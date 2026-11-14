@@ -1,10 +1,11 @@
 // Owns the renderer and the frame loop, advances the clock while playing, and switches
 // between the globe and the surface view when the store's `view` changes.
-import { PCFSoftShadowMap, WebGLRenderer } from 'three';
+import { PCFShadowMap, WebGLRenderer } from 'three';
 import { moonGeometry, MoonGeometry } from '../../astro/ephemeris';
 import { SITE_ALTITUDE_KM } from '../../core/coreActions';
 import { MAX_TIME_MS, store } from '../../core/store';
 import type { SiteRef } from '../../core/types';
+import { surfaceResolution } from '../autoResolution';
 import { SurfaceController } from '../surface/controller';
 import { GlobeView } from './globeView';
 
@@ -19,11 +20,16 @@ export class SceneHost {
 
   constructor(private readonly canvas: HTMLCanvasElement) {
     const r = (this.renderer = new WebGLRenderer({ canvas, antialias: true }));
-    r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const basePixelRatio = Math.min(window.devicePixelRatio, 2);
+    r.setPixelRatio(basePixelRatio);
+    // The surface view is drawn a little smaller when frames run slow (see autoResolution.ts).
+    surfaceResolution.attach((scale) => r.setPixelRatio(basePixelRatio * scale));
     r.shadowMap.enabled = true; // used by the surface view
-    r.shadowMap.type = PCFSoftShadowMap;
+    r.shadowMap.type = PCFShadowMap; // the cheaper filter; shadows here are small and sharp anyway
     this.globe = new GlobeView(r, canvas);
     this.surface = new SurfaceController(r.capabilities.getMaxAnisotropy(), canvas);
+    // Dev builds only: lets the surface view be inspected from the browser console.
+    if (import.meta.env.DEV) (window as unknown as { __surface: unknown }).__surface = this.surface.view;
     this.geometry = moonGeometry(new Date(store.get().timeMs));
 
     this.fade = document.createElement('div');
@@ -84,6 +90,7 @@ export class SceneHost {
         this.surface.enter(this.geometry);
       } else {
         this.surface.leave();
+        surfaceResolution.reset();
         this.globe.active = true;
         this.globe.controls.enabled = true;
         this.canvas.style.cursor = 'grab';
@@ -111,8 +118,10 @@ export class SceneHost {
         const t = Math.min(MAX_TIME_MS, s.timeMs + dt * s.rate * 1000);
         store.set({ timeMs: t, ...(t >= MAX_TIME_MS && { playing: false }) });
       }
-      if (this.showing === 'surface') this.surface.render(dt, this.renderer);
-      else this.globe.render(dt, now / 1000);
+      if (this.showing === 'surface') {
+        surfaceResolution.tune(dt, now);
+        this.surface.render(dt, this.renderer);
+      } else this.globe.render(dt, now / 1000);
       for (const fn of this.frameListeners) fn(dt);
     });
   }
