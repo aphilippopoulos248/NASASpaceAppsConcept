@@ -1,0 +1,95 @@
+/*
+ * The layout frame: fixed regions over the full-screen canvas, matching the globe and
+ * surface mockups. Each region is a mount point handed to one module by main.ts.
+ * body[data-view] decides which regions show; [data-views] on a region lists its views.
+ */
+#scene {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-scene);
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.shell { position: fixed; inset: 0; z-index: var(--z-hud); pointer-events: none; }
+.region { position: absolute; pointer-events: none; }
+.region > * { pointer-events: auto; }
+.region:empty { display: none; }
+
+body[data-view='globe'] .region[data-views='surface'],
+body[data-view='surface'] .region[data-views='globe'] { display: none; }
+
+.region-wordmark { top: var(--sp-4); left: 50%; transform: translateX(-50%); }
+.wordmark {
+  font-family: var(--font-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.32em;
+  margin-right: -0.32em; /* optical centring of tracked caps */
+  line-height: 1;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
+
+.region-left { top: calc(var(--sp-4) + 56px); left: var(--edge); bottom: 132px; width: var(--panel-w); display: flex; flex-direction: column; }
+.region-metrics { top: var(--edge); left: var(--edge); width: var(--panel-w); }
+.region-card { top: var(--edge); right: var(--edge); width: min(320px, calc(100vw - 2 * var(--edge))); max-height: calc(100vh - 260px); display: flex; flex-direction: column; }
+.region-close { top: var(--edge); right: var(--edge); }
+.region-compass { left: var(--edge); bottom: 108px; }
+.region-chart { left: var(--edge); bottom: 108px; }
+.region-scrubber { left: 50%; bottom: var(--edge); width: min(760px, calc(100vw - 2 * var(--edge) - 2 * 220px)); transform: translateX(-50%); }
+.region-locator { right: var(--edge); bottom: var(--edge); width: 200px; }
+.region-assistant { right: var(--edge); bottom: calc(var(--edge) + 120px); }
+.region-surface-hud { left: 50%; bottom: 104px; width: min(760px, calc(100vw - 2 * var(--edge))); transform: translateX(-50%); }
+.region-drawer { top: 0; right: 0; bottom: 0; z-index: var(--z-drawer); }
+.region-compare { inset: 0; z-index: var(--z-drawer); }
+.region-toast { top: 72px; left: 50%; transform: translateX(-50%); z-index: var(--z-toast); display: grid; gap: var(--sp-2); justify-items: center; }
+
+.scene-fade {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-fade);
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms;
+}
+.scene-fade.on { opacity: 1; }
+
+.loading {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-loading);
+  display: grid;
+  place-items: center;
+  background: #000;
+  color: var(--text-muted);
+  font-size: var(--fs-sm);
+  letter-spacing: 0.06em;
+  transition: opacity var(--dur-slow);
+}
+.loading.done { opacity: 0; pointer-events: none; }
+
+/* Panel toggle: only on narrow screens. */
+.left-toggle { display: none; }
+
+@media (max-width: 1100px) {
+  .region-scrubber { width: calc(100vw - 2 * var(--edge) - 216px); left: var(--edge); transform: none; }
+}
+
+@media (max-width: 700px) {
+  .wordmark { font-size: var(--fs-xl); }
+  .region-wordmark { top: var(--sp-3); }
+  .left-toggle { display: inline-flex; position: absolute; top: var(--sp-3); left: var(--edge); pointer-events: auto; }
+  .region-left { top: 56px; bottom: auto; max-height: calc(100vh - 220px); display: none; }
+  body.left-open .region-left { display: flex; }
+  .region-card { top: auto; bottom: 168px; max-height: 48vh; }
+  .region-scrubber { left: var(--edge); right: var(--edge); width: auto; }
+  .region-locator { display: none; }
+  .region-compass, .region-chart { bottom: 172px; }
+  .region-assistant { bottom: 172px; }
+  .region-surface-hud { bottom: 168px; }
+  body[data-view='surface'] .region-metrics { width: calc(100vw - 2 * var(--edge) - 48px); }
+}
