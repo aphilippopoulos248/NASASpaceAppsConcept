@@ -90,7 +90,8 @@ export class LocalSource implements HeightSource {
 /**
  * Equirectangular (simple cylindrical) grid. Row 0 is the northern edge, column 0 the
  * western edge; pixel centres sit half a pixel inside the bounds. A grid spanning 360
- * degrees wraps in longitude, and one that reaches a pole interpolates across it.
+ * degrees wraps in longitude; where it reaches a pole, the pole gets the mean of the
+ * last row and the half pixel in between eases towards it.
  */
 export class EquirectSource implements HeightSource {
   readonly name: string;
@@ -103,6 +104,9 @@ export class EquirectSource implements HeightSource {
   private readonly pxPerDegY: number;
   private readonly hasNodata: boolean;
   private readonly nodata: number;
+  /** Height at each pole the grid reaches (mean of the adjacent row). */
+  private readonly capN?: number;
+  private readonly capS?: number;
 
   constructor(descriptor: EquirectDescriptor, provenance?: HeightProvenance) {
     this.provenance = provenance;
@@ -117,6 +121,8 @@ export class EquirectSource implements HeightSource {
     this.pxPerDegY = descriptor.height / (descriptor.latN - descriptor.latS);
     this.hasNodata = descriptor.nodata !== undefined;
     this.nodata = descriptor.nodata ?? NaN;
+    if (this.full && descriptor.latN >= 90 - 1e-9) this.capN = this.rowMean(0);
+    if (this.full && descriptor.latS <= -90 + 1e-9) this.capS = this.rowMean(descriptor.height - 1);
   }
 
   covers(lat: number, lon: number): boolean {
@@ -129,23 +135,27 @@ export class EquirectSource implements HeightSource {
 
   private at(row: number, col: number): number {
     const d = this.descriptor;
-    // Beyond a pole the neighbouring row is the same row seen from the opposite meridian.
-    if (row < 0) {
-      if (d.latN >= 90 - 1e-9 && this.full) {
-        row = -1 - row;
-        col += d.width >> 1;
-      } else row = 0;
-    } else if (row >= d.height) {
-      if (d.latS <= -90 + 1e-9 && this.full) {
-        row = 2 * d.height - 1 - row;
-        col += d.width >> 1;
-      } else row = d.height - 1;
-    }
+    row = Math.min(d.height - 1, Math.max(0, row));
     if (this.full) col = ((col % d.width) + d.width) % d.width;
     else col = Math.min(d.width - 1, Math.max(0, col));
     const raw = d.data[row * d.width + col];
     if (this.hasNodata && raw === this.nodata) return NaN;
     return raw * d.scale + d.offset;
+  }
+
+  /** Mean of a whole row, metres: the height given to a pole the grid reaches. */
+  private rowMean(row: number): number {
+    const d = this.descriptor;
+    let sum = 0;
+    let n = 0;
+    for (let c = 0; c < d.width; c++) {
+      const v = this.at(row, c);
+      if (!Number.isNaN(v)) {
+        sum += v;
+        n++;
+      }
+    }
+    return n ? sum / n : NaN;
   }
 
   sample(lat: number, lon: number): number {
@@ -154,8 +164,19 @@ export class EquirectSource implements HeightSource {
     const fx = mod360(lon - d.lonW) * this.pxPerDegX - 0.5;
     const fy = (d.latN - lat) * this.pxPerDegY - 0.5;
     const x = Math.floor(fx);
+    const a = fx - x;
+    // Between the last row of pixel centres and a pole: ease from that row to the single
+    // polar value, so the pole has one height whatever longitude it is asked at.
+    if (fy < 0 && this.capN !== undefined) {
+      const edge = blend(this.at(0, x), this.at(0, x + 1), 0, 0, a, 0);
+      return edge + (this.capN - edge) * Math.min(1, -2 * fy);
+    }
+    if (fy > d.height - 1 && this.capS !== undefined) {
+      const edge = blend(this.at(d.height - 1, x), this.at(d.height - 1, x + 1), 0, 0, a, 0);
+      return edge + (this.capS - edge) * Math.min(1, 2 * (fy - (d.height - 1)));
+    }
     const y = Math.floor(fy);
-    return blend(this.at(y, x), this.at(y, x + 1), this.at(y + 1, x), this.at(y + 1, x + 1), fx - x, fy - y);
+    return blend(this.at(y, x), this.at(y, x + 1), this.at(y + 1, x), this.at(y + 1, x + 1), a, fy - y);
   }
 }
 
