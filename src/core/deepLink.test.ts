@@ -54,6 +54,19 @@ describe('deep links', () => {
     expect(store.get().timeMs).toBe(TOUCHDOWN);
   });
 
+  it('starts the mission window where the link sets the clock', async () => {
+    let store = setup();
+    await applyDeepLink(parseDeepLink('?site=apollo-11&light=landing'));
+    expect(store.get()).toMatchObject({ timeMs: TOUCHDOWN, windowStartMs: TOUCHDOWN });
+    store = setup();
+    await applyDeepLink(parseDeepLink('?site=apollo-11&light=landing&t=2026-11-22T03:31Z'));
+    expect(store.get()).toMatchObject({ timeMs: Date.UTC(2026, 10, 22, 3, 31), windowStartMs: Date.UTC(2026, 10, 22, 3, 31) });
+    // No time in the link: the window stays where the app started it.
+    store = setup();
+    await applyDeepLink(parseDeepLink('?site=apollo-11'));
+    expect(store.get().windowStartMs).toBe(Date.UTC(2025, 2, 14, 6, 0));
+  });
+
   it('sets the clock without a site', async () => {
     const store = setup();
     expect(await applyDeepLink(parseDeepLink('?time=2026-11-22T03:31Z'))).toEqual([]);
