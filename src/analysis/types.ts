@@ -61,6 +61,8 @@ export interface HorizonProfile {
   /** How far out terrain was searched, metres. */
   maxRangeM: number;
   layers: DemLayerUse[];
+  /** Per azimuth: index into `layers` of the data that forms the skyline there. */
+  skylineLayer: Uint8Array;
   warnings: string[];
 }
 
