@@ -1,4 +1,18 @@
-import { Camera, CanvasTexture, Group, SRGBColorSpace, Sprite, SpriteMaterial, Vector3 } from 'three';
+import {
+  Camera,
+  CanvasTexture,
+  CylinderGeometry,
+  DoubleSide,
+  Group,
+  Mesh,
+  MeshBasicMaterial,
+  PlaneGeometry,
+  Quaternion,
+  ShaderMaterial,
+  SphereGeometry,
+  SRGBColorSpace,
+  Vector3,
+} from 'three';
 import { flagCode, Ownership } from '../data/ownership';
 import type { Marker } from './markers';
 
@@ -127,75 +141,139 @@ export function flagCanvas(state: string, width = 36): HTMLCanvasElement | null 
   return c;
 }
 
-// Sprite image: a flag on a short pole, with the foot of the pole at the bottom-left corner.
-const SPRITE = 128;
-const POLE_X = 5;
-const FLAG = { x: 7, y: 6, w: 84, h: 56 };
+// ---------- 3D flags on the globe ----------
+
+/** Pole height on screen, as a fraction of the view height (it then scales with distance). */
+const SCREEN_SIZE = 0.05;
+/** Flag cloth, relative to a pole of height 1. */
+const CLOTH_W = 0.78;
+const CLOTH_H = 0.52;
+
+const clothVertex = /* glsl */ `
+uniform float uTime;
+uniform float uPhase;
+varying vec2 vUv;
+varying float vShade;
+void main() {
+	vUv = uv;
+	// Ripple travelling away from the pole, growing towards the free edge; the edge at the pole stays put.
+	float along = uv.x;
+	float wave = sin( along * 7.0 - uTime * 2.6 + uPhase ) * 0.045 * along + sin( along * 13.0 - uTime * 4.1 + uPhase * 1.7 ) * 0.012 * along;
+	vec3 p = position;
+	p.z += wave;
+	p.y -= 0.03 * along * along; // droop slightly at the free corner
+	// Light and shade from the slope of the ripple, as cloth folds would catch light.
+	float slope = cos( along * 7.0 - uTime * 2.6 + uPhase ) * 0.045 * 7.0 * along;
+	vShade = clamp( 0.86 + 0.6 * slope, 0.6, 1.08 );
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( p, 1.0 );
+}`;
+
+const clothFragment = /* glsl */ `
+uniform sampler2D uMap;
+uniform float uLight;
+varying vec2 vUv;
+varying float vShade;
+void main() {
+	vec3 c = texture2D( uMap, vUv ).rgb;
+	// Darker towards the pole and the bottom, like a hanging flag lit from above.
+	float shade = vShade * mix( 0.88, 1.0, vUv.y ) * mix( 0.9, 1.0, smoothstep( 0.0, 0.2, vUv.x ) );
+	gl_FragColor = vec4( c * shade * uLight, 1.0 );
+	#include <colorspace_fragment>
+}`;
 
 const textureCache = new Map<string, CanvasTexture>();
-function flagOnPole(state: string): CanvasTexture | null {
-  const cached = textureCache.get(state);
+function clothTexture(code: string): CanvasTexture | null {
+  const cached = textureCache.get(code);
   if (cached) return cached;
-  const paint = PAINTERS[state];
-  if (!paint) return null;
-  const c = document.createElement('canvas');
-  c.width = c.height = SPRITE;
-  const ctx = c.getContext('2d')!;
-  // Pole, with a dark edge so it reads against bright ground.
-  ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
-  ctx.fillRect(POLE_X - 2, FLAG.y - 4, 5, SPRITE - FLAG.y + 4);
-  ctx.fillStyle = '#e8e8e8';
-  ctx.fillRect(POLE_X - 1, FLAG.y - 3, 3, SPRITE - FLAG.y + 3);
-  ctx.save();
-  ctx.translate(FLAG.x, FLAG.y);
-  paint(ctx, FLAG.w, FLAG.h);
-  ctx.restore();
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.55)';
-  ctx.lineWidth = 2;
-  ctx.strokeRect(FLAG.x, FLAG.y, FLAG.w, FLAG.h);
-  const t = new CanvasTexture(c);
+  const canvas = flagCanvas(code, 96);
+  if (!canvas) return null;
+  const t = new CanvasTexture(canvas);
   t.colorSpace = SRGBColorSpace;
-  textureCache.set(state, t);
+  t.anisotropy = 4;
+  textureCache.set(code, t);
   return t;
 }
 
-/** Height of a flag on screen, as a fraction of the view height. */
-const SCREEN_SIZE = 0.055;
+const poleGeometry = new CylinderGeometry(0.012, 0.016, 1, 8, 1, false).translate(0, 0.5, 0);
+const finialGeometry = new SphereGeometry(0.028, 10, 8).translate(0, 1.0, 0);
+const baseGeometry = new CylinderGeometry(0.05, 0.065, 0.025, 16).translate(0, 0.0125, 0);
+const clothGeometry = new PlaneGeometry(CLOTH_W, CLOTH_H, 20, 6).translate(CLOTH_W / 2 + 0.012, 1 - CLOTH_H / 2 - 0.02, 0);
 
-/** A small flag above each landing marker showing which state the hardware belongs to. */
+interface Flag {
+  marker: Marker;
+  group: Group;
+  swivel: Group;
+  cloth: ShaderMaterial;
+  metal: MeshBasicMaterial;
+}
+
+/**
+ * A small flag on a pole planted at each landing site, showing which state the hardware belongs to.
+ * The pole stands straight up from the surface; the cloth turns about the pole to face the viewer and
+ * ripples gently. Flags stay a constant size on screen, are hidden by the Moon when they go round
+ * the limb, and dim (but stay readable) on the night side.
+ */
 export class FlagMarkers {
   readonly root = new Group();
-  private readonly items: { marker: Marker; sprite: Sprite }[] = [];
+  private readonly items: Flag[] = [];
   private enabled = false;
-  private readonly tmp = new Vector3();
+  private readonly local = new Vector3();
+  private readonly inverse = new Quaternion();
 
   constructor(markers: Marker[], ownerOf: (landingId: string) => Ownership | undefined) {
-    for (const marker of markers) {
+    const up = new Vector3(0, 1, 0);
+    markers.forEach((marker, i) => {
       const owner = ownerOf(marker.landing.id);
-      const texture = owner ? flagOnPole(flagCode(owner)) : null;
-      if (!texture) continue;
-      const sprite = new Sprite(new SpriteMaterial({ map: texture, sizeAttenuation: false, depthTest: false, depthWrite: false, toneMapped: false }));
-      sprite.center.set(POLE_X / SPRITE, 0); // foot of the pole sits on the site
-      sprite.scale.setScalar(SCREEN_SIZE);
-      sprite.position.copy(marker.dir).multiplyScalar(1.0004);
-      sprite.renderOrder = 4;
-      sprite.visible = false;
-      this.root.add(sprite);
-      this.items.push({ marker, sprite });
-    }
+      const map = owner ? clothTexture(flagCode(owner)) : null;
+      if (!map) return;
+      const metal = new MeshBasicMaterial({ color: 0xd9dde3, toneMapped: false });
+      const cloth = new ShaderMaterial({
+        uniforms: { uMap: { value: map }, uTime: { value: 0 }, uPhase: { value: i * 1.7 }, uLight: { value: 1 } },
+        vertexShader: clothVertex,
+        fragmentShader: clothFragment,
+        side: DoubleSide,
+      });
+      const group = new Group();
+      group.position.copy(marker.dir).multiplyScalar(1.0003);
+      // The pole stands straight out of the surface at the site.
+      group.quaternion.setFromUnitVectors(up, marker.dir);
+      const swivel = new Group();
+      swivel.add(new Mesh(poleGeometry, metal), new Mesh(finialGeometry, metal), new Mesh(clothGeometry, cloth));
+      group.add(new Mesh(baseGeometry, metal), swivel);
+      group.visible = false;
+      this.root.add(group);
+      this.items.push({ marker, group, swivel, cloth, metal });
+    });
   }
 
   setEnabled(on: boolean): void {
     this.enabled = on;
-    if (!on) for (const { sprite } of this.items) sprite.visible = false;
+    if (!on) for (const f of this.items) f.group.visible = false;
   }
 
-  /** Call every frame: shows a flag only for visible markers on the side of the Moon facing the camera. */
-  update(camera: Camera): void {
+  /**
+   * Call every frame. `sunDir` is the direction to the Sun in scene space, or null when the scene
+   * is lit evenly.
+   */
+  update(camera: Camera, timeSec: number, sunDir: Vector3 | null): void {
     if (!this.enabled) return;
-    for (const { marker, sprite } of this.items) {
-      // A point on the unit sphere faces a camera at c when p·c > 1; a small margin hides flags at the very edge.
-      sprite.visible = marker.group.visible && marker.dir.dot(this.tmp.copy(camera.position)) > 1.02;
+    for (const f of this.items) {
+      const { marker, group, swivel } = f;
+      // A point on the unit sphere faces a camera at c when p·c > 1; past the limb the Moon hides it anyway.
+      const facing = marker.dir.dot(camera.position);
+      group.visible = marker.group.visible && facing > 0.98;
+      if (!group.visible) continue;
+      group.scale.setScalar(camera.position.distanceTo(group.position) * SCREEN_SIZE * 0.73);
+      // Turn the cloth about the pole so it faces the viewer.
+      this.local.copy(camera.position).sub(group.position).applyQuaternion(this.inverse.copy(group.quaternion).invert());
+      // Turned slightly off square so the ripple and the pole read in depth.
+      swivel.rotation.y = Math.atan2(this.local.x, this.local.z) + 0.35;
+      // Sunlit sites at full brightness; sites in night stay readable at a lower level.
+      const day = sunDir ? Math.min(1, Math.max(0, marker.dir.dot(sunDir) * 4 + 0.5)) : 1;
+      const light = 0.55 + 0.45 * day;
+      f.cloth.uniforms.uTime.value = timeSec;
+      f.cloth.uniforms.uLight.value = light;
+      f.metal.color.setRGB(0.85 * light, 0.87 * light, 0.9 * light);
     }
   }
 }

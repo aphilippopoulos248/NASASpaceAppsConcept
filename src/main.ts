@@ -580,7 +580,7 @@ renderer.setAnimationLoop((now) => {
   sky.update(camera, right, up);
 
   markers?.update(camera, now / 1000);
-  flags?.update(camera);
+  flags?.update(camera, now / 1000, sky.litDirection);
   sitePatch?.update(altNow);
   renderer.render(scene, camera);
 });
@@ -594,6 +594,7 @@ async function boot() {
   markers = new Markers(landings);
   scene.add(markers.root);
   flags = new FlagMarkers(markers.items, (id) => ownership?.byLanding.get(id));
+  if (import.meta.env.DEV) (window as unknown as { __flags: FlagMarkers }).__flags = flags;
   scene.add(flags.root);
   setFlags(flagsWanted);
   new Filters(landings, filtersPanel, $('timeline'), applyFilter);
