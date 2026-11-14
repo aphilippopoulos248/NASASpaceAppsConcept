@@ -4,6 +4,8 @@
 import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
 import { computeHorizon, destination, profileIndex, skylineAt, slopeAt, type HorizonOptions } from './horizon';
+import { dsnOpportunities } from './dsn';
+import { EVENT_PRECISION_MS, hours, intervalsOf, longest } from './intervals';
 import { skyAt, type Ephemeris } from './sky';
 import type {
   Blockage, ComparisonDiff, HorizonProfile, Interval, SiteAnalysis, SkyEvent, SkySeries, WindowMetrics,
@@ -11,8 +13,7 @@ import type {
 
 const RAD = Math.PI / 180;
 const H = 3_600_000;
-/** Event times are refined by bisection to this precision. */
-export const EVENT_PRECISION_MS = 10_000;
+export { EVENT_PRECISION_MS };
 /** Strips across a disc when integrating its visible fraction. */
 const STRIPS = 24;
 
@@ -111,62 +112,6 @@ export function buildSeries(s: Scenario, p: HorizonProfile, eph: Ephemeris): { s
     sunTop[i] = st.sunTop;
   }
   return { series: { startMs, stepMs, n, ...out, source: eph.source }, sunTop };
-}
-
-// ---------- intervals and events ----------
-
-/** Finds where a continuous indicator g(t) changes sign between two instants, to EVENT_PRECISION_MS. `up` = it becomes positive. */
-function refine(g: (t: number) => number, t0: number, t1: number, up: boolean): number {
-  let a = t0, b = t1;
-  while (b - a > EVENT_PRECISION_MS) {
-    const m = (a + b) / 2;
-    if ((g(m) > 0) === up) b = m;
-    else a = m;
-  }
-  return (a + b) / 2;
-}
-
-/**
- * Splits [startMs, endMs] into spans where a state is on and off. The state is known at
- * `count` instants (`timeAt(i)`, increasing, the first at startMs and the last at endMs);
- * between two instants that differ, the crossing is refined on the continuous indicator g.
- * Spans touching the window's ends are flagged open: the state continues beyond the window.
- */
-function intervalsOf(stateAt: (i: number) => boolean, g: (t: number) => number, timeAt: (i: number) => number, count: number, startMs: number, endMs: number) {
-  const on: Interval[] = [];
-  const off: Interval[] = [];
-  const crossings: { t: number; up: boolean }[] = [];
-  let cur = stateAt(0);
-  let segStart = startMs;
-  let openStart = true;
-  const close = (end: number, openEnd: boolean) => {
-    if (!(end > segStart)) return; // zero-length span (a crossing refined onto a window edge)
-    const iv: Interval = { startMs: segStart, endMs: end };
-    if (openStart) iv.openStart = true;
-    if (openEnd) iv.openEnd = true;
-    (cur ? on : off).push(iv);
-  };
-  for (let i = 1; i < count; i++) {
-    const s = stateAt(i);
-    if (s !== cur) {
-      const t = refine(g, timeAt(i - 1), timeAt(i), s);
-      close(t, false);
-      crossings.push({ t, up: s });
-      cur = s;
-      segStart = t;
-      openStart = false;
-    }
-  }
-  close(endMs, true);
-  return { on, off, crossings };
-}
-
-const hours = (iv: Interval) => (iv.endMs - iv.startMs) / H;
-
-function longest(list: Interval[]): { h: number; open: boolean } {
-  let best: Interval | null = null;
-  for (const iv of list) if (!best || hours(iv) > hours(best)) best = iv;
-  return best ? { h: hours(best), open: !!(best.openStart || best.openEnd) } : { h: 0, open: false };
 }
 
 export interface WindowResult {
@@ -270,6 +215,7 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
   const slope = slopeAt(stack, site, slopeBaselineM(stack, site.lat, site.lon));
   if (!Number.isFinite(slope.slopeDeg)) warnings.push('Slope unavailable: no elevation data around the site.');
   let res: WindowResult;
+  let dsn: SiteAnalysis['dsn'];
   if (!Number.isFinite(horizon.siteElevationM)) {
     const times = sampleTimes(scenario);
     const nan = () => new Float32Array(times.n).fill(NaN);
@@ -281,6 +227,7 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
     warnings.push('Window metrics unavailable: without terrain at the site there is no skyline to measure against.');
   } else {
     res = evaluateWindow(scenario, horizon, eph);
+    dsn = dsnOpportunities(scenario, horizon);
   }
   if (res.metrics.eclipseIntervals.length) {
     const spans = res.metrics.eclipseIntervals.map((iv) => `${utcMinute(iv.startMs).replace(' UTC', '')} to ${utcMinute(iv.endMs)}`).join('; ');
@@ -313,6 +260,7 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
       ],
     },
     warnings,
+    ...(dsn ? { dsn } : {}),
   };
 }
 

@@ -178,12 +178,17 @@ describe('real terrain (loadTerrainFor) and bundled Horizons windows', () => {
     expect(Math.abs(a.metrics.sunAnyPct - b.metrics.sunAnyPct)).toBeLessThan(0.05);
     expect(a.events.length).toBe(b.events.length);
     a.events.forEach((e, i) => expect(Math.abs(e.timeMs - b.events[i].timeMs)).toBeLessThan(60_000));
-    // Total lunar eclipse of 1971 August 6 (umbral phase roughly 17:55 to 21:32 UT): a site near the middle of the
-    // disc is inside the umbra for the middle part of that span.
+    // Total lunar eclipse of 1971 August 6, contacts from F. Espenak's EclipseWise page (UT1): U1 17:55:25,
+    // U2 18:53:28, U3 20:32:53, U4 21:30:57, P1 16:59:26, P4 22:26:50. A point on the Moon has the Sun entirely
+    // hidden from some moment between U1 and U2 until some moment between U3 and U4.
     expect(dark).toBeDefined();
-    expect(dark!.startMs).toBeGreaterThan(Date.parse('1971-08-06T17:55:00Z'));
-    expect(dark!.endMs).toBeLessThan(Date.parse('1971-08-06T21:33:00Z'));
-    expect((dark!.endMs - dark!.startMs) / H).toBeGreaterThan(2);
+    expect(dark!.startMs).toBeGreaterThan(Date.parse('1971-08-06T17:55:25Z'));
+    expect(dark!.startMs).toBeLessThan(Date.parse('1971-08-06T18:53:28Z'));
+    expect(dark!.endMs).toBeGreaterThan(Date.parse('1971-08-06T20:32:53Z'));
+    expect(dark!.endMs).toBeLessThan(Date.parse('1971-08-06T21:30:57Z'));
+    const overlap71 = a.metrics.eclipseIntervals.find((iv) => isoS(iv.startMs).startsWith('1971-08-06'))!;
+    expect(overlap71.startMs).toBeGreaterThan(Date.parse('1971-08-06T16:59:26Z'));
+    expect(overlap71.endMs).toBeLessThan(Date.parse('1971-08-06T22:26:50Z'));
     // Sunset over the real skyline on the 13th; Earth stays up (near side).
     expect(a.events.map((e) => e.type)).toEqual(['sunset']);
     expect(isoS(a.events[0].timeMs).slice(0, 13)).toBe('1971-08-13T11');
@@ -221,6 +226,21 @@ describe('real terrain (loadTerrainFor) and bundled Horizons windows', () => {
     expect(dark.endMs).toBeGreaterThan(Date.parse('2025-03-14T08:30:00Z'));
     expect(dark.endMs).toBeLessThan(Date.parse('2025-03-14T08:40:00Z'));
     expect(a.warnings.join(' ')).toMatch(/Earth passes in front of the Sun/);
+    // Published contacts of the lunar eclipse (EclipseWise, UT1): P1 03:57:09, U1 05:09:23, U2 06:25:58,
+    // U3 07:32:02, U4 08:48:19, P4 10:00:32. The site's totality starts between U1 and U2 and ends between U3 and U4.
+    expect(dark.startMs).toBeGreaterThan(Date.parse('2025-03-14T05:09:23Z'));
+    expect(dark.startMs).toBeLessThan(Date.parse('2025-03-14T06:25:58Z'));
+    expect(dark.endMs).toBeGreaterThan(Date.parse('2025-03-14T07:32:02Z'));
+    expect(dark.endMs).toBeLessThan(Date.parse('2025-03-14T08:48:19Z'));
+    expect(ecl.startMs).toBeGreaterThan(Date.parse('2025-03-14T03:57:09Z'));
+    expect(ecl.endMs).toBeLessThan(Date.parse('2025-03-14T10:00:32Z'));
+    // Reported for the lander (KUT / Texas Public Radio, local CDT = UTC-5): the eclipse "starting at 12 a.m. ...
+    // and ending around 4:52 a.m.", "Totality lasted just over 2 hours, beginning at 1:18 a.m.".
+    expect(Math.abs(ecl.startMs - Date.parse('2025-03-14T05:00:00Z'))).toBeLessThan(3 * 60_000);
+    expect(Math.abs(ecl.endMs - Date.parse('2025-03-14T09:52:00Z'))).toBeLessThan(3 * 60_000);
+    expect(Math.abs(dark.startMs - Date.parse('2025-03-14T06:18:00Z'))).toBeLessThan(3 * 60_000);
+    expect((dark.endMs - dark.startMs) / H).toBeGreaterThan(2);
+    expect((dark.endMs - dark.startMs) / H).toBeLessThan(2.5);
     // Sunset over the real skyline comes before the smooth-sphere time (centre at the horizontal about 20:11 UTC).
     expect(sunset.timeMs).toBeGreaterThan(Date.parse('2025-03-16T18:30:00Z'));
     expect(sunset.timeMs).toBeLessThan(Date.parse('2025-03-16T20:45:00Z'));

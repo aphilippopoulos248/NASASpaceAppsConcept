@@ -172,15 +172,67 @@ horizontal at about 20:11 UTC (independent fixture README). 0.1 deg of skyline i
 atmosphere ignored). They are part of the illumination series (`sunEclipsed`,
 `eclipseIntervals`), and `blockageAt` says so in words.
 
-| Site | Earth's disc overlaps the Sun | Sun entirely behind Earth | Independent reference |
-| --- | --- | --- | --- |
-| Blue Ghost 1 (18.56 N, 61.81 E), 2025-03-14 | 05:00:38 - 09:51:06 UTC | 06:17:21 - 08:34:23 UTC | The independent Horizons fixture (10 min samples of Sun-Earth separation and radii at the site) has the discs overlapping in its samples from 05:10 to 09:50 and the Sun wholly behind Earth from 06:20 to 08:30: consistent to the sampling. |
-| IM-2 (84.79 S, 29.2 E), 2025-03-14 | 04:23:32 - 09:28:23 UTC | 05:33:04 - 08:18:51 UTC | same eclipse, earlier at a site nearer the leading side of the disc |
-| Apollo 15 (26.13 N, 3.63 E), 1971-08-06 | 17:30:36 - 21:59:12 UTC | 18:26:23 - 21:03:25 UTC | model only (no Horizons table for 1971 is bundled) |
+| Site | Earth's disc overlaps the Sun | Sun entirely behind Earth |
+| --- | --- | --- |
+| Blue Ghost 1 (18.56 N, 61.81 E), 2025-03-14 | 05:00:38 - 09:51:06 UTC | 06:17:21 - 08:34:23 UTC |
+| IM-2 (84.79 S, 29.2 E), 2025-03-14 | 04:23:32 - 09:28:23 UTC | 05:33:04 - 08:18:51 UTC |
+| Apollo 15 (26.13 N, 3.63 E), 1971-08-06 | 17:30:36 - 21:59:12 UTC | 18:26:23 - 21:03:25 UTC (model ephemeris; no Horizons table for 1971 is bundled) |
 
-Comparison with published contact times of the lunar eclipses and with what Firefly published
-about the view from Blue Ghost: not yet entered here (the sources still have to be read and
-quoted exactly; @ephemeris-check's task T-26 covers the same events independently).
+Three outside checks:
+
+1. *Independent Horizons fixture* (`tests/fixtures/horizons/ephemeris-check`, 10 min samples of
+   the Sun-Earth separation and radii at the Blue Ghost site): the discs overlap in its samples
+   from 05:10 to 09:50 and the Sun is wholly behind Earth from 06:20 to 08:30. Consistent to
+   the sampling.
+
+2. *What was reported for the lander.* KUT / Texas Public Radio (Austin's NPR station, 14 and
+   16 March 2025, reporting on Firefly's images; local time, CDT = UTC-5 on that date, as the
+   photo caption "on March 14 at 12:30 am CDT" states):
+
+   | At the Blue Ghost site | Lunyx | Reported |
+   | --- | --- | --- |
+   | Earth begins to cover the Sun | 05:00:38 UTC | "The solar eclipse lasted nearly five hours, starting at 12 a.m. CST and ending around 4:52 a.m. at the Blue Ghost's landing site" -> 05:00 UTC |
+   | Sun entirely hidden from | 06:17:21 UTC | "Totality lasted just over 2 hours, beginning at 1:18 a.m." -> 06:18 UTC |
+   | Sun entirely hidden until | 08:34:23 UTC (2 h 17 min) | no time given; "Another image, taken around 3:30 a.m., shows the lunar lander capturing a "diamond ring effect,"" -> 08:30 UTC, as the Sun was about to emerge |
+   | Earth leaves the Sun | 09:51:06 UTC (4 h 50 min in all) | "ending around 4:52 a.m." -> 09:52 UTC |
+
+   The three stated clock times agree with the computed ones to about a minute. (The sentence
+   says "CST" where the caption says "CDT"; read as CST the times would fall an hour after the
+   lunar eclipse itself, so CDT is meant.) Sources:
+   https://www.kut.org/text/science/2025-03-14/firefly-aerospace-blue-ghost-lunar-lander-total-solar-eclipse ,
+   https://www.tpr.org/science-technology/2025-03-16/firefly-aerospaces-blue-ghost-lunar-lander-captures-diamond-ring-effect-of-eclipse
+
+3. *Published contacts of the lunar eclipses* (F. Espenak, EclipseWise, UT1; umbra modelled
+   with the Herald/Sinnott rule, which enlarges it for Earth's atmosphere, so agreement is a
+   matter of brackets, not equality). A point on the Moon has the Sun entirely hidden from some
+   moment between U1 and U2 until some moment between U3 and U4, and sees no part of the event
+   before P1 or after P4:
+
+   | Eclipse | P1 | U1 | U2 | U3 | U4 | P4 | Site: Sun hidden from / until | Inside the brackets |
+   | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+   | 2025 Mar 14 | 03:57:09 | 05:09:23 | 06:25:58 | 07:32:02 | 08:48:19 | 10:00:32 | Blue Ghost 06:17:21 / 08:34:23 | yes (first and last contact 05:00:38 / 09:51:06 lie between P1 and P4) |
+   | 2025 Mar 14 | | | | | | | IM-2 05:33:04 / 08:18:51 | yes |
+   | 1971 Aug 06 | 16:59:26 | 17:55:25 | 18:53:28 | 20:32:53 | 21:30:57 | 22:26:50 | Apollo 15 18:26:23 / 21:03:25 | yes |
+
+   Mare Crisium is on the side of the disc that enters Earth's shadow last, hence Blue Ghost's
+   times close to U2 and U4; Apollo 15, near the middle of the disc, sits mid-way. Sources:
+   https://eclipsewise.com/lunar/LEprime/2001-2100/LE2025Mar14Tprime.html ,
+   https://www.eclipsewise.com/lunar/LEprime/1901-2000/LE1971Aug06Tprime.html
+
+**Blue Ghost's sunset, 16 March 2025: not a clean check.** Computed over the real skyline (2 m
+above the ground): the skyline starts to cut the Sun's disc at 18:25 UTC, half of it is gone at
+18:58, the last limb at 19:30:10. The skyline there (+0.59 deg at azimuth 270) is a real rise
+of about 10 m, 0.75-0.85 km west of the lander, present in both the 3 m LROC model and the
+60 m SLDEM2015 window (which agree to 3.3 m rms over the model's extent). Being so near, it
+makes the time depend on the eye height: 19:16 for 0.5 m, 19:58 for 5 m. Firefly's release of
+17 March 2025 gives no sunset time; it says the lander completed "more than 14 days of surface
+operations (346 hours of daylight)" and kept "operating just over 5 hours into the lunar night
+with the final data received around 6:15 pm CDT on March 16". Counted from the touchdown time
+in this repository's catalogue (08:34 UTC on 2 March), 346 hours end at 18:34 UTC; "just over
+5 hours" before 23:15 UTC is a little before 18:15 UTC. Both fall where the computed Sun is
+just starting to set (18:25), about an hour before its last limb goes. The release does not say
+which moment it calls sunset, so this neither confirms nor contradicts the computed times.
+Source: https://fireflyspace.com/news/firefly-aerospace-successfully-completes-14-days-of-surface-operations-on-the-moon
 
 **In the browser.** `analyse()` and `rankNearby()` post only the scenario (about 400 bytes) to
 one Web Worker, which loads terrain and ephemeris tables itself. Checked in headless Chromium
@@ -219,3 +271,67 @@ Synthetic checks: a ridge crest outranks the valley floor; a 20 deg wall is reje
 10 deg limit and accepted at 30 deg; candidates without data are rejected as `no-data`.
 Resolution caveat, stated in every candidate's `basis`: slope and skyline rest on 60 m
 grids; metre-scale boulders, craters and slopes are invisible to this scan.
+
+## 6. Extension: geometric opportunities with the DSN stations (`src/analysis/dsn.ts`, task T-21)
+
+For the mission window, `analysis.dsn` gives, per station and for any of the three, the spans in
+which the straight line between the station and the site is open at both ends: the site above
+the station's elevation limit, and the station (its own direction, not Earth's centre) above
+the site's terrain skyline. `dsnAt(analysis, t)` gives the same for one instant, with what is
+in the way. **Geometry only**: no link budget, frequency, antenna pattern, scheduling or
+availability; the stations' own terrain masks are not applied.
+
+**Station facts** (DSN Telecommunications Link Design Handbook, JPL 810-005, Module 301
+"Coverage and Geometry", Rev. N, 15 April 2022,
+https://deepspace.jpl.nasa.gov/dsndocs/810-005/301/301N.pdf):
+
+| Station | Geodetic latitude, longitude, height (Table 5, WGS 84) | Cartesian x, y, z (Table 2, ITRF93, epoch 2003.0), m |
+| --- | --- | --- |
+| DSS 14, 70-m, Goldstone | 35 25 33.24312, 243 6 37.66244, 1001.390 m | -2353621.420, -4641341.472, +3677052.318 |
+| DSS 43, 70-m, Canberra | -35 24 8.72724, 148 58 52.56231, 688.867 m | -4460894.917, +2682361.507, -3674748.152 |
+| DSS 63, 70-m, Madrid | 40 25 52.35510, 355 45 7.16924, 864.816 m | +4849092.518, -360180.3480, +4115109.251 |
+
+JPL Horizons holds the same coordinates for its sites -14, -43 and -63 (checked to its printed
+digits in `src/analysis/dsn.test.ts`), and the two tables describe the same points to 1 cm.
+
+**Elevation limits assumed**, from the same module: section 2.2.3, "generic elevation limits
+for the receive and transmit elevations. These are 6.0 degrees for receive, 10.0 degrees for
+low-power transmit, and 13.5 degrees for high-power transmit"; section 2.2.2, "the mechanical
+elevation limit, which is approximately six degrees"; section 2.2.3.2, the 70 m transmit
+chart uses "a 10.4-degree transmit elevation limit at DSS 14 and a 10.2-degree transmit
+elevation limit at DSS 43 and DSS 63". Used here: receive 6.0 deg; transmit 10.4 / 10.2 / 10.2
+deg. Not used: the azimuth-dependent horizon masks of the module's Figures 11, 18 and 23 (for
+example "a 20.2-degree elevation limit to protect the high ground to the northwest" of DSS 63
+when transmitting), high-power transmit limits, keyholes and cable wrap.
+
+**Check against JPL Horizons** (`src/analysis/__fixtures__/horizons-dsn-check.json`, built by
+`node scripts/fetch-horizons-dsn-check.mjs`: target `g: lonE, lat, alt @ 301`, a point on the
+Moon's surface in MEAN_ME; observers -14@399, -43@399, -63@399; apparent, airless):
+
+| What | Rows | Worst difference |
+| --- | --- | --- |
+| Elevation of the lunar site at the station (Blue Ghost, IM-2 and a west-limb point; 2025-03-06/07 hourly, 2025-03-13 around the limits, 1971-07-31, 2034-09-10) | 1154 | 0.00115 deg |
+| Azimuth (as arc) | 1154 | 0.00128 deg |
+| Rise and set times through 6.0 and 10.2 / 10.4 deg (2025-03-13, Horizons at 1 min) | 24 crossings | 0.27 s |
+
+The geometry takes UT1 = UTC (they differ by at most 0.9 s, so about a second in rise and set
+times in general) and ignores polar motion and the 1.3 s of light-time; no refraction. The
+straight-line distance returned is geometric: Horizons' light-time range differs from it by up
+to about 50 km (37 km from Earth's motion during the light-time, 12 km from the lunar theory).
+
+**Results** (2 m mast, 14 days, real terrain):
+
+| Site | DSS-14 receive / transmit | DSS-43 | DSS-63 | Any station, receive | Any station, transmit | Earth's centre in view |
+| --- | --- | --- | --- | --- | --- | --- |
+| Blue Ghost 1 from 2025-03-02 08:34 | 51.6 % / 48.4 % | 36.0 % / 32.6 % | 54.5 % / 51.1 % | 100 % | 99.42 % (longest gap 0.30 h) | 100 % |
+| IM-2 from 2025-03-06 17:28 | 41.7 % / 39.0 % | 37.9 % / 34.9 % | 42.0 % / 39.2 % | 88.77 % (longest gap 26.4 h, runs into the window edge) | 87.95 % | 88.91 % |
+
+At IM-2 Earth hangs near the skyline, so it matters where on Earth's disc a station sits: seen
+from this south-polar site, Canberra stands about 1 deg higher above the lunar skyline than
+Goldstone or Madrid (its clearance ranges over -0.99..13.29 deg against -1.99..12.28 and
+-1.81..12.17). On a smooth Moon: a far-side site has no opportunity at all; a site at 0 N 0 E
+over 28 days has 43.8-45.1 % per station and 99.83 % for any station (receive).
+
+Cost: about 50 ms added to a 14-day analysis (which then takes 125 ms with a Horizons table).
+Neither Blue Ghost Mission 1 nor IM-2 is claimed here to have used these stations: which
+ground stations the missions used was not looked up.

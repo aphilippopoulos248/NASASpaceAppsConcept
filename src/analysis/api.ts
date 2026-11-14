@@ -9,7 +9,8 @@ import type { TerrainStack } from '../terrain/types';
 import { analyseScenario, nearbyScenario, runAnalysis, runNearbyInSlices } from './engine';
 import type { NearbyProgress } from './nearby';
 import { findBundledTable } from './sky';
-import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, SiteAnalysis, SkyEvent } from './types';
+import { dsnInstant } from './dsn';
+import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, SiteAnalysis, SkyEvent, StationInstant } from './types';
 import * as win from './window';
 import type { WorkerReply, WorkerRequestBody } from './worker';
 
@@ -154,6 +155,16 @@ export function blockageAt(analysis: SiteAnalysis, body: 'sun' | 'earth', timeMs
 /** The next rise and set of each body after an instant, within the analysed window (null when none occurs in it). */
 export function nextEvents(analysis: SiteAnalysis, timeMs: number): Record<SkyEvent['type'], SkyEvent | null> {
   return win.nextEvents(analysis, timeMs);
+}
+
+/**
+ * Extension: each Deep Space Network station at an instant, for an analysed site: the site's
+ * elevation at the station, the station's clearance above the site's skyline, and whether the
+ * straight line is open with the receive / transmit elevation limits. Geometry only, not a link.
+ * The spans over the whole window are in `analysis.dsn`.
+ */
+export function dsnAt(analysis: SiteAnalysis, timeMs: number): StationInstant[] {
+  return dsnInstant(analysis, timeMs);
 }
 
 /** Differences B - A between two analyses, with the headline differences in words. */
