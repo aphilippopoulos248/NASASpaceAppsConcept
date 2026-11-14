@@ -1,0 +1,5 @@
+.locator { position: relative; padding: var(--sp-1); }
+.locator-canvas { display: block; width: 100%; aspect-ratio: 2 / 1; border-radius: var(--radius-sm); cursor: crosshair; touch-action: none; }
+.locator-readout { margin-top: 2px; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.locator-zoom { position: absolute; top: calc(var(--sp-1) + 4px); right: calc(var(--sp-1) + 4px); display: flex; gap: 2px; }
+.locator-zoom .ly-btn { width: 22px; min-height: 22px; padding: 0; background: rgba(0, 0, 0, 0.55); }

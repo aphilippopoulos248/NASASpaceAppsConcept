@@ -3,89 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Moon Landings in 3D</title>
-    <link rel="stylesheet" href="/src/style.css" />
+    <meta name="description" content="Lunyx: pick a place and a date on the Moon, drop to the surface, and see where the Sun and Earth sit against the real skyline." />
+    <title>Lunyx · Lunar landing site navigator</title>
   </head>
-  <body>
-    <canvas id="scene"></canvas>
+  <body data-view="globe">
+    <canvas id="scene" tabindex="0" aria-label="3D Moon globe. Drag or arrow keys to turn, scroll or plus/minus to zoom, click a marker to open a site, click the ground or press Enter to drop a pin at the centre."></canvas>
 
-    <header class="hud title">
-      <h1>Moon Landings</h1>
-      <p id="subtitle">Loading…</p>
-    </header>
-
-    <button class="hud filters-toggle" id="filters-toggle" type="button" aria-expanded="false">Lighting &amp; filters</button>
-    <div class="hud side" id="side">
-      <section class="panel lighting" id="lighting" aria-label="Lighting">
-        <h3>Sunlight</h3>
-        <div class="segmented" id="light-mode">
-          <button type="button" data-mode="real">Real</button>
-          <button type="button" data-mode="even">Even</button>
-        </div>
-        <div class="light-controls">
-          <label class="light-date"><input type="datetime-local" id="light-date" step="60" aria-label="Date and time, UTC" /><span>UTC</span></label>
-          <div class="light-row">
-            <button type="button" id="light-now">Now</button>
-            <button type="button" id="light-play" aria-pressed="false">Play</button>
-            <select id="light-speed" aria-label="Playback speed">
-              <option value="3600">1 hour/s</option>
-              <option value="43200" selected>12 hours/s</option>
-              <option value="259200">3 days/s</option>
-            </select>
-          </div>
-          <p id="light-readout"></p>
-        </div>
-      </section>
-      <aside class="panel filters" id="filters" aria-label="Filters"></aside>
+    <!--
+      Layout frame. Each region is a mount point handed to exactly one module by src/main.ts;
+      modules build their own DOM inside it. data-views lists the views a region shows in.
+    -->
+    <div class="shell" id="shell">
+      <header class="region region-wordmark" data-views="globe"><h1 class="wordmark">LUNYX</h1></header>
+      <button class="ly-btn left-toggle" id="left-toggle" type="button" aria-expanded="false" aria-controls="region-left">Filters</button>
+      <aside class="region region-left" id="region-left" data-views="globe" aria-label="Filters"></aside>
+      <section class="region region-metrics" id="region-metrics" data-views="surface" aria-label="Key metrics"></section>
+      <aside class="region region-card" id="region-card" data-views="globe" aria-label="Selected site"></aside>
+      <div class="region region-close" id="region-close" data-views="surface"></div>
+      <div class="region region-compass" id="region-compass" data-views="globe"></div>
+      <section class="region region-chart" id="region-chart" data-views="surface" aria-label="Skyline chart"></section>
+      <section class="region region-surface-hud" id="region-surface-hud" data-views="surface" aria-label="Surface view"></section>
+      <section class="region region-scrubber" id="region-scrubber" aria-label="Time"></section>
+      <section class="region region-locator" id="region-locator" aria-label="Locator map"></section>
+      <div class="region region-person" id="region-person" data-views="globe"></div>
+      <div class="region region-assistant" id="region-assistant"></div>
+      <aside class="region region-drawer" id="region-drawer" aria-label="Assistant"></aside>
+      <section class="region region-compare" id="region-compare" aria-label="Comparison"></section>
+      <div class="region region-toast" id="region-toast" role="status" aria-live="polite"></div>
     </div>
 
-    <section class="hud timeline" id="timeline" aria-label="Year range"></section>
-
-    <aside class="hud card" id="card" hidden>
-      <button id="card-close" type="button" aria-label="Close and return to the globe">×</button>
-      <div class="card-program"><span class="swatch" id="card-swatch"></span><span id="card-program"></span></div>
-      <h2 id="card-name"></h2>
-      <dl>
-        <dt>Landed</dt><dd id="card-date"></dd>
-        <dt>Country</dt><dd id="card-country"></dd>
-        <dt>Type</dt><dd id="card-type"></dd>
-        <dt>Region</dt><dd id="card-region"></dd>
-        <dt>Coordinates</dt><dd id="card-coords"></dd>
-        <dt>Sun</dt><dd id="card-sun"></dd>
-        <dt>Earth</dt><dd id="card-earth"></dd>
-      </dl>
-      <p id="card-summary"></p>
-      <div class="card-links">
-        <a id="card-quickmap" target="_blank" rel="noopener">Open in QuickMap ↗</a>
-        <a id="card-trek" target="_blank" rel="noopener">Open in Moon Trek ↗</a>
-      </div>
-      <p class="card-credit" id="card-credit"></p>
-      <div class="card-nav">
-        <button id="card-prev" type="button">← Earlier</button>
-        <span id="card-index"></span>
-        <button id="card-next" type="button">Later →</button>
-      </div>
-      <div class="card-actions">
-        <button id="card-landing-light" type="button">Lighting at landing</button>
-        <button id="card-surface" type="button">Surface view</button>
-        <button id="card-globe" type="button">Whole Moon</button>
-      </div>
-    </aside>
-
-    <section class="hud surface-hud" id="surface-hud" aria-label="Surface view">
-      <div class="surface-head">
-        <strong>Surface view</strong>
-        <span id="surface-status"></span>
-        <button id="surface-generated" type="button" aria-pressed="true">Generated detail: on</button>
-        <button id="surface-exit" type="button">Back to orbit</button>
-      </div>
-      <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>E</kbd>/<kbd>Q</kbd> rise and descend · <kbd>Shift</kbd> faster · hold left mouse button to look · scroll to zoom · <kbd>Esc</kbd> to leave</p>
-      <p class="surface-note" id="surface-note"></p>
-    </section>
-
-    <div id="fade"></div>
-    <div id="tooltip" hidden></div>
-    <div id="loading">Loading lunar surface…</div>
+    <div class="loading" id="loading" role="status">Loading lunar surface…</div>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
