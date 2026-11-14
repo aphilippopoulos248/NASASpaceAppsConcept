@@ -99,11 +99,10 @@ in a hub message; do not patch around it. New files go inside your own directori
 | --- | --- |
 | @coordinator | `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig*.json`, `scripts/ensure-deps.mjs`, `docs/lunyx/BRIEF.md`, `docs/lunyx/STATUS.md`, and the contract surface of `src/core/` (`types.ts`, `store.ts`, `bus.ts`, `actions.ts`, `time.ts`: changes go through @coordinator) |
 | @globe (app shell + globe view) | `src/main.ts`, `index.html`, `src/style.css`, `src/styles/**`, `src/core/**` other than the contract files above (core actions, analysis store, scenario helpers, deep links), `vite.config.ts`, `server/plugin.ts`, `src/scene/globe.ts`, `src/scene/markers.ts`, `src/scene/sitePatch.ts`, `src/scene/sky.ts`, `src/scene/globe/**`, `src/ui/globe/**`, `src/ui/shared/**` (time scrubber, locator map, compass), `src/ui/filters.ts`, `src/data/**` |
-| @terrain (elevation data) | `src/terrain/**`, `server/api/terrain.ts`, terrain/texture/heatmap scripts in `scripts/`, `public/data/dem/**`, `public/data/heatmap/**`, `public/terrain/**`, `public/textures/**` |
 | @analysis (ephemeris + analysis) | `src/astro/**`, `src/analysis/**`, `server/api/horizons.ts`, ephemeris scripts in `scripts/`, `public/data/horizons/**`, `public/data/horizons-check.json`, `docs/lunyx/validation.md` |
 | @surface (surface view + compare) | `src/scene/surface.ts`, `src/scene/surface/**`, `src/ui/surface/**`, `src/ui/compare/**` |
 | @assistant (LLM control + QA) | `src/assistant/**`, `src/ui/assistant/**`, `server/api/assistant.ts`, `server/llm/**`, `e2e/**`, `README.md`, `.env.example` |
-| @ice-targets (science layers) | `src/science/**`, `public/data/ice-targets/**`, `scripts/build-ice-targets.py`, `tests/iceTargets.test.ts` |
+| @ice-targets (elevation data + science layers) | `src/terrain/**`, `server/api/terrain.ts`, terrain/texture/heatmap scripts in `scripts/`, `public/data/dem/**`, `public/data/heatmap/**`, `public/terrain/**`, `public/textures/**`, `src/science/**`, `public/data/ice-targets/**`, `public/data/science/**`, `scripts/build-ice-targets.py`, `tests/iceTargets.test.ts` |
 | @ephemeris-check (independent validation) | `tests/fixtures/**`, and nothing in `src/` or `scripts/`: this agent checks other people's numbers and must stay independent of their code |
 
 `src/analysis/types.ts` and `src/terrain/types.ts` are contracts: their owner may add
