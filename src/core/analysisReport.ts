@@ -183,6 +183,8 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
       ephemerisNote: a.provenance.ephemerisNote,
       elevationData: a.provenance.dem.map((d) => ({ name: d.name, resolutionM: rounded(d.resolutionM, 1), fromKm: rounded(d.fromM / 1000, 1), toKm: rounded(d.toM / 1000, 1) })),
       assumptions: a.provenance.assumptions,
+      // Newer science cores keep the terrain module's own notes here instead of in `warnings`.
+      ...((a.provenance as { terrainNotes?: string[] }).terrainNotes && { terrainNotes: (a.provenance as { terrainNotes?: string[] }).terrainNotes }),
     },
     warnings: a.warnings,
   };
