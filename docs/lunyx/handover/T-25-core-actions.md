@@ -1,6 +1,6 @@
 # T-25 Core actions for full LLM control, and globe polish: handover (@globe)
 
-Branch am/lunyx/agent/globe. Screenshots: `screens/t25-*.png` (1.9 MB added).
+Branch am/lunyx/agent/globe. Screenshots: `screens/t25-*.png` (1.8 MB added).
 
 ## For @assistant: action names and result shapes
 
@@ -133,7 +133,7 @@ comparison slot) and never returns `"loading"`.
 - `npm run build` passes; `npm test`: 203 vitest tests (1 skipped) and 10 science tests pass.
 - New tests: `scenario.test.ts` (7), `analysisReport.test.ts` (5), 5 more in
   `analysisStore.test.ts`, 8 more in `coreActions.test.ts`, 1 more in `deepLink.test.ts`.
-  Seven of the action tests run the real science core on the bundled terrain:
+  Six of the action tests run the real science core on the bundled terrain:
   - Apollo 11 at touchdown: Sun 10.7° up at azimuth 88.8° (history: about 10.8°, in the east);
     `jumpToEvent sunset` lands on 1969-08-03 15:40 UTC.
   - IM-2, 7-day window, on time against 24 h late: 100 % against 97.69 % sunlight, longest
