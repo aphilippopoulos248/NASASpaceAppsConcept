@@ -1,5 +1,5 @@
 import {
-  PCFSoftShadowMap,
+  PCFShadowMap,
   PerspectiveCamera,
   Scene,
   Vector3,
@@ -35,7 +35,7 @@ const canvas = $<HTMLCanvasElement>('scene');
 const renderer = new WebGLRenderer({ canvas, antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.shadowMap.enabled = true; // used by the surface view
-renderer.shadowMap.type = PCFSoftShadowMap;
+renderer.shadowMap.type = PCFShadowMap; // the cheaper filter; shadows here are small and sharp anyway
 
 const scene = new Scene();
 const camera = new PerspectiveCamera(40, 1, 0.01, 1200);
@@ -173,6 +173,7 @@ function exitSurface(instant = false) {
   if (!inSurface) return;
   const leave = () => {
     inSurface = false;
+    setResolutionScale(1);
     controls.enabled = true;
     document.body.classList.remove('surface');
     $('card-surface').textContent = 'Surface view';
@@ -419,6 +420,35 @@ function applyFilter(matches: (l: Landing) => boolean) {
   else if (markers.selection) updateCardNav();
 }
 
+// ---------- automatic resolution (surface view) ----------
+// If frames run slow the picture is rendered a little smaller and scaled up, and restored
+// when there is headroom again. Detail in the scene itself is never reduced.
+const BASE_PIXEL_RATIO = Math.min(window.devicePixelRatio, 2);
+let resolutionScale = 1;
+let frameTime = 1 / 60;
+let framesSinceTune = 0;
+let holdUntil = 0;
+
+function setResolutionScale(scale: number) {
+  resolutionScale = scale;
+  renderer.setPixelRatio(BASE_PIXEL_RATIO * scale);
+}
+
+function tuneResolution(dt: number) {
+  // A very long frame means the tab was in the background or stalled, not that rendering is slow.
+  if (dt >= 0.099) return;
+  frameTime += (dt - frameTime) * 0.08;
+  if (++framesSinceTune < 30) return;
+  framesSinceTune = 0;
+  const now = performance.now();
+  if (frameTime > 1 / 50 && resolutionScale > 0.6) {
+    setResolutionScale(Math.max(0.6, resolutionScale - 0.1));
+    holdUntil = now + 5000; // do not climb straight back up
+  } else if (frameTime < 1 / 58 && resolutionScale < 1 && now > holdUntil) {
+    setResolutionScale(Math.min(1, resolutionScale + 0.05));
+  }
+}
+
 // ---------- surface HUD ----------
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
 let hudText = '';
@@ -428,7 +458,9 @@ function updateSurfaceHud() {
   const dist = d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
   const eye = 1.7 + surface.lift;
   const height = eye < 10 ? `${eye.toFixed(1)} m` : `${Math.round(eye)} m`;
-  const text = `Facing ${COMPASS[Math.round(h / 45) % 8]} (${h}°) · ${dist} from the landing point · eye height ${height}`;
+  const fps = Math.round(1 / frameTime);
+  const res = resolutionScale < 1 ? `, ${Math.round(resolutionScale * 100)}% resolution` : '';
+  const text = `Facing ${COMPASS[Math.round(h / 45) % 8]} (${h}°) · ${dist} from the landing point · eye height ${height} · ${fps} fps${res}`;
   if (text !== hudText) $('surface-status').textContent = hudText = text;
 }
 
@@ -467,6 +499,7 @@ renderer.setAnimationLoop((now) => {
       fast: keysDown.has('ShiftLeft') || keysDown.has('ShiftRight'),
     });
     updateSurfaceHud();
+    tuneResolution(dt);
     renderer.render(surface.scene, surface.camera);
     return;
   }
