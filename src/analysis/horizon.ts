@@ -7,8 +7,9 @@
 // above the observer's local horizontal. The Moon's curvature is therefore included.
 import type { LatLon } from '../core/types';
 import { MOON_RADIUS_M } from '../core/types';
-import type { HeightSource, TerrainStack } from '../terrain/types';
+import type { HeightGridDescriptor, HeightSource, TerrainStack } from '../terrain/types';
 import type { DemLayerUse, HorizonProfile, SlopeInfo } from './types';
+import { fastSamplerFor, type UnitSampler } from './fastSample';
 
 const R = MOON_RADIUS_M;
 const RAD = Math.PI / 180;
@@ -24,6 +25,18 @@ export interface HorizonOptions {
   growth?: number;
   /** Marching step as a fraction of the source resolution (default 0.7). */
   resFraction?: number;
+  /** Set false to look every height up through HeightSource.sample() only (slower; for cross-checks). */
+  fast?: boolean;
+}
+
+const samplerCache = new WeakMap<HeightSource, UnitSampler | null>();
+function cachedSampler(source: HeightSource): UnitSampler | null {
+  let f = samplerCache.get(source);
+  if (f === undefined) {
+    f = fastSamplerFor(source);
+    samplerCache.set(source, f);
+  }
+  return f;
 }
 
 /** Point reached from a site after walking `distM` over the sphere towards `azDeg`. */
@@ -39,11 +52,103 @@ export function destination(site: LatLon, azDeg: number, distM: number): LatLon 
 export function sampleStack(stack: TerrainStack, lat: number, lon: number): { h: number; idx: number } {
   const s = stack.sources;
   for (let k = 0; k < s.length; k++) {
-    if (!s[k].covers(lat, lon)) continue;
+    // sample() is NaN wherever the source has no data, so no separate covers() call is needed.
     const h = s[k].sample(lat, lon);
     if (Number.isFinite(h)) return { h, idx: k };
   }
   return { h: NaN, idx: -1 };
+}
+
+// ---------- which sources can matter at which distance ----------
+
+/**
+ * Distances from a site between which a source can have data: nothing nearer than `rMin`,
+ * nothing beyond `rOut`. Used only to skip lookups that cannot succeed; inside the band the
+ * source itself is still asked, so the skyline is identical with or without it.
+ */
+export interface SourceReach {
+  rMin: number;
+  rOut: number;
+}
+
+const ANY_DISTANCE: SourceReach = { rMin: 0, rOut: Infinity };
+
+/** Unit vectors of a site's local frame in Moon-fixed coordinates. */
+function frameOf(lat: number, lon: number) {
+  const la = lat * RAD, lo = lon * RAD;
+  const cl = Math.cos(la), sl = Math.sin(la), co = Math.cos(lo), so = Math.sin(lo);
+  return { up: [cl * co, cl * so, sl], east: [-so, co, 0], north: [-sl * co, -sl * so, cl] };
+}
+
+/** Reach predicted from the grid's description alone (conservative), or null when no simple bound applies. */
+function predictedReach(d: HeightGridDescriptor, site: LatLon): SourceReach | null {
+  if (d.kind === 'equirect') {
+    const whole = d.lonE - d.lonW >= 360 - 1e-9 && d.latN >= 90 - 1e-9 && d.latS <= -90 + 1e-9;
+    return whole ? ANY_DISTANCE : null;
+  }
+  // Both other layouts are squares in a map projection (azimuthal equidistant about the grid
+  // centre; polar stereographic). In both, map distances are never shorter than ground
+  // distances and at most `stretch` times longer inside the region considered.
+  let half: number, x: number, y: number, stretch: number, px: number;
+  if (d.kind === 'local') {
+    half = ((d.n - 1) / 2) * d.spacingM;
+    px = d.spacingM;
+    if (!(half > 0) || half > 0.25 * R) return null;
+    const f = frameOf(d.lat0, d.lon0);
+    const q = frameOf(site.lat, site.lon).up;
+    const ce = q[0] * f.east[0] + q[1] * f.east[1] + q[2] * f.east[2];
+    const cn = q[0] * f.north[0] + q[1] * f.north[1] + q[2] * f.north[2];
+    const cu = q[0] * f.up[0] + q[1] * f.up[1] + q[2] * f.up[2];
+    const t = Math.hypot(ce, cn);
+    const ang = Math.atan2(t, cu);
+    if (ang > 0.5) return { rMin: Math.max(0, (ang - 0.36) * R), rOut: Infinity };
+    const k = t > 1e-15 ? (ang * R) / t : 0;
+    x = ce * k;
+    y = cn * k;
+    const cMax = (Math.hypot(Math.abs(x) + half, Math.abs(y) + half)) / R;
+    stretch = cMax / Math.sin(cMax);
+  } else {
+    half = ((d.size - 1) / 2) * d.metresPerPx;
+    px = d.metresPerPx;
+    const colat = d.pole === 'S' ? 90 + site.lat : 90 - site.lat;
+    if (!(half > 0) || !(colat >= 0 && colat < 60)) return null;
+    const r = 2 * R * Math.tan((colat / 2) * RAD);
+    x = r * Math.sin(site.lon * RAD);
+    y = r * Math.cos(site.lon * RAD);
+    const rhoMax = Math.hypot(Math.abs(x) + half, Math.abs(y) + half);
+    if (rhoMax > 1.8 * R) return null;
+    stretch = 1 + (rhoMax / (2 * R)) ** 2;
+  }
+  const ax = Math.abs(x), ay = Math.abs(y);
+  const margin = 3 * px;
+  const nearest = Math.hypot(Math.max(0, ax - half), Math.max(0, ay - half));
+  const farthest = Math.hypot(ax + half, ay + half);
+  return { rMin: Math.max(0, nearest / stretch - margin), rOut: farthest + margin };
+}
+
+/**
+ * Reach of a source from a site. The prediction from the descriptor is checked against the
+ * source's own covers() at probe points; if they disagree (a synthetic or unusual source),
+ * no pruning is applied to it.
+ */
+export function sourceReach(source: HeightSource, site: LatLon): SourceReach {
+  let r: SourceReach | null;
+  try {
+    r = predictedReach(source.descriptor, site);
+  } catch {
+    r = null;
+  }
+  if (!r || (r.rMin === 0 && r.rOut === Infinity)) return ANY_DISTANCE;
+  const probe = (dist: number, az: number) => {
+    const p = destination(site, az, dist);
+    return source.covers(p.lat, p.lon);
+  };
+  for (let az = 0; az < 360; az += 30) {
+    if (r.rMin > 0 && (probe(r.rMin * 0.98, az + 7) || probe(r.rMin * 0.5, az + 7))) return ANY_DISTANCE;
+    if (Number.isFinite(r.rOut) && r.rOut < 0.9 * Math.PI * R && (probe(r.rOut * 1.02 + 1, az + 7) || probe(r.rOut * 1.5 + 1, az + 7))) return ANY_DISTANCE;
+  }
+  if (r.rMin > 0 && source.covers(site.lat, site.lon)) return ANY_DISTANCE;
+  return r;
 }
 
 /** Skyline elevation at any azimuth, degrees, interpolated between profile samples. */
@@ -83,7 +188,6 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   const distM = new Float32Array(nAz);
   const heightM = new Float32Array(nAz);
   const skylineLayer = new Uint8Array(nAz);
-  const used = sources.map(() => ({ from: Infinity, to: -Infinity }));
 
   const here = sampleStack(stack, site.lat, site.lon);
   const mast = Math.max(0, Number.isFinite(mastHeightM) ? mastHeightM : 0);
@@ -100,61 +204,73 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   const Rmax = R + Math.max(MOON_MAX_HEIGHT_M, h0);
   let gaps = 0;
   let reachedMax = 0;
+  const nSrc = sources.length;
+  const rMin = new Float64Array(nSrc), rOut = new Float64Array(nSrc), resOf = new Float64Array(nSrc);
+  const fast: (UnitSampler | null)[] = [];
+  sources.forEach((src, k) => {
+    const r = sourceReach(src, site);
+    rMin[k] = r.rMin;
+    rOut[k] = r.rOut;
+    resOf[k] = src.resolutionM;
+    fast.push(options.fast === false ? null : cachedSampler(src));
+  });
+  const usedFrom = new Float64Array(nSrc).fill(Infinity), usedTo = new Float64Array(nSrc).fill(-Infinity);
+  const coarsest = resOf[nSrc - 1];
 
   // Local frame at the site (same convention as src/astro/topocentric.ts).
-  const la = site.lat * RAD, lo = site.lon * RAD;
-  const up = [Math.cos(la) * Math.cos(lo), Math.cos(la) * Math.sin(lo), Math.sin(la)];
-  const east = [-Math.sin(lo), Math.cos(lo), 0];
-  const north = [-Math.sin(la) * Math.cos(lo), -Math.sin(la) * Math.sin(lo), Math.cos(la)];
+  const { up, east, north } = frameOf(site.lat, site.lon);
 
   for (let a = 0; a < nAz; a++) {
     const az = a * azStepDeg * RAD;
     const ca = Math.cos(az), sa = Math.sin(az);
     const tx = ca * north[0] + sa * east[0], ty = ca * north[1] + sa * east[1], tz = ca * north[2] + sa * east[2];
-    let best = -Math.PI / 2, bestD = NaN, bestH = NaN, bestIdx = 0;
+    let bestD = NaN, bestH = NaN, bestIdx = 0;
+    // Elevations are compared through their tangents (the horizontal component is always positive).
     let tanBest = -Infinity;
-    let idx = here.idx;
-    let d = resFrac * sources[idx].resolutionM;
+    let d = resFrac * resOf[here.idx];
     while (d <= maxRange) {
       const th = d / R;
       const ct = Math.cos(th), st = Math.sin(th);
       // Stop once the highest possible terrain at this distance would sit below the skyline.
-      const capEl = Math.atan2(Rmax * ct - R0, Rmax * st);
-      if (capEl < best) break;
+      if ((Rmax * ct - R0) / (Rmax * st) < tanBest) break;
       const px = ct * up[0] + st * tx, py = ct * up[1] + st * ty, pz = ct * up[2] + st * tz;
-      const lat = Math.asin(pz > 1 ? 1 : pz < -1 ? -1 : pz) / RAD;
-      const lon = Math.atan2(py, px) / RAD;
-      // Finest source with data here.
+      // Finest source with data here. Latitude and longitude are only worked out if a source needs them.
       let h = NaN;
-      idx = -1;
-      for (let k = 0; k < sources.length; k++) {
-        if (!sources[k].covers(lat, lon)) continue;
-        const v = sources[k].sample(lat, lon);
-        if (Number.isFinite(v)) { h = v; idx = k; break; }
+      let idx = -1;
+      let lat = NaN, lon = NaN;
+      for (let k = 0; k < nSrc; k++) {
+        if (d < rMin[k] || d > rOut[k]) continue;
+        const f = fast[k];
+        let v: number;
+        if (f) v = f(px, py, pz);
+        else {
+          if (lat !== lat) {
+            lat = Math.asin(pz > 1 ? 1 : pz < -1 ? -1 : pz) / RAD;
+            lon = Math.atan2(py, px) / RAD;
+          }
+          v = sources[k].sample(lat, lon);
+        }
+        if (v === v && v !== Infinity && v !== -Infinity) { h = v; idx = k; break; }
       }
       let res: number;
       if (idx < 0) {
         gaps++;
-        res = sources[sources.length - 1].resolutionM;
+        res = coarsest;
       } else {
-        res = sources[idx].resolutionM;
-        const u = used[idx];
-        if (d < u.from) u.from = d;
-        if (d > u.to) u.to = d;
+        res = resOf[idx];
+        if (d < usedFrom[idx]) usedFrom[idx] = d;
+        if (d > usedTo[idx]) usedTo[idx] = d;
         const Rh = R + h;
-        const y = Rh * ct - R0, x = Rh * st;
-        // Compare by tan to avoid an atan2 per sample (x > 0 always).
-        const t = y / x;
+        const t = (Rh * ct - R0) / (Rh * st);
         if (t > tanBest) {
           tanBest = t;
-          best = Math.atan(t);
           bestD = d; bestH = h; bestIdx = idx;
         }
       }
       if (d > reachedMax) reachedMax = d;
       d += Math.max(resFrac * res, growth * d);
     }
-    elevDeg[a] = best / RAD;
+    elevDeg[a] = tanBest === -Infinity ? -90 : Math.atan(tanBest) / RAD;
     distM[a] = bestD;
     heightM[a] = bestH;
     skylineLayer[a] = bestIdx;
@@ -162,11 +278,11 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
 
   const layers: DemLayerUse[] = [];
   const layerOf = new Map<number, number>();
-  used.forEach((u, k) => {
-    if (u.to < 0) return;
+  for (let k = 0; k < nSrc; k++) {
+    if (usedTo[k] < 0) continue;
     layerOf.set(k, layers.length);
-    layers.push({ name: sources[k].name, resolutionM: sources[k].resolutionM, fromM: Math.round(u.from), toM: Math.round(u.to) });
-  });
+    layers.push({ name: sources[k].name, resolutionM: sources[k].resolutionM, fromM: Math.round(usedFrom[k]), toM: Math.round(usedTo[k]) });
+  }
   for (let a = 0; a < nAz; a++) skylineLayer[a] = layerOf.get(skylineLayer[a]) ?? 0;
 
   if (gaps > 0) warnings.push(`${gaps} terrain samples had no elevation data in any source; the skyline ignores those points.`);
@@ -176,7 +292,6 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   if (finestNear >= 500) {
     warnings.push(`Only ${Math.round(finestNear)} m elevation data within 30 km of the site: nearby hills and crater rims smaller than about ${Math.round(2 * finestNear)} m across are not resolved, so the near skyline may be too low.`);
   }
-  if (stack.notes.length) warnings.push(...stack.notes);
 
   return {
     site: { lat: site.lat, lon: site.lon },
@@ -194,26 +309,41 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   };
 }
 
+/** The 3 x 3 pattern of points a slope is fitted through: offsets of -half, 0, +half east and north. */
+function slopeStencil(site: LatLon, baselineM: number) {
+  const half = baselineM / 2;
+  const pts: { e: number; n: number; p: LatLon }[] = [];
+  for (let j = -1; j <= 1; j++) {
+    for (let i = -1; i <= 1; i++) {
+      const e = i * half, n = j * half;
+      const dist = Math.hypot(e, n);
+      pts.push({ e, n, p: dist === 0 ? { lat: site.lat, lon: site.lon } : destination(site, Math.atan2(e, n) / RAD, dist) });
+    }
+  }
+  return pts;
+}
+
 /**
  * Terrain slope at a site: least-squares plane through a 3 x 3 pattern of points
  * spaced baselineM / 2 apart (so the slope is measured over `baselineM`), from the
  * finest source that has data at all nine points.
  */
 export function slopeAt(stack: TerrainStack, site: LatLon, baselineM: number): SlopeInfo {
-  const half = baselineM / 2;
-  const offsets: [number, number][] = [];
-  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) offsets.push([i * half, j * half]);
-  const pts = offsets.map(([e, n]) => {
-    const dist = Math.hypot(e, n);
-    return { e, n, p: dist === 0 ? { lat: site.lat, lon: site.lon } : destination(site, Math.atan2(e, n) / RAD, dist) };
-  });
+  const pts = slopeStencil(site, baselineM);
   for (const src of stack.sources) {
-    if (!src.covers(site.lat, site.lon)) continue;
     const z = pts.map(({ p }) => src.sample(p.lat, p.lon));
     if (z.some((v) => !Number.isFinite(v))) continue;
     return slopeFromPlane(pts, z, baselineM, src);
   }
   return { slopeDeg: NaN, aspectDeg: NaN, baselineM, demName: 'no elevation data at this site' };
+}
+
+/** The same slope from one given source only (NaN where it lacks data at any of the nine points). */
+export function slopeOn(source: HeightSource, site: LatLon, baselineM: number): SlopeInfo {
+  const pts = slopeStencil(site, baselineM);
+  const z = pts.map(({ p }) => source.sample(p.lat, p.lon));
+  if (z.some((v) => !Number.isFinite(v))) return { slopeDeg: NaN, aspectDeg: NaN, baselineM, demName: `${source.name}: no data at this point` };
+  return slopeFromPlane(pts, z, baselineM, source);
 }
 
 function slopeFromPlane(pts: { e: number; n: number }[], z: number[], baselineM: number, src: HeightSource): SlopeInfo {
@@ -226,6 +356,7 @@ function slopeFromPlane(pts: { e: number; n: number }[], z: number[], baselineM:
   const g = Math.hypot(gx, gy);
   let aspect = g > 1e-9 ? Math.atan2(-gx, -gy) / RAD : NaN;
   if (aspect < 0) aspect += 360;
-  const note = baselineM < src.resolutionM ? ` (baseline shorter than the ${src.resolutionM} m grid: interpolated)` : '';
-  return { slopeDeg: Math.atan(g) / RAD, aspectDeg: aspect, baselineM, demName: `${src.name}, ${src.resolutionM} m${note}` };
+  const res = Math.round(src.resolutionM * 100) / 100;
+  const note = baselineM < src.resolutionM ? ` (baseline shorter than the ${res} m grid: interpolated)` : '';
+  return { slopeDeg: Math.atan(g) / RAD, aspectDeg: aspect, baselineM, demName: `${src.name}, ${res} m${note}` };
 }

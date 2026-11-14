@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeHorizon, destination, skylineAt, slopeAt } from './horizon';
-import { fnSource, radialSource, readSiteTerrain, stackOf } from './testing';
+import { loadTerrainFor } from '../terrain/api';
+import { fnSource, radialSource, stackOf } from './testing';
 
 const R = 1_737_400;
 const RAD = Math.PI / 180;
@@ -117,7 +118,7 @@ describe('slopeAt', () => {
   });
 });
 
-describe('real terrain: Apollo 15 site window (public/terrain/apollo-15*.bin: LROC NAC 3 m, SLDEM2015 60 m and 480 m)', () => {
+describe('real terrain: Apollo 15 (loadTerrainFor: LROC NAC 3 m window, SLDEM2015 60 m and 480 m windows, LOLA 16 px/deg beyond)', () => {
   // Published: "Two major Apennine massifs tower over the Hadley plain to heights of 4.5 and 3.5 km.
   // These are Mt. Hadley to the northeast and Hadley Delta just south of the landing site"
   // (NASA SP-289, Apollo 15 Preliminary Science Report, p. 5-4). LROC (lroc.im-ldi.com/images/783):
@@ -129,14 +130,17 @@ describe('real terrain: Apollo 15 site window (public/terrain/apollo-15*.bin: LR
     for (let i = bi; i <= Math.round(b / p.azStepDeg); i++) if (p.elevDeg[i] > p.elevDeg[bi]) bi = i;
     return { el: p.elevDeg[bi], az: bi * p.azStepDeg, d: p.distM[bi], rise: p.heightM[bi] - p.siteElevationM };
   };
-  it('Mons Hadley (NE) and Hadley Delta (S) stand where the published heights and positions put them; < 1 s', async () => {
-    const st = await readSiteTerrain('apollo-15');
+  it('Mons Hadley (NE) and Hadley Delta (S) stand where the published heights and positions put them', async () => {
+    const site = { id: 'apollo-15', name: 'Apollo 15', kind: 'landing' as const, lat: 26.13239, lon: 3.6333 };
+    const st = await loadTerrainFor(site);
+    computeHorizon(st, site, 2); // warm-up, so the timing below is of the march itself
     const t0 = performance.now();
-    const p = computeHorizon(st, st, 2);
+    const p = computeHorizon(st, site, 2);
     const ms = performance.now() - t0;
     const ne = sector(p, 20, 60), s = sector(p, 150, 210);
-    console.log(`apollo-15: ${ms.toFixed(0)} ms; Mons Hadley sector ${JSON.stringify(ne)}; Hadley Delta sector ${JSON.stringify(s)}`);
-    expect(ms).toBeLessThan(1000);
+    console.log(`apollo-15: full profile ${ms.toFixed(0)} ms; Mons Hadley sector ${JSON.stringify(ne)}; Hadley Delta sector ${JSON.stringify(s)}; layers ${p.layers.map((l) => `${Math.round(l.resolutionM)} m: ${(l.fromM / 1000).toFixed(1)}-${(l.toM / 1000).toFixed(1)} km`).join(', ')}`);
+    expect(p.siteElevationM).toBeGreaterThan(-1940);
+    expect(p.siteElevationM).toBeLessThan(-1915);
     // Mons Hadley: 4.0-4.5 km above the plain, ~20 km away, NE.
     expect(ne.rise).toBeGreaterThan(3600);
     expect(ne.rise).toBeLessThan(4700);
@@ -155,5 +159,10 @@ describe('real terrain: Apollo 15 site window (public/terrain/apollo-15*.bin: LR
     expect(s.el).toBeLessThan(16);
     // West, over the mare and Hadley Rille: low skyline.
     expect(sector(p, 240, 300).el).toBeLessThan(4);
+    // The whole-Moon grid takes over beyond the site windows and the search ends well short of the 400 km cap.
+    expect(p.layers.length).toBe(4);
+    expect(p.maxRangeM).toBeGreaterThan(100_000);
+    expect(p.maxRangeM).toBeLessThan(400_000);
+    expect(ms).toBeLessThan(5000);
   });
 });

@@ -141,6 +141,10 @@ export interface Blockage {
   demResolutionM: number;
   /** One or two plain sentences stating the above. */
   explanation: string;
+  /** Fraction of the body's disc above the skyline at that instant, 0..1 (NaN without a skyline). `blocked` is about the centre only. */
+  discVisibleFraction?: number;
+  /** Sun only: fraction of its disc covered by Earth at that instant (an eclipse seen from the site), 0..1. */
+  eclipsedFraction?: number;
 }
 
 export interface SlopeInfo {
@@ -159,6 +163,8 @@ export interface Provenance {
   ephemerisNote: string;
   dem: DemLayerUse[];
   assumptions: string[];
+  /** The terrain module's own sentences about the elevation data at this site: what is loaded, how far each layer reaches, what is missing. */
+  terrainNotes?: string[];
 }
 
 /** Complete analysis of one scenario. */
@@ -201,6 +207,8 @@ export interface NearbyCandidate {
   score: number;
   /** 1 = best; 0 when rejected. */
   rank: number;
+  /** Compass bearing from the scenario's site to this candidate, degrees clockwise from north (NaN for the site itself). */
+  bearingDeg?: number;
   /** True for the scenario's own site (always included, even when over the slope limit). */
   isReference: boolean;
   /** What the skyline and slope rest on and which settings were traded for speed, in words. */
@@ -216,4 +224,6 @@ export interface ComparisonDiff {
   slopeDeg: number;
   /** Most important differences first. */
   highlights: string[];
+  /** How the two sides are named in `highlights` (their labels when short and distinct, otherwise what differs between them). */
+  names?: { a: string; b: string };
 }

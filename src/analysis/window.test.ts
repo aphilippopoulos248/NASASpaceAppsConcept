@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Scenario } from '../core/types';
 import { computeHorizon } from './horizon';
-import { findBundledTable, horizonsEphemeris, modelEphemeris, setBundleReader } from './sky';
-import { fnSource, radialSource, readSiteTerrain, stackOf } from './testing';
-import { analyseWith, blockageAt, compareAnalyses, discVisibility, nextEvents } from './window';
+import { modelEphemeris, setBundleReader } from './sky';
+import { loadTerrainFor } from '../terrain/api';
+import { fnSource, radialSource, stackOf } from './testing';
+import { analyseWith, blockageAt, compareAnalyses, comparisonNames, discOverlap, discVisibility, nextEvents } from './window';
 import { analyseStack } from './api';
 
 setBundleReader(async (p) => readFileSync(join(process.cwd(), 'public', p), 'utf8'));
@@ -115,52 +116,164 @@ describe('analyse on analytic terrain', () => {
   });
 });
 
-describe('real terrain and bundled Horizons windows', () => {
-  it('Apollo 15, 14 days from landing: convergence when the step is halved, runtime', async () => {
-    const st = await readSiteTerrain('apollo-15');
-    const s10 = scen(st.lat, st.lon, '1971-07-30T22:16:00Z', 14 * 24, 10, 2, 'Apollo 15');
-    let t0 = performance.now();
-    const a = analyseWith(s10, st, modelEphemeris(s10.site, -1928 + 2));
+describe('window edges', () => {
+  it('a window that ends between two samples still finds an event in its last partial step', () => {
+    const base = run(scen(0, 0, '2025-01-01T00:00:00Z', 29.53 * 24, 20, 0));
+    const sunset = base.events.find((e) => e.type === 'sunset')!;
+    // 60 min steps; the window ends 20 min after the sunset, 35 min after its last sample.
+    const startMs = sunset.timeMs - 5 * H - 15 * 60_000;
+    const a = run({ ...scen(0, 0, '2025-01-01T00:00:00Z', 5 + 35 / 60, 60, 0), startMs });
+    expect(a.series.n).toBe(6);
+    const found = a.events.find((e) => e.type === 'sunset');
+    expect(found, 'sunset inside the last partial step').toBeDefined();
+    expect(Math.abs(found!.timeMs - sunset.timeMs)).toBeLessThan(30_000);
+    const lastDark = a.metrics.darkIntervals[a.metrics.darkIntervals.length - 1];
+    expect(lastDark.endMs).toBe(startMs + (5 + 35 / 60) * H);
+    expect(lastDark.openEnd).toBe(true);
+    expect(a.metrics.sunAnyPct).toBeGreaterThan(90);
+    expect(a.metrics.sunAnyPct).toBeLessThan(100);
+  });
+  it('percentages and intervals add up to the window', () => {
+    const a = run(scen(0, 89, '2025-03-01T00:00:00Z', 20 * 24 + 7.3, 30, 2));
+    const total = (l: { startMs: number; endMs: number }[]) => l.reduce((x, iv) => x + iv.endMs - iv.startMs, 0);
+    const windowMs = (20 * 24 + 7.3) * H;
+    expect(total(a.metrics.sunIntervals) + total(a.metrics.darkIntervals)).toBeCloseTo(windowMs, -1);
+    expect(total(a.metrics.earthIntervals) + total(a.metrics.earthGapIntervals)).toBeCloseTo(windowMs, -1);
+    expect(a.metrics.earthVisiblePct).toBeCloseTo((100 * total(a.metrics.earthIntervals)) / windowMs, 6);
+  });
+});
+
+describe('disc overlap (Earth in front of the Sun)', () => {
+  it('limits and symmetry', () => {
+    expect(discOverlap(2, 0.27, 0.95)).toBe(0);
+    expect(discOverlap(0.5, 0.27, 0.95)).toBe(1);
+    expect(discOverlap(0.95, 0.27, 0.95)).toBeGreaterThan(0.45);
+    expect(discOverlap(0.95, 0.27, 0.95)).toBeLessThan(0.5);
+    // equal discs, centres one radius apart: 2/3 - sqrt(3)/(2 pi) of the disc
+    expect(discOverlap(1, 1, 1)).toBeCloseTo(2 / 3 - Math.sqrt(3) / (2 * Math.PI), 9);
+    // a smaller covering disc can hide at most its own area
+    expect(discOverlap(0, 1, 0.5)).toBeCloseTo(0.25, 12);
+  });
+});
+
+const landing = (id: string, name: string, lat: number, lon: number) => ({ id, name, kind: 'landing' as const, lat, lon });
+const BLUE_GHOST = landing('blue-ghost-1', 'Blue Ghost Mission 1', 18.562, 61.81);
+const IM2 = landing('im-2', 'IM-2 Athena', -84.79, 29.2);
+const APOLLO15 = landing('apollo-15', 'Apollo 15', 26.13239, 3.6333);
+const scenAt = (site: typeof BLUE_GHOST, start: string, durationH: number, stepMin = 10, mastHeightM = 2, label = site.name): Scenario => ({ id: `${site.id}|${start}|${durationH}|${stepMin}|${mastHeightM}`, label, site, mastHeightM, startMs: Date.parse(start), durationH, stepMin });
+const isoS = (t: number) => `${new Date(t).toISOString().slice(0, 19)}Z`;
+
+describe('real terrain (loadTerrainFor) and bundled Horizons windows', () => {
+  it('Apollo 15, 14 days from landing (model ephemeris): convergence when the step is halved; the 6 August 1971 eclipse is in the window', async () => {
+    const st = await loadTerrainFor(APOLLO15);
+    const s10 = scenAt(APOLLO15, '1971-07-30T22:16:00Z', 14 * 24);
+    const t0 = performance.now();
+    const a = await analyseStack(s10, st);
     const ms = performance.now() - t0;
-    const b = analyseWith({ ...s10, stepMin: 5 }, st, modelEphemeris(s10.site, -1928 + 2));
-    console.log(`apollo-15 14 d: ${ms.toFixed(0)} ms; illum ${a.metrics.illuminationPct.toFixed(3)} vs ${b.metrics.illuminationPct.toFixed(3)}; events ${a.events.map((e) => `${e.type} ${new Date(e.timeMs).toISOString()}`).join(', ')}`);
+    const b = await analyseStack({ ...s10, stepMin: 5 }, st);
+    expect(a.series.source).toBe('model');
+    const dark = a.metrics.darkIntervals.find((iv) => isoS(iv.startMs).startsWith('1971-08-06'));
+    console.log(`apollo-15 14 d: ${ms.toFixed(0)} ms; illumination ${a.metrics.illuminationPct.toFixed(3)} % at 10 min vs ${b.metrics.illuminationPct.toFixed(3)} % at 5 min; events ${a.events.map((e) => `${e.type} ${isoS(e.timeMs)}`).join(', ')}; Sun behind Earth ${dark ? `${isoS(dark.startMs)} to ${isoS(dark.endMs)}` : 'never'}`);
     expect(Math.abs(a.metrics.illuminationPct - b.metrics.illuminationPct)).toBeLessThan(0.1);
     expect(Math.abs(a.metrics.sunAnyPct - b.metrics.sunAnyPct)).toBeLessThan(0.05);
     expect(a.events.length).toBe(b.events.length);
     a.events.forEach((e, i) => expect(Math.abs(e.timeMs - b.events[i].timeMs)).toBeLessThan(60_000));
-    expect(ms).toBeLessThan(3000);
-    t0 = performance.now();
-    void t0;
+    // Total lunar eclipse of 1971 August 6 (umbral phase roughly 17:55 to 21:32 UT): a site near the middle of the
+    // disc is inside the umbra for the middle part of that span.
+    expect(dark).toBeDefined();
+    expect(dark!.startMs).toBeGreaterThan(Date.parse('1971-08-06T17:55:00Z'));
+    expect(dark!.endMs).toBeLessThan(Date.parse('1971-08-06T21:33:00Z'));
+    expect((dark!.endMs - dark!.startMs) / H).toBeGreaterThan(2);
+    // Sunset over the real skyline on the 13th; Earth stays up (near side).
+    expect(a.events.map((e) => e.type)).toEqual(['sunset']);
+    expect(isoS(a.events[0].timeMs).slice(0, 13)).toBe('1971-08-13T11');
+    expect(a.metrics.earthVisiblePct).toBe(100);
+    // Provenance: the terrain module's notes are kept; the purely descriptive one is not repeated as a warning.
+    expect(a.provenance.terrainNotes!.some((n) => /finest first/.test(n))).toBe(true);
+    expect(a.warnings.some((n) => /finest first/.test(n))).toBe(false);
+    expect(a.warnings.some((n) => /whole-Moon grid/.test(n))).toBe(true);
+    expect(a.slope.baselineM).toBe(10);
+    expect(a.slope.slopeDeg).toBeGreaterThan(0);
+    expect(a.slope.slopeDeg).toBeLessThan(10);
   });
 
-  for (const [id, label, start] of [['blue-ghost-1', 'Blue Ghost Mission 1', '2025-03-02T08:34:00Z'], ['im-2', 'IM-2 Athena', '2025-03-06T17:28:00Z']] as const) {
-    it(`${label}: bundled Horizons table drives the series; metrics`, async () => {
-      const st = await readSiteTerrain(id);
-      const s = scen(st.lat, st.lon, start, 14 * 24, 10, 2, label);
-      const t0 = performance.now();
-      const a = await analyseStack(s, st);
-      const ms = performance.now() - t0;
-      expect(a.series.source).toBe('horizons');
-      expect(a.provenance.ephemerisNote).toMatch(/Horizons/);
-      const m = a.metrics;
-      console.log(`${label}: ${ms.toFixed(0)} ms; illum ${m.illuminationPct.toFixed(1)} %, sunAny ${m.sunAnyPct.toFixed(1)} %, longest dark ${m.longestDarknessH.toFixed(1)} h${m.darknessOpenEnded ? ' (open)' : ''}, Earth ${m.earthVisiblePct.toFixed(1)} %, longest gap ${m.longestEarthGapH.toFixed(1)} h${m.earthGapOpenEnded ? ' (open)' : ''}, sun el ${m.minSunElDeg.toFixed(2)}..${m.maxSunElDeg.toFixed(2)}, slope ${a.slope.slopeDeg.toFixed(1)} deg / ${a.slope.baselineM} m; events ${a.events.length}; layers ${a.horizon.layers.map((l) => l.name).join(' | ')}`);
-      // model ephemeris for the same scenario gives practically the same metrics
-      const b = analyseWith(s, st, modelEphemeris(s.site, a.horizon.siteElevationM + 2));
-      expect(Math.abs(b.metrics.illuminationPct - m.illuminationPct)).toBeLessThan(0.2);
-      expect(Math.abs(b.metrics.earthVisiblePct - m.earthVisiblePct)).toBeLessThan(0.2);
-      void horizonsEphemeris; void findBundledTable;
-      if (id === 'blue-ghost-1') {
-        // 2025-03-14 total lunar eclipse = Earth hides the Sun as seen from the Moon (umbral phase about 05:09-08:48 UTC, totality 06:26-07:31 UTC on Earth's side).
-        const ecl = m.eclipseIntervals.find((iv) => new Date(iv.startMs).toISOString().startsWith('2025-03-14'));
-        expect(ecl).toBeDefined();
-        const dark = m.darkIntervals.find((iv) => iv.startMs < Date.parse('2025-03-14T07:00:00Z') && iv.endMs > Date.parse('2025-03-14T07:00:00Z'));
-        expect(dark).toBeDefined();
-        console.log(`Blue Ghost eclipse: Earth overlaps the Sun ${new Date(ecl!.startMs).toISOString()} - ${new Date(ecl!.endMs).toISOString()}; Sun fully hidden ${new Date(dark!.startMs).toISOString()} - ${new Date(dark!.endMs).toISOString()}`);
-        expect(m.sunAnyPct).toBeLessThan(100);
-        expect(a.warnings.join(' ')).toMatch(/Earth passes in front of the Sun/);
-      }
-    });
-  }
+  it('Blue Ghost Mission 1, 15 days from landing: Horizons table, the 14 March 2025 eclipse, sunset on 16 March', async () => {
+    const st = await loadTerrainFor(BLUE_GHOST);
+    const s = scenAt(BLUE_GHOST, '2025-03-02T08:34:00Z', 15 * 24);
+    const t0 = performance.now();
+    const a = await analyseStack(s, st);
+    const ms = performance.now() - t0;
+    const m = a.metrics;
+    expect(a.series.source).toBe('horizons');
+    expect(a.provenance.ephemerisNote).toMatch(/Horizons/);
+    const ecl = m.eclipseIntervals.find((iv) => isoS(iv.startMs).startsWith('2025-03-14'))!;
+    const dark = m.darkIntervals.find((iv) => iv.startMs < Date.parse('2025-03-14T07:00:00Z') && iv.endMs > Date.parse('2025-03-14T07:00:00Z'))!;
+    const sunset = a.events.find((e) => e.type === 'sunset')!;
+    console.log(`Blue Ghost 15 d: ${ms.toFixed(0)} ms; illumination ${m.illuminationPct.toFixed(2)} %, any Sun ${m.sunAnyPct.toFixed(2)} %, Earth ${m.earthVisiblePct.toFixed(1)} %; Earth overlaps the Sun ${isoS(ecl.startMs)} to ${isoS(ecl.endMs)}; Sun fully hidden ${isoS(dark.startMs)} to ${isoS(dark.endMs)}; sunset (last limb) ${isoS(sunset.timeMs)} at azimuth ${sunset.azDeg.toFixed(1)}; skyline ${Math.min(...a.horizon.elevDeg).toFixed(2)}..${Math.max(...a.horizon.elevDeg).toFixed(2)} deg; slope ${a.slope.slopeDeg.toFixed(2)} deg over ${a.slope.baselineM} m`);
+    // The independent Horizons fixture (tests/fixtures/horizons/ephemeris-check, 10 min samples) has the discs
+    // overlapping in its samples from 05:10 to 09:50 and the Sun wholly behind Earth from 06:20 to 08:30.
+    expect(ecl.startMs).toBeGreaterThan(Date.parse('2025-03-14T05:00:00Z'));
+    expect(ecl.startMs).toBeLessThan(Date.parse('2025-03-14T05:10:00Z'));
+    expect(ecl.endMs).toBeGreaterThan(Date.parse('2025-03-14T09:50:00Z'));
+    expect(ecl.endMs).toBeLessThan(Date.parse('2025-03-14T10:00:00Z'));
+    expect(dark.startMs).toBeGreaterThan(Date.parse('2025-03-14T06:10:00Z'));
+    expect(dark.startMs).toBeLessThan(Date.parse('2025-03-14T06:20:00Z'));
+    expect(dark.endMs).toBeGreaterThan(Date.parse('2025-03-14T08:30:00Z'));
+    expect(dark.endMs).toBeLessThan(Date.parse('2025-03-14T08:40:00Z'));
+    expect(a.warnings.join(' ')).toMatch(/Earth passes in front of the Sun/);
+    // Sunset over the real skyline comes before the smooth-sphere time (centre at the horizontal about 20:11 UTC).
+    expect(sunset.timeMs).toBeGreaterThan(Date.parse('2025-03-16T18:30:00Z'));
+    expect(sunset.timeMs).toBeLessThan(Date.parse('2025-03-16T20:45:00Z'));
+    expect(m.earthVisiblePct).toBe(100);
+    // The model ephemeris gives practically the same answer as the Horizons table.
+    const b = analyseWith(s, st, modelEphemeris(s.site, a.horizon.siteElevationM + 2));
+    expect(Math.abs(b.metrics.illuminationPct - m.illuminationPct)).toBeLessThan(0.05);
+    expect(Math.abs(b.events[0].timeMs - sunset.timeMs)).toBeLessThan(60_000);
+    // What the blocking-ridge explanation says during and around the eclipse.
+    const total = blockageAt(a, 'sun', Date.parse('2025-03-14T07:00:00Z'));
+    expect(total.blocked).toBe(false);
+    expect(total.eclipsedFraction).toBe(1);
+    expect(total.explanation).toMatch(/covers it completely/);
+    const partial = blockageAt(a, 'sun', Date.parse('2025-03-14T05:40:00Z'));
+    expect(partial.eclipsedFraction).toBeGreaterThan(0.3);
+    expect(partial.eclipsedFraction).toBeLessThan(0.7);
+    expect(partial.explanation).toMatch(/covers about \d+ % of it/);
+    const after = blockageAt(a, 'sun', sunset.timeMs + 5 * 60_000);
+    expect(after.blocked).toBe(true);
+    expect(after.discVisibleFraction).toBe(0);
+    expect(after.explanation).toMatch(/hidden by/);
+    expect(after.ridgeDistanceM).toBeGreaterThan(0);
+  });
+
+  it('IM-2 Athena, 14 days from landing: Horizons table, low Sun, Earth near the skyline', async () => {
+    const st = await loadTerrainFor(IM2);
+    const s = scenAt(IM2, '2025-03-06T17:28:00Z', 14 * 24);
+    const t0 = performance.now();
+    const a = await analyseStack(s, st);
+    const ms = performance.now() - t0;
+    const m = a.metrics;
+    console.log(`IM-2 14 d: ${ms.toFixed(0)} ms; illumination ${m.illuminationPct.toFixed(2)} %, any Sun ${m.sunAnyPct.toFixed(2)} %, longest darkness ${m.longestDarknessH.toFixed(1)} h${m.darknessOpenEnded ? ' (open)' : ''}, Earth ${m.earthVisiblePct.toFixed(2)} %, longest gap ${m.longestEarthGapH.toFixed(1)} h${m.earthGapOpenEnded ? ' (open)' : ''}; Sun elevation ${m.minSunElDeg.toFixed(2)}..${m.maxSunElDeg.toFixed(2)}; skyline ${Math.min(...a.horizon.elevDeg).toFixed(2)}..${Math.max(...a.horizon.elevDeg).toFixed(2)} deg; events ${a.events.map((e) => `${e.type} ${isoS(e.timeMs)}`).join(', ')}; layers ${a.horizon.layers.map((l) => `${Math.round(l.resolutionM)} m ${(l.fromM / 1000).toFixed(1)}-${(l.toM / 1000).toFixed(1)} km`).join(', ')}`);
+    expect(a.series.source).toBe('horizons');
+    expect(m.maxSunElDeg).toBeLessThan(6);
+    expect(m.illuminationPct).toBeGreaterThan(85);
+    expect(m.illuminationPct).toBeLessThan(97);
+    expect(m.earthVisiblePct).toBeGreaterThan(80);
+    expect(m.earthVisiblePct).toBeLessThan(95);
+    expect(a.events.some((e) => e.type === 'earthset')).toBe(true);
+    expect(a.events.some((e) => e.type === 'sunset')).toBe(true);
+    // South-polar layers are in the skyline, and the whole-Moon grid closes it.
+    expect(a.horizon.layers.some((l) => /160 m/.test(l.name) || Math.round(l.resolutionM) === 160)).toBe(true);
+    const b = analyseWith(s, st, modelEphemeris(s.site, a.horizon.siteElevationM + 2));
+    expect(Math.abs(b.metrics.illuminationPct - m.illuminationPct)).toBeLessThan(0.2);
+    expect(Math.abs(b.metrics.earthVisiblePct - m.earthVisiblePct)).toBeLessThan(0.2);
+    // At an Earth event the explanation says how much of the disc still shows.
+    const es = a.events.find((e) => e.type === 'earthset')!;
+    const blk = blockageAt(a, 'earth', es.timeMs);
+    expect(Math.abs(blk.clearanceDeg)).toBeLessThan(0.02);
+    expect(blk.discVisibleFraction).toBeGreaterThan(0.3);
+    expect(blk.discVisibleFraction).toBeLessThan(0.7);
+    expect(blk.explanation).toMatch(/of Earth's disc is above the skyline/);
+  });
 });
 
 describe('blockageAt, nextEvents, compareAnalyses', () => {
@@ -174,6 +287,8 @@ describe('blockageAt, nextEvents, compareAnalyses', () => {
     expect(b.ridgeDistanceM).toBeGreaterThan(6000);
     expect(b.ridgeDistanceM).toBeLessThan(10000);
     expect(b.demName).toBe('bowl');
+    expect(b.discVisibleFraction).toBe(0);
+    expect(b.eclipsedFraction).toBe(0);
     expect(b.explanation).toMatch(/hidden by \d+\.\d\d deg/);
     expect(b.explanation).toContain(b.skylineElDeg.toFixed(2));
     // Outside the window the model is used.
@@ -192,14 +307,49 @@ describe('blockageAt, nextEvents, compareAnalyses', () => {
     const d = compareAnalyses(lit, far);
     expect(d.earthVisiblePct).toBeCloseTo(far.metrics.earthVisiblePct - lit.metrics.earthVisiblePct, 9);
     expect(d.highlights.length).toBeGreaterThan(0);
+    expect(d.names).toEqual({ a: 'Site A', b: 'Site B' });
     expect(d.highlights.join(' ')).toMatch(/Site B/);
     const same = compareAnalyses(lit, lit);
     expect(same.highlights[0]).toMatch(/practically the same/);
   });
-  it('+24 h delayed arrival at the same site', () => {
-    const a = run(scen(0, 0, '2025-01-05T00:00:00Z', 7 * 24, 10, 2, 'On time'));
-    const b = run({ ...scen(0, 0, '2025-01-05T00:00:00Z', 7 * 24, 10, 2, '+24 h'), startMs: Date.parse('2025-01-06T00:00:00Z') });
+  it('names the two sides by what differs when the labels do not tell them apart', () => {
+    const base = scen(-84.79, 29.2, '2025-03-06T17:28:00Z', 336, 10, 2, 'IM-2 Athena');
+    base.site.name = 'IM-2 Athena';
+    const later = { ...base, startMs: base.startMs + 24 * H };
+    expect(comparisonNames(base, later)).toEqual({ a: 'the earlier arrival', b: 'the arrival 24 h later' });
+    expect(comparisonNames(later, base)).toEqual({ a: 'the arrival 24 h later', b: 'the earlier arrival' });
+    expect(comparisonNames(base, { ...base, mastHeightM: 10 })).toEqual({ a: 'the 2 m mast', b: 'the 10 m mast' });
+    expect(comparisonNames(base, { ...base, durationH: 720 })).toEqual({ a: 'the 336 h window', b: 'the 720 h window' });
+    expect(comparisonNames(base, { ...later, mastHeightM: 10 })).toEqual({ a: 'the earlier arrival with the 2 m mast', b: 'the arrival 24 h later with the 10 m mast' });
+    expect(comparisonNames(base, { ...base })).toEqual({ a: 'scenario A', b: 'scenario B' });
+    // Long generated labels (as the app builds them) are not pasted into sentences either.
+    const longA = { ...base, label: 'IM-2 Athena, from 2025-03-06 17:28 UTC for 336 h, mast 2 m' };
+    const longB = { ...later, label: 'IM-2 Athena, from 2025-03-07 17:28 UTC for 336 h, mast 2 m, +24 h delay' };
+    expect(comparisonNames(longA, longB).b).toBe('the arrival 24 h later');
+    // Different sites with the same label fall back to the site names, then to coordinates.
+    const other = { ...base, site: { ...base.site, id: 'x', name: 'Ridge pin', lat: -84.8, lon: 29.3 } };
+    expect(comparisonNames(base, other)).toEqual({ a: 'IM-2 Athena', b: 'Ridge pin' });
+    const unnamed = { ...other, site: { ...other.site, name: 'IM-2 Athena' } };
+    expect(comparisonNames(base, unnamed).b).toMatch(/^the site at -84\.8000, 29\.3000$/);
+  });
+  it('+24 h delayed arrival and two mast heights at the same site read naturally', () => {
+    const a = run(scen(0, 0, '2025-01-05T00:00:00Z', 7 * 24, 10, 2, 'Equator'));
+    const b = run({ ...scen(0, 0, '2025-01-05T00:00:00Z', 7 * 24, 10, 2, 'Equator'), startMs: Date.parse('2025-01-06T00:00:00Z') });
     const d = compareAnalyses(a, b);
     expect(Number.isFinite(d.illuminationPct)).toBe(true);
+    expect(d.names).toEqual({ a: 'the earlier arrival', b: 'the arrival 24 h later' });
+    for (const h of d.highlights) {
+      expect(h).not.toMatch(/Equator.*Equator/);
+      expect(h[0]).toBe(h[0].toUpperCase());
+    }
+    expect(d.highlights.join(' ')).toMatch(/The arrival 24 h later|the arrival 24 h later/);
+    const site = { lat: -89.6, lon: 0 };
+    const ring = radialSource('ring', 20, site.lat, site.lon, (dd) => 450 * Math.exp(-(((dd - 20_000) / 1000) ** 2)));
+    const low = run(scen(site.lat, site.lon, '2025-01-01T00:00:00Z', 30 * 24, 30, 2, 'Rim'), stackOf(ring));
+    const high = run(scen(site.lat, site.lon, '2025-01-01T00:00:00Z', 30 * 24, 30, 100, 'Rim'), stackOf(ring));
+    const dm = compareAnalyses(low, high);
+    expect(dm.names).toEqual({ a: 'the 2 m mast', b: 'the 100 m mast' });
+    expect(dm.illuminationPct).toBeGreaterThan(0);
+    expect(dm.highlights[0]).toMatch(/^The 100 m mast gets \d+\.\d percentage points more sunlight than the 2 m mast/);
   });
 });

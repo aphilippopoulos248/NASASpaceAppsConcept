@@ -1,33 +1,30 @@
-// Web Worker for the heavy parts of analyse() and rankNearby(): rebuilds the terrain
-// sources from their plain descriptors, then runs the same code as the inline path.
-import { sourceFromDescriptor } from '../terrain/api';
+// Web Worker for analyse() and rankNearby(). It receives only the scenario (and options),
+// loads terrain and ephemeris tables itself (cached here for later requests) and posts back
+// the result; a scan also posts progress and lets other requests run between slices.
 import type { Scenario } from '../core/types';
-import type { HeightGridDescriptor } from '../terrain/types';
-import type { HorizonsTable } from './sky';
-import type { NearbyOptions } from './types';
-import { runAnalysis, runNearby } from './engine';
+import { analyseScenario, nearbyScenario } from './engine';
+import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from './types';
 
-export interface WorkerRequest {
-  id: number;
-  kind: 'analyse' | 'nearby';
-  scenario: Scenario;
-  descriptors: HeightGridDescriptor[];
-  notes: string[];
-  table: HorizonsTable | null;
-  options?: NearbyOptions;
-}
+export type WorkerRequestBody =
+  | { kind: 'analyse'; scenario: Scenario }
+  | { kind: 'nearby'; scenario: Scenario; options: NearbyOptions };
+export type WorkerRequest = WorkerRequestBody & { id: number };
 
-const post = (m: unknown) => (self as unknown as Worker).postMessage(m);
+export type WorkerReply =
+  | { id: number; result: SiteAnalysis | NearbyCandidate[] }
+  | { id: number; progress: { done: number; total: number } }
+  | { id: number; error: string };
+
+const post = (m: WorkerReply) => (self as unknown as { postMessage(m: WorkerReply): void }).postMessage(m);
 
 self.onmessage = (ev: MessageEvent<WorkerRequest>) => {
-  const { id, kind, scenario, descriptors, notes, table, options } = ev.data;
-  try {
-    const stack = { sources: descriptors.map((d) => sourceFromDescriptor(d)), notes };
-    const result = kind === 'nearby'
-      ? runNearby(scenario, stack, table, options!, (done, total) => post({ id, progress: { done, total } }))
-      : runAnalysis(scenario, stack, table);
-    post({ id, result });
-  } catch (e) {
-    post({ id, error: e instanceof Error ? e.message : String(e) });
-  }
+  const req = ev.data;
+  const work: Promise<SiteAnalysis | NearbyCandidate[]> =
+    req.kind === 'nearby'
+      ? nearbyScenario(req.scenario, req.options, (done, total) => post({ id: req.id, progress: { done, total } }))
+      : analyseScenario(req.scenario);
+  work.then(
+    (result) => post({ id: req.id, result }),
+    (e: unknown) => post({ id: req.id, error: e instanceof Error ? e.message : String(e) }),
+  );
 };
