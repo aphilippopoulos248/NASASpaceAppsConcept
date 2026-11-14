@@ -1,0 +1,86 @@
+/*
+ * Lunyx design tokens. Use these instead of literal sizes and colours.
+ *
+ * Type: two families at most. --font-ui for everything (tabular numerals for data via
+ * .ly-value / --num), --font-display for the wordmark and section headings only.
+ * Scale (rem, 16 px root): 11 / 13 / 15 / 18 / 24 / 32.
+ * Spacing: 4 px grid. Contrast: every text token passes WCAG AA (4.5:1) on --surface-1
+ * composited over black; --text-muted is about 7.9:1, --accent about 8.6:1.
+ */
+:root {
+  --font-ui: 'Inter Variable', Inter, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Space Grotesk Variable', 'Space Grotesk', var(--font-ui);
+
+  --fs-xs: 0.6875rem;   /* 11: captions, legends, units */
+  --fs-sm: 0.8125rem;   /* 13: body in panels, controls */
+  --fs-md: 0.9375rem;   /* 15: emphasised values */
+  --fs-lg: 1.125rem;    /* 18: panel titles */
+  --fs-xl: 1.5rem;      /* 24: card titles */
+  --fs-display: 2rem;   /* 32: wordmark */
+  --lh-tight: 1.2;
+  --lh-body: 1.45;
+  --fw-regular: 400;
+  --fw-medium: 500;
+  --fw-semibold: 600;
+  --tracking-caps: 0.08em;
+
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --sp-6: 32px;
+  --sp-7: 48px;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+
+  /* Colour: dark UI floating over black space. */
+  --bg: #000;
+  --surface-1: rgba(13, 15, 21, 0.86);
+  --surface-2: rgba(255, 255, 255, 0.06);
+  --surface-3: rgba(255, 255, 255, 0.11);
+  --border: rgba(255, 255, 255, 0.14);
+  --border-strong: rgba(255, 255, 255, 0.4);
+  --text: #eef1f6;
+  --text-muted: #a7b0c0;
+  --accent: #8fb8ff;
+  --accent-soft: rgba(143, 184, 255, 0.18);
+  --accent-line: rgba(143, 184, 255, 0.6);
+  --on-accent: #0b1220;
+  --sun: #ffd479;
+  --earth: #6fb4ff;
+  --ok: #6fe3a5;
+  --warn: #ffc56b;
+  --danger: #ff8f85;
+  --focus: #ffd479;
+
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --blur: blur(10px);
+
+  --dur-fast: 120ms;
+  --dur: 240ms;
+  --dur-slow: 420ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Layout */
+  --edge: var(--sp-5);
+  --panel-w: 288px;
+  --z-scene: 0;
+  --z-fade: 1;
+  --z-hud: 2;
+  --z-drawer: 5;
+  --z-tooltip: 6;
+  --z-toast: 7;
+  --z-loading: 8;
+}
+
+@media (max-width: 700px) {
+  :root { --edge: var(--sp-3); --panel-w: calc(100vw - 2 * var(--sp-3)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --dur-fast: 0ms; --dur: 0ms; --dur-slow: 0ms; }
+}
