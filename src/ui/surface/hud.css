@@ -1,0 +1,9 @@
+.surface-hud { padding: var(--sp-2) var(--sp-4); }
+.sh-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-3); }
+.sh-status { color: var(--text-muted); }
+.sh-head > .ly-btn:first-of-type { margin-left: auto; }
+.sh-help { margin-top: var(--sp-1); }
+.sh-note { margin-top: var(--sp-1); }
+@media (max-width: 700px) {
+  .sh-note, .sh-help { display: none; }
+}

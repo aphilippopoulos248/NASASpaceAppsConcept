@@ -1,0 +1,269 @@
+{
+ "fixture": {
+  "sets": 15,
+  "rows": 1008
+ },
+ "problems": [],
+ "geometry": {
+  "sepVsSOT": -0.00004988382404036429,
+  "sunDiam": -0.0004996266338821442,
+  "earthDiam": 0.0009515053570794407,
+  "sunFromSubSolar": 0.00019195482336672624,
+  "earthFromSubEarth": 0.005935740118488926
+ },
+ "baseline": {
+  "centre": {
+   "rows": 1008,
+   "sunElDeg": 0.003415197675438464,
+   "sunAzArcDeg": -0.0033014352054633904,
+   "earthElDeg": 0.2773002275244725,
+   "earthAzArcDeg": -0.0034983798785666385,
+   "worstAt": {
+    "sunEl": "near-north-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "earthEl": "limb-east.epochs-1969-2035 2024-10-14T22:32:00Z",
+    "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+   }
+  },
+  "withParallax": {
+   "rows": 1008,
+   "sunElDeg": -0.0028938550080295222,
+   "sunAzArcDeg": -0.0033014352054633904,
+   "earthElDeg": -0.0034320327061365674,
+   "earthAzArcDeg": -0.0034983798785666385,
+   "worstAt": {
+    "sunEl": "im-2.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "earthEl": "apollo-17.epochs-1969-2035 1974-10-24T06:47:00Z",
+    "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+   }
+  },
+  "subEarthArcDeg": 0.007762667754492395,
+  "subSolarArcDeg": 0.0032399552371297348,
+  "pass": true
+ },
+ "skyAt": {
+  "implemented": true,
+  "rows": 1008,
+  "sunElDeg": -0.0029146846200955867,
+  "sunAzArcDeg": -0.0033461012907555743,
+  "earthElDeg": -0.0035612354709968486,
+  "earthAzArcDeg": -0.0033752560723767596,
+  "worstAt": {
+   "sunEl": "im-2.epochs-1969-2035 1972-12-11T19:54:00Z",
+   "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+   "earthEl": "apollo-17.epochs-1969-2035 1974-10-24T06:47:00Z",
+   "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+  },
+  "extra": {
+   "sunRadius": -0.000012202165985297775,
+   "earthRadius": 0.00003490794408800291,
+   "sunRange": 0.0000119558236431061,
+   "earthRange": -0.00003484600776104685,
+   "lit": 0.00662311728969911,
+   "subEarth": 0.007575414349292902,
+   "subSolar": 0.0032909425898625558
+  },
+  "sources": {
+   "model": 1008
+  },
+  "perSet": {
+   "blue-ghost-1.surface-2025-03": {
+    "rows": 352,
+    "sunElDeg": 0.0018294423870912624,
+    "sunAzArcDeg": 0.0009484253926925483,
+    "earthElDeg": 0.0022748988925478386,
+    "earthAzArcDeg": 0.0014500731647611516,
+    "worstAt": {
+     "sunEl": "blue-ghost-1.surface-2025-03 2025-03-11T12:00:00Z",
+     "sunAz": "blue-ghost-1.surface-2025-03 2025-03-02T23:00:00Z",
+     "earthEl": "blue-ghost-1.surface-2025-03 2025-03-17T00:00:00Z",
+     "earthAz": "blue-ghost-1.surface-2025-03 2025-03-17T00:00:00Z"
+    }
+   },
+   "blue-ghost-1.eclipse-2025-03-14": {
+    "rows": 49,
+    "sunElDeg": 0.001756974305592962,
+    "sunAzArcDeg": 0.0008907118741639385,
+    "earthElDeg": 0.0021186603027665285,
+    "earthAzArcDeg": 0.0008675966886564537,
+    "worstAt": {
+     "sunEl": "blue-ghost-1.eclipse-2025-03-14 2025-03-14T03:00:00Z",
+     "sunAz": "blue-ghost-1.eclipse-2025-03-14 2025-03-14T03:00:00Z",
+     "earthEl": "blue-ghost-1.eclipse-2025-03-14 2025-03-14T11:00:00Z",
+     "earthAz": "blue-ghost-1.eclipse-2025-03-14 2025-03-14T11:00:00Z"
+    }
+   },
+   "im-2.surface-2025-03": {
+    "rows": 247,
+    "sunElDeg": -0.0016667970529926635,
+    "sunAzArcDeg": 0.0013795013908133526,
+    "earthElDeg": -0.0020448417021812215,
+    "earthAzArcDeg": 0.0017832638321107176,
+    "worstAt": {
+     "sunEl": "im-2.surface-2025-03 2025-03-11T08:00:00Z",
+     "sunAz": "im-2.surface-2025-03 2025-03-15T04:00:00Z",
+     "earthEl": "im-2.surface-2025-03 2025-03-17T00:00:00Z",
+     "earthAz": "im-2.surface-2025-03 2025-03-16T08:00:00Z"
+    }
+   },
+   "apollo-11.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": 0.002746971887752636,
+    "sunAzArcDeg": -0.0027759154886727528,
+    "earthElDeg": -0.0032170058023410775,
+    "earthAzArcDeg": -0.002987839818491782,
+    "worstAt": {
+     "sunEl": "apollo-11.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "sunAz": "apollo-11.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "apollo-11.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthAz": "apollo-11.epochs-1969-2035 1972-12-11T19:54:00Z"
+    }
+   },
+   "apollo-17.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": 0.002730066011025656,
+    "sunAzArcDeg": -0.003279642854793263,
+    "earthElDeg": -0.0035612354709968486,
+    "earthAzArcDeg": -0.0033752560723767596,
+    "worstAt": {
+     "sunEl": "apollo-17.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "sunAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "apollo-17.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+    }
+   },
+   "blue-ghost-1.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": 0.0024689349583937314,
+    "sunAzArcDeg": -0.0033461012907555743,
+    "earthElDeg": -0.003395614706420247,
+    "earthAzArcDeg": -0.003254026216670542,
+    "worstAt": {
+     "sunEl": "blue-ghost-1.epochs-1969-2035 1995-11-09T00:47:00Z",
+     "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "blue-ghost-1.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z"
+    }
+   },
+   "im-2.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0029146846200955867,
+    "sunAzArcDeg": -0.0027682753758363856,
+    "earthElDeg": -0.0030402642380087386,
+    "earthAzArcDeg": -0.0027709155533224093,
+    "worstAt": {
+     "sunEl": "im-2.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "sunAz": "im-2.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "im-2.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "im-2.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "change-4.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0023777944029337306,
+    "sunAzArcDeg": 0.0033325286181890143,
+    "earthElDeg": -0.003057547691774687,
+    "earthAzArcDeg": -0.002778300864381107,
+    "worstAt": {
+     "sunEl": "change-4.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "sunAz": "change-4.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "change-4.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "change-4.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "north-pole.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": 0.0027491879749204085,
+    "sunAzArcDeg": 0.0027289375210417595,
+    "earthElDeg": 0.0029746745057748214,
+    "earthAzArcDeg": 0.002667842108722681,
+    "worstAt": {
+     "sunEl": "north-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "sunAz": "north-pole.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "north-pole.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "north-pole.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "south-pole.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0027491836499838884,
+    "sunAzArcDeg": -0.002728938215135674,
+    "earthElDeg": -0.0029844408199037886,
+    "earthAzArcDeg": -0.002670228322135542,
+    "worstAt": {
+     "sunEl": "south-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "sunAz": "south-pole.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "south-pole.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "south-pole.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "near-north-pole.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": 0.0027533138214394515,
+    "sunAzArcDeg": 0.0027328196192402026,
+    "earthElDeg": 0.002964208479522057,
+    "earthAzArcDeg": 0.0026498145644802537,
+    "worstAt": {
+     "sunEl": "near-north-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "sunAz": "near-north-pole.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "near-north-pole.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "near-north-pole.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "near-south-pole.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.002733543788269066,
+    "sunAzArcDeg": -0.0027255469434351314,
+    "earthElDeg": -0.0029764666854914523,
+    "earthAzArcDeg": -0.0026564578968597302,
+    "worstAt": {
+     "sunEl": "near-south-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "sunAz": "near-south-pole.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "near-south-pole.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "near-south-pole.epochs-1969-2035 1974-10-24T06:47:00Z"
+    }
+   },
+   "limb-east.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0026633968190736823,
+    "sunAzArcDeg": -0.0028376160583347453,
+    "earthElDeg": -0.002679581439080092,
+    "earthAzArcDeg": 0.0029767309077226743,
+    "worstAt": {
+     "sunEl": "limb-east.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "sunAz": "limb-east.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "limb-east.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthAz": "limb-east.epochs-1969-2035 2014-04-08T01:32:00Z"
+    }
+   },
+   "limb-west.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0022848315957233467,
+    "sunAzArcDeg": -0.0027975884273784704,
+    "earthElDeg": 0.003518335122477012,
+    "earthAzArcDeg": 0.0033676785018294233,
+    "worstAt": {
+     "sunEl": "limb-west.epochs-1969-2035 1995-11-09T00:47:00Z",
+     "sunAz": "limb-west.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthEl": "limb-west.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "earthAz": "limb-west.epochs-1969-2035 1972-12-11T19:54:00Z"
+    }
+   },
+   "antimeridian.epochs-1969-2035": {
+    "rows": 30,
+    "sunElDeg": -0.0027314059751493147,
+    "sunAzArcDeg": 0.0027414235063147087,
+    "earthElDeg": 0.0027239456984204935,
+    "earthAzArcDeg": 0.003336085286377273,
+    "worstAt": {
+     "sunEl": "antimeridian.epochs-1969-2035 1974-10-24T06:47:00Z",
+     "sunAz": "antimeridian.epochs-1969-2035 1972-12-11T19:54:00Z",
+     "earthEl": "antimeridian.epochs-1969-2035 2014-04-08T01:32:00Z",
+     "earthAz": "antimeridian.epochs-1969-2035 1972-12-11T19:54:00Z"
+    }
+   }
+  },
+  "pass": true
+ }
+}
