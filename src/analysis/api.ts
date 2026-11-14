@@ -107,6 +107,11 @@ function offThread<T extends SiteAnalysis | NearbyCandidate[]>(request: WorkerRe
 
 // ---------- analysis ----------
 
+/** True when the terrain module reported that a file or an on-request window could not be obtained. */
+function terrainIncomplete(a: SiteAnalysis): boolean {
+  return (a.provenance.terrainNotes ?? []).some((note) => /could not/i.test(note));
+}
+
 const cache = new Map<string, Promise<SiteAnalysis>>();
 const CACHE_MAX = 32;
 
@@ -125,9 +130,15 @@ export function analyse(scenario: Scenario): Promise<SiteAnalysis> {
     cache.set(key, p);
   } else {
     p = offThread<SiteAnalysis>({ kind: 'analyse', scenario }, () => analyseScenario(scenario));
-    p.catch(() => {
-      if (cache.get(key) === p) cache.delete(key);
-    });
+    const mine = p;
+    const forget = () => {
+      if (cache.get(key) === mine) cache.delete(key);
+    };
+    // A failure is not remembered, and neither is a result computed while some elevation data could not be
+    // fetched (the terrain module says so in its notes): asking again should get the chance to do better.
+    p.then((a) => {
+      if (terrainIncomplete(a)) forget();
+    }, forget);
     cache.set(key, p);
     if (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value as string);
   }

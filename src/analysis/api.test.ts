@@ -76,6 +76,31 @@ describe('analyse() entry point', () => {
   });
 });
 
+describe('analyse() and elevation data that could not be fetched', () => {
+  it('such a result is returned with its warning but not remembered, so a later call can do better', async () => {
+    const { setTerrainWindowFetcher, clearTerrainCache } = await import('../terrain/api');
+    const s: Scenario = { id: 'pin', label: 'Pin', site: { id: 'pin:10.00000,100.00000', name: 'Pin', kind: 'custom', lat: 10, lon: 100 }, mastHeightM: 2, startMs: Date.parse('2026-01-01T00:00:00Z'), durationH: 24, stepMin: 30 };
+    let calls = 0;
+    try {
+      clearTerrainCache();
+      setTerrainWindowFetcher(async () => {
+        calls++;
+        throw new Error('offline');
+      });
+      const first = await analyse(s);
+      expect(first.warnings.join(' ')).toMatch(/could not build a 60 m window/);
+      expect(first.provenance.terrainNotes!.join(' ')).toMatch(/offline/);
+      const second = await analyse(s);
+      expect(calls).toBe(2); // asked again: the first result was not kept
+      expect(second.series).not.toBe(first.series);
+      expect(second.metrics.illuminationPct).toBe(first.metrics.illuminationPct);
+    } finally {
+      setTerrainWindowFetcher(undefined);
+      clearTerrainCache();
+    }
+  });
+});
+
 describe('rankNearby() entry point', () => {
   it('scans in slices with progress, includes the reference, and remembers the result', async () => {
     const s = bg('2025-03-02T08:34:00Z', 72);
