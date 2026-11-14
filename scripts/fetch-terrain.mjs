@@ -9,7 +9,7 @@
 // Output, per site, in public/terrain/:
 //   <id>.bin   Float32 heights in metres above the 1737.4 km sphere:
 //              an inner grid (fine) followed by an outer grid (coarse)
-//   index.json grid sizes and spacings
+//   index.json grid sizes and spacings, and for each site the centre (lat, lon) its window was built for
 //
 // Each grid is square, centred on the site, with x east and y north; a sample
 // at (east, north) metres is the point reached by walking that far over the sphere.
@@ -163,6 +163,8 @@ const exists = (p) => access(p).then(() => true, () => false);
 const { landings } = JSON.parse(await readFile(join(ROOT, 'public/data/landings.json'), 'utf8'));
 await mkdir(OUT, { recursive: true });
 
+// Keep what later steps added to an existing index (the "fine" entries of fetch-apollo-terrain).
+const previous = (await exists(join(OUT, 'index.json'))) ? JSON.parse(await readFile(join(OUT, 'index.json'), 'utf8')).sites ?? {} : {};
 const index = { radius: R, size: N, levels: LEVELS, sites: {} };
 for (const site of landings) {
   const dest = join(OUT, `${site.id}.bin`);
@@ -181,7 +183,8 @@ for (const site of landings) {
   const centre = data[((N - 1) / 2) * N + (N - 1) / 2];
   let lo = Infinity, hi = -Infinity;
   for (const v of data) { lo = Math.min(lo, v); hi = Math.max(hi, v); }
-  index.sites[site.id] = { source: src.name, height: Math.round(centre) };
+  // lat/lon record the centre this window was built for (the loaders place the grid from them).
+  index.sites[site.id] = { ...previous[site.id], lat: site.lat, lon: site.lon, source: src.name, height: Math.round(centre) };
   console.log(`${site.id.padEnd(14)} site ${centre.toFixed(0).padStart(6)} m   range ${lo.toFixed(0)} .. ${hi.toFixed(0)} m   (${src.name})`);
 }
 await writeFile(join(OUT, 'index.json'), JSON.stringify(index, null, 1) + '\n');
