@@ -48,8 +48,36 @@ meridian; this matches Horizons' azimuths at lon 0 to < 0.003 deg (26 instants).
 Tests: `src/analysis/sky.test.ts` (fails above 0.01 deg to 2035 and 0.03 deg after).
 Development table with live (cached) queries: `node scripts/compare-topocentric.mjs`.
 
-Independent fixtures from @ephemeris-check (`tests/fixtures/`, task T-18): pending; the
-suite will be extended to run against them as soon as they land.
+### 1a. Independent check (fixture built by @ephemeris-check, task T-18)
+
+`tests/fixtures/horizons/ephemeris-check/` holds 1008 Horizons instants at 12 sites,
+1969-07-20 to 2035-04-23, fetched and verified by a different agent that never touched
+`src/` (its README gives the queries; every row was also reproduced offline with NAIF SPICE
+to 0.000002 deg). `skyAt()` against all 1008 rows, compared the fixture's way (elevation
+directly, azimuth as the arc `|d az| * cos(el)`), with the fixture's own tolerances:
+
+| Quantity | Worst over 1008 rows | Fixture tolerance |
+| --- | --- | --- |
+| Sun elevation / azimuth arc | 0.0029 / 0.0033 deg | 0.01 deg |
+| Earth elevation / azimuth arc | 0.0036 / 0.0034 deg | 0.01 deg |
+| Angular radius, Sun / Earth (relative) | 1.2e-5 / 3.5e-5 | 2e-3 |
+| Distance, Sun / Earth (relative) | 1.2e-5 / 3.5e-5 | 1e-4 |
+| Earth lit fraction | 0.0066 percentage points | 0.5 |
+| Sub-Earth / sub-solar point | 0.0076 / 0.0033 deg | 0.02 deg |
+
+Run: `npx vitest run src/analysis/skyFixtures.test.ts`, or the fixture owner's own checker,
+`node tests/fixtures/horizons/ephemeris-check/check.mjs` (same numbers, PASS). The fixture's
+SPICE sensitivity study puts the floor for any model on the IAU lunar rotation series at
+0.0035 deg, so the residual is the rotation model, not the geometry. The sub-Earth point here
+is the apparent direction of Earth from the Moon's centre (stellar aberration included);
+Horizons' sub-observer point is corrected for light-time only, which accounts for 0.006 deg of
+the 0.0076.
+
+The same fixture also checks the **bundled Horizons tables**: its Blue Ghost surface set
+(352 hourly rows), Blue Ghost eclipse set (49 rows) and IM-2 set (247 rows) are separate
+downloads of the same Horizons quantities for the same sites and heights. The bundled tables
+reproduce them to 0.00005 deg in azimuth/elevation (the tables' rounding) and 1.5e-6 deg in
+angular radius.
 
 ## 2. Bundled Horizons windows (`public/data/horizons/`)
 
