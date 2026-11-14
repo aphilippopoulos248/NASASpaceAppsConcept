@@ -41,6 +41,8 @@ export interface LlmConfig {
   /** A custom API base URL is in use (a proxy or gateway). */
   customBaseUrl: boolean;
   router: string;
+  /** Settings of the optional Jev router (TypeSafe AI); present when its key is configured. */
+  jev?: { apiKey: string; model: string; simpleEffort: Effort; minConfidence: number; timeoutMs: number };
   /** Script name for the scripted test model. */
   script: string;
   /** Every secret value seen, for redaction of anything that leaves the server. */
@@ -125,6 +127,10 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
   const wanted = s.get('LUNYX_LLM_PROVIDER')?.toLowerCase();
   const effortRaw = s.get('LUNYX_LLM_EFFORT')?.toLowerCase() as Effort | undefined;
   const maxTokensRaw = Number(s.get('LUNYX_LLM_MAX_TOKENS'));
+  const typesafeKey = s.get('TYPESAFE_API_KEY');
+  const jevEffort = s.get('LUNYX_JEV_SIMPLE_EFFORT')?.toLowerCase() as Effort | undefined;
+  const jevConfidence = Number(s.get('LUNYX_JEV_MIN_CONFIDENCE'));
+  const jevTimeout = Number(s.get('LUNYX_JEV_TIMEOUT_MS'));
 
   const base = {
     model: s.get('LUNYX_LLM_MODEL') ?? DEFAULT_MODEL,
@@ -134,8 +140,17 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
     sdkCredentials,
     customBaseUrl: Boolean(s.get('ANTHROPIC_BASE_URL')),
     router: (s.get('LUNYX_LLM_ROUTER') ?? 'direct').toLowerCase(),
+    ...(typesafeKey && {
+      jev: {
+        apiKey: typesafeKey,
+        model: s.get('LUNYX_JEV_MODEL') ?? 'jev-latest',
+        simpleEffort: jevEffort && EFFORTS.includes(jevEffort) ? jevEffort : ('low' as Effort),
+        minConfidence: jevConfidence > 0 && jevConfidence <= 1 ? jevConfidence : 0.6,
+        timeoutMs: Number.isInteger(jevTimeout) && jevTimeout >= 200 && jevTimeout <= 30_000 ? jevTimeout : 4000,
+      },
+    }),
     script: s.get('LUNYX_LLM_SCRIPT') ?? 'default',
-    secrets: [apiKey, authToken].filter((v): v is string => Boolean(v)),
+    secrets: [apiKey, authToken, typesafeKey].filter((v): v is string => Boolean(v)),
   };
 
   if (wanted === 'off' || wanted === 'none' || wanted === 'deterministic') {

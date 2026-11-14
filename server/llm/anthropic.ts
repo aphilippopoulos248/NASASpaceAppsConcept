@@ -136,7 +136,7 @@ export function buildParams(cfg: LlmConfig, req: ProviderRequest, opts: { betas:
     cache_control: { type: 'ephemeral' },
     tools: toToolParams(req.tools, !cfg.customBaseUrl),
     messages: toMessageParams(req.messages, opts.stripThinking),
-    output_config: { effort: cfg.effort },
+    output_config: { effort: req.effort ?? cfg.effort },
     thinking: { type: 'adaptive' },
   };
   if (opts.betas) {

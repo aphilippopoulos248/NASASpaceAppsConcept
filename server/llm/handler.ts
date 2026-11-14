@@ -12,10 +12,11 @@
 import { NDJSON_CONTENT_TYPE, type AssistantStatus, type StepEvent, type WireError } from '../../src/assistant/protocol';
 import { AnthropicProvider } from './anthropic';
 import { loadConfig, redact, type LlmConfig } from './env';
+import { createJevRouter } from './jev';
 import { SYSTEM_PROMPT } from './prompt';
 import { assertFullCapability, getRouter, routerIds } from './router';
 import { getScript, scriptNames, ScriptedProvider } from './scripted';
-import type { LlmProvider, ProviderRequest, ProviderSet } from './types';
+import type { LlmProvider, LlmRouter, ProviderRequest, ProviderSet } from './types';
 import { validateStepRequest } from './validate';
 
 /** Structurally the same as ApiRequest / ApiResponse in server/plugin.ts. */
@@ -42,6 +43,8 @@ export interface HandlerDeps {
   /** The provider for a configuration, or null when it has none. */
   provider(cfg: LlmConfig): LlmProvider | null;
   log(line: string): void;
+  /** The router for a configuration, or a sentence saying why there is none. Default: the registered routers, plus Jev when its key is set. */
+  router?(cfg: LlmConfig): LlmRouter | string;
 }
 
 const providerCache = new Map<string, LlmProvider>();
@@ -63,24 +66,35 @@ function defaultProvider(cfg: LlmConfig): LlmProvider | null {
   return p;
 }
 
+let jevRouter: { key: string; router: LlmRouter } | null = null;
+
+export function defaultRouter(cfg: LlmConfig): LlmRouter | string {
+  if (cfg.router === 'jev') {
+    if (!cfg.jev) return 'LUNYX_LLM_ROUTER=jev needs TYPESAFE_API_KEY in the server environment (see .env.example).';
+    const key = JSON.stringify(cfg.jev);
+    if (jevRouter?.key !== key) jevRouter = { key, router: createJevRouter(cfg.jev) };
+    return jevRouter.router;
+  }
+  return getRouter(cfg.router) ?? `LUNYX_LLM_ROUTER names a router this build does not have ("${cfg.router}"). Available: ${[...routerIds(), 'jev'].join(', ')}.`;
+}
+
 export const defaultDeps: HandlerDeps = {
   loadConfig: () => loadConfig(),
   provider: defaultProvider,
   log: (line) => console.warn(line),
 };
 
-function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | null; reason?: string } {
+function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | null; router: LlmRouter | null; reason?: string } {
   const cfg = deps.loadConfig();
-  if (cfg.provider === 'none') return { cfg, provider: null, reason: cfg.reason ?? 'No language model is configured on this server.' };
-  if (!getRouter(cfg.router)) {
-    return { cfg, provider: null, reason: `LUNYX_LLM_ROUTER names a router this build does not have ("${cfg.router}"). Available: ${routerIds().join(', ')}.` };
-  }
+  if (cfg.provider === 'none') return { cfg, provider: null, router: null, reason: cfg.reason ?? 'No language model is configured on this server.' };
+  const router = (deps.router ?? defaultRouter)(cfg);
+  if (typeof router === 'string') return { cfg, provider: null, router: null, reason: router };
   const provider = deps.provider(cfg);
   if (!provider) {
     const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'The configured model provider could not be created.';
-    return { cfg, provider: null, reason: why };
+    return { cfg, provider: null, router: null, reason: why };
   }
-  return { cfg, provider };
+  return { cfg, provider, router };
 }
 
 function status(deps: HandlerDeps): AssistantStatus {
@@ -100,17 +114,18 @@ export function createAssistantHandler(deps: HandlerDeps = defaultDeps): (req: H
     if (!parsed.ok) return { status: 400, json: { error: { kind: 'invalid_request', message: parsed.error } satisfies WireError } };
 
     const r = resolve(deps);
-    if (!r.provider) return { status: 503, json: { error: { kind: 'no_model', message: r.reason ?? 'No language model is configured on this server.' } satisfies WireError } };
+    if (!r.provider || !r.router) return { status: 503, json: { error: { kind: 'no_model', message: r.reason ?? 'No language model is configured on this server.' } satisfies WireError } };
 
     const request: ProviderRequest = { system: SYSTEM_PROMPT, tools: parsed.value.tools, messages: parsed.value.messages, signal: req.signal };
     const primary = r.provider;
+    const router = r.router!;
     const providers: ProviderSet = { primary, get: (id) => (id === primary.info.provider ? primary : null) };
     const secrets = r.cfg.secrets;
 
     async function* run(): AsyncIterable<string> {
       let ended = false;
       try {
-        const decision = await getRouter(r.cfg.router)!.route(request, providers);
+        const decision = await router.route(request, providers);
         assertFullCapability(request, decision.request);
         for await (const event of decision.provider.step(decision.request)) {
           if (ended) break;

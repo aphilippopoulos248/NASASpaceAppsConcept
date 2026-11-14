@@ -1,6 +1,7 @@
 // The one interface every model backend implements, and the router slot in front of it.
 // Server-side only. The wire types are shared with the browser (src/assistant/protocol.ts).
 import type { ModelInfo, StepEvent, WireMessage, WireTool } from '../../src/assistant/protocol';
+import type { Effort } from './env';
 
 /** One model step: the whole conversation so far and the FULL tool list from the action registry. */
 export interface ProviderRequest {
@@ -10,6 +11,8 @@ export interface ProviderRequest {
   messages: readonly WireMessage[];
   /** Aborted when the browser disconnects or the user presses stop. */
   signal: AbortSignal;
+  /** Set by a router: how much effort the model should spend on this step (default: the configured effort). */
+  effort?: Effort;
 }
 
 /**

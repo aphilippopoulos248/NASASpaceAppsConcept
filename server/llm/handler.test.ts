@@ -62,9 +62,9 @@ describe('GET /api/assistant', () => {
   });
 
   it('is unavailable, with the reason, for an unknown router or script', async () => {
-    const router = (await createAssistantHandler(deps({ LUNYX_LLM_PROVIDER: 'scripted', LUNYX_LLM_ROUTER: 'jev' }))(httpRequest('GET'))).json as AssistantStatus;
+    const router = (await createAssistantHandler(deps({ LUNYX_LLM_PROVIDER: 'scripted', LUNYX_LLM_ROUTER: 'nope' }))(httpRequest('GET'))).json as AssistantStatus;
     expect(router.available).toBe(false);
-    expect(router.reason).toContain('"jev"');
+    expect(router.reason).toContain('"nope"');
     const script = (await createAssistantHandler(deps({ LUNYX_LLM_PROVIDER: 'scripted', LUNYX_LLM_SCRIPT: 'nope' }, () => null))(httpRequest('GET'))).json as AssistantStatus;
     expect(script.reason).toContain('LUNYX_LLM_SCRIPT');
   });
