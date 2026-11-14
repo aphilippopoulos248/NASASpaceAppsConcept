@@ -2,6 +2,8 @@
 // &view=surface drops straight to the ground, &light=landing sets the clock to touchdown,
 // &t=2025-03-14T06:00Z sets the clock (&time= is read the same way: links made for the main
 // branch's app use that spelling). A time given in the link wins over &light=landing.
+// Whichever sets the clock also starts the mission window there, so the analysis and the
+// time scrubber are about the moment the link shows.
 // Applied through the action registry (origin "url"), and the address bar follows the
 // current site and view so a link can be copied at any time.
 import { getLandings } from '../data/catalog';
@@ -37,13 +39,17 @@ export async function applyDeepLink(link: DeepLink, jumpTo?: (lat: number, lon: 
     return r;
   };
   const timeSet = link.t ? (await run('setTime', { utc: link.t })).ok : false;
+  if (timeSet) await run('setMissionWindow', { startUtc: 'now' });
   if (!link.site) return errors;
   const sel = await run('selectSite', { site: link.site });
   if (!sel.ok) return errors;
   const landing = getLandings().find((l) => l.id === (sel.result as { site: { id: string } }).site.id);
   if (link.light === 'landing' && landing) {
     await run('setLightMode', { mode: 'real' });
-    if (!timeSet) await run('setTime', { utc: isoUtc(landingDate(landing).getTime()) });
+    if (!timeSet) {
+      await run('setTime', { utc: isoUtc(landingDate(landing).getTime()) });
+      await run('setMissionWindow', { startUtc: 'landing' });
+    }
   }
   if (link.view === 'surface') {
     const site = (sel.result as { site: { latDeg: number; lonDegEast: number } }).site;

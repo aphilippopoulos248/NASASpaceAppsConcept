@@ -1,13 +1,13 @@
 // Time scrubber along the bottom (both views): scrubs the shared clock across the mission
 // window (24 h by default), with play/pause, speed, the exact UTC instant, the window length,
 // and - once the site analysis is ready - sunrise/sunset/Earthrise/Earthset marks and
-// jump-to-event buttons. Every control is an action.
+// jump-to-event buttons. Every control is an action (jumpToEvent is in core/coreActions.ts).
 import type { SkyEvent } from '../../analysis/types';
 import { moonGeometry, phaseName } from '../../astro/ephemeris';
-import { ActionError, defineAction, registerActions, runAction } from '../../core/actions';
+import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { RATE_PRESETS } from '../../core/coreActions';
-import { effectiveStartMs } from '../../core/scenario';
+import { effectiveStartMs, spanText } from '../../core/scenario';
 import { findEvent } from '../../core/skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, store } from '../../core/store';
 import { formatUtc, isoUtc } from '../../core/time';
@@ -32,43 +32,17 @@ export const WINDOW_CHOICES = [
 /** Events of the current analysis, or why there are none. */
 function currentEvents(): { events: SkyEvent[] } | { reason: string } {
   const st = analysis.get('current');
+  // Just after a change the published result still belongs to the previous scenario.
+  if (st.state !== 'idle' && st.scenario.id !== analysis.wanted('current')?.id) return { reason: 'Analysing the site…' };
   switch (st.state) {
     case 'idle': return { reason: 'Select a site or drop a pin to see sunrise, sunset, Earthrise and Earthset.' };
     case 'loading': return { reason: 'Analysing the site…' };
-    case 'error': return { reason: st.notAvailable ? 'Sunrise/sunset marks appear when the site analysis is available (not merged yet).' : `No event marks: ${st.error}` };
+    case 'error': return { reason: `No rise and set marks: the site analysis is not available (${st.error})` };
     case 'ready': return { events: st.value.events };
   }
 }
 
 export function mountTimeScrubber(region: HTMLElement): void {
-  registerActions([
-    defineAction<{ type: EventType; which?: 'next' | 'previous' }, unknown>({
-      name: 'jumpToEvent',
-      title: 'Jump to sunrise/sunset/Earthrise/Earthset',
-      description: 'Moves the clock to the next (or previous) sunrise, sunset, Earthrise or Earthset at the selected site, from the site analysis (terrain skyline included). Needs a site whose analysis is ready.',
-      effect: 'command',
-      params: {
-        type: 'object',
-        properties: {
-          type: { type: 'string', description: 'Event type.', enum: EVENTS.map((e) => e.type) },
-          which: { type: 'string', description: 'next (default) or previous, relative to the current simulated time.', enum: ['next', 'previous'] },
-        },
-        required: ['type'],
-      },
-      run: async ({ type, which = 'next' }) => {
-        const ev = currentEvents();
-        if ('reason' in ev) throw new ActionError(ev.reason);
-        const t = store.get().timeMs;
-        const hit = findEvent(ev.events, type, which, t);
-        if (!hit) throw new ActionError(`No ${which} ${type} inside the analysed mission window.`);
-        await runAction('pause');
-        const r = await runAction('setTime', { utc: new Date(hit.timeMs).toISOString().slice(0, 19) + 'Z' });
-        if (!r.ok) throw new ActionError(r.error);
-        return { event: type, timeUtc: isoUtc(hit.timeMs), azDeg: hit.azDeg };
-      },
-    }),
-  ]);
-
   const bar = el('div', 'ly-panel time-scrubber');
   const play = button('', 'ly-btn ly-btn--icon ts-play');
   play.addEventListener('click', () => void runAction(store.get().playing ? 'pause' : 'play'));
@@ -102,7 +76,8 @@ export function mountTimeScrubber(region: HTMLElement): void {
   date.step = '60';
   date.min = new Date(MIN_TIME_MS).toISOString().slice(0, 16);
   date.max = new Date(MAX_TIME_MS).toISOString().slice(0, 16);
-  date.setAttribute('aria-label', 'Date and time, UTC');
+  date.setAttribute('aria-label', 'Simulated date and time, UTC');
+  date.title = 'The simulated instant shown in every view (UTC). The mission window keeps its own start.';
   when.append(date, el('span', 'ly-label', 'UTC'));
   date.addEventListener('change', async () => {
     if (!date.value) return;
@@ -110,8 +85,8 @@ export function mountTimeScrubber(region: HTMLElement): void {
     date.setAttribute('aria-invalid', String(!r.ok));
     date.title = r.ok ? '' : r.error;
   });
-  const now = button('Now', 'ly-btn ly-btn--small', () => void runAction('setTime', { utc: isoUtc(Date.now()) }));
-  now.title = 'Set the clock to the current real time';
+  const now = button('Now', 'ly-btn ly-btn--small', () => void runAction('setMissionWindow', { startUtc: isoUtc(Date.now()), moveClock: true }));
+  now.title = 'Start the mission window at the current real time and set the clock there';
   const rate = el('select', 'ly-select ts-rate');
   rate.setAttribute('aria-label', 'Playback speed');
   for (const p of RATE_PRESETS) rate.append(new Option(p.label, String(p.secondsPerSecond)));
@@ -126,11 +101,11 @@ export function mountTimeScrubber(region: HTMLElement): void {
   const jumps = el('div', 'ts-jumps');
   jumps.setAttribute('role', 'group');
   jumps.setAttribute('aria-label', 'Jump to the next event');
-  for (const e of EVENTS) {
+  const jumpButtons = EVENTS.map((e) => {
     const b = button(`${e.glyph} ${e.label}`, `ly-btn ly-btn--small ts-jump ts-${e.body}`, () => void runAction('jumpToEvent', { type: e.type }));
-    b.setAttribute('aria-label', `Jump to the next ${e.label.toLowerCase()}`);
     jumps.append(b);
-  }
+    return { ...e, button: b };
+  });
   const eventNote = el('span', 'ly-note ts-eventnote');
   const readout = el('span', 'ly-note ts-readout');
 
@@ -140,6 +115,19 @@ export function mountTimeScrubber(region: HTMLElement): void {
   region.append(bar);
 
   let lastPhase = -Infinity;
+  /** Events of the finished analysis (null while there is none). */
+  let events: SkyEvent[] | null = null;
+  const syncJumps = () => {
+    if (!events) return;
+    const t = store.get().timeMs;
+    for (const j of jumpButtons) {
+      const next = findEvent(events, j.type, 'next', t);
+      j.button.disabled = !next;
+      const text = next ? `Jump to the next ${j.label.toLowerCase()}, ${formatUtc(next.timeMs)}` : `No ${j.label.toLowerCase()} after the simulated time inside the mission window`;
+      j.button.setAttribute('aria-label', text);
+      j.button.title = text;
+    }
+  };
   const syncWindow = () => {
     const s = store.get();
     const start = effectiveStartMs(s);
@@ -157,12 +145,14 @@ export function mountTimeScrubber(region: HTMLElement): void {
     const start = effectiveStartMs(s), span = s.windowDurationH * 3_600_000;
     const ev = currentEvents();
     marks.replaceChildren();
-    const ready = 'events' in ev;
-    jumps.hidden = !ready;
-    eventNote.hidden = ready;
-    eventNote.textContent = ready ? '' : ev.reason;
-    if (!ready) return;
-    for (const e of ev.events) {
+    events = 'events' in ev ? ev.events : null;
+    const none = events !== null && events.length === 0;
+    jumps.hidden = events === null || none;
+    eventNote.hidden = events !== null && !none;
+    eventNote.textContent = 'reason' in ev ? ev.reason : none ? `No sunrise, sunset, Earthrise or Earthset in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).` : '';
+    if (!events) return;
+    syncJumps();
+    for (const e of events) {
       const f = (e.timeMs - start) / span;
       if (f < 0 || f > 1) continue;
       const info = EVENTS.find((x) => x.type === e.type)!;
@@ -191,6 +181,7 @@ export function mountTimeScrubber(region: HTMLElement): void {
     rate.value = String(s.rate);
     bar.classList.toggle('even', s.lightMode === 'even');
     if (performance.now() - lastPhase > 250) {
+      syncJumps();
       const g = moonGeometry(new Date(s.timeMs));
       readout.textContent = `${phaseName(g)} · ${Math.round(g.litFraction * 100)}% lit from Earth`;
       lastPhase = performance.now();
