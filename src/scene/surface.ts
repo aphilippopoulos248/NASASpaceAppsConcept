@@ -1,6 +1,7 @@
 import {
   AdditiveBlending,
   AmbientLight,
+  Box3,
   BufferGeometry,
   CanvasTexture,
   Color,
@@ -16,17 +17,24 @@ import {
   Matrix4,
   Mesh,
   MeshBasicMaterial,
+  MeshDepthMaterial,
   MeshStandardMaterial,
+  Material,
   PerspectiveCamera,
   RepeatWrapping,
   SRGBColorSpace,
+  ShaderChunk,
+  ShaderMaterial,
   Scene,
+  Sphere,
   SphereGeometry,
   Sprite,
   SpriteMaterial,
+  Texture,
   TextureLoader,
   Vector3,
 } from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MoonGeometry, Vec3 } from '../astro/ephemeris';
 import { Landing, programColor } from '../data/landings';
 import { createStars } from './globe';
@@ -146,101 +154,368 @@ function detailNormalMap(d: DetailMap): CanvasTexture {
   return new CanvasTexture(canvas);
 }
 
-// ---------- generated detail (not real): everything finer than the orbital photos can show ----------
-const MICRO_TILE_M = 12;
-const MICRO_PX = 1024;
-const MAX_ROCKS = 600;
+// ---------- generated detail (not real): everything finer than the orbital data can show ----------
+// Many small rocks share a few light meshes; the rare boulders, which you can walk up to, get detailed ones.
+const SMALL_ROCK_SHAPES = 3;
+const SMALL_ROCKS_EACH = 260;
+const BOULDER_SHAPES = 2;
+const BOULDERS_EACH = 40;
+const BOULDER_SIZE_M = 0.25;
 const ROCK_CELL_M = 4;
 const ROCK_REACH_M = 46;
 
-let microTexture: CanvasTexture | null = null;
-
-/** Tiling normal map of centimetre-to-metre craters and lumps, built once from fixed random numbers. */
-function microNormalMap(): CanvasTexture {
-  if (microTexture) return microTexture;
-  const n = MICRO_PX, px = MICRO_TILE_M / n;
-  const rand = seededRandom('regolith');
-  const h = new Float32Array(n * n);
-  // Small craters, same D^-2 size law as the larger generated ones.
-  const count = Math.round((0.03 * MICRO_TILE_M * MICRO_TILE_M) / 0.15 ** 2);
-  for (let k = 0; k < count; k++) {
-    const d = Math.min(3, 0.15 / Math.sqrt(1 - rand()));
-    const r = d / 2 / px;
-    const cx = rand() * n, cy = rand() * n;
-    const depth = d * (0.03 + 0.15 * rand() ** 2), rim = depth * 0.2;
-    const reach = Math.ceil(r * 2);
-    for (let dy = -reach; dy <= reach; dy++) {
-      for (let dx = -reach; dx <= reach; dx++) {
-        const rho = Math.hypot(dx, dy) / r;
-        if (rho >= 2) continue;
-        const x = (((Math.round(cx) + dx) % n) + n) % n, y = (((Math.round(cy) + dy) % n) + n) % n; // wraps, so the texture tiles
-        h[y * n + x] += rho < 1 ? -depth * (1 - rho * rho) + rim * rho * rho : rim * (2 - rho) ** 2;
-      }
-    }
-  }
-  // Lumpy regolith at a few scales.
-  for (let cells = 16, amp = 0.02; cells <= 256; cells *= 2, amp *= 0.55) {
-    const lattice = new Float32Array(cells * cells).map(() => rand() * 2 - 1);
-    for (let y = 0; y < n; y++) {
-      for (let x = 0; x < n; x++) {
-        const fx = (x / n) * cells, fy = (y / n) * cells;
-        const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
-        const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
-        const at = (xx: number, yy: number) => lattice[(yy % cells) * cells + (xx % cells)];
-        h[y * n + x] += ((at(x0, y0) * (1 - sx) + at(x0 + 1, y0) * sx) * (1 - sy) + (at(x0, y0 + 1) * (1 - sx) + at(x0 + 1, y0 + 1) * sx) * sy) * amp;
-      }
-    }
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = n;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(n, n);
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      let nx = -(h[y * n + ((x + 1) % n)] - h[y * n + ((x + n - 1) % n)]) / (2 * px);
-      let ny = -(h[((y + n - 1) % n) * n + x] - h[((y + 1) % n) * n + x]) / (2 * px);
-      const len = Math.hypot(nx, ny, 1);
-      const o = (y * n + x) * 4;
-      img.data[o] = ((nx / len) * 0.5 + 0.5) * 255;
-      img.data[o + 1] = ((ny / len) * 0.5 + 0.5) * 255;
-      img.data[o + 2] = (0.5 / len + 0.5) * 255;
-      img.data[o + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  microTexture = new CanvasTexture(canvas);
-  microTexture.wrapS = microTexture.wrapT = RepeatWrapping;
-  return microTexture;
+/** Repeatable pseudo-random number in [0, 1) for a grid cell. */
+function cellHash(ix: number, iy: number, salt: number): number {
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(salt, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** One lumpy rock shape; instances are stretched and turned for variety. */
-function rockGeometry(): IcosahedronGeometry {
-  const geo = new IcosahedronGeometry(1, 1);
-  const rand = seededRandom('rock');
-  const pos = geo.getAttribute('position');
-  const moved = new Map<string, number>();
-  for (let i = 0; i < pos.count; i++) {
-    // Vertices are duplicated per face; move coincident ones together so the rock stays closed.
-    const key = `${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`;
-    if (!moved.has(key)) moved.set(key, 0.72 + rand() * 0.5);
-    const f = moved.get(key)!;
-    pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f);
+/**
+ * Height of a field of generated craters, one candidate per grid cell. Sizes run from about
+ * a quarter to nearly a full cell; most are old and shallow, a few fresh and sharp, and no
+ * rim is a perfect circle.
+ */
+function craterField(east: number, north: number, cell: number, salt: number): number {
+  const ix = Math.floor(east / cell), iy = Math.floor(north / cell);
+  let h = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const cx = ix + dx, cy = iy + dy;
+      const pick = cellHash(cx, cy, salt);
+      if (pick > 0.55) continue;
+      const px = (cx + 0.5 + (cellHash(cx, cy, salt + 1) - 0.5) * 0.5) * cell;
+      const py = (cy + 0.5 + (cellHash(cx, cy, salt + 2) - 0.5) * 0.5) * cell;
+      const ox = east - px, oy = north - py;
+      const angle = Math.atan2(oy, ox), phase = pick * 40;
+      const radius = cell * (0.14 + 0.3 * cellHash(cx, cy, salt + 3)) * (1 + 0.1 * Math.sin(2 * angle + phase) + 0.06 * Math.sin(5 * angle + phase * 2.3));
+      const rho = Math.hypot(ox, oy) / radius;
+      if (rho >= 2.6) continue;
+      const fresh = cellHash(cx, cy, salt + 4) ** 2;
+      const depth = 2 * radius * (0.04 + 0.14 * fresh), rim = depth * (0.1 + 0.2 * fresh);
+      // Bowl inside, raised rim, apron of ejecta dying away outside.
+      h += rho < 1 ? -depth * (1 - rho * rho) + rim * rho * rho : rim * Math.exp(-3.2 * (rho - 1));
+    }
   }
+  return h;
+}
+
+/** A rock: a subdivided sphere pushed around by layered noise, then chipped along a few flat fracture planes. */
+function rockGeometry(seed: number, subdivisions: number): BufferGeometry {
+  const base = new IcosahedronGeometry(1, subdivisions);
+  base.deleteAttribute('uv');
+  base.deleteAttribute('normal');
+  const geo = mergeVertices(base);
+  const rand = seededRandom(`rock${seed}`);
+  // 3D value noise on a hashed lattice.
+  const lattice = (x: number, y: number, z: number) => cellHash(x + seed * 131, y, z * 7 + 3);
+  const noise = (x: number, y: number, z: number) => {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const fade = (t: number) => t * t * (3 - 2 * t);
+    const u = fade(x - xi), v = fade(y - yi), w = fade(z - zi);
+    const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+    return mix(
+      mix(mix(lattice(xi, yi, zi), lattice(xi + 1, yi, zi), u), mix(lattice(xi, yi + 1, zi), lattice(xi + 1, yi + 1, zi), u), v),
+      mix(mix(lattice(xi, yi, zi + 1), lattice(xi + 1, yi, zi + 1), u), mix(lattice(xi, yi + 1, zi + 1), lattice(xi + 1, yi + 1, zi + 1), u), v),
+      w,
+    );
+  };
+  // Fracture planes: anything beyond one is sliced flat, giving the angular faces of broken rock.
+  const planes = Array.from({ length: 5 + Math.floor(rand() * 4) }, () => {
+    const n = new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
+    return { n, d: 0.62 + rand() * 0.3 };
+  });
+  const pos = geo.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const v = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    const big = noise(v.x * 1.4 + 5, v.y * 1.4 + 5, v.z * 1.4 + 5);
+    const ridged = 1 - Math.abs(2 * noise(v.x * 3 + 9, v.y * 3 + 9, v.z * 3 + 9) - 1);
+    const fine = noise(v.x * 8 + 2, v.y * 8 + 2, v.z * 8 + 2);
+    const grit = noise(v.x * 19 + 4, v.y * 19 + 4, v.z * 19 + 4);
+    let r = 0.78 + 0.42 * (big - 0.5) * 2 * 0.5 + 0.16 * ridged + 0.09 * (fine - 0.5) + 0.035 * (grit - 0.5);
+    for (const p of planes) {
+      const along = v.dot(p.n) * r;
+      if (along > p.d) r *= p.d / along;
+    }
+    v.multiplyScalar(r);
+    pos.setXYZ(i, v.x, v.y * 0.72, v.z);
+    // Slightly darker in hollows and lighter on exposed faces.
+    const shade = 0.72 + 0.2 * fine + 0.16 * (r - 0.78);
+    colors.set([shade, shade, shade], i * 3);
+  }
+  geo.setAttribute('color', new Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   return geo;
 }
 
 /**
- * Smooth (bicubic) magnification for the ground photo. Plain bilinear filtering shows the
- * photo's pixel grid as blocky diamonds when one pixel covers a large part of the screen.
+ * Lunar soil reflects most strongly straight back towards its light source, so ground seen with
+ * the Sun behind you is brighter than ground seen looking towards the Sun, with a tight bright
+ * patch around your own shadow. Without this, a high Sun leaves the surface flat and pale.
  */
-function useSmoothMagnification(material: MeshStandardMaterial, mapSize: { value: number }): void {
+/**
+ * Surface detail for the generated rocks, computed per pixel in each rock's own space so it sticks
+ * to the rock and differs from rock to rock: rough relief, uneven tone, and a coat of soil-coloured
+ * dust on the lower, buried part.
+ * Rocks are small on screen, so a few noise lookups per pixel cost very little.
+ */
+/** The ground under the rocks: its photo (if any), brightness and extent, so rocks can take on its tone. */
+interface RockGround {
+  map: { value: Texture | null };
+  hasMap: { value: number };
+  color: { value: Color };
+  half: { value: number };
+}
+
+function patchRockShader(material: MeshStandardMaterial, ground: RockGround): void {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uGroundMap = ground.map;
+    shader.uniforms.uGroundHasMap = ground.hasMap;
+    shader.uniforms.uGroundColor = ground.color;
+    shader.uniforms.uGroundHalf = ground.half;
+    shader.vertexShader = shader.vertexShader
+      .replace('void main() {', 'uniform float uGroundHalf;\nvarying vec3 vRockPos;\nvarying vec3 vRockSeed;\nvarying float vRockSize;\nvarying vec2 vGroundUv;\nvoid main() {')
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+	vRockPos = position;
+	#ifdef USE_INSTANCING
+		vRockSeed = instanceMatrix[ 3 ].xyz;
+		vRockSize = length( instanceMatrix[ 0 ].xyz );
+		// Where the rock sits on the ground photo (x east, z south; the photo runs west-east, south-north).
+		vGroundUv = vec2( instanceMatrix[ 3 ].x + uGroundHalf, - instanceMatrix[ 3 ].z + uGroundHalf ) / ( 2.0 * uGroundHalf );
+	#else
+		vGroundUv = vec2( 0.5 );
+		vRockSeed = vec3( 0.0 );
+		vRockSize = 1.0;
+	#endif`,
+      );
+    shader.fragmentShader = withBackscatter(
+      shader.fragmentShader
+        .replace(
+          'void main() {',
+          /* glsl */ `uniform sampler2D uGroundMap;
+uniform float uGroundHasMap;
+uniform vec3 uGroundColor;
+varying vec3 vRockPos;
+varying vec3 vRockSeed;
+varying float vRockSize;
+varying vec2 vGroundUv;
+float rHash( vec3 p ) {
+	p = fract( p * 0.3183099 + 0.1 );
+	p *= 17.0;
+	return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) );
+}
+float rNoise( vec3 p ) {
+	vec3 i = floor( p ), f = fract( p );
+	f = f * f * ( 3.0 - 2.0 * f );
+	return mix(
+		mix( mix( rHash( i ), rHash( i + vec3( 1, 0, 0 ) ), f.x ), mix( rHash( i + vec3( 0, 1, 0 ) ), rHash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+		mix( mix( rHash( i + vec3( 0, 0, 1 ) ), rHash( i + vec3( 1, 0, 1 ) ), f.x ), mix( rHash( i + vec3( 0, 1, 1 ) ), rHash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ),
+		f.z );
+}
+void main() {`,
+        )
+        .replace(
+          '#include <color_fragment>',
+          /* glsl */ `#include <color_fragment>
+	vec3 rP = vRockPos + fract( vRockSeed * 0.137 ) * 40.0;
+	// Start from the tone of the ground the rock sits on (averaged over a few metres), so rocks
+	// belong to their surroundings, then vary it gently across the rock.
+	vec3 rSoil = uGroundColor * ( uGroundHasMap > 0.5 ? texture2D( uGroundMap, vGroundUv, 4.0 ).rgb : vec3( 1.0 ) );
+	diffuseColor.rgb *= rSoil * 1.05 * ( 0.9 + 0.16 * rNoise( rP * 2.5 ) + 0.08 * ( rNoise( rP * 11.0 ) - 0.5 ) );
+	// Dust settles on the lower part, where the rock meets the soil.
+	diffuseColor.rgb = mix( diffuseColor.rgb, rSoil, smoothstep( -0.1, -0.55, vRockPos.y ) * 0.8 );`,
+        )
+        .replace(
+          '#include <normal_fragment_maps>',
+          /* glsl */ `#include <normal_fragment_maps>
+	{
+		// Rough, chipped surface: relief scaled to the rock's size so it reads the same on pebbles and boulders.
+		float rH = ( 0.07 * rNoise( rP * 4.0 ) + 0.035 * rNoise( rP * 9.0 ) ) * vRockSize;
+		vec3 rSigX = dFdx( - vViewPosition ), rSigY = dFdy( - vViewPosition );
+		vec3 rR1 = cross( rSigY, normal ), rR2 = cross( normal, rSigX );
+		float rDet = dot( rSigX, rR1 ) * faceDirection;
+		vec3 rGrad = sign( rDet ) * ( dFdx( rH ) * rR1 + dFdy( rH ) * rR2 );
+		normal = normalize( abs( rDet ) * normal - rGrad );
+	}`,
+        ),
+    );
+  };
+  material.customProgramCacheKey = () => 'lunar-rock';
+}
+
+const SHADOW_LINE = 'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ) : 1.0;';
+/**
+ * Shadows only exist in a square around the viewer. Without this they would stop dead at its edge;
+ * here they fade out over the outer part of the square instead.
+ */
+const FADED_SHADOW_LIGHTS = ShaderChunk.lights_fragment_begin.includes(SHADOW_LINE)
+  ? ShaderChunk.lights_fragment_begin.replace(
+      SHADOW_LINE,
+      `{
+			vec2 gShadowUv = vDirectionalShadowCoord[ i ].xy / vDirectionalShadowCoord[ i ].w;
+			vec2 gShadowEdge = min( gShadowUv, 1.0 - gShadowUv );
+			float gShadowFade = smoothstep( 0.0, 0.3, min( gShadowEdge.x, gShadowEdge.y ) );
+			directLight.color *= ( directLight.visible && receiveShadow ) ? mix( 1.0, getShadow( directionalShadowMap[ i ], directionalLightShadow.shadowMapSize, directionalLightShadow.shadowIntensity, directionalLightShadow.shadowBias, directionalLightShadow.shadowRadius, vDirectionalShadowCoord[ i ] ), gShadowFade ) : 1.0;
+		}`,
+    )
+  : null;
+if (!FADED_SHADOW_LIGHTS) console.warn('Shadow edge fade not applied: three.js shader source has changed.');
+
+function withBackscatter(fragmentShader: string): string {
+  if (FADED_SHADOW_LIGHTS) fragmentShader = fragmentShader.replace('#include <lights_fragment_begin>', FADED_SHADOW_LIGHTS);
+  return fragmentShader.replace(
+    '#include <lights_fragment_end>',
+    /* glsl */ `#include <lights_fragment_end>
+#if NUM_DIR_LIGHTS > 0
+	{
+		float gBack = max( dot( normalize( vViewPosition ), directionalLights[ 0 ].direction ), 0.0 );
+		reflectedLight.directDiffuse *= 0.84 + 0.42 * gBack * gBack * gBack + 0.22 * pow( gBack, 30.0 );
+	}
+#endif`,
+  ).replace(
+    '#include <opaque_fragment>',
+    /* glsl */ `{
+		// Highlight roll-off: slopes facing a low Sun get very bright. Above a knee, brightness is
+		// compressed smoothly instead of clipping to flat white; mid-tones are left exactly as they were.
+		float gPeak = max( outgoingLight.r, max( outgoingLight.g, outgoingLight.b ) );
+		const float gKnee = 0.5;
+		if ( gPeak > gKnee ) outgoingLight *= ( gKnee + ( 1.0 - gKnee ) * ( 1.0 - exp( - ( gPeak - gKnee ) / ( 1.0 - gKnee ) ) ) ) / gPeak;
+	}
+	#include <opaque_fragment>`,
+  );
+}
+
+/**
+ * Generated detail for terrain beyond the near ground (not real): the close-up crater map, applied
+ * at whatever size keeps its craters a similar size on screen. The size is chosen per pixel from
+ * how much ground that pixel covers and steps by a factor of 3, cross-fading between neighbouring
+ * steps. Because it depends only on position and distance, it is continuous across the different
+ * terrain meshes, so there is no visible change of texture where one mesh meets the next.
+ * Shading and a little tone only; the terrain shape is untouched.
+ */
+function withFarDetail(
+  shader: { vertexShader: string; fragmentShader: string; uniforms: Record<string, { value: unknown }> },
+  strength: number,
+  generated: { value: number },
+): void {
+  shader.uniforms.uFarNormal = detailMaps.normal;
+  shader.uniforms.uFarTone = detailMaps.tone;
+  shader.uniforms.uFarReady = detailMaps.ready;
+  shader.uniforms.uFarOn = generated;
+  shader.vertexShader = 'varying vec2 vFarXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvFarXZ = position.xz;');
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      'void main() {',
+      /* glsl */ `uniform sampler2D uFarNormal;
+uniform sampler2D uFarTone;
+uniform float uFarReady;
+uniform float uFarOn;
+varying vec2 vFarXZ;
+// One step of the map at repeat size t. Alternate steps are turned a quarter turn and shifted so
+// they do not line up.
+// Returns east, north, up.
+vec3 fLayer( vec2 p, float t, float step ) {
+	bool turn = mod( step, 2.0 ) > 0.5;
+	vec2 q = ( turn ? vec2( - p.y, p.x ) : p ) / t + step * 0.37;
+	vec3 n = texture2D( uFarNormal, q ).xyz * 2.0 - 1.0;
+	if ( turn ) n.xy = vec2( n.y, - n.x );
+	return n;
+}
+float fTone( vec2 p, float t, float step ) {
+	bool turn = mod( step, 2.0 ) > 0.5;
+	vec2 q = ( turn ? vec2( - p.y, p.x ) : p ) / t + step * 0.37;
+	return texture2D( uFarTone, q ).r * 2.0;
+}
+void main() {`,
+    )
+    .replace(
+      '#include <map_fragment>',
+      /* glsl */ `#include <map_fragment>
+	vec2 fGround = vec2( vFarXZ.x, - vFarXZ.y );
+	// Ground covered by one pixel (metres), and from it the map size: about 300 pixels per repeat.
+	float fLevel = max( log( max( length( fwidth( fGround ) ), 1e-4 ) * 300.0 / 12.0 ) / log( 3.0 ), 0.0 );
+	float fStep = floor( fLevel ), fBlend = fLevel - fStep;
+	float fTile = 12.0 * pow( 3.0, fStep );
+	if ( uFarOn > 0.5 && uFarReady > 0.5 ) {
+		float tone = mix( fTone( fGround, fTile, fStep ), fTone( fGround, fTile * 3.0, fStep + 1.0 ), fBlend );
+		diffuseColor.rgb *= mix( 1.0, clamp( tone, 0.7, 1.25 ), 0.18 );
+	}`,
+    )
+    .replace(
+      '#include <normal_fragment_maps>',
+      /* glsl */ `#include <normal_fragment_maps>
+	if ( uFarOn > 0.5 && uFarReady > 0.5 ) {
+		vec3 fN = normalize( mix( fLayer( fGround, fTile, fStep ), fLayer( fGround, fTile * 3.0, fStep + 1.0 ), fBlend ) );
+		// Larger generated craters are kept fainter, so they never compete with the real terrain.
+		float fStrength = ${strength.toFixed(2)} * clamp( 40.0 / fTile, 0.35, 1.0 );
+		normal = normalize( normal + mat3( viewMatrix ) * vec3( fN.x, 0.0, - fN.y ) * fStrength / max( fN.z, 0.2 ) );
+	}`,
+    );
+}
+
+// Artist-made close-up surface maps (craters of roughly 0.1-2.5 m and fine texture). They are not
+// lunar measurements: they only shade the ground near the viewer, as part of the generated detail,
+// and never move the terrain. Loaded the first time the surface view is used.
+const DETAIL_TILE_M = 12;
+const detailMaps = { normal: { value: null as Texture | null }, tone: { value: null as Texture | null }, ready: { value: 0 } };
+/** 0 with the light on the horizon, 1 with it overhead: tone matters more as shading fades. */
+const lightHeight = { value: 0 };
+let detailRequested = false;
+function requestDetailMaps(anisotropy: number): void {
+  if (detailRequested) return;
+  detailRequested = true;
+  const loader = new TextureLoader();
+  const prepare = (t: Texture) => {
+    // Made seamless by scripts/make-surface-detail.mjs, so they simply repeat.
+    t.wrapS = t.wrapT = RepeatWrapping;
+    t.anisotropy = anisotropy;
+    return t;
+  };
+  Promise.all([
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_normal.jpg`),
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_tone.jpg`),
+  ]).then(
+    ([normal, tone]) => {
+      detailMaps.normal.value = prepare(normal);
+      detailMaps.tone.value = prepare(tone);
+      detailMaps.ready.value = 1;
+    },
+    (err) => console.warn('Close-up surface maps unavailable; using computed craters instead', err),
+  );
+}
+
+/**
+ * Shader additions for the ground near the viewer:
+ *  - smooth (bicubic) magnification of the photo, which otherwise shows its pixel grid as blocky diamonds;
+ *  - generated relief finer than the mesh (craters of a few centimetres to a metre, lumpy regolith),
+ *    computed per pixel from ground position so it never repeats and stays sharp underfoot;
+ *  - faint generated variation in tone.
+ * The generated parts switch off with uGenerated.
+ */
+function patchNearShader(material: MeshStandardMaterial, mapSize: { value: number }, generated: { value: number }): void {
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uMapSize = mapSize;
+    shader.uniforms.uGenerated = generated;
+    shader.uniforms.uDetailNormal = detailMaps.normal;
+    shader.uniforms.uDetailTone = detailMaps.tone;
+    shader.uniforms.uDetailReady = detailMaps.ready;
+    shader.uniforms.uLightHeight = lightHeight;
+    shader.vertexShader = 'varying vec2 vGroundXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvGroundXZ = position.xz;');
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
         /* glsl */ `uniform float uMapSize;
+uniform float uGenerated;
+uniform sampler2D uDetailNormal;
+uniform sampler2D uDetailTone;
+uniform float uDetailReady;
+uniform float uLightHeight;
+varying vec2 vGroundXZ;
+
 vec4 smoothMap( sampler2D tex, vec2 uv ) {
 	vec2 st = uv * uMapSize - 0.5;
 	vec2 f = fract( st ), i = floor( st );
@@ -254,25 +529,161 @@ vec4 smoothMap( sampler2D tex, vec2 uv ) {
 	return ( texture2D( tex, vec2( h0.x, h0.y ) ) * g0.x + texture2D( tex, vec2( h1.x, h0.y ) ) * g1.x ) * g0.y
 		+ ( texture2D( tex, vec2( h0.x, h1.y ) ) * g0.x + texture2D( tex, vec2( h1.x, h1.y ) ) * g1.x ) * g1.y;
 }
+
+float gHash( vec2 p ) {
+	vec3 p3 = fract( vec3( p.xyx ) * 0.1031 );
+	p3 += dot( p3, p3.yzx + 33.33 );
+	return fract( ( p3.x + p3.y ) * p3.z );
+}
+float gNoise( vec2 p ) {
+	vec2 i = floor( p ), f = fract( p );
+	f = f * f * ( 3.0 - 2.0 * f );
+	return mix( mix( gHash( i ), gHash( i + vec2( 1.0, 0.0 ) ), f.x ), mix( gHash( i + vec2( 0.0, 1.0 ) ), gHash( i + vec2( 1.0, 1.0 ) ), f.x ), f.y );
+}
+// One candidate crater per grid cell: mostly worn and shallow, a few sharp, none perfectly round.
+// Craters are kept small enough that only the four cells around a point can reach it.
+float gCraters( vec2 p, float cell ) {
+	vec2 base = floor( p / cell - 0.5 );
+	float h = 0.0;
+	for ( int y = 0; y <= 1; y ++ ) {
+		for ( int x = 0; x <= 1; x ++ ) {
+			vec2 c = base + vec2( float( x ), float( y ) );
+			float pick = gHash( c + cell * 17.3 );
+			if ( pick > 0.62 ) continue;
+			vec2 wobble = vec2( gHash( c + 3.3 ), gHash( c + 9.7 ) ) - 0.5;
+			vec2 d = p - ( c + 0.5 + wobble * 0.4 ) * cell;
+			float dist = length( d );
+			vec2 dir = d / max( dist, 1e-5 );
+			// Out-of-round rim: a two-lobed variation with a random orientation, no trigonometry needed.
+			float lobes = 2.0 * dir.x * dir.y * wobble.y * 2.0 + ( dir.x * dir.x - dir.y * dir.y ) * wobble.x * 2.0;
+			float radius = cell * ( 0.1 + 0.2 * gHash( c + 7.1 + cell ) ) * ( 1.0 + 0.16 * lobes );
+			float rho = dist / radius;
+			if ( rho > 2.2 ) continue;
+			float fresh = gHash( c + 21.9 );
+			fresh *= fresh;
+			float depth = 2.0 * radius * ( 0.04 + 0.15 * fresh ), rim = depth * ( 0.1 + 0.2 * fresh );
+			float apron = 1.0 - ( rho - 1.0 ) / 1.2;
+			h += rho < 1.0 ? - depth * ( 1.0 - rho * rho ) + rim * rho * rho : rim * apron * apron;
+		}
+	}
+	return h;
+}
+// Each layer fades out once it is too small on screen to draw cleanly, and is then skipped entirely.
+float gLayer( float size, float footprint ) {
+	return 1.0 - smoothstep( 0.1, 0.38, footprint / size );
+}
+float gHeight( vec2 p, float footprint ) {
+	float h = 0.0, w;
+	if ( uDetailReady < 0.5 ) {
+		// Fallback craters, used only until (or unless) the close-up maps have loaded.
+		w = gLayer( 0.6, footprint ); if ( w > 0.0 ) h += gCraters( p, 1.6 ) * w;
+		w = gLayer( 0.27, footprint ); if ( w > 0.0 ) h += gCraters( p + 31.7, 0.7 ) * w;
+		w = gLayer( 0.11, footprint ); if ( w > 0.0 ) h += gCraters( p + 77.1, 0.3 ) * w;
+	}
+	w = gLayer( 0.43, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 2.3 ) - 0.5 ) * 0.035 * w;
+	w = gLayer( 0.11, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 9.0 ) - 0.5 ) * 0.012 * w;
+	w = gLayer( 0.032, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 31.0 ) - 0.5 ) * 0.004 * w;
+	return h;
+}
+// Close-up map lookup at a ground position (x east, y north).
+// Returns east, north, up.
+vec3 gDetailSample( vec2 q ) {
+	vec3 n = texture2D( uDetailNormal, q ).xyz * 2.0 - 1.0;
+	return n;
+}
+// Two copies at different sizes, one turned a quarter turn, mixed by a slowly varying mask so the repeat is hard to spot.
+vec3 gDetailNormal( vec2 p ) {
+	vec3 a = gDetailSample( p / ${DETAIL_TILE_M.toFixed(1)} );
+	vec3 b = gDetailSample( vec2( - p.y, p.x ) / ${(DETAIL_TILE_M * 0.79).toFixed(2)} + 0.37 );
+	b.xy = vec2( b.y, - b.x );
+	return normalize( mix( a, b, smoothstep( 0.35, 0.65, gNoise( p * 0.045 + 11.0 ) ) ) );
+}
+// Tilts the shading normal for a height change given per screen pixel (metres).
+vec3 gPerturb( vec3 surfPos, vec3 surfNorm, vec2 dHdxy, float faceDir ) {
+	vec3 sigmaX = dFdx( surfPos ), sigmaY = dFdy( surfPos );
+	vec3 r1 = cross( sigmaY, surfNorm ), r2 = cross( surfNorm, sigmaX );
+	float det = dot( sigmaX, r1 ) * faceDir;
+	vec3 grad = sign( det ) * ( dHdxy.x * r1 + dHdxy.y * r2 );
+	return normalize( abs( det ) * surfNorm - grad );
+}
 void main() {`,
       )
       .replace(
         '#include <map_fragment>',
         /* glsl */ `#ifdef USE_MAP
-	// Only when magnified; minified ground keeps normal mip-mapped filtering.
+	// Bicubic only when magnified; minified ground keeps normal mip-mapped filtering.
 	float texelsPerPixel = max( length( dFdx( vMapUv ) ), length( dFdy( vMapUv ) ) ) * uMapSize;
 	vec4 sampledDiffuseColor = mix( smoothMap( map, vMapUv ), texture2D( map, vMapUv ), smoothstep( 0.4, 1.0, texelsPerPixel ) );
 	diffuseColor *= sampledDiffuseColor;
-#endif`,
+#endif
+	diffuseColor.rgb *= 1.0 + uGenerated * ( 0.22 * ( gNoise( vGroundXZ * 0.6 ) - 0.5 ) + 0.07 * ( gNoise( vGroundXZ * 21.0 ) - 0.5 ) );
+	// A little of the close-up map's light and dark, so small craters read by tone as well as by shading.
+	vec2 gGround = vec2( vGroundXZ.x, - vGroundXZ.y );
+	if ( uDetailReady > 0.5 ) diffuseColor.rgb *= mix( 1.0, clamp( texture2D( uDetailTone, gGround / ${DETAIL_TILE_M.toFixed(1)} ).r * 2.0, 0.55, 1.35 ), ( 0.35 + 0.4 * uLightHeight ) * uGenerated );`,
+      )
+      .replace(
+        '#include <normal_fragment_maps>',
+        /* glsl */ `#include <normal_fragment_maps>
+	if ( uGenerated > 0.5 ) {
+		float gH = gHeight( vGroundXZ, length( fwidth( vGroundXZ ) ) );
+		normal = gPerturb( - vViewPosition, normal, vec2( dFdx( gH ), dFdy( gH ) ), faceDirection );
+	}`,
       );
   };
-  material.customProgramCacheKey = () => 'ground-smooth-magnify';
+  const patch = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, renderer) => {
+    // Distant-detail first: the near patch then replaces the map chunk but keeps what follows it.
+    withFarDetail(shader, 0.7, generated);
+    patch.call(material, shader, renderer);
+    shader.fragmentShader = withBackscatter(shader.fragmentShader);
+  };
+  material.customProgramCacheKey = () => 'ground-near';
+}
+
+/**
+ * Splits a grid mesh into square pieces that share its vertex data, so the renderer can skip
+ * the pieces that are off-screen. A terrain mesh drawn whole is mostly triangles nobody sees.
+ */
+function splitForCulling(source: BufferGeometry, material: Material, n: number, pieces: number, pad: number): Group {
+  const group = new Group();
+  const cells = Math.ceil((n - 1) / pieces);
+  const index = source.getIndex()!.array;
+  const buckets: number[][] = Array.from({ length: pieces * pieces }, () => []);
+  for (let t = 0; t < index.length; t += 3) {
+    const a = index[t];
+    const pi = Math.min(pieces - 1, Math.floor((a % n) / cells)), pj = Math.min(pieces - 1, Math.floor(Math.floor(a / n) / cells));
+    buckets[pj * pieces + pi].push(index[t], index[t + 1], index[t + 2]);
+  }
+  for (const bucket of buckets) {
+    if (!bucket.length) continue;
+    const geo = new BufferGeometry();
+    for (const name of Object.keys(source.attributes)) geo.setAttribute(name, source.getAttribute(name));
+    geo.setIndex(bucket);
+    group.add(new Mesh(geo, material));
+  }
+  group.userData.pad = pad;
+  refreshBounds(group);
+  return group;
+}
+
+/** Bounding spheres from the vertices each piece actually uses (the default would span the whole shared buffer). */
+function refreshBounds(group: Group): void {
+  const box = new Box3(), v = new Vector3();
+  for (const child of group.children) {
+    const geo = (child as Mesh).geometry;
+    const pos = geo.getAttribute('position'), index = geo.getIndex()!.array;
+    box.makeEmpty();
+    for (let k = 0; k < index.length; k += 3) box.expandByPoint(v.fromBufferAttribute(pos, index[k]));
+    geo.boundingSphere = box.getBoundingSphere(geo.boundingSphere ?? new Sphere());
+    geo.boundingSphere.radius += group.userData.pad as number;
+  }
 }
 
 // Dense ground mesh that follows the viewer, so nearby relief is real geometry.
-const NEAR_N = 257;
-const NEAR_SPACING = 0.5; // metres -> 128 m across
-const NEAR_SNAP = 4; // re-centre in steps of this many metres, so vertices never slide over the ground
+const NEAR_N = 385;
+const NEAR_SPACING = 0.25; // metres -> 96 m across
+const NEAR_SNAP = 2; // re-centre onto a 2 m lattice, so vertices never slide over the ground
+const NEAR_SLACK = 14; // how far the viewer may wander from the centre before the mesh is rebuilt
 
 /** What to drape over a terrain mesh: map tiles looked up by lat/lon, or one image covering the grid exactly. */
 type Drape = { layer: ImageryLayer } | { image: string };
@@ -363,8 +774,12 @@ export class SurfaceView {
   private mosaics: TileMosaic[] = [];
   private mode: LightMode = 'real';
   private readonly sunDirection = new Vector3(0, 1, 0);
-  private readonly rocks: InstancedMesh;
+  private readonly rocks: InstancedMesh[] = [];
+  private readonly generatedFlag = { value: 1 };
+  /** Generated detail on terrain beyond the near ground; follows generatedFlag. */
+  private readonly farFlag = { value: 1 };
   private readonly mapSize = { value: 1024 };
+  private readonly rockGround: RockGround = { map: { value: null }, hasMap: { value: 0 }, color: { value: new Color(0.2, 0.2, 0.2) }, half: { value: 1 } };
   private siteId = '';
   /** Whether generated (not real) detail is shown: rocks and sub-metre texture. */
   generated = true;
@@ -383,8 +798,15 @@ export class SurfaceView {
   private up: Vec3 = [1, 0, 0];
   private loadToken = 0;
   private detailMap: DetailMap | null = null;
-  private near: Mesh | null = null;
+  private near: Group | null = null;
+  private nearGeometry: BufferGeometry | null = null;
+  /** Image coordinates on the fine mesh's image for a ground point, so the near ground shares it exactly. */
+  private fineUvAt: (e: number, n: number, out: [number, number]) => [number, number] = (_e, _n, out) => out;
   private nearCentre = { east: NaN, north: NaN };
+  /** A rebuild of the near mesh in progress, worked on a few milliseconds per frame. */
+  private nearBuild: { east: number; north: number; row: number; pass: 0 | 1 } | null = null;
+  private readonly nearScratch = { pos: new Float32Array(NEAR_N * NEAR_N * 3), nrm: new Float32Array(NEAR_N * NEAR_N * 3), uv: new Float32Array(NEAR_N * NEAR_N * 2) };
+  private shadowStale = true;
   /** Square cut out of the fine mesh where the near mesh takes over: x, z, half-size (scene units). */
   private readonly hole = { value: new Vector3(0, 0, 0) };
 
@@ -400,32 +822,67 @@ export class SurfaceView {
     );
     this.sunGlow.scale.setScalar(0.22);
 
-    const earthMaterial = new MeshStandardMaterial({ color: 0x2a4f8f, roughness: 0.9, metalness: 0 });
+    // The Earth shades itself from the true Sun direction. It cannot use the scene's light, which is
+    // exposure-scaled for the ground and, at night, stands in for the Earth's own glow.
+    const earthMaterial = new ShaderMaterial({
+      uniforms: { map: { value: null as Texture | null }, hasMap: { value: 0 }, sunDir: { value: new Vector3(1, 0, 0) } },
+      vertexShader: /* glsl */ `
+varying vec2 vUv;
+varying vec3 vWorldNormal;
+void main() {
+	vUv = uv;
+	vWorldNormal = normalize( mat3( modelMatrix ) * normal );
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+}`,
+      fragmentShader: /* glsl */ `
+uniform sampler2D map;
+uniform float hasMap;
+uniform vec3 sunDir;
+varying vec2 vUv;
+varying vec3 vWorldNormal;
+void main() {
+	vec3 base = hasMap > 0.5 ? texture2D( map, vUv ).rgb : vec3( 0.05, 0.12, 0.3 );
+	float lit = smoothstep( -0.05, 0.25, dot( normalize( vWorldNormal ), sunDir ) );
+	gl_FragColor = vec4( base * ( 0.015 + 1.15 * lit ), 1.0 );
+	#include <colorspace_fragment>
+}`,
+    });
     new TextureLoader().load(`${import.meta.env.BASE_URL}textures/earth_2k.jpg`, (t) => {
       t.colorSpace = SRGBColorSpace;
-      earthMaterial.map = t;
-      earthMaterial.color.set(0xffffff);
-      earthMaterial.needsUpdate = true;
+      earthMaterial.uniforms.map.value = t;
+      earthMaterial.uniforms.hasMap.value = 1;
     });
     this.earth = new Mesh(new SphereGeometry(1, 64, 32), earthMaterial);
 
-    this.rocks = new InstancedMesh(rockGeometry(), new MeshStandardMaterial({ color: 0x555555, roughness: 1, metalness: 0, flatShading: true }), MAX_ROCKS);
-    this.rocks.count = 0;
-    this.rocks.frustumCulled = false;
-    this.rocks.castShadow = this.rocks.receiveShadow = true;
+    // Lunar rock is about as dark as the soil around it, not pale: a linear albedo near 0.2.
+    const rockMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+    patchRockShader(rockMaterial, this.rockGround);
+    for (let k = 0; k < SMALL_ROCK_SHAPES + BOULDER_SHAPES; k++) {
+      const boulder = k >= SMALL_ROCK_SHAPES;
+      // 320 triangles is plenty for a rock a hand-span across; boulders get 1280.
+      const rocks = new InstancedMesh(rockGeometry(k, boulder ? 3 : 2), rockMaterial, boulder ? BOULDERS_EACH : SMALL_ROCKS_EACH);
+      rocks.count = 0;
+      rocks.frustumCulled = false;
+      // Rocks cast shadows but do not receive them: at this size the shadow map would only speckle them.
+      rocks.castShadow = true;
+      this.rocks.push(rocks);
+    }
 
     // Shadows for the ground around the viewer only.
     this.sun.castShadow = true;
-    this.sun.shadow.mapSize.set(2048, 2048);
+    this.sun.shadow.mapSize.set(3072, 3072);
     const sc = this.sun.shadow.camera;
-    sc.left = sc.bottom = -70;
-    sc.right = sc.top = 70;
+    // Wide enough that shadows reach well past the near ground before fading out.
+    sc.left = sc.bottom = -110;
+    sc.right = sc.top = 110;
     sc.near = 1;
     sc.far = 1400;
     this.sun.shadow.bias = -0.0004;
     this.sun.shadow.normalBias = 0.06;
+    // Nothing that casts a shadow moves between rebuilds, so the shadow map is redrawn on demand only.
+    this.sun.shadow.autoUpdate = false;
 
-    this.scene.add(this.ambient, this.sun, this.sun.target, stars, this.sunGlow, this.earth, this.terrain, this.rocks);
+    this.scene.add(this.ambient, this.sun, this.sun.target, stars, this.sunGlow, this.earth, this.terrain, ...this.rocks);
   }
 
   /** Loads the terrain and imagery for a site. Resolves when the ground is ready to stand on. */
@@ -478,10 +935,35 @@ export class SurfaceView {
     const drape: Drape = measured && info.fine!.ortho ? { image: terrainUrl(info.fine!.ortho) } : { layer: DETAIL_LAYER };
     // Sub-metre grain underfoot is procedural everywhere: no orbital photo resolves it.
     const fineMesh = this.buildMesh(landing, fine, drape, 0, 1.5);
-    this.terrain.add(fineMesh);
+    const finePieces = splitForCulling(fineMesh.geometry, fineMesh.material as Material, fine.n, 8, 2 * fine.spacing);
+    // The ground around the near mesh takes and casts shadows too, so they don't stop at its edge.
+    // Its shadow-casting copy skips the square the near mesh covers, as its visible surface does,
+    // so the two overlapping surfaces don't shadow each other.
+    const fineDepth = new MeshDepthMaterial();
+    fineDepth.onBeforeCompile = (shader) => {
+      shader.uniforms.uHole = this.hole;
+      shader.vertexShader =
+        'varying vec2 vHoleXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvHoleXZ = position.xz;');
+      shader.fragmentShader =
+        'uniform vec3 uHole;\nvarying vec2 vHoleXZ;\n' +
+        shader.fragmentShader.replace(
+          'void main() {',
+          'void main() {\n\tif ( uHole.z > 0.0 && abs( vHoleXZ.x - uHole.x ) < uHole.z && abs( vHoleXZ.y - uHole.y ) < uHole.z ) discard;',
+        );
+    };
+    fineDepth.customProgramCacheKey = () => 'ground-depth-with-hole';
+    for (const piece of finePieces.children) {
+      piece.castShadow = piece.receiveShadow = true;
+      piece.customDepthMaterial = fineDepth;
+    }
+    this.terrain.add(finePieces);
+    this.fineUvAt = fineMesh.geometry.userData.uvAt;
     this.addNearMesh(fineMesh.material as MeshStandardMaterial, detailMap, 'image' in drape);
-    this.terrain.add(this.buildMesh(landing, inner, { layer: DETAIL_LAYER }, halfExtent(fine), 0));
-    this.terrain.add(this.buildMesh(landing, outer, { layer: CONTEXT_LAYER }, halfExtent(inner), 0));
+    const innerMesh = this.buildMesh(landing, inner, { layer: DETAIL_LAYER }, halfExtent(fine), 0);
+    const outerMesh = this.buildMesh(landing, outer, { layer: CONTEXT_LAYER }, halfExtent(inner), 0);
+    this.addFarDetail(innerMesh.material as MeshStandardMaterial, 'inner');
+    this.addFarDetail(outerMesh.material as MeshStandardMaterial, 'outer');
+    this.terrain.add(innerMesh, outerMesh);
     this.terrain.add(this.buildBeacon(landing));
 
     // Start a short walk south of the landing point, facing it.
@@ -592,8 +1074,28 @@ export class SurfaceView {
   /** Height above the sphere at a local east/north offset, metres. */
   private heightAt(east: number, north: number): number {
     const grid = this.gridAt(east, north);
-    if (grid === this.grids[0]) return this.sampleSmooth(grid, east, north) + this.detailAt(east, north);
+    if (grid === this.grids[0]) return this.sampleSmooth(grid, east, north) + this.detailAt(east, north) + this.generatedAt(east, north);
     return this.sampleGrid(grid, east, north);
+  }
+
+  /**
+   * Generated craters a metre or more across (not real), which the near mesh carries as geometry.
+   * Where a survey exists they stay under about 2.5 m, below what the photo resolves; elsewhere
+   * they run up to about 6 m, meeting the larger generated craters of the fine grid.
+   */
+  private generatedAt(east: number, north: number): number {
+    if (!this.generated) return 0;
+    let h = craterField(east, north, 3, 11);
+    if (this.detail === 'procedural') h += craterField(east, north, 7, 23);
+    return h;
+  }
+
+  private addFarDetail(material: MeshStandardMaterial, key: string): void {
+    material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = withBackscatter(shader.fragmentShader);
+      withFarDetail(shader, 0.7, this.farFlag);
+    };
+    material.customProgramCacheKey = () => `ground-far-${key}`;
   }
 
   /** Photo-derived fine relief at a point, metres; zero where there is none. */
@@ -622,7 +1124,8 @@ export class SurfaceView {
       shader.vertexShader = 'varying vec2 vGroundXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvGroundXZ = position.xz;');
       shader.fragmentShader =
         'uniform vec3 uHole;\nvarying vec2 vGroundXZ;\n' +
-        shader.fragmentShader.replace('void main() {', 'void main() {\n\tif ( uHole.z > 0.0 && abs( vGroundXZ.x - uHole.x ) < uHole.z && abs( vGroundXZ.y - uHole.y ) < uHole.z ) discard;');
+        withBackscatter(shader.fragmentShader).replace('void main() {', 'void main() {\n\tif ( uHole.z > 0.0 && abs( vGroundXZ.x - uHole.x ) < uHole.z && abs( vGroundXZ.y - uHole.y ) < uHole.z ) discard;');
+      withFarDetail(shader, 0.7, this.farFlag);
     };
     fineMaterial.customProgramCacheKey = () => 'ground-with-hole';
 
@@ -636,115 +1139,173 @@ export class SurfaceView {
     }
     const geo = new BufferGeometry();
     geo.setAttribute('position', new Float32BufferAttribute(new Float32Array(n * n * 3), 3));
+    geo.setAttribute('normal', new Float32BufferAttribute(new Float32Array(n * n * 3), 3));
     geo.setAttribute('uv', new Float32BufferAttribute(new Float32Array(n * n * 2), 2));
     geo.setIndex(idx);
     // Drawn slightly in front where it overlaps the fine mesh at its rim.
     const material = new MeshStandardMaterial({ color: 0x777777, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
-    // Generated sub-metre relief (not real), as shading.
-    const micro = microNormalMap();
-    micro.anisotropy = this.anisotropy;
-    micro.repeat.setScalar((2 * halfExtent(this.grids[0])) / MICRO_TILE_M);
-    material.normalMap = micro;
-    material.normalScale.setScalar(this.generated ? 1 : 0);
+    requestDetailMaps(this.anisotropy);
+    patchNearShader(material, this.mapSize, this.generatedFlag);
+    this.rockGround.half.value = halfExtent(this.grids[0]);
+    this.rockGround.hasMap.value = 0;
     if (hasPhoto) {
-      useSmoothMagnification(material, this.mapSize);
       // Share the photo once the fine mesh has it.
       fineMaterial.userData.onMap = () => {
         material.map = fineMaterial.map;
         this.mapSize.value = (fineMaterial.map!.image as HTMLImageElement).width;
         material.color.copy(fineMaterial.color);
         material.needsUpdate = true;
+        this.rockGround.map.value = fineMaterial.map;
+        this.rockGround.hasMap.value = 1;
+        this.rockGround.color.value.copy(fineMaterial.color);
       };
       if (fineMaterial.map) fineMaterial.userData.onMap();
     } else {
-      // No photo here: the 20 m imagery is one flat tone at this scale, so use the exposed mid-grey directly.
+      // No photo here: share the same 20 m imagery as the ground around, so the two match in tone.
       material.color.setScalar(0.2);
+      this.rockGround.hasMap.value = 0;
+      this.rockGround.color.value.setScalar(0.2);
+      fineMaterial.userData.onMap = () => {
+        material.map = fineMaterial.map;
+        this.mapSize.value = (fineMaterial.map!.image as HTMLCanvasElement).width;
+        material.color.copy(fineMaterial.color);
+        material.needsUpdate = true;
+      };
+      if (fineMaterial.map) fineMaterial.userData.onMap();
     }
-    this.near = new Mesh(geo, material);
-    this.near.castShadow = this.near.receiveShadow = true;
-    this.near.frustumCulled = false;
+    this.nearGeometry = geo;
+    this.near = splitForCulling(geo, material, NEAR_N, 6, 1);
+    for (const piece of this.near.children) piece.castShadow = piece.receiveShadow = true;
     this.near.visible = false;
     this.nearCentre = { east: NaN, north: NaN };
+    this.nearBuild = null;
     this.terrain.add(this.near);
   }
 
-  /** Keeps the dense mesh centred near the viewer. */
-  private updateNear(east: number, north: number): void {
+  /**
+   * Keeps the dense mesh centred near the viewer. Rebuilding it means working out some 150,000
+   * heights, so the work is spread over several frames (about `budgetMs` each) into scratch
+   * buffers and swapped in when complete; the first build after arriving is done in one go.
+   */
+  private updateNear(east: number, north: number, budgetMs = 4): void {
     const near = this.near, fine = this.grids[0];
     if (!near || !fine) return;
     const reach = ((NEAR_N - 1) / 2) * NEAR_SPACING;
     if (Math.max(Math.abs(east), Math.abs(north)) > halfExtent(fine) - reach - 8) {
       near.visible = false;
+      this.nearBuild = null;
       this.hole.value.z = 0;
-      this.rocks.count = 0;
+      for (const r of this.rocks) r.count = 0;
       return;
     }
-    const ce = Math.round(east / NEAR_SNAP) * NEAR_SNAP, cn = Math.round(north / NEAR_SNAP) * NEAR_SNAP;
-    if (near.visible && ce === this.nearCentre.east && cn === this.nearCentre.north) return;
-    this.nearCentre = { east: ce, north: cn };
-
-    const n = NEAR_N, c = (n - 1) / 2, span = 2 * halfExtent(fine);
-    const pos = near.geometry.getAttribute('position') as Float32BufferAttribute;
-    const uv = near.geometry.getAttribute('uv') as Float32BufferAttribute;
-    const p = new Vector3();
-    for (let j = 0; j < n; j++) {
-      for (let i = 0; i < n; i++) {
-        const e = ce + (i - c) * NEAR_SPACING, nn = cn + (j - c) * NEAR_SPACING;
-        // At its rim the mesh settles onto the fine mesh's own surface, so the two join without a step.
-        const rim = Math.min(1, (Math.min(i, j, n - 1 - i, n - 1 - j) * NEAR_SPACING) / 12);
-        const blend = rim * rim * (3 - 2 * rim);
-        const flat = this.sampleGrid(fine, e, nn);
-        const h = flat + (this.sampleSmooth(fine, e, nn) + this.detailAt(e, nn) - flat) * blend;
-        this.groundPoint(e, nn, h, p);
-        pos.setXYZ(j * n + i, p.x, p.y, p.z);
-        uv.setXY(j * n + i, (e + span / 2) / span, (nn + span / 2) / span);
-      }
+    const wandered = Math.max(Math.abs(east - this.nearCentre.east), Math.abs(north - this.nearCentre.north));
+    if (!this.nearBuild && (!near.visible || wandered >= NEAR_SLACK)) {
+      this.nearBuild = { east: Math.round(east / NEAR_SNAP) * NEAR_SNAP, north: Math.round(north / NEAR_SNAP) * NEAR_SNAP, row: 0, pass: 0 };
     }
-    pos.needsUpdate = true;
-    uv.needsUpdate = true;
-    near.geometry.computeVertexNormals();
-    near.visible = true;
-    this.hole.value.set(ce, -cn, reach - 1.5);
-    this.scatterRocks(ce, cn);
+    const build = this.nearBuild;
+    if (!build) return;
+
+    const n = NEAR_N, c = (n - 1) / 2;
+    const uvTmp: [number, number] = [0, 0];
+    const { pos, nrm, uv } = this.nearScratch;
+    const p = new Vector3();
+    const deadline = near.visible ? performance.now() + budgetMs : Infinity;
+    while (performance.now() < deadline) {
+      const j = build.row;
+      if (build.pass === 0) {
+        // Pass 1: positions.
+        for (let i = 0; i < n; i++) {
+          const e = build.east + (i - c) * NEAR_SPACING, nn = build.north + (j - c) * NEAR_SPACING;
+          // At its rim the mesh settles onto the fine mesh's own surface, so the two join without a step.
+          const rim = Math.min(1, (Math.min(i, j, n - 1 - i, n - 1 - j) * NEAR_SPACING) / 12);
+          const blend = rim * rim * (3 - 2 * rim);
+          const flat = this.sampleGrid(fine, e, nn);
+          const h = flat + (this.sampleSmooth(fine, e, nn) + this.detailAt(e, nn) + this.generatedAt(e, nn) - flat) * blend;
+          this.groundPoint(e, nn, h, p).toArray(pos, (j * n + i) * 3);
+          this.fineUvAt(e, nn, uvTmp);
+          uv[(j * n + i) * 2] = uvTmp[0];
+          uv[(j * n + i) * 2 + 1] = uvTmp[1];
+        }
+      } else {
+        // Pass 2: normals, from the neighbouring positions.
+        const jS = Math.max(0, j - 1), jN = Math.min(n - 1, j + 1);
+        for (let i = 0; i < n; i++) {
+          const w = (j * n + Math.max(0, i - 1)) * 3, e = (j * n + Math.min(n - 1, i + 1)) * 3;
+          const s = (jS * n + i) * 3, t = (jN * n + i) * 3;
+          const ax = pos[e] - pos[w], ay = pos[e + 1] - pos[w + 1], az = pos[e + 2] - pos[w + 2]; // towards east
+          const bx = pos[t] - pos[s], by = pos[t + 1] - pos[s + 1], bz = pos[t + 2] - pos[s + 2]; // towards north
+          const nx = ay * bz - az * by, ny = az * bx - ax * bz, nz = ax * by - ay * bx;
+          const len = Math.hypot(nx, ny, nz) || 1;
+          nrm.set([nx / len, ny / len, nz / len], (j * n + i) * 3);
+        }
+      }
+      if (++build.row < n) continue;
+      if (build.pass === 0) {
+        build.pass = 1;
+        build.row = 0;
+        continue;
+      }
+      // Done: swap the finished mesh in.
+      for (const [name, data] of [['position', pos], ['normal', nrm], ['uv', uv]] as const) {
+        const attr = this.nearGeometry!.getAttribute(name) as Float32BufferAttribute;
+        (attr.array as Float32Array).set(data);
+        attr.needsUpdate = true;
+      }
+      refreshBounds(near);
+      near.visible = true;
+      this.nearCentre = { east: build.east, north: build.north };
+      this.hole.value.set(build.east, -build.north, reach - 1.5);
+      this.scatterRocks(build.east, build.north);
+      this.shadowStale = true;
+      this.nearBuild = null;
+      break;
+    }
   }
 
   /** Generated rocks (not real) around a point. The same cell always gets the same rocks. */
   private scatterRocks(ce: number, cn: number): void {
     const q = new Quaternion(), scale = new Vector3(), p = new Vector3(), m = new Matrix4(), euler = new Euler();
-    let count = 0;
+    const counts = this.rocks.map(() => 0);
     const cells = Math.ceil(ROCK_REACH_M / ROCK_CELL_M);
     const c0e = Math.round(ce / ROCK_CELL_M), c0n = Math.round(cn / ROCK_CELL_M);
-    for (let j = -cells; j <= cells && count < MAX_ROCKS; j++) {
-      for (let i = -cells; i <= cells && count < MAX_ROCKS; i++) {
+    for (let j = -cells; j <= cells; j++) {
+      for (let i = -cells; i <= cells; i++) {
         const rand = seededRandom(`${this.siteId}:${c0e + i}:${c0n + j}`);
-        // About one rock per 30 square metres, mostly fist-sized, with the occasional boulder.
-        const n = rand() < 0.42 ? 1 : rand() < 0.1 ? 2 : 0;
-        for (let k = 0; k < n && count < MAX_ROCKS; k++) {
+        // About one rock per 25 square metres, mostly fist-sized, with the occasional boulder.
+        const n = rand() < 0.45 ? 1 : rand() < 0.14 ? 2 : 0;
+        for (let k = 0; k < n; k++) {
           const e = (c0e + i + rand() - 0.5) * ROCK_CELL_M, nn = (c0n + j + rand() - 0.5) * ROCK_CELL_M;
-          const size = Math.min(0.9, 0.06 / Math.sqrt(1 - rand()));
-          if (Math.hypot(e - ce, nn - cn) > ROCK_REACH_M) continue;
+          const size = Math.min(0.9, 0.05 / Math.sqrt(1 - rand()));
+          const variant = size >= BOULDER_SIZE_M ? SMALL_ROCK_SHAPES + Math.floor(rand() * BOULDER_SHAPES) : Math.floor(rand() * SMALL_ROCK_SHAPES);
+          const squash = 0.55 + rand() * 0.5;
+          const stretch = 0.75 + rand() * 0.6;
+          const tilt = [rand() * 0.7 - 0.35, rand() * Math.PI * 2, rand() * 0.7 - 0.35];
+          if (Math.hypot(e - ce, nn - cn) > ROCK_REACH_M || counts[variant] >= this.rocks[variant].instanceMatrix.count) continue;
           this.groundPoint(e, nn, this.heightAt(e, nn), p);
-          p.y += size * 0.2; // partly buried
-          scale.set(size * (0.7 + rand() * 0.6), size * (0.45 + rand() * 0.4), size * (0.7 + rand() * 0.6));
-          q.setFromEuler(euler.set(rand() * 0.6 - 0.3, rand() * Math.PI * 2, rand() * 0.6 - 0.3));
-          this.rocks.setMatrixAt(count++, m.compose(p, q, scale));
+          p.y += size * squash * 0.25; // sits partly buried
+          scale.set(size * stretch, size * squash, size / stretch);
+          q.setFromEuler(euler.set(tilt[0], tilt[1], tilt[2]));
+          this.rocks[variant].setMatrixAt(counts[variant]++, m.compose(p, q, scale));
         }
       }
     }
-    this.rocks.count = count;
-    this.rocks.instanceMatrix.needsUpdate = true;
-    this.rocks.visible = this.generated;
+    this.rocks.forEach((r, k) => {
+      r.count = counts[k];
+      r.instanceMatrix.needsUpdate = true;
+      r.visible = this.generated;
+    });
   }
 
-  /** Shows or hides everything generated rather than measured: rocks and sub-metre surface texture. */
+  /** Shows or hides everything generated rather than measured: rocks, small craters and sub-metre texture. */
   setGenerated(on: boolean): void {
     this.generated = on;
-    this.rocks.visible = on;
-    if (this.near) {
-      const m = this.near.material as MeshStandardMaterial;
-      m.normalScale.setScalar(on ? 1 : 0);
-      m.bumpScale = on ? 0.15 : 0;
-    }
+    this.generatedFlag.value = on ? 1 : 0;
+    this.farFlag.value = on ? 1 : 0;
+    for (const r of this.rocks) r.visible = on;
+    this.shadowStale = true;
+    // The generated craters are part of the near mesh, so rebuild it on the next step.
+    if (this.near) this.near.visible = false;
+    this.nearBuild = null;
   }
 
   /** The finest grid that covers a point. */
@@ -771,23 +1332,30 @@ export class SurfaceView {
     const uv = new Float32Array(n * n * 2);
     const p = new Vector3();
     const la = landing.lat * DEG;
+    const span = (n - 1) * grid.spacing;
+    /** Image coordinates of a ground point (metres east and north of the site). */
+    const uvAt = (e: number, nn: number, out: [number, number]): [number, number] => {
+      if (!mosaic) {
+        out[0] = (e + span / 2) / span;
+        out[1] = (nn + span / 2) / span;
+        return out;
+      }
+      const d = Math.hypot(e, nn) / this.radius;
+      const az = Math.atan2(e, nn);
+      const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(az));
+      const dLon = Math.atan2(Math.sin(az) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(lat2));
+      out[0] = (landing.lon + dLon / DEG - mosaic.lonW) / (mosaic.lonE - mosaic.lonW);
+      out[1] = (lat2 / DEG - mosaic.latS) / (mosaic.latN - mosaic.latS);
+      return out;
+    };
+    const t: [number, number] = [0, 0];
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
         const e = (i - c) * grid.spacing, nn = (j - c) * grid.spacing;
         this.groundPoint(e, nn, grid.data[j * n + i], p).toArray(pos, (j * n + i) * 3);
-        if (!mosaic) {
-          // The image was resampled onto this very grid, north up.
-          uv[(j * n + i) * 2] = i / (n - 1);
-          uv[(j * n + i) * 2 + 1] = j / (n - 1);
-          continue;
-        }
-        // Latitude / longitude of this sample (great-circle offset from the site), for the imagery lookup.
-        const d = Math.hypot(e, nn) / this.radius;
-        const az = Math.atan2(e, nn);
-        const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(az));
-        const dLon = Math.atan2(Math.sin(az) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(lat2));
-        uv[(j * n + i) * 2] = (landing.lon + dLon / DEG - mosaic.lonW) / (mosaic.lonE - mosaic.lonW);
-        uv[(j * n + i) * 2 + 1] = (lat2 / DEG - mosaic.latS) / (mosaic.latN - mosaic.latS);
+        uvAt(e, nn, t);
+        uv[(j * n + i) * 2] = t[0];
+        uv[(j * n + i) * 2 + 1] = t[1];
       }
     }
     const idx: number[] = [];
@@ -803,6 +1371,7 @@ export class SurfaceView {
       }
     }
     const geo = new BufferGeometry();
+    geo.userData.uvAt = uvAt;
     geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
     geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
     geo.setIndex(idx);
@@ -810,6 +1379,10 @@ export class SurfaceView {
 
     // Until imagery arrives the ground is plain regolith grey.
     const material = new MeshStandardMaterial({ color: 0x777777, roughness: 1, metalness: 0 });
+    material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = withBackscatter(shader.fragmentShader);
+    };
+    material.customProgramCacheKey = () => 'ground-backscatter';
     if (grainMetres > 0) {
       const grain = grainTexture();
       const repeats = ((n - 1) * grid.spacing) / grainMetres;
@@ -826,6 +1399,7 @@ export class SurfaceView {
         material.map = mosaic.texture;
         material.color.setScalar(exposureFor(mosaic.texture.image as HTMLCanvasElement));
         material.needsUpdate = true;
+        material.userData.onMap?.();
       });
     } else if ('image' in drape) {
       const token = this.loadToken;
@@ -884,29 +1458,46 @@ export class SurfaceView {
     const sunDir = this.toLocal(g.sunDir);
     this.sunGlow.position.copy(sunDir).multiplyScalar(SKY_DISTANCE);
     this.sunGlow.visible = this.mode === 'real';
-    // Exposure, like a camera's: level ground keeps a steady mid-tone whatever the Sun's height,
+    const earthDir = this.toLocal(g.earthDir);
+    (this.earth.material as ShaderMaterial).uniforms.sunDir.value.copy(sunDir);
+
+    // Exposure, like a camera's: level ground keeps a steady mid-tone whatever the light's height,
     // so a low Sun shows up as strong contrast on slopes rather than as a dim scene.
-    let sinElevation = 0.8;
-    if (this.mode === 'real') {
+    let sinElevation = 0.8, exposure = 0.62;
+    this.sun.color.setRGB(1, 1, 1);
+    this.sun.visible = true;
+    if (this.mode !== 'real') {
+      this.sunDirection.set(0.35, 0.8, 0.5).normalize();
+      this.ambient.intensity = 0.3;
+    } else if (sunDir.y > -0.01) {
+      // Day. Sunlit ground all around bounces light into shadows, so they are dim rather than black;
+      // with the Sun high there is little shadow left to fill, so the fill backs off to keep contrast.
+      const high = Math.max(0, sunDir.y);
       this.sunDirection.copy(sunDir);
       sinElevation = Math.max(sunDir.y, 0.08);
-      this.sun.visible = sunDir.y > -0.01;
-      // Fill light so the ground is still readable in shadow and at night.
-      this.ambient.intensity = this.sun.visible ? 0.1 : 0.28;
+      exposure = 0.62 + 0.1 * high;
+      this.ambient.intensity = 0.3 - 0.14 * high;
+    } else if (earthDir.y > 0.02) {
+      // Night with the Earth in the sky: the ground is lit by Earthshine, from the Earth's direction,
+      // bluish, and brighter the fuller the Earth (which is fullest when the Moon is new).
+      const earthLit = 1 - g.litFraction;
+      this.sunDirection.copy(earthDir);
+      sinElevation = Math.max(earthDir.y, 0.15);
+      this.sun.color.setRGB(0.72, 0.84, 1);
+      exposure = 0.05 + 0.2 * earthLit;
+      this.ambient.intensity = 0.05;
     } else {
-      this.sunDirection.set(0.35, 0.8, 0.5).normalize();
-      this.sun.visible = true;
-      this.ambient.intensity = 0.3;
+      // Night on the far side: starlight only.
+      this.sun.visible = false;
+      this.ambient.intensity = 0.06;
     }
-    this.sun.intensity = (Math.PI * 0.62) / sinElevation;
+    lightHeight.value = this.sun.visible ? Math.max(0, this.sunDirection.y) : 0;
+    this.sun.intensity = (Math.PI * exposure) / sinElevation;
     this.sun.castShadow = this.sun.visible;
-    this.placeSun();
-    // The Earth shares this light, so cancel the exposure boost on it.
-    const earthMaterial = this.earth.material as MeshStandardMaterial;
-    if (earthMaterial.map) earthMaterial.color.setScalar(3.2 / this.sun.intensity);
+    this.shadowStale = true;
 
     // Earth at its true direction and apparent size, turned to show the right face.
-    this.toLocal(g.earthDir, this.earth.position).multiplyScalar(SKY_DISTANCE);
+    this.earth.position.copy(earthDir).multiplyScalar(SKY_DISTANCE);
     this.earth.scale.setScalar((SKY_DISTANCE * EARTH_RADIUS_KM) / g.earthDistanceKm);
     const pole = this.toLocal(g.earthPole).normalize();
     const prime = this.toLocal(g.earthPrime);
@@ -916,9 +1507,13 @@ export class SurfaceView {
 
   /** The light sits along the Sun's direction from the viewer, so its shadow area follows them. */
   private placeSun(): void {
-    const cam = this.camera.position;
-    this.sun.target.position.set(cam.x, cam.y - EYE_HEIGHT - this.lift, cam.z);
+    // Centred on the near mesh (the only thing that casts shadows), not on the viewer.
+    const e = Number.isFinite(this.nearCentre.east) ? this.nearCentre.east : this.camera.position.x;
+    const n = Number.isFinite(this.nearCentre.north) ? this.nearCentre.north : -this.camera.position.z;
+    this.groundPoint(e, n, this.grids.length ? this.heightAt(e, n) : 0, this.sun.target.position);
     this.sun.position.copy(this.sun.target.position).addScaledVector(this.sunDirection, 600);
+    this.sun.shadow.needsUpdate = true;
+    this.shadowStale = false;
   }
 
   /** Mouse-look: positive dx turns right, positive dy looks down. */
@@ -955,7 +1550,7 @@ export class SurfaceView {
       cam.position.y = this.groundPoint(east, north, this.heightAt(east, north), new Vector3()).y + EYE_HEIGHT + this.lift;
     }
     cam.rotation.set(this.pitch * DEG, -h, 0);
-    this.placeSun();
+    if (this.shadowStale) this.placeSun();
   }
 
   /** Distance from the landing point, metres. */
@@ -970,7 +1565,8 @@ export class SurfaceView {
 
   private clearTerrain(): void {
     this.near = null;
-    this.rocks.count = 0;
+    this.nearGeometry = null;
+    for (const r of this.rocks) r.count = 0;
     this.detailMap = null;
     this.hole.value.set(0, 0, 0);
     this.terrain.traverse((o) => {
@@ -981,7 +1577,7 @@ export class SurfaceView {
       // Tile mosaics dispose their own textures below; single-image drapes are owned by the material.
       if (mat.map && !this.mosaics.some((m) => m.texture === mat.map)) mat.map.dispose();
       mat.bumpMap?.dispose();
-      if (mat.normalMap && mat.normalMap !== microTexture) mat.normalMap.dispose();
+      mat.normalMap?.dispose();
       mat.dispose();
     });
     for (const m of this.mosaics) m.dispose();
