@@ -7,7 +7,7 @@
     <title>Lunyx · Lunar landing site navigator</title>
   </head>
   <body data-view="globe">
-    <canvas id="scene" aria-label="3D view of the Moon. Drag to turn, scroll to zoom, click a marker to open a site."></canvas>
+    <canvas id="scene" tabindex="0" aria-label="3D Moon globe. Drag or arrow keys to turn, scroll or plus/minus to zoom, click a marker to open a site, click the ground or press Enter to drop a pin at the centre."></canvas>
 
     <!--
       Layout frame. Each region is a mount point handed to exactly one module by src/main.ts;
@@ -25,6 +25,7 @@
       <section class="region region-surface-hud" id="region-surface-hud" data-views="surface" aria-label="Surface view"></section>
       <section class="region region-scrubber" id="region-scrubber" aria-label="Time"></section>
       <section class="region region-locator" id="region-locator" aria-label="Locator map"></section>
+      <div class="region region-person" id="region-person" data-views="globe"></div>
       <div class="region region-assistant" id="region-assistant"></div>
       <aside class="region region-drawer" id="region-drawer" aria-label="Assistant"></aside>
       <section class="region region-compare" id="region-compare" aria-label="Comparison"></section>

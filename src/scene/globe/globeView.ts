@@ -1,11 +1,11 @@
 // The 3D globe: Moon, stars, Sun/Earth, landing markers, custom pin, close-up imagery,
 // orbit controls and fly-to. It follows the store (time, light, site, filters) and writes
 // the camera pose back (globeCenter); clicks and picks go out as actions.
-import { Camera, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, RingGeometry, Scene, Vector3, WebGLRenderer, DoubleSide } from 'three';
+import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import { runAction } from '../../core/actions';
+import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
-import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
+import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
 import { MOON_RADIUS_KM, SiteRef, wrapLon } from '../../core/types';
@@ -20,8 +20,11 @@ import { Sky } from '../sky';
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
 const MIN_DISTANCE = 1.006;
 const Z = new Vector3(0, 0, 1);
+const MOON = new Sphere(new Vector3(), 1);
 
 /** Scene direction to selenographic lat/lon (inverse of latLonToVec3). */
+const round5 = (x: number) => Math.round(x * 1e5) / 1e5;
+
 export function vec3ToLatLon(v: Vector3): { lat: number; lon: number } {
   const n = v.clone().normalize();
   return { lat: (Math.asin(Math.max(-1, Math.min(1, n.y))) * 180) / Math.PI, lon: wrapLon((Math.atan2(-n.z, n.x) * 180) / Math.PI) };
@@ -80,6 +83,47 @@ export class GlobeView {
       this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM);
     });
     this.bindPointer();
+    this.bindKeyboard();
+    registerActions([
+      defineAction({
+        name: 'resetNorth',
+        title: 'North up',
+        description: 'Turns the globe view so that lunar north points up on screen (what clicking the compass does).',
+        effect: 'command',
+        params: { type: 'object', properties: {} },
+        run: () => {
+          this.resetNorth();
+          return { northAngleDeg: Math.round(this.northAngleDeg() * 10) / 10 };
+        },
+      }),
+    ]);
+  }
+
+  /** Keyboard on the focused globe: arrows turn, +/- zoom, Enter drops a pin at the centre. */
+  private bindKeyboard(): void {
+    this.canvas.addEventListener('keydown', (e) => {
+      if (!this.active) return;
+      const c = store.get().globeCenter;
+      // Turn by about a tenth of the visible width.
+      const stepDeg = Math.min(20, Math.max(0.02, (c.altitudeKm / MOON_RADIUS_KM) * 12));
+      let lat = c.lat, lon = c.lon, alt = c.altitudeKm;
+      switch (e.key) {
+        case 'ArrowUp': lat = Math.min(89, lat + stepDeg); break;
+        case 'ArrowDown': lat = Math.max(-89, lat - stepDeg); break;
+        case 'ArrowLeft': lon = wrapLon(lon - stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
+        case 'ArrowRight': lon = wrapLon(lon + stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
+        case '+': case '=': alt = Math.max(MIN_ALTITUDE_KM, alt / 1.5); break;
+        case '-': case '_': alt = Math.min(MAX_ALTITUDE_KM, alt * 1.5); break;
+        case 'Enter':
+          e.preventDefault();
+          void runAction('dropPin', { lat: round5(c.lat), lon: round5(c.lon) });
+          return;
+        default: return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      void runAction('setGlobeCamera', { lat, lon, altitudeKm: alt });
+    });
   }
 
   async load(): Promise<void> {
@@ -272,12 +316,42 @@ export class GlobeView {
       if (moved > 5) return; // a drag, not a click
       this.tooltip.hidden = true;
       const hits = this.pickAt(e, this.camera);
-      if (!hits.length) return; // clicking empty ground keeps the current selection
+      if (!hits.length) {
+        // Empty ground: drop a pin there.
+        const at = this.latLonAt(e.clientX, e.clientY);
+        if (at) void runAction('dropPin', { lat: round5(at.lat), lon: round5(at.lon) });
+        return;
+      }
       // Clicking again on overlapping sites (e.g. Apollo 12 / Surveyor 3) cycles through them.
       const current = hits.findIndex((m) => m.landing.id === store.get().site?.id);
       const next = hits[(current + 1) % hits.length];
       void runAction('selectSite', { site: next.landing.id, surface: true });
     });
+  }
+
+  /** The surface point under a screen position (client pixels), or null off the Moon. */
+  latLonAt(clientX: number, clientY: number): { lat: number; lon: number } | null {
+    const r = this.canvas.getBoundingClientRect();
+    if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null;
+    const ndc = new Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    const dir = new Vector3(ndc.x, ndc.y, 0.5).unproject(this.camera).sub(this.camera.position).normalize();
+    const hit = new Ray(this.camera.position.clone(), dir).intersectSphere(MOON, new Vector3());
+    return hit ? vec3ToLatLon(hit) : null;
+  }
+
+  /** Screen angle of lunar north at the screen centre, degrees clockwise from screen-up. */
+  northAngleDeg(): number {
+    const c = this.camera.position.clone().normalize();
+    const north = new Vector3(0, 1, 0).addScaledVector(c, -c.y);
+    if (north.lengthSq() < 1e-10) return 0; // looking straight down a pole
+    this.camera.matrixWorld.extractBasis(this.right, this.up, this.camDir);
+    return (Math.atan2(north.dot(this.right), north.dot(this.up)) * 180) / Math.PI;
+  }
+
+  /** Restores the default orientation: lunar north up on screen. */
+  resetNorth(): void {
+    this.camera.up.set(0, 1, 0);
+    this.controls.update();
   }
 
   hideTooltip(): void {

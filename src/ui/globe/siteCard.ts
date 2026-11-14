@@ -10,6 +10,7 @@ import { store } from '../../core/store';
 import { isoUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
+import { loadTerrainFor } from '../../terrain/api';
 import { formatCoords, formatDate, Landing, landingDate, programColor, quickmapUrl, trekUrl } from '../../data/landings';
 import { SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
 import { button, el, isTypingTarget } from '../dom';
@@ -45,7 +46,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const title = el('h2', 'sc-title');
   const dl = el('dl', 'ly-kv sc-facts');
   const rows: Record<string, Row> = {};
-  for (const [key, label] of [['date', 'Landed'], ['country', 'Country'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['sun', 'Sun'], ['earth', 'Earth'], ['analysis', 'Analysis']] as const) {
+  for (const [key, label] of [['date', 'Landed'], ['country', 'Country'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['elevation', 'Elevation'], ['coverage', 'Elevation data'], ['sun', 'Sun'], ['earth', 'Earth'], ['analysis', 'Analysis']] as const) {
     const dt = el('dt', undefined, label), dd = el('dd');
     dl.append(dt, dd);
     rows[key] = { dt, dd };
@@ -74,7 +75,7 @@ export function mountSiteCard(region: HTMLElement): void {
     await runAction('setLightMode', { mode: 'real' });
     await runAction('setTime', { utc: isoUtc(landingDate(l).getTime()) });
   });
-  const surface = button('Surface view', 'ly-btn ly-btn--small ly-btn--primary', async () => {
+  const surface = button('Enter surface view', 'ly-btn ly-btn--small ly-btn--primary', async () => {
     const r = await runAction('enterSurface');
     if (!r.ok) status.textContent = r.error;
   });
@@ -137,7 +138,7 @@ export function mountSiteCard(region: HTMLElement): void {
       swatch.style.background = programColor(l.program);
       programName.textContent = l.program;
     }
-    title.textContent = l ? l.name : 'Custom pin';
+    title.textContent = l ? l.name : 'Pinned location';
     setRow('date', l ? formatDate(l.date) : null);
     setRow('country', l?.country ?? null);
     setRow('type', l ? (l.crewed ? 'Crewed' : 'Robotic') : null);
@@ -160,6 +161,26 @@ export function mountSiteCard(region: HTMLElement): void {
     }
     renderSky(site);
     renderAnalysis();
+    void renderTerrain(site);
+  };
+
+  // Elevation and data coverage at the site, from the terrain service.
+  let terrainToken = 0;
+  const renderTerrain = async (site: SiteRef) => {
+    const token = ++terrainToken;
+    setRow('elevation', 'Loading…');
+    setRow('coverage', null);
+    try {
+      const stack = await loadTerrainFor(site);
+      if (token !== terrainToken) return;
+      const src = stack.sources.find((x) => x.covers(site.lat, site.lon));
+      const h = src ? src.sample(site.lat, site.lon) : NaN;
+      setRow('elevation', Number.isFinite(h) ? `${Math.round(h).toLocaleString('en-US')} m (above the 1737.4 km reference sphere)` : 'No elevation data at this point');
+      setRow('coverage', src ? `${src.name}, ${src.resolutionM < 100 ? src.resolutionM : Math.round(src.resolutionM).toLocaleString('en-US')} m resolution${stack.notes.length ? `. ${stack.notes.join(' ')}` : ''}` : stack.notes.join(' ') || null);
+    } catch {
+      if (token !== terrainToken) return;
+      setRow('elevation', 'Not available yet: the elevation service is not merged.');
+    }
   };
   const renderAnalysis = () => setRow('analysis', analysisText(analysis.get('current')) || null);
 

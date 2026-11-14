@@ -15,6 +15,7 @@ import { SceneHost } from './scene/globe/sceneHost';
 import { mountAssistantButton, mountAssistantDrawer } from './ui/assistant/drawer';
 import { mountComparePanel } from './ui/compare/panel';
 import { mountFiltersPanel } from './ui/globe/filtersPanel';
+import { mountPerson } from './ui/globe/person';
 import { mountSiteCard } from './ui/globe/siteCard';
 import { mountCloseButton } from './ui/shared/closeButton';
 import { mountCompass } from './ui/shared/compass';
@@ -37,7 +38,8 @@ async function boot() {
   mountToasts(region('toast'));
   mountFiltersPanel(region('left'));
   mountSiteCard(region('card'));
-  mountCompass(region('compass'));
+  mountCompass(region('compass'), () => host.globe.northAngleDeg(), (fn) => host.onFrame(fn));
+  mountPerson(region('person'), (x, y) => host.globe.latLonAt(x, y));
   mountTimeScrubber(region('scrubber'));
   mountLocatorMap(region('locator'));
   mountKeyMetrics(region('metrics'));

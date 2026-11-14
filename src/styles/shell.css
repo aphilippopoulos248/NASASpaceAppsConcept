@@ -33,16 +33,16 @@ body[data-view='surface'] .region[data-views='globe'] { display: none; }
   pointer-events: none;
 }
 
-.region-left { top: calc(var(--sp-4) + 56px); left: var(--edge); bottom: 132px; width: var(--panel-w); display: flex; flex-direction: column; }
+.region-left { top: calc(var(--sp-4) + 56px); left: var(--edge); bottom: 96px; width: var(--panel-w); display: flex; flex-direction: column; }
 .region-metrics { top: var(--edge); left: var(--edge); width: var(--panel-w); }
 .region-card { top: var(--edge); right: var(--edge); width: min(320px, calc(100vw - 2 * var(--edge))); max-height: calc(100vh - 260px); display: flex; flex-direction: column; }
 .region-close { top: var(--edge); right: var(--edge); }
-.region-compass { left: var(--edge); bottom: 108px; }
+.region-compass { left: var(--edge); bottom: var(--edge); }
 .region-chart { left: var(--edge); bottom: 108px; }
-.region-scrubber { left: 50%; bottom: var(--edge); width: min(760px, calc(100vw - 2 * var(--edge) - 2 * 220px)); transform: translateX(-50%); }
-.region-locator { right: var(--edge); bottom: var(--edge); width: 200px; }
-.region-assistant { right: var(--edge); bottom: calc(var(--edge) + 120px); }
-.region-surface-hud { left: 50%; bottom: 104px; width: min(760px, calc(100vw - 2 * var(--edge))); transform: translateX(-50%); }
+.region-scrubber { left: 50%; bottom: var(--edge); width: min(820px, calc(100vw - 2 * var(--edge) - 2 * 292px)); transform: translateX(-50%); }
+.region-locator { right: var(--edge); bottom: var(--edge); width: 208px; }
+.region-assistant { right: var(--edge); bottom: calc(var(--edge) + 148px); }
+.region-surface-hud { left: 50%; bottom: 156px; width: min(760px, calc(100vw - 2 * var(--edge))); transform: translateX(-50%); }
 .region-drawer { top: 0; right: 0; bottom: 0; z-index: var(--z-drawer); }
 .region-compare { inset: 0; z-index: var(--z-drawer); }
 .region-toast { top: 72px; left: 50%; transform: translateX(-50%); z-index: var(--z-toast); display: grid; gap: var(--sp-2); justify-items: center; }
@@ -76,20 +76,21 @@ body[data-view='surface'] .region[data-views='globe'] { display: none; }
 .left-toggle { display: none; }
 
 @media (max-width: 1100px) {
-  .region-scrubber { width: calc(100vw - 2 * var(--edge) - 216px); left: var(--edge); transform: none; }
+  .region-scrubber { left: calc(var(--edge) + 68px); width: calc(100vw - 2 * var(--edge) - 68px - 276px); transform: none; }
 }
 
 @media (max-width: 700px) {
   .wordmark { font-size: var(--fs-xl); }
   .region-wordmark { top: var(--sp-3); }
   .left-toggle { display: inline-flex; position: absolute; top: var(--sp-3); left: var(--edge); pointer-events: auto; }
-  .region-left { top: 56px; bottom: auto; max-height: calc(100vh - 220px); display: none; }
+  .region-left { top: 56px; bottom: auto; max-height: calc(100dvh - 56px - 216px); display: none; z-index: 1; }
   body.left-open .region-left { display: flex; }
-  .region-card { top: auto; bottom: 168px; max-height: 48vh; }
-  .region-scrubber { left: var(--edge); right: var(--edge); width: auto; }
+  .region-card { top: auto; bottom: 216px; max-height: calc(100dvh - 216px - 64px); }
+  .region-scrubber { left: var(--edge); right: var(--edge); width: auto; transform: none; }
   .region-locator { display: none; }
-  .region-compass, .region-chart { bottom: 172px; }
-  .region-assistant { bottom: 172px; }
+  .region-compass, .region-chart { bottom: 160px; }
+  .region-compass .compass { width: 44px; height: 44px; }
+  .region-assistant { bottom: 160px; }
   .region-surface-hud { bottom: 168px; }
   body[data-view='surface'] .region-metrics { width: calc(100vw - 2 * var(--edge) - 48px); }
 }
