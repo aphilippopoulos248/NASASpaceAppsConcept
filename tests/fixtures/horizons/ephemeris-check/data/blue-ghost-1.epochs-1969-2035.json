@@ -1,0 +1,83 @@
+{
+ "schema": "lunyx.horizons-sky/1",
+ "id": "blue-ghost-1.epochs-1969-2035",
+ "title": "Blue Ghost 1 pin (62 E) at 28 instants 1969-2035, including its touchdown.",
+ "site": {
+  "id": "blue-ghost-1",
+  "name": "Blue Ghost Mission 1",
+  "kind": "landing",
+  "lat": 18.562,
+  "lon": 61.81,
+  "altKm": -3.652,
+  "altSource": "public/terrain/index.json: -3652 m above the 1737.4 km sphere (SLDEM2015 512 ppd)",
+  "pinSource": "public/data/landings.json"
+ },
+ "time": {
+  "scale": "UTC",
+  "list": "epochs-1969-2035",
+  "start": "1969-07-20T20:17:00Z",
+  "stop": "2035-01-22T18:16:00Z",
+  "count": 28,
+  "note": "24 instants t0 + k * (1040 d 7 h 13 min), k = 0..23, t0 = Apollo 11 touchdown: the step is incommensurate with the synodic, anomalistic and draconic months and the year, so phase, libration and season are all sampled. Plus the touchdown instants (public/data/landings.json) of Apollo 17, Chang'e 4, Blue Ghost 1 and IM-2."
+ },
+ "source": {
+  "service": "NASA/JPL Horizons API (https://ssd.jpl.nasa.gov/api/horizons.api)",
+  "apiVersion": "1.2",
+  "ephemeris": "DE441",
+  "moonFrame": "MEAN_ME (high precision)",
+  "moonRadiiKm": "1737.4, 1737.4, 1737.4",
+  "refraction": "NO (AIRLESS)",
+  "retrievedUtc": "2026-11-14T20:36:46Z"
+ },
+ "units": "utc: ISO 8601 UTC. az, el: deg, airless apparent, of the body centre (az clockwise from north; el above the local horizontal of the 1737.4 km sphere). angDiamArcsec: arcsec. rangeKm: km from the site. illumPct: % of the disc sunlit. sunElongDeg: deg between Sun and Earth centres in the site sky. subEarth, subSolar: deg, lat north+, lon east+ in -180..180 (Moon ME frame).",
+ "query": {
+  "sun": {
+   "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&MAKE_EPHEM=%27YES%27&OBJ_DATA=%27NO%27&EPHEM_TYPE=%27OBSERVER%27&TIME_TYPE=%27UT%27&TIME_DIGITS=%27FRACSEC%27&CAL_FORMAT=%27BOTH%27&ANG_FORMAT=%27DEG%27&APPARENT=%27AIRLESS%27&RANGE_UNITS=%27KM%27&EXTRA_PREC=%27YES%27&CSV_FORMAT=%27YES%27&COMMAND=%2710%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2761.81%2C18.562%2C-3.652%27&QUANTITIES=%274%2C10%2C13%2C20%2C23%2C24%27&TLIST=%271969-07-20+20%3A17%3A00%27+%271972-05-26+03%3A30%3A00%27+%271972-12-11+19%3A54%3A00%27+%271975-04-01+10%3A43%3A00%27+%271978-02-04+17%3A56%3A00%27+%271980-12-11+01%3A09%3A00%27+%271983-10-17+08%3A22%3A00%27+%271986-08-22+15%3A35%3A00%27+%271989-06-27+22%3A48%3A00%27+%271992-05-03+06%3A01%3A00%27+%271995-03-09+13%3A14%3A00%27+%271998-01-12+20%3A27%3A00%27+%272000-11-18+03%3A40%3A00%27+%272003-09-24+10%3A53%3A00%27+%272006-07-30+18%3A06%3A00%27+%272009-06-05+01%3A19%3A00%27+%272012-04-10+08%3A32%3A00%27+%272015-02-14+15%3A45%3A00%27+%272017-12-20+22%3A58%3A00%27+%272019-01-03+02%3A26%3A00%27+%272020-10-26+06%3A11%3A00%27+%272023-09-01+13%3A24%3A00%27+%272025-03-02+08%3A34%3A00%27+%272025-03-06+17%3A28%3A00%27+%272026-07-07+20%3A37%3A00%27+%272029-05-13+03%3A50%3A00%27+%272032-03-18+11%3A03%3A00%27+%272035-01-22+18%3A16%3A00%27",
+   "raw": "raw/blue-ghost-1.epochs-1969-2035.sun.txt",
+   "sha256": "147f613b782270585ed9e7648883694cb7fd8edc8afbf6e4c600a018e6d9e6cd",
+   "retrievedUtc": "2026-11-14T20:37:07Z"
+  },
+  "earth": {
+   "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&MAKE_EPHEM=%27YES%27&OBJ_DATA=%27NO%27&EPHEM_TYPE=%27OBSERVER%27&TIME_TYPE=%27UT%27&TIME_DIGITS=%27FRACSEC%27&CAL_FORMAT=%27BOTH%27&ANG_FORMAT=%27DEG%27&APPARENT=%27AIRLESS%27&RANGE_UNITS=%27KM%27&EXTRA_PREC=%27YES%27&CSV_FORMAT=%27YES%27&COMMAND=%27399%27&CENTER=%27coord%40301%27&COORD_TYPE=%27GEODETIC%27&SITE_COORD=%2761.81%2C18.562%2C-3.652%27&QUANTITIES=%274%2C10%2C13%2C20%2C23%2C24%27&TLIST=%271969-07-20+20%3A17%3A00%27+%271972-05-26+03%3A30%3A00%27+%271972-12-11+19%3A54%3A00%27+%271975-04-01+10%3A43%3A00%27+%271978-02-04+17%3A56%3A00%27+%271980-12-11+01%3A09%3A00%27+%271983-10-17+08%3A22%3A00%27+%271986-08-22+15%3A35%3A00%27+%271989-06-27+22%3A48%3A00%27+%271992-05-03+06%3A01%3A00%27+%271995-03-09+13%3A14%3A00%27+%271998-01-12+20%3A27%3A00%27+%272000-11-18+03%3A40%3A00%27+%272003-09-24+10%3A53%3A00%27+%272006-07-30+18%3A06%3A00%27+%272009-06-05+01%3A19%3A00%27+%272012-04-10+08%3A32%3A00%27+%272015-02-14+15%3A45%3A00%27+%272017-12-20+22%3A58%3A00%27+%272019-01-03+02%3A26%3A00%27+%272020-10-26+06%3A11%3A00%27+%272023-09-01+13%3A24%3A00%27+%272025-03-02+08%3A34%3A00%27+%272025-03-06+17%3A28%3A00%27+%272026-07-07+20%3A37%3A00%27+%272029-05-13+03%3A50%3A00%27+%272032-03-18+11%3A03%3A00%27+%272035-01-22+18%3A16%3A00%27",
+   "raw": "raw/blue-ghost-1.epochs-1969-2035.earth.txt",
+   "sha256": "756a8194c236c6da8d4f6ff1a661151af86c7416555214081411f70ce0fda900",
+   "retrievedUtc": "2026-11-14T20:37:08Z"
+  },
+  "moon": {
+   "url": "https://ssd.jpl.nasa.gov/api/horizons.api?format=text&MAKE_EPHEM=%27YES%27&OBJ_DATA=%27NO%27&EPHEM_TYPE=%27OBSERVER%27&TIME_TYPE=%27UT%27&TIME_DIGITS=%27FRACSEC%27&CAL_FORMAT=%27BOTH%27&ANG_FORMAT=%27DEG%27&APPARENT=%27AIRLESS%27&RANGE_UNITS=%27KM%27&EXTRA_PREC=%27YES%27&CSV_FORMAT=%27YES%27&COMMAND=%27301%27&CENTER=%27500%40399%27&QUANTITIES=%2714%2C15%27&TLIST=%271969-07-20+20%3A17%3A00%27+%271972-05-26+03%3A30%3A00%27+%271972-12-11+19%3A54%3A00%27+%271975-04-01+10%3A43%3A00%27+%271978-02-04+17%3A56%3A00%27+%271980-12-11+01%3A09%3A00%27+%271983-10-17+08%3A22%3A00%27+%271986-08-22+15%3A35%3A00%27+%271989-06-27+22%3A48%3A00%27+%271992-05-03+06%3A01%3A00%27+%271995-03-09+13%3A14%3A00%27+%271998-01-12+20%3A27%3A00%27+%272000-11-18+03%3A40%3A00%27+%272003-09-24+10%3A53%3A00%27+%272006-07-30+18%3A06%3A00%27+%272009-06-05+01%3A19%3A00%27+%272012-04-10+08%3A32%3A00%27+%272015-02-14+15%3A45%3A00%27+%272017-12-20+22%3A58%3A00%27+%272019-01-03+02%3A26%3A00%27+%272020-10-26+06%3A11%3A00%27+%272023-09-01+13%3A24%3A00%27+%272025-03-02+08%3A34%3A00%27+%272025-03-06+17%3A28%3A00%27+%272026-07-07+20%3A37%3A00%27+%272029-05-13+03%3A50%3A00%27+%272032-03-18+11%3A03%3A00%27+%272035-01-22+18%3A16%3A00%27",
+   "raw": "raw/moon-subpoints.epochs-1969-2035.txt",
+   "sha256": "2f19ae26c66391d3049a2499d81c896deef710be64502662d5f35af5493e3ed8",
+   "retrievedUtc": "2026-11-14T20:36:46Z"
+  }
+ },
+ "rows": [
+  {"utc":"1969-07-20T20:17:00Z","sun":{"az":108.45480246,"el":46.280083963,"angDiamArcsec":1889.756,"rangeKm":151870327.56},"earth":{"az":264.72846749,"el":20.214209906,"angDiamArcsec":6767.151,"rangeKm":388832.51281,"illumPct":67.31523,"sunElongDeg":110.1221},"subEarth":{"lat":1.698106,"lon":-7.159476},"subSolar":{"lat":1.298886,"lon":102.787051}},
+  {"utc":"1972-05-26T03:30:00Z","sun":{"az":250.450730091,"el":47.77915526,"angDiamArcsec":1888.901,"rangeKm":151939089.23},"earth":{"az":267.115988202,"el":28.71826379,"angDiamArcsec":6494.242,"rangeKm":405171.03297,"illumPct":3.99781,"sunElongDeg":23.0127},"subEarth":{"lat":6.445439,"lon":0.206078},"subSolar":{"lat":1.294088,"lon":22.508123}},
+  {"utc":"1972-12-11T19:54:00Z","sun":{"az":108.925103295,"el":42.265511242,"angDiamArcsec":1950.727,"rangeKm":147123558.65},"earth":{"az":258.785323998,"el":18.17447064,"angDiamArcsec":6757.185,"rangeKm":389405.94016,"illumPct":70.02662,"sunElongDeg":113.4704},"subEarth":{"lat":-4.264099,"lon":-7.135024},"subSolar":{"lat":-0.769445,"lon":106.24439}},
+  {"utc":"1975-04-01T10:43:00Z","sun":{"az":281.859947194,"el":-28.250642824,"angDiamArcsec":1917.881,"rangeKm":149643236.73},"earth":{"az":255.461000846,"el":32.298178909,"angDiamArcsec":6853.338,"rangeKm":383943.00269,"illumPct":29.40656,"sunElongDeg":65.5414},"subEarth":{"lat":-1.693856,"lon":7.062898},"subSolar":{"lat":1.200459,"lon":-58.616826}},
+  {"utc":"1978-02-04T17:56:00Z","sun":{"az":51.850524222,"el":-59.682625904,"angDiamArcsec":1949.424,"rangeKm":147221929.63},"earth":{"az":254.257435945,"el":22.349430516,"angDiamArcsec":7274.607,"rangeKm":361711.15958,"illumPct":88.04318,"sunElongDeg":139.4531},"subEarth":{"lat":-6.609596,"lon":-1.630441},"subSolar":{"lat":1.191995,"lon":-141.584175}},
+  {"utc":"1980-12-11T01:09:00Z","sun":{"az":94.441528755,"el":16.874202961,"angDiamArcsec":1952.312,"rangeKm":147004139.41},"earth":{"az":260.819182834,"el":20.772111862,"angDiamArcsec":6814.039,"rangeKm":386157.15483,"illumPct":88.3876,"sunElongDeg":140.0519},"subEarth":{"lat":-1.549866,"lon":-5.388261},"subSolar":{"lat":1.269415,"lon":134.421905}},
+  {"utc":"1983-10-17T08:22:00Z","sun":{"az":212.18366665,"el":69.875416197,"angDiamArcsec":1921.83,"rangeKm":149335733.4},"earth":{"az":267.248884376,"el":28.269657074,"angDiamArcsec":6523.258,"rangeKm":403368.9843,"illumPct":19.16968,"sunElongDeg":51.8129},"subEarth":{"lat":6.420648,"lon":-0.256128},"subSolar":{"lat":1.309401,"lon":51.247823}},
+  {"utc":"1986-08-22T15:35:00Z","sun":{"az":271.787481837,"el":-1.432228322,"angDiamArcsec":1893.101,"rangeKm":151601981.73},"earth":{"az":259.832881486,"el":32.812201298,"angDiamArcsec":6853.883,"rangeKm":383912.48957,"illumPct":9.62525,"sunElongDeg":36.0579},"subEarth":{"lat":1.903723,"lon":6.147744},"subSolar":{"lat":1.238123,"lon":-30.116334}},
+  {"utc":"1989-06-27T22:48:00Z","sun":{"az":338.278850048,"el":-68.861916428,"angDiamArcsec":1888.747,"rangeKm":151951446.67},"earth":{"az":254.397202903,"el":24.280013498,"angDiamArcsec":7144.55,"rangeKm":368294.93965,"illumPct":67.5296,"sunElongDeg":110.3952},"subEarth":{"lat":-5.729955,"lon":0.091214},"subSolar":{"lat":1.184767,"lon":-110.518481}},
+  {"utc":"1992-05-03T06:01:00Z","sun":{"az":83.301716924,"el":-15.60233295,"angDiamArcsec":1907.498,"rangeKm":150457771.42},"earth":{"az":257.610520032,"el":20.26438397,"angDiamArcsec":6954.435,"rangeKm":378362.146,"illumPct":99.61431,"sunElongDeg":172.8565},"subEarth":{"lat":-4.528993,"lon":-4.770957},"subSolar":{"lat":1.19669,"lon":168.715037}},
+  {"utc":"1995-03-09T13:14:00Z","sun":{"az":122.672187166,"el":60.115916762,"angDiamArcsec":1932.108,"rangeKm":148541352.43},"earth":{"az":265.859739602,"el":26.069409102,"angDiamArcsec":6530.229,"rangeKm":402938.38852,"illumPct":48.99961,"sunElongDeg":88.6985},"subEarth":{"lat":4.567088,"lon":-1.965526},"subSolar":{"lat":1.205005,"lon":86.613167}},
+  {"utc":"1998-01-12T20:27:00Z","sun":{"az":260.241886619,"el":30.12176369,"angDiamArcsec":1945.568,"rangeKm":147513720.72},"earth":{"az":263.742954846,"el":32.667069712,"angDiamArcsec":6776.259,"rangeKm":388309.93676,"illumPct":0.11801,"sunElongDeg":3.925},"subEarth":{"lat":4.936973,"lon":4.885664},"subSolar":{"lat":1.190652,"lon":3.311764}},
+  {"utc":"2000-11-18T03:40:00Z","sun":{"az":293.768181717,"el":-47.826868476,"angDiamArcsec":1940.4,"rangeKm":147906599.92},"earth":{"az":255.229310534,"el":27.913525645,"angDiamArcsec":7114.434,"rangeKm":369853.82408,"illumPct":44.26941,"sunElongDeg":83.2755},"subEarth":{"lat":-3.607437,"lon":3.130534},"subSolar":{"lat":1.180094,"lon":-80.26948}},
+  {"utc":"2003-09-24T10:53:00Z","sun":{"az":70.701767846,"el":-41.82541213,"angDiamArcsec":1916.638,"rangeKm":149740292.75},"earth":{"az":255.99051644,"el":19.067866155,"angDiamArcsec":7062.994,"rangeKm":372547.20736,"illumPct":95.97523,"sunElongDeg":156.8024},"subEarth":{"lat":-6.387606,"lon":-5.3071},"subSolar":{"lat":1.213669,"lon":-162.896114}},
+  {"utc":"2006-07-30T18:06:00Z","sun":{"az":101.600086595,"el":34.195794975,"angDiamArcsec":1892.195,"rangeKm":151674538.8},"earth":{"az":262.81217578,"el":24.290208606,"angDiamArcsec":6515.211,"rangeKm":403867.14147,"illumPct":74.23068,"sunElongDeg":118.8512},"subEarth":{"lat":1.384298,"lon":-2.738742},"subSolar":{"lat":1.21747,"lon":115.945764}},
+  {"utc":"2009-06-05T01:19:00Z","sun":{"az":238.843460486,"el":59.009406141,"angDiamArcsec":1886.689,"rangeKm":152117208.87},"earth":{"az":265.433257164,"el":33.459711485,"angDiamArcsec":6666.92,"rangeKm":394677.70368,"illumPct":7.19355,"sunElongDeg":31.0433},"subEarth":{"lat":6.526373,"lon":5.187191},"subSolar":{"lat":1.166302,"lon":35.66074}},
+  {"utc":"2012-04-10T08:32:00Z","sun":{"az":276.648192274,"el":-15.776934944,"angDiamArcsec":1911.725,"rangeKm":150125088.28},"earth":{"az":257.957012176,"el":30.242321361,"angDiamArcsec":7240.479,"rangeKm":363415.92971,"illumPct":17.54389,"sunElongDeg":49.4154},"subEarth":{"lat":-0.515752,"lon":4.359879},"subSolar":{"lat":1.092552,"lon":-45.242928}},
+  {"utc":"2015-02-14T15:45:00Z","sun":{"az":26.913579995,"el":-68.132987963,"angDiamArcsec":1945.106,"rangeKm":147548728.97},"earth":{"az":256.813421891,"el":16.982324876,"angDiamArcsec":7026.44,"rangeKm":374485.16693,"illumPct":75.11834,"sunElongDeg":120.0336},"subEarth":{"lat":-6.443884,"lon":-7.548138},"subSolar":{"lat":1.112381,"lon":-127.897604}},
+  {"utc":"2017-12-20T22:58:00Z","sun":{"az":90.049189259,"el":3.839049426,"angDiamArcsec":1954.737,"rangeKm":146821755.86},"earth":{"az":259.261688149,"el":23.087996859,"angDiamArcsec":6502.386,"rangeKm":404663.6094,"illumPct":93.80227,"sunElongDeg":151.0881},"subEarth":{"lat":-2.075902,"lon":-2.72191},"subSolar":{"lat":1.174944,"lon":148.15406}},
+  {"utc":"2019-01-03T02:26:00Z","sun":{"az":52.47027644,"el":-60.577921821,"angDiamArcsec":1955.399,"rangeKm":146772079.3},"earth":{"az":252.569341585,"el":29.629733376,"angDiamArcsec":6680.36,"rangeKm":393883.71891,"illumPct":91.62051,"sunElongDeg":146.2663},"subEarth":{"lat":-5.040798,"lon":5.641366},"subSolar":{"lat":0.367424,"lon":-141.118386}},
+  {"utc":"2020-10-26T06:11:00Z","sun":{"az":170.281042405,"el":72.383264712,"angDiamArcsec":1927.34,"rangeKm":148908829.71},"earth":{"az":264.976646177,"el":34.255956021,"angDiamArcsec":6617.209,"rangeKm":397642.43769,"illumPct":24.29522,"sunElongDeg":58.9347},"subEarth":{"lat":6.41234,"lon":6.065706},"subSolar":{"lat":1.181435,"lon":64.739392}},
+  {"utc":"2023-09-01T13:24:00Z","sun":{"az":267.460808956,"el":11.035458297,"angDiamArcsec":1896.639,"rangeKm":151319173.11},"earth":{"az":261.764855844,"el":31.328257413,"angDiamArcsec":7314.668,"rangeKm":359730.37287,"illumPct":3.32727,"sunElongDeg":20.966},"subEarth":{"lat":2.919621,"lon":4.2004},"subSolar":{"lat":1.129707,"lon":-16.924692}},
+  {"utc":"2025-03-02T08:34:00Z","sun":{"az":91.619265207,"el":3.425059815,"angDiamArcsec":1939.585,"rangeKm":147968707.77},"earth":{"az":258.304531135,"el":25.724899636,"angDiamArcsec":7281.783,"rangeKm":361354.73219,"illumPct":92.49473,"sunElongDeg":148.122},"subEarth":{"lat":-1.911237,"lon":0.071942},"subSolar":{"lat":-0.442223,"lon":148.047293}},
+  {"utc":"2025-03-06T17:28:00Z","sun":{"az":116.589083497,"el":52.529020579,"angDiamArcsec":1933.45,"rangeKm":148438258.02},"earth":{"az":250.977182663,"el":28.682920712,"angDiamArcsec":7029.994,"rangeKm":374295.82731,"illumPct":49.74624,"sunElongDeg":89.5651},"subEarth":{"lat":-6.69261,"lon":5.379972},"subSolar":{"lat":-0.31395,"lon":94.768048}},
+  {"utc":"2026-07-07T20:37:00Z","sun":{"az":311.676950804,"el":-61.630198057,"angDiamArcsec":1887.083,"rangeKm":152085464.31},"earth":{"az":258.290070185,"el":18.089079033,"angDiamArcsec":6963.754,"rangeKm":377855.83367,"illumPct":50.31543,"sunElongDeg":90.2189},"subEarth":{"lat":-4.73095,"lon":-7.039141},"subSolar":{"lat":1.112622,"lon":-97.398179}},
+  {"utc":"2029-05-13T03:50:00Z","sun":{"az":78.343374145,"el":-28.051253089,"angDiamArcsec":1903.657,"rangeKm":150761295.13},"earth":{"az":256.256909936,"el":22.192321049,"angDiamArcsec":6541.1,"rangeKm":402268.83339,"illumPct":99.71288,"sunElongDeg":173.8445},"subEarth":{"lat":-4.977987,"lon":-2.51941},"subSolar":{"lat":1.108197,"lon":-178.01461}},
+  {"utc":"2032-03-18T11:03:00Z","sun":{"az":110.522086148,"el":48.542591975,"angDiamArcsec":1927.741,"rangeKm":148877830.12},"earth":{"az":263.10921251,"el":33.195480362,"angDiamArcsec":6651.316,"rangeKm":395603.53358,"illumPct":54.20653,"sunElongDeg":94.6742},"subEarth":{"lat":4.606141,"lon":5.562109},"subSolar":{"lat":1.062969,"lon":100.137128}},
+  {"utc":"2035-01-22T18:16:00Z","sun":{"az":253.539084838,"el":42.697345454,"angDiamArcsec":1944.742,"rangeKm":147576351.63},"earth":{"az":265.503948866,"el":30.392419568,"angDiamArcsec":7257.078,"rangeKm":362584.76461,"illumPct":1.8449,"sunElongDeg":15.5804},"subEarth":{"lat":5.637387,"lon":2.261208},"subSolar":{"lat":1.057171,"lon":16.985686}}
+ ]
+}
