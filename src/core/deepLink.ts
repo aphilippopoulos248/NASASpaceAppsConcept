@@ -1,7 +1,9 @@
 // Deep links: ?site=apollo-11 opens a site (or ?site=pin:<lat>,<lon> a custom pin),
 // &view=surface drops straight to the ground, &light=landing sets the clock to touchdown,
-// &t=2025-03-14T06:00Z sets the clock. Applied through the action registry (origin "url"),
-// and the address bar follows the current site and view so a link can be copied at any time.
+// &t=2025-03-14T06:00Z sets the clock (&time= is read the same way: links made for the main
+// branch's app use that spelling). A time given in the link wins over &light=landing.
+// Applied through the action registry (origin "url"), and the address bar follows the
+// current site and view so a link can be copied at any time.
 import { getLandings } from '../data/catalog';
 import { landingDate } from '../data/landings';
 import { runAction } from './actions';
@@ -22,7 +24,7 @@ export function parseDeepLink(search: string): DeepLink {
     site: p.get('site'),
     view: view === 'surface' || view === 'globe' ? view : null,
     light: p.get('light') === 'landing' ? 'landing' : null,
-    t: p.get('t'),
+    t: p.get('t') ?? p.get('time'),
   };
 }
 
@@ -34,14 +36,14 @@ export async function applyDeepLink(link: DeepLink, jumpTo?: (lat: number, lon: 
     if (!r.ok) errors.push(`${name}: ${r.error}`);
     return r;
   };
-  if (link.t) await run('setTime', { utc: link.t });
+  const timeSet = link.t ? (await run('setTime', { utc: link.t })).ok : false;
   if (!link.site) return errors;
   const sel = await run('selectSite', { site: link.site });
   if (!sel.ok) return errors;
   const landing = getLandings().find((l) => l.id === (sel.result as { site: { id: string } }).site.id);
   if (link.light === 'landing' && landing) {
     await run('setLightMode', { mode: 'real' });
-    await run('setTime', { utc: isoUtc(landingDate(landing).getTime()) });
+    if (!timeSet) await run('setTime', { utc: isoUtc(landingDate(landing).getTime()) });
   }
   if (link.view === 'surface') {
     const site = (sel.result as { site: { latDeg: number; lonDegEast: number } }).site;
@@ -57,6 +59,7 @@ export function syncUrl(store: Store): () => void {
     const p = new URLSearchParams(location.search);
     p.delete('light');
     p.delete('t');
+    p.delete('time');
     if (s.site) p.set('site', s.site.id);
     else p.delete('site');
     if (s.site && s.view === 'surface') p.set('view', 'surface');

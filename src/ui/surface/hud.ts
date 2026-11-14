@@ -4,6 +4,7 @@
 import { runAction } from '../../core/actions';
 import { store } from '../../core/store';
 import type { SurfaceController } from '../../scene/surface/controller';
+import { surfaceResolution } from '../../scene/autoResolution';
 import { button, el } from '../dom';
 import './hud.css';
 
@@ -45,7 +46,7 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
     const dist = d < 1000 ? `${Math.round(d)} m` : `${(d / 1000).toFixed(1)} km`;
     const eye = 1.7 + v.lift;
     const height = eye < 10 ? `${eye.toFixed(1)} m` : `${Math.round(eye)} m`;
-    const next = `Facing ${COMPASS[Math.round(h / 45) % 8]} (${h}°) · ${dist} from the landing point · eye height ${height}`;
+    const next = `Facing ${COMPASS[Math.round(h / 45) % 8]} (${h}°) · ${dist} from the landing point · eye height ${height} · ${surfaceResolution.statusText}`;
     if (next !== text) status.textContent = text = next;
   });
 }
