@@ -12,6 +12,9 @@ import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { mountMissionFilters } from '../filters';
+import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
+import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
+import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './filtersPanel.css';
@@ -120,6 +123,35 @@ export function mountFiltersPanel(region: HTMLElement): void {
   mission.append(mast.wrap, winField, delay.wrap);
   panel.append(mission);
 
+  // ---- Terrain relief ----
+  panel.append(el('h3', 'ly-section-title', 'Terrain relief'));
+  const reliefId = `fp-${++uid}`;
+  const reliefLab = el('label', 'ly-label', 'Exaggeration');
+  reliefLab.htmlFor = reliefId;
+  const relief = el('select', 'ly-select');
+  relief.id = reliefId;
+  const reliefLabel = (f: number) => (f === 0 ? 'Off (smooth sphere)' : f === 1 ? 'True scale (×1)' : `×${f}${f === DEFAULT_RELIEF ? ' (default)' : ''}`);
+  for (const f of RELIEF_CHOICES) relief.append(new Option(reliefLabel(f), String(f)));
+  relief.addEventListener('change', () => void runAction('setReliefExaggeration', { factor: Number(relief.value) }));
+  const reliefField = el('div', 'fp-num');
+  reliefField.append(reliefLab, relief);
+  const reliefNote = el('p', 'ly-note');
+  const cover = el('label', 'ly-check');
+  const coverBox = el('input');
+  coverBox.type = 'checkbox';
+  coverBox.addEventListener('change', () => void runAction('showCoverage', { show: coverBox.checked }));
+  cover.append(coverBox, el('span', undefined, 'Show elevation data coverage'));
+  const coverLegend = el('div', 'ly-legend fp-coverlegend');
+  for (const c of COVERAGE_STYLE) {
+    const row = el('div', 'ly-legend-row');
+    const sw = el('span', 'ly-swatch fp-outline');
+    sw.style.borderColor = c.colour;
+    row.append(sw, el('span', undefined, c.label));
+    coverLegend.append(row);
+  }
+  coverLegend.append(el('p', 'ly-note', 'Outlines show where each grid exists. Everywhere else rests on the LOLA whole-Moon grid (1.9 km per sample); for a pin, a 60 m window is built on request when the elevation server can be reached.'));
+  panel.append(reliefField, reliefNote, cover, coverLegend);
+
   // ---- Lighting ----
   panel.append(el('h3', 'ly-section-title', 'Sunlight on the globe'));
   const seg = el('div', 'ly-seg');
@@ -186,14 +218,28 @@ export function mountFiltersPanel(region: HTMLElement): void {
       sw.style.background = SUN_BAND_COLOUR;
       row.append(sw, el('span', undefined, `Sun between ${s.sunElMinDeg}° and ${s.sunElMaxDeg}° at ${isoUtc(s.timeMs)}`));
       legend.append(row);
-    } else {
-      const ramp = el('div', 'ly-legend-ramp');
-      ramp.style.background = `linear-gradient(to right, ${OVERLAY_RAMP.join(', ')})`;
-      const scale = el('div', 'ly-legend-scale');
-      scale.append(el('span', undefined, '0 %'), el('span', undefined, '50 %'), el('span', undefined, '100 % of time'));
-      legend.append(ramp, scale);
+      legend.append(el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+      return;
     }
-    legend.append(el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+    // The multi-year average maps: their own legend, in the words of the data's own index.
+    const avg = globeDisplay.getLive().averages;
+    const ramp = el('div', 'ly-legend-ramp');
+    ramp.style.background = `linear-gradient(to right, ${OVERLAY_RAMP.join(', ')})`;
+    const scale = el('div', 'ly-legend-scale');
+    scale.append(el('span', undefined, '0 % (never)'), el('span', undefined, '50 %'), el('span', undefined, '100 % of time'));
+    legend.append(ramp, scale);
+    if (avg.state !== 'ready') {
+      const status = el('p', 'ly-note fp-avgstatus', avg.state === 'missing' ? avg.reason : 'Loading the map…');
+      status.setAttribute('role', 'status');
+      legend.append(status, el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+      return;
+    }
+    const l = avg.legend;
+    legend.append(el('p', 'ly-note', l.meaning), el('p', 'ly-note', `Where: ${l.extent}`));
+    const more = el('details', 'fp-avgmore');
+    more.append(el('summary', undefined, 'Source, averaging period and limits'));
+    for (const text of [`Averaging period: ${l.period}`, `Source: ${l.source}`, ...l.processing, ...l.caveats, l.citation]) more.append(el('p', 'ly-note', text));
+    legend.append(more);
   };
 
   let lastLegendMs = -Infinity;
@@ -225,6 +271,27 @@ export function mountFiltersPanel(region: HTMLElement): void {
       lastLegendMs = performance.now();
     }
   };
+  const syncDisplay = () => {
+    const d = globeDisplay.get(), live = globeDisplay.getLive();
+    if (![...relief.options].some((o) => Number(o.value) === d.reliefFactor)) relief.append(new Option(reliefLabel(d.reliefFactor), String(d.reliefFactor)));
+    relief.value = String(d.reliefFactor);
+    const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
+    const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
+    reliefNote.textContent = `${data}${rule}`;
+    coverBox.checked = d.coverage;
+    coverLegend.hidden = !d.coverage;
+  };
+  let shownAverages = globeDisplay.getLive().averages;
+  globeDisplay.subscribe(() => {
+    syncDisplay();
+    // The average map's legend follows its loading state.
+    if (globeDisplay.getLive().averages !== shownAverages) {
+      shownAverages = globeDisplay.getLive().averages;
+      renderLegend();
+    }
+  });
+  syncDisplay();
+
   // A field is not overwritten while it has the focus (someone may be typing in it); bring it
   // back in step when the focus leaves.
   panel.addEventListener('focusout', () => queueMicrotask(() => sync()));

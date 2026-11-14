@@ -1,6 +1,7 @@
-// The 3D globe: Moon, stars, Sun/Earth, landing markers, custom pin, close-up imagery,
-// orbit controls and fly-to. It follows the store (time, light, site, filters) and writes
-// the camera pose back (globeCenter); clicks and picks go out as actions.
+// The 3D globe: the Moon with real relief (LOLA elevation), stars, Sun/Earth, landing
+// markers, custom pin, close-up imagery, colour overlays, orbit controls and fly-to. It
+// follows the store (time, light, site, filters, overlay) and writes the camera pose back
+// (globeCenter); clicks and picks go out as actions.
 import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
@@ -8,17 +9,29 @@ import { onCommand } from '../../core/bus';
 import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
-import { MOON_RADIUS_KM, SiteRef, wrapLon } from '../../core/types';
+import { MOON_RADIUS_KM, MOON_RADIUS_M, SiteRef, wrapLon } from '../../core/types';
 import type { MoonGeometry } from '../../astro/ephemeris';
 import { getLandings } from '../../data/catalog';
 import { latLonToVec3, programColor } from '../../data/landings';
-import { createMoon, createStars } from '../globe';
+import { coverageRegions, demLayers } from '../../terrain/api';
+import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
 import { SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
+import { AverageMaps } from './averageMaps';
+import { globeDisplay, registerDisplayActions } from './displayState';
+import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
+import { PolarCloseUp } from './polarCloseUp';
+import { ReliefGlobe } from './reliefGlobe';
+import { effectiveRelief } from './reliefTiles';
+import { createSurfaceUniforms, MAX_COVERAGE_SITES, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
-const MIN_DISTANCE = 1.006;
+/** The camera comes no closer to the terrain under the screen centre than this, Moon radii (about 10 km). */
+const MIN_CLEARANCE = 0.006;
+const MIN_DISTANCE = 1 + MIN_CLEARANCE;
+/** Site imagery is equirectangular: poleward of this latitude it is stretched into streaks and is not drawn. */
+const IMAGERY_MAX_LAT = 80;
 const Z = new Vector3(0, 0, 1);
 const MOON = new Sphere(new Vector3(), 1);
 
@@ -47,6 +60,18 @@ export class GlobeView {
   private lastCenter = { lat: NaN, lon: NaN, altitudeKm: NaN };
   private readonly tooltip: HTMLElement;
   private downAt: { x: number; y: number } | null = null;
+  /** Shared by every surface material: exaggeration, Sun direction, overlay, coverage. */
+  private readonly uniforms = createSurfaceUniforms(OVERLAY_RAMP, SUN_BAND_COLOUR, COVERAGE_STYLE.map((c) => c.colour));
+  private relief: ReliefGlobe | null = null;
+  /** Poleward of about 80S the surface is drawn from the polar elevation layers, with real Sun shadows. */
+  private readonly polar = new PolarCloseUp(this.uniforms);
+  /** The multi-year average maps, as textures for the avg-* overlays. */
+  private readonly averages: AverageMaps;
+  /** Unit vector to the Sun, Moon-fixed axes (x: 0N 0E, y: 0N 90E, z: north). */
+  private sunMoonFixed: [number, number, number] = [1, 0, 0];
+  /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
+  private placed = { relief: NaN, version: -1, site: '', polar: false };
+  private patchVersion = -1;
   active = true;
 
   constructor(private readonly renderer: WebGLRenderer, private readonly canvas: HTMLCanvasElement) {
@@ -65,7 +90,8 @@ export class GlobeView {
     });
     this.scene.add(this.sky.root, createStars());
 
-    const pinMat = new MeshBasicMaterial({ color: '#ffd479', toneMapped: false, side: DoubleSide, transparent: true });
+    // A symbol drawn over the terrain, like the landing markers; hidden while behind the Moon (see render).
+    const pinMat = new MeshBasicMaterial({ color: '#ffd479', toneMapped: false, side: DoubleSide, transparent: true, depthTest: false });
     const ring = new Mesh(new RingGeometry(1.6, 2.3, 40), pinMat);
     const dot = new Mesh(new RingGeometry(0, 0.7, 24), pinMat);
     this.pin.add(ring, dot);
@@ -82,8 +108,11 @@ export class GlobeView {
     onCommand('flyTo', ({ lat, lon, altitudeKm }) => {
       this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM);
     });
+    this.averages = new AverageMaps(this.uniforms, Math.min(4096, renderer.capabilities.maxTextureSize));
+    this.averages.onChange = () => globeDisplay.setLive({ averages: this.averages.state });
     this.bindPointer();
     this.bindKeyboard();
+    registerDisplayActions();
     registerActions([
       defineAction({
         name: 'resetNorth',
@@ -127,8 +156,17 @@ export class GlobeView {
   }
 
   async load(): Promise<void> {
-    const moon = await createMoon(this.renderer);
-    this.scene.add(moon);
+    const material = await createMoonMaterial(this.renderer);
+    patchSurfaceMaterial(material, this.uniforms, { hole: true });
+    this.relief = new ReliefGlobe(material);
+    this.scene.add(this.relief.root, this.polar.root);
+    this.polar.onData = () => (this.placed.version = -1);
+    // The small whole-Moon grid first (1.5 MB); the full grid follows when the camera comes closer.
+    void this.relief.loadOverview();
+    void this.loadCoverage();
+    this.applyOverlay();
+    store.subscribe(['overlay', 'sunElMinDeg', 'sunElMaxDeg'], () => this.applyOverlay());
+    globeDisplay.subscribe(() => this.applyOverlay());
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
     const s = store.get();
@@ -146,6 +184,55 @@ export class GlobeView {
 
   setGeometry(g: MoonGeometry): void {
     this.sky.setGeometry(g);
+    this.sunMoonFixed = [g.sunDir[0], g.sunDir[1], g.sunDir[2]];
+    // Moon-fixed (x: 0E, y: 90E, z: north) to scene axes.
+    this.uniforms.uSunDir.value.set(g.sunDir[0], g.sunDir[2], -g.sunDir[1]).normalize();
+  }
+
+  private applyOverlay(): void {
+    const s = store.get();
+    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage);
+    this.uniforms.uBand.value.set(s.sunElMinDeg, s.sunElMaxDeg);
+  }
+
+  /** Where each class of elevation data exists, for the coverage outlines (from the terrain module's own list). */
+  private async loadCoverage(): Promise<void> {
+    try {
+      const [regions, layers] = await Promise.all([coverageRegions(), demLayers()]);
+      const u = this.uniforms;
+      // South-polar squares: half-widths in the projection plane (Moon radii), finest first.
+      const polar = layers.filter((l) => l.role === 'polar' && l.pole === 'S' && l.halfWidthM).sort((a, b) => a.resolutionM - b.resolutionM);
+      const half = (i: number) => (polar[i] ? polar[i].halfWidthM! / MOON_RADIUS_M : 0);
+      u.uPolarHalf.value.set(half(0), half(1), half(2));
+      const windows = regions.filter((r) => r.sites && !r.onDemand).sort((a, b) => b.resolutionM - a.resolutionM);
+      const outer = windows[0], inner = windows.find((w) => w.resolutionM < (outer?.resolutionM ?? 0) && w.resolutionM >= 30), survey = windows.find((w) => w.resolutionM < 30);
+      const sinHalf = (r?: { sites?: { halfWidthM: number }[] }) => (r?.sites?.length ? Math.sin(r.sites[0].halfWidthM / MOON_RADIUS_M) : 0);
+      u.uSiteHalf.value.set(sinHalf(outer), sinHalf(inner), sinHalf(survey));
+      const sites = (outer?.sites ?? []).slice(0, MAX_COVERAGE_SITES);
+      sites.forEach((site, i) => {
+        const d = latLonToVec3(site.lat, site.lon);
+        const surveyed = survey?.sites?.some((x) => Math.abs(x.lat - site.lat) < 1e-6 && Math.abs(x.lon - site.lon) < 1e-6) ?? false;
+        u.uSiteDir.value[i].set(d.x, d.y, d.z, surveyed ? 1 : 0);
+        // East at the site: d(position)/d(longitude), normalised.
+        const lon = (site.lon * Math.PI) / 180;
+        u.uSiteEast.value[i].set(-Math.sin(lon), 0, -Math.cos(lon));
+      });
+      u.uSiteCount.value = sites.length;
+    } catch (err) {
+      console.warn('Elevation coverage could not be read', err);
+    }
+  }
+
+  /** Height of the drawn terrain above the reference sphere, metres (0 until elevation data has loaded). */
+  heightM(lat: number, lon: number): number {
+    // Under the polar close-up the surface on screen is the polar layer, not the whole-Moon grid.
+    const polar = this.polar.covers(lat) ? this.polar.heightM(lat, lon) : null;
+    return polar ?? this.relief?.heightM(lat, lon) ?? 0;
+  }
+
+  /** Distance of the drawn surface from the Moon's centre at a point, Moon radii, exaggeration included. */
+  private surfaceRadius(lat: number, lon: number): number {
+    return 1 + (this.uniforms.uRelief.value * this.heightM(lat, lon)) / MOON_RADIUS_M;
   }
 
   /** Markers in display order (filtered), for picking and stepping. */
@@ -161,21 +248,21 @@ export class GlobeView {
   private applySite(site: SiteRef | null): void {
     const marker = site?.kind === 'landing' ? (this.markers?.items.find((m) => m.landing.id === site.id) ?? null) : null;
     this.markers?.select(marker);
-    this.pin.visible = site?.kind === 'custom';
     if (site?.kind === 'custom') {
       const dir = latLonToVec3(site.lat, site.lon);
-      this.pin.position.copy(dir).multiplyScalar(1.0002);
       this.pin.quaternion.setFromUnitVectors(Z, dir);
+      this.pin.position.copy(dir).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
     }
-    if (!site) {
+    this.placed.site = ''; // place the markers and the pin again
+    if (site?.id !== this.patchSiteId) {
       this.sitePatch?.dispose();
       this.sitePatch = null;
-      this.patchSiteId = '';
-    } else if (site.id !== this.patchSiteId) {
-      this.sitePatch?.dispose();
-      this.sitePatch = new SitePatch(site.lat, site.lon, this.renderer.capabilities.getMaxAnisotropy());
-      this.patchSiteId = site.id;
-      this.scene.add(this.sitePatch.root);
+      this.patchSiteId = site?.id ?? '';
+      if (site && Math.abs(site.lat) <= IMAGERY_MAX_LAT) {
+        this.sitePatch = new SitePatch(site.lat, site.lon, this.renderer.capabilities.getMaxAnisotropy(), this.uniforms, (lat, lon) => this.heightM(lat, lon));
+        this.patchVersion = this.relief?.dataVersion ?? -1;
+        this.scene.add(this.sitePatch.root);
+      }
     }
   }
 
@@ -244,18 +331,61 @@ export class GlobeView {
     const alt = Math.max(cam.position.length() - 1, 1e-4);
     this.controls.rotateSpeed = Math.min(1, Math.max(0.004, alt / 2.2));
     this.controls.zoomSpeed = Math.log((1 + 1.08 * alt) / (1 + alt)) / 0.0513;
+    // Stay clear of the terrain under the screen centre (true scale near the ground, so this is real height).
+    const under = vec3ToLatLon(cam.position);
+    this.controls.minDistance = Math.max(MIN_DISTANCE, this.surfaceRadius(under.lat, under.lon) + MIN_CLEARANCE);
     this.controls.update();
     const altNow = Math.max(cam.position.length() - 1, 1e-4);
-    cam.near = Math.max(0.0005, altNow * 0.2);
+    cam.near = Math.max(0.0005, Math.min(altNow, Math.max(cam.position.length() - this.surfaceRadius(under.lat, under.lon), 1e-4)) * 0.2);
     cam.updateProjectionMatrix();
+    cam.updateMatrixWorld();
     cam.matrixWorld.extractBasis(this.right, this.up, this.camDir);
     this.sky.update(cam, this.right, this.up);
+    this.updateRelief(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
-    const s = this.pin.visible ? cam.position.distanceTo(this.pin.position) * 0.006 : 0;
-    if (s) this.pin.scale.setScalar(s);
+    const pinned = store.get().site;
+    this.pin.visible = pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
+    if (this.pin.visible) this.pin.scale.setScalar(cam.position.distanceTo(this.pin.position) * 0.006);
     this.sitePatch?.update(altNow);
     this.renderer.render(this.scene, cam);
     this.publishCenter(altNow);
+  }
+
+  /** Relief for this frame: the exaggeration at this altitude, the tiles to draw, and everything that sits on the surface. */
+  private updateRelief(altitudeKm: number): void {
+    const relief = this.relief;
+    if (!relief) return;
+    const hasData = relief.pyramid.maxPpd > 0;
+    const drawn = hasData ? effectiveRelief(globeDisplay.get().reliefFactor, altitudeKm) : 0;
+    this.uniforms.uRelief.value = drawn;
+    relief.update(this.camera, this.renderer.domElement.height / this.renderer.getPixelRatio(), drawn);
+    const site = store.get().site;
+    const centre = vec3ToLatLon(this.camera.position);
+    const realLight = store.get().lightMode === 'real';
+    // The fine average map is fetched once the camera is low over a polar region.
+    this.averages.update(store.get().overlay, altitudeKm < 1500 && Math.abs(centre.lat) > 70 ? (centre.lat < 0 ? 'S' : 'N') : null);
+    const polar = this.polar.update({ altitudeKm, centre, site, sunDir: this.sunMoonFixed, realLight, nowMs: performance.now() });
+    globeDisplay.setLive({
+      reliefNow: drawn,
+      reliefPpd: relief.pyramid.maxPpd,
+      reliefProblem: relief.problem,
+      polar: polar && {
+        ...polar,
+        note: `South-polar close-up: shaded relief from LOLA elevation (${polar.resolutionM} m grid), ${polar.shadows ? 'with the shadows the terrain casts at the simulated time' : 'evenly lit, without shadows'}. Not a photograph.`,
+      },
+    });
+
+    // Markers, the pin and site imagery follow the surface when the exaggeration or the data changes.
+    const key = { relief: drawn, version: relief.dataVersion, site: site?.id ?? '', polar: this.polar.covers(-90) };
+    if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
+      this.placed = key;
+      this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
+      if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
+    }
+    if (this.sitePatch && this.patchVersion !== relief.dataVersion) {
+      this.patchVersion = relief.dataVersion;
+      this.sitePatch.refreshHeights((lat, lon) => this.heightM(lat, lon));
+    }
   }
 
   /** Writes the point under the screen centre and the altitude to the store, when they change visibly. */
@@ -335,8 +465,21 @@ export class GlobeView {
     if (clientX < r.left || clientX > r.right || clientY < r.top || clientY > r.bottom) return null;
     const ndc = new Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
     const dir = new Vector3(ndc.x, ndc.y, 0.5).unproject(this.camera).sub(this.camera.position).normalize();
-    const hit = new Ray(this.camera.position.clone(), dir).intersectSphere(MOON, new Vector3());
-    return hit ? vec3ToLatLon(hit) : null;
+    const ray = new Ray(this.camera.position.clone(), dir);
+    const hit = new Vector3();
+    if (!ray.intersectSphere(MOON, hit)) {
+      // Past the smooth limb the ray can still meet raised terrain: try the tallest sphere the relief reaches.
+      const tall = new Sphere(MOON.center, 1 + this.uniforms.uRelief.value * 0.0062);
+      if (!ray.intersectSphere(tall, hit)) return null;
+    }
+    // The drawn surface is not the unit sphere: step to the sphere through the terrain height found, a few times.
+    const shell = new Sphere(MOON.center, 1);
+    for (let i = 0; i < 4; i++) {
+      const at = vec3ToLatLon(hit);
+      shell.radius = this.surfaceRadius(at.lat, at.lon);
+      if (!ray.intersectSphere(shell, hit)) break;
+    }
+    return vec3ToLatLon(hit);
   }
 
   /** Screen angle of lunar north at the screen centre, degrees clockwise from screen-up. */

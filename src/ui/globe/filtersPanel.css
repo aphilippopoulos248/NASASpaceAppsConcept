@@ -16,3 +16,11 @@
 .fp-overlay { display: grid; gap: var(--sp-2); margin-left: 24px; }
 .fp-overlay[hidden] { display: none; }
 .fp-legend .ly-note { margin-top: var(--sp-1); }
+
+.fp-coverlegend { margin-left: 24px; }
+.fp-coverlegend[hidden] { display: none; }
+.fp-outline { border: 2px solid; border-radius: 2px; background: transparent; }
+.fp-avgmore { font-size: var(--fs-xs); }
+.fp-avgmore > summary { cursor: pointer; color: var(--text-muted); }
+.fp-avgmore > summary:hover { color: var(--text); }
+.fp-avgmore .ly-note { margin-top: var(--sp-1); }

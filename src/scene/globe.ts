@@ -2,26 +2,23 @@ import {
   BufferGeometry,
   Color,
   Float32BufferAttribute,
-  Mesh,
   MeshStandardMaterial,
   Points,
   PointsMaterial,
   SRGBColorSpace,
-  SphereGeometry,
   Texture,
   TextureLoader,
   WebGLRenderer,
 } from 'three';
 
-import { applyLunarShading } from './sky';
-
 const TEX = `${import.meta.env.BASE_URL}textures/`;
 
 /**
- * Unit-radius Moon (1 scene unit = 1737.4 km). Resolves once the 2K colour map
- * is on screen, then swaps in the normal map and a sharper colour map.
+ * The Moon's surface material: equirectangular colour and normal maps. Resolves once the
+ * 2K colour map is loaded, then swaps in the normal map and a sharper colour map. The
+ * caller patches in the shading and supplies the geometry (scene/globe/reliefGlobe.ts).
  */
-export async function createMoon(renderer: WebGLRenderer): Promise<Mesh> {
+export async function createMoonMaterial(renderer: WebGLRenderer): Promise<MeshStandardMaterial> {
   const loader = new TextureLoader();
   const anisotropy = renderer.capabilities.getMaxAnisotropy();
 
@@ -36,14 +33,12 @@ export async function createMoon(renderer: WebGLRenderer): Promise<Mesh> {
     roughness: 1,
     metalness: 0,
   });
-  applyLunarShading(material);
-  const moon = new Mesh(new SphereGeometry(1, 192, 96), material);
 
   const coarsePointer = window.matchMedia('(pointer: coarse)').matches;
   const capable = renderer.capabilities.maxTextureSize >= 8192 && !coarsePointer;
   const hiRes = capable ? '8k' : '4k';
 
-  // Relief: the 4K map first, then (on capable devices) the sharper 8K one built from LOLA 64 px/degree data.
+  // Shading detail: the 4K normal map first, then (on capable devices) the sharper 8K one built from LOLA 64 px/degree data.
   const setNormal = (t: Texture) => {
     t.anisotropy = anisotropy;
     const old = material.normalMap;
@@ -62,7 +57,7 @@ export async function createMoon(renderer: WebGLRenderer): Promise<Mesh> {
     old?.dispose();
   }).catch((e) => console.warn('high-res colour map failed to load', e));
 
-  return moon;
+  return material;
 }
 
 export function createStars(count = 2500): Points {

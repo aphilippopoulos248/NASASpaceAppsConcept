@@ -2,10 +2,7 @@
 // uses the same ramp so the legend and the globe always agree.
 import type { OverlayMode } from '../../core/types';
 
-/** Colour ramp for 0..100 % averages (perceptually ordered, dark to light). */
-export const OVERLAY_RAMP = ['#2b1a5a', '#3f4c9a', '#2f86a6', '#36b38c', '#9bd35c', '#f4e45a'] as const;
-/** Colour of "Sun inside the required band" in the sun-band overlay. */
-export const SUN_BAND_COLOUR = '#ffd479';
+export { OVERLAY_RAMP, SUN_BAND_COLOUR } from '../../scene/globe/overlayStyle';
 
 export interface OverlayInfo {
   mode: Exclude<OverlayMode, 'off'>;
@@ -20,18 +17,18 @@ export const OVERLAYS: OverlayInfo[] = [
     label: 'Sun in required band (now)',
     kind: 'band',
     meaning: (min, max) =>
-      `Shaded where the Sun's elevation at the simulated time is between ${min}° and ${max}°. Smooth Moon: terrain shadows are not included; check the surface view for a site.`,
+      `Shaded where the Sun's elevation at the simulated time is between ${min}° and ${max}° above the local horizontal. Computed for a smooth Moon: terrain shadows are not included, so check the surface view or the site analysis for a site.`,
   },
   {
     mode: 'avg-illumination',
     label: 'Average sunlight (multi-year)',
     kind: 'ramp',
-    meaning: () => 'Average fraction of time the Sun is visible, over many years, including terrain shadows. NASA PGDA product 69; polar regions only.',
+    meaning: () => 'Share of time with any part of the Sun above the terrain horizon, averaged over 18.6 years. A long-term average of a model, not the Sun on the date shown. NASA PGDA product 69; polar regions only.',
   },
   {
     mode: 'avg-earth-visibility',
     label: 'Average Earth visibility (multi-year)',
     kind: 'ramp',
-    meaning: () => 'Average fraction of time the Earth is above the terrain horizon, over many years. NASA PGDA product 69; polar regions only.',
+    meaning: () => 'Share of time with any part of Earth above the terrain horizon, averaged over 18.6 years. Geometric line of sight, not a radio link, and not Earth on the date shown. NASA PGDA product 69; polar regions only.',
   },
 ];
