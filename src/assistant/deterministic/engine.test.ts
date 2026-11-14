@@ -398,6 +398,66 @@ describe('deterministic mode: comparison and nearby alternatives', () => {
   });
 });
 
+describe('deterministic mode: on a build with the awaiting core actions and no dedicated blockage action', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp({ getAnalysis: true, landingActions: true });
+  });
+
+  it('goes to a landing at its touchdown time in one step', async () => {
+    const e = engine();
+    const r = await e.reply('show IM-2 at its landing time');
+    expect(state).toMatchObject({ site: { id: 'im-2' }, timeMs: Date.UTC(2025, 2, 6, 17, 28), windowStartMs: Date.UTC(2025, 2, 6, 17, 28), delayH: 0 });
+    expect(r.text).toContain('The clock and the mission window start at touchdown, 2025-03-06 17:28 UTC.');
+    expect(ran()).toEqual(['selectSite']);
+    await e.reply('go to Apollo 11 at landing on the surface');
+    expect(state).toMatchObject({ site: { id: 'apollo-11' }, view: 'surface', timeMs: Date.UTC(1969, 6, 20, 20, 17) });
+    await e.reply('set time to 2026-01-01 then mission window starts at landing');
+    expect(state.windowStartMs).toBe(Date.UTC(1969, 6, 20, 20, 17));
+    expect(state.timeMs).toBe(Date.UTC(2026, 0, 1));
+  });
+
+  it('shows the ridge at Earthset from the analysis readout', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    const r = await e.reply('show me the ridge at Earthset');
+    expect(ran().slice(1)).toEqual(['jumpToEvent', 'getAnalysis', 'getState', 'enterSurface', 'lookAt']);
+    expect(state).toMatchObject({ timeMs: T0 + 9 * 3_600_000, view: 'surface', look: { azDeg: 351, elDeg: 6.4 } });
+    expect(r.text).toContain('Moved the clock to the next Earthset: 2026-03-01 21:00 UTC.');
+    expect(r.text).toContain('Earth is hidden by terrain 4.20 km away towards azimuth 351.0°');
+    expect(r.text).toContain('Ridge: 4.20 km away, 1385 m above the reference sphere; clearance -0.80°. Elevation data: LOLA 60 m polar grid (60 m).');
+    expect(r.text).toContain('not a guarantee of a working radio link');
+  });
+
+  it('reports unmet requirements and the elevation data with the metrics', async () => {
+    const e = engine();
+    await e.reply('go to IM-2; sun elevation between 0 and 60; maximum earth gap 12 h');
+    const r = await e.reply('metrics');
+    expect(r.text).toContain('The Sun leaves the required elevation band (0.0° to 60.0°) during the window: it ranges from -1.2° to 4.6°.');
+    expect(r.text).toContain('The longest Earth gap (28.5 h) is longer than the tolerated 12.0 h.');
+    expect(r.text).toContain('Elevation data, finest first: LOLA 60 m polar grid (60 m); LOLA whole-Moon grid (1895 m).');
+  });
+
+  it('folds and opens panels', async () => {
+    const e = engine();
+    expect((await e.reply('hide the site details')).text).toBe('The site details are folded away.');
+    expect((await e.reply('open the filters panel')).text).toBe('The filters panel is open.');
+    expect(ran()).toEqual(['showPanel', 'showPanel']);
+  });
+});
+
+describe('deterministic mode: on an older build', () => {
+  beforeEach(() => {
+    installFakeApp();
+  });
+
+  it('says that the one-step landing date is not available instead of selecting without it', async () => {
+    const r = await engine().reply('show IM-2 at its landing time');
+    expect(r.text).toContain('cannot go to a landing and its date in one step');
+    expect(ran()).toEqual([]);
+  });
+});
+
 describe('deterministic mode: with the analysis readout action', () => {
   let state: FakeState;
   beforeEach(() => {
