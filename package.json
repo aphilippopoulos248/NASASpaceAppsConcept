@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "prebuild": "node scripts/ensure-deps.mjs",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && node scripts/typecheck-server.mjs && vite build",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "vitest run && npm run test:science",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
     "fetch-textures": "node scripts/fetch-textures.mjs",
@@ -16,10 +16,14 @@
     "check-ephemeris": "node scripts/check-ephemeris.mjs",
     "fetch-terrain": "node scripts/fetch-terrain.mjs",
     "fetch-apollo-terrain": "node scripts/fetch-apollo-terrain.mjs",
-    "derive-detail": "node scripts/derive-detail.mjs"
+    "derive-detail": "node scripts/derive-detail.mjs",
+    "build-ice-targets": "python3 -I scripts/build-ice-targets.py",
+    "test:science": "node --experimental-strip-types --no-warnings --test tests/iceTargets.test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
+    "@fontsource-variable/inter": "^5.3.0",
+    "@fontsource-variable/space-grotesk": "^5.3.0",
     "astronomy-engine": "^2.1.19",
     "three": "^0.187.0"
   },
