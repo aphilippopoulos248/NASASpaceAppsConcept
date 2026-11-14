@@ -164,6 +164,76 @@ export class PolarAverageMap {
   valueAt(lat: number, lon: number): number {
     return this.percentAt(lat, lon) * this.info.valueStep;
   }
+
+  /**
+   * The map as an 8-bit texture no more than `maxSize` cells on a side. A map that already
+   * fits is returned as it is. Otherwise cells are merged by a whole factor into area-weighted
+   * means, keeping the pole at the centre, so the same texture-coordinate formula applies
+   * with the `halfWidthM` returned here. 0 still means that nothing under the cell is ever
+   * lit; a cell with anything lit under it is at least 1. For drawing: point values should
+   * come from percentAt(), which reads the full-resolution cells.
+   */
+  texture(maxSize = Infinity): PolarAverageTexture {
+    if (this.size <= maxSize) return { data: this.data, size: this.size, metresPerPx: this.metresPerPx, halfWidthM: this.info.halfWidthM, factor: 1 };
+    if (!(maxSize >= 1)) throw new Error('texture: maxSize must be at least 1');
+    const n = this.size;
+    let f = Math.ceil(n / maxSize);
+    // Output cells are centred on the pole like the source: an odd number of them, f source cells wide each.
+    const sizeFor = (k: number): number => 2 * Math.ceil((n / k - 1) / 2) + 1;
+    while (sizeFor(f) > maxSize) f++;
+    const m = sizeFor(f);
+    const c = (n - 1) / 2;
+    const cOut = (m - 1) / 2;
+    // Along one axis: for each output cell, the source cells it overlaps and by how much.
+    const first = new Int32Array(m);
+    const weights: Float64Array[] = [];
+    for (let k = 0; k < m; k++) {
+      const lo = c + (k - cOut - 0.5) * f; // edges of the output cell, in source-cell coordinates
+      const hi = lo + f;
+      const i0 = Math.max(0, Math.ceil(lo - 0.5));
+      const i1 = Math.min(n - 1, Math.floor(hi + 0.5));
+      first[k] = i0;
+      const w = new Float64Array(Math.max(0, i1 - i0 + 1));
+      for (let i = i0; i <= i1; i++) w[i - i0] = Math.max(0, Math.min(hi, i + 0.5) - Math.max(lo, i - 0.5));
+      weights.push(w);
+    }
+    const out = new Uint8Array(m * m);
+    for (let r = 0; r < m; r++) {
+      const wr = weights[r];
+      for (let q = 0; q < m; q++) {
+        const wq = weights[q];
+        let sum = 0;
+        let area = 0;
+        let lit = false;
+        for (let a = 0; a < wr.length; a++) {
+          if (wr[a] === 0) continue;
+          const row = (first[r] + a) * n + first[q];
+          for (let b = 0; b < wq.length; b++) {
+            const w = wr[a] * wq[b];
+            if (w === 0) continue;
+            const v = this.data[row + b];
+            sum += w * v;
+            area += w;
+            if (v > 0) lit = true;
+          }
+        }
+        out[r * m + q] = !lit || area === 0 ? 0 : Math.max(1, Math.round(sum / area));
+      }
+    }
+    return { data: out, size: m, metresPerPx: this.metresPerPx * f, halfWidthM: (m * this.metresPerPx * f) / 2, factor: f };
+  }
+}
+
+/** A map prepared for drawing; see PolarAverageMap.texture(). */
+export interface PolarAverageTexture {
+  /** size x size bytes, row 0 first: 0 = never lit, 1..100 = percent of time. */
+  data: Uint8Array;
+  size: number;
+  metresPerPx: number;
+  /** Half the width of the square this texture spans, metres in the projection plane: use it in polarAverageUv(). */
+  halfWidthM: number;
+  /** How many source cells were merged along each side (1 = untouched). */
+  factor: number;
 }
 
 // ---------------------------------------------------------------- loading

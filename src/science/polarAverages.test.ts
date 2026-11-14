@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { loadGlobalGrid } from '../terrain/api';
 import { offsetPoint } from '../terrain/geo';
 import { readTerrainFile } from '../terrain/reader';
-import { loadPolarAverage, loadPolarAverageIndex, polarAverageAt, polarAverageUv, type PolarAverageCheck, type PolarAverageMap, type Pole } from './polarAverages';
+import { loadPolarAverage, loadPolarAverageIndex, polarAverageAt, polarAverageUv, PolarAverageMap, type PolarAverageCheck, type Pole } from './polarAverages';
 
 const index = await loadPolarAverageIndex();
 const maps = new Map<string, PolarAverageMap>();
@@ -13,6 +13,10 @@ for (const l of index.layers) maps.set(l.id, await loadPolarAverage(l.quantity, 
 const map = (id: string): PolarAverageMap => maps.get(id)!;
 const R = 1_737_400;
 const DEG = Math.PI / 180;
+const shift = (p: { lat: number; lon: number }, eastM: number, northM: number): [number, number] => {
+  const q = offsetPoint(p.lat, p.lon, eastM, northM);
+  return [q.lat, q.lon];
+};
 
 /** The projection as the PDS labels give it, written out again here so the module is not checked against itself. */
 function labelPixel(pole: Pole, lat: number, lon: number, size: number, metresPerPx: number): { line: number; sample: number } {
@@ -257,6 +261,74 @@ describe('positions', () => {
     expect(polarAverageUv('S', 10, 0, h)).toBeNull();
     // The edge of complete coverage: 65 degrees lies on the edge of the wide square.
     expect(polarAverageUv('S', -65, 90, h)!.u).toBeCloseTo(1, 3);
+  });
+});
+
+describe('texture()', () => {
+  it('hands the map over untouched when it fits', () => {
+    const m = map('south-illumination-wide');
+    const t = m.texture(2048);
+    expect(t.data).toBe(m.data);
+    expect([t.size, t.metresPerPx, t.halfWidthM, t.factor]).toEqual([1605, 960, 770400, 1]);
+    expect(m.texture().data).toBe(m.data);
+  });
+
+  it('merges cells about the pole when it does not, and keeps the map where it was', () => {
+    const m = map('south-illumination-detail');
+    const t = m.texture(2048);
+    expect([t.size, t.metresPerPx, t.factor]).toEqual([1265, 240, 2]);
+    // 1265 cells of 240 m span 303.6 km: the source's 303.48 km plus half a source cell all round.
+    expect(t.halfWidthM).toBe(151800);
+    expect(t.data.length).toBe(1265 * 1265);
+    // Same place, same value: a broad never-lit floor stays 0, and bright ground keeps its level.
+    const texel = (lat: number, lon: number): number => {
+      const uv = polarAverageUv('S', lat, lon, t.halfWidthM)!;
+      return t.data[Math.floor(uv.v * t.size) * t.size + Math.floor(uv.u * t.size)];
+    };
+    expect(texel(-89.67, 129.78)).toBe(0); // Shackleton's floor
+    expect(texel(-90, 0)).toBeGreaterThan(10); // the rim at the pole
+    let diff = 0;
+    let count = 0;
+    for (let lat = -89.9; lat < -85.2; lat += 0.137) {
+      for (let lon = -180; lon < 180; lon += 7.3) {
+        // Mean of the source cells in a 720 m box against the mean of the texture there.
+        let a = 0;
+        let b = 0;
+        for (let j = -1; j <= 1; j++) {
+          for (let i = -1; i <= 1; i++) {
+            const p = offsetPoint(lat, lon, i * 240, j * 240);
+            a += (m.percentAt(p.lat, p.lon) + m.percentAt(...shift(p, 120, 0)) + m.percentAt(...shift(p, 0, 120)) + m.percentAt(...shift(p, 120, 120))) / 4;
+            b += texel(p.lat, p.lon);
+          }
+        }
+        diff += Math.abs(a - b) / 9;
+        count++;
+      }
+    }
+    expect(count).toBeGreaterThan(1000);
+    expect(diff / count).toBeLessThan(3); // percent points: the same picture at half the resolution
+    // The overall level is unchanged.
+    const mean = (d: Uint8Array): number => d.reduce((x, v) => x + v, 0) / d.length;
+    expect(Math.abs(mean(t.data) - mean(m.data))).toBeLessThan(0.3);
+  });
+
+  it('weights cells by the area they share with the merged cell, and keeps 0 for "never lit"', () => {
+    const info = { ...map('south-illumination-detail').info, size: 5, metresPerPx: 100, halfWidthM: 250 };
+    const cells = new Uint8Array(25);
+    cells[12] = 100; // the cell on the pole
+    const small = new PolarAverageMap(info, cells);
+    const t = small.texture(3);
+    expect([t.size, t.factor, t.metresPerPx, t.halfWidthM]).toEqual([3, 2, 200, 300]);
+    // The centre cell of the result covers the pole cell and half of each neighbour: 100 / 4 = 25.
+    expect(Array.from(t.data)).toEqual([0, 0, 0, 0, 25, 0, 0, 0, 0]);
+    // A faint cell is never rounded away to "never lit".
+    const faint = new Uint8Array(25);
+    faint[0] = 1;
+    expect(new PolarAverageMap(info, faint).texture(3).data[0]).toBe(1);
+    // A uniform map stays uniform, edges included.
+    expect(Array.from(new PolarAverageMap(info, new Uint8Array(25).fill(40)).texture(3).data)).toEqual(new Array(9).fill(40));
+    expect(new PolarAverageMap(info, cells).texture(1).size).toBe(1);
+    expect(() => small.texture(0)).toThrow(/maxSize/);
   });
 });
 

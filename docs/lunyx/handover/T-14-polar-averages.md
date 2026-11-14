@@ -53,7 +53,13 @@ v = 0.5 - r * cos(lon)   south        v = 0.5 + r * cos(lon)   north
 ```
 
 Draw only where 0 <= u, v <= 1 and the fragment is in that hemisphere. `halfWidthM` is 770 400
-(wide) and 151 740 (detail). Checked in headless Chromium: an R8 texture built from `map.data`
+(wide) and 151 740 (detail).
+
+The detail layer is 2529 cells on a side. Where one texture must stay smaller,
+`map.texture(2048)` returns `{ data, size, metresPerPx, halfWidthM, factor }`: here 1265 cells of
+240 m, merged about the pole as area-weighted means (0 still means never lit), with the
+`halfWidthM` to use in the formula above (151 800). A map that already fits is returned
+untouched. Point values should still come from `percentAt()`. Checked in headless Chromium: an R8 texture built from `map.data`
 reads back the stored byte at the expected texel.
 
 ## Packaged files (13.41 MB added, largest 2.77 MB)
