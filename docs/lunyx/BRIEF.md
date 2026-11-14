@@ -97,18 +97,21 @@ in a hub message; do not patch around it. New files go inside your own directori
 
 | Owner | Paths |
 | --- | --- |
-| @coordinator | `src/core/**`, `src/main.ts`, `index.html`, `src/styles/**`, `package.json`, `package-lock.json`, `vite.config.ts`, `vitest.config.ts`, `tsconfig*.json`, `server/plugin.ts`, `docs/lunyx/BRIEF.md`, `docs/lunyx/STATUS.md` |
-| @globe (globe + terrain) | `src/terrain/**`, `src/scene/globe.ts`, `src/scene/markers.ts`, `src/scene/sitePatch.ts`, `src/scene/sky.ts`, `src/scene/globe/**`, `src/ui/globe/**`, `src/ui/shared/**` (time scrubber, locator map, compass), `src/ui/filters.ts`, `server/api/terrain.ts`, terrain/texture scripts in `scripts/`, `public/data/dem/**`, `public/data/heatmap/**`, `public/terrain/**`, `public/textures/**` |
-| @ephem (ephemeris + analysis) | `src/astro/**`, `src/analysis/**`, `server/api/horizons.ts`, ephemeris/validation scripts in `scripts/`, `public/data/horizons/**`, `public/data/horizons-check.json`, `docs/lunyx/validation.md` |
-| @surface (surface + compare) | `src/scene/surface.ts`, `src/scene/surface/**`, `src/ui/surface/**`, `src/ui/compare/**` |
-| @assistant (assistant + QA) | `src/assistant/**`, `src/ui/assistant/**`, `server/api/assistant.ts`, `server/llm/**`, `e2e/**`, `README.md`, `.env.example` |
+| @coordinator | `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig*.json`, `scripts/ensure-deps.mjs`, `docs/lunyx/BRIEF.md`, `docs/lunyx/STATUS.md`, and the contract surface of `src/core/` (`types.ts`, `store.ts`, `bus.ts`, `actions.ts`, `time.ts`: changes go through @coordinator) |
+| @globe (app shell + globe view) | `src/main.ts`, `index.html`, `src/style.css`, `src/styles/**`, `src/core/**` other than the contract files above (core actions, analysis store, scenario helpers, deep links), `vite.config.ts`, `server/plugin.ts`, `src/scene/globe.ts`, `src/scene/markers.ts`, `src/scene/sitePatch.ts`, `src/scene/sky.ts`, `src/scene/globe/**`, `src/ui/globe/**`, `src/ui/shared/**` (time scrubber, locator map, compass), `src/ui/filters.ts`, `src/data/**` |
+| @terrain (elevation data) | `src/terrain/**`, `server/api/terrain.ts`, terrain/texture/heatmap scripts in `scripts/`, `public/data/dem/**`, `public/data/heatmap/**`, `public/terrain/**`, `public/textures/**` |
+| @analysis (ephemeris + analysis) | `src/astro/**`, `src/analysis/**`, `server/api/horizons.ts`, ephemeris scripts in `scripts/`, `public/data/horizons/**`, `public/data/horizons-check.json`, `docs/lunyx/validation.md` |
+| @surface (surface view + compare) | `src/scene/surface.ts`, `src/scene/surface/**`, `src/ui/surface/**`, `src/ui/compare/**` |
+| @assistant (LLM control + QA) | `src/assistant/**`, `src/ui/assistant/**`, `server/api/assistant.ts`, `server/llm/**`, `e2e/**`, `README.md`, `.env.example` |
+| @ice-targets (science layers) | `src/science/**`, `public/data/ice-targets/**`, `scripts/build-ice-targets.py`, `tests/iceTargets.test.ts` |
+| @ephemeris-check (independent validation) | `tests/fixtures/**`, and nothing in `src/` or `scripts/`: this agent checks other people's numbers and must stay independent of their code |
 
 `src/analysis/types.ts` and `src/terrain/types.ts` are contracts: their owner may add
 fields; removing or renaming one needs a note in the hub first, because other workers
 code against them.
 
-Dependencies: do not edit `package.json` / the lockfile. Ask @coordinator for a package
-and it will arrive through the integration branch. Already installed: three,
+Dependencies: do not edit `package.json` / the lockfile. Ask @coordinator for a package or
+an npm script and it will arrive through the integration branch. Already installed: three,
 astronomy-engine, @anthropic-ai/sdk, vitest (+ coverage), playwright 1.60.0 (Chromium is
 already cached on this machine), geotiff, sharp, @types/node.
 
@@ -116,13 +119,24 @@ already cached on this machine), geotiff, sharp, @types/node.
 
 - `src/core/store.ts`: one `AppState` (see `types.ts`) with `get()`, `set(patch)` and
   `subscribe(keys, fn)`. One clock (`timeMs`), one site, one mission window for every view.
-- `src/core/actions.ts`: the operations the UI and the assistant both use (`setTime`,
-  `selectSite`, `dropPin`, `enterSurface`, `setDelay`, `compare`, ...). The assistant's
-  tools call these same functions, so anything the assistant can do a user can do.
-- `src/core/bus.ts`: imperative commands (`flyTo`, `lookAt`, `toast`).
-- `src/core/analysisStore.ts`: runs `analyse()` for the current scenario (and for
-  comparison slots A/B) whenever site / mast / window change, and publishes
-  loading/ready/error so panels never compute the same thing twice.
+- `src/core/actions.ts`: **the action registry (decision D-1, read its header)**. Every
+  user-facing navigation, visualisation, analysis and output operation is a registered
+  action with a name, a description and a parameter schema. UI controls call
+  `runAction(name, params)`; they do not change state or scenes behind its back. The
+  assistant's tools are generated from the same registry, so the assistant can do
+  everything a user can, through the same code, and leaves the same state on screen.
+  **If you ship a control, a gesture or an output, you register its action** in your own
+  module and describe it well: the description is what the model reads. Continuous gestures
+  (dragging the globe, looking around, scrubbing) map to an action with absolute parameters
+  (camera pose, look direction, time), so the same end state is reachable by name.
+  Action results are small JSON objects taken from real app state and analysis results;
+  the assistant may quote numbers only from them.
+- `src/core/bus.ts`: imperative commands between modules (`flyTo`, `lookAt`, `toast`).
+- `src/core/time.ts`: the only UTC parsing/formatting helpers; use them for every time shown.
+- Analysis store (`src/core/`, built with the app shell): runs `analyse()` for the current
+  scenario and for comparison slots A/B, and `rankNearby()`, and publishes
+  loading/ready/error, so every panel and the assistant read the same results and nothing
+  is computed twice. Results an action produces stay visible in the UI.
 - `src/main.ts` boots the renderer and calls each module's `mount...()` function. Modules
   build their own DOM inside the mount element they are given and import their own CSS.
 - `server/plugin.ts` serves `/api/*` in both `npm run dev` and `npm run preview`; each
@@ -133,7 +147,7 @@ already cached on this machine), geotiff, sharp, @types/node.
 
 1. Start every task with `git merge am/lunyx/integration` (when that branch exists).
 2. Run `npm ci` once in your worktree. Gate: `npm run build` must pass. Also run `npm test`
-   before you hand over; new logic comes with tests (`*.test.ts` next to the code).
+   before you hand over; new logic comes with tests (`*.test.ts` next to the code, run by vitest).
 3. Commit on your own branch in small, described commits. Never push, never touch another
    worktree or the main checkout, never rewrite the upstream default branch.
 4. When a task is done: `hub_task_update` with status `review` and a result that states
