@@ -33,7 +33,7 @@ import { groundMaterial } from './surface/materials';
 import { createField, litAt, sweepSunlight, type SweepField } from './surface/shadowSweep';
 import { EarthGlobe, SunDisc } from './surface/skyBodies';
 import { azElToScene, DEG, discAreaAbove, discCoveredFraction, niceStepH, sceneToAzEl, wrapAz } from './surface/skyMath';
-import { SkyPaths } from './surface/skyPaths';
+import { Label, SkyPaths } from './surface/skyPaths';
 import { CONTEXT_LAYER, createTileMosaic, DETAIL_LAYER, type ImageryLayer, type TileMosaic } from './sitePatch';
 
 // Ground-level view of a site. Local frame, in metres:
@@ -70,9 +70,9 @@ const FAR = 800_000;
 const FAR_LAYER = 1;
 const NEAR_LAYER = 2;
 
-// Dense ground mesh that follows the viewer, so nearby relief is real geometry.
-const NEAR_N = 257;
-const NEAR_SPACING = 0.5; // metres -> 128 m across
+// Dense ground mesh that follows the viewer, so nearby relief is real geometry: 128 m across,
+// half-metre spacing (one metre on weak devices).
+const NEAR_HALF_M = 64;
 const NEAR_SNAP = 4; // re-centre in steps of this many metres, so vertices never slide over the ground
 
 const EARTH_RADIUS_KM = 6378.137;
@@ -193,6 +193,8 @@ export class SurfaceView {
 
   private readonly anisotropy: number;
   private readonly lowPower: boolean;
+  private readonly nearSpacing: number;
+  private readonly nearN: number;
   private readonly ambient = new AmbientLight(0xffffff, 0.1);
   private readonly sun = new DirectionalLight(0xffffff, 3.2);
   private readonly sunDisc = new SunDisc();
@@ -200,6 +202,7 @@ export class SurfaceView {
   private readonly paths = new SkyPaths();
   private readonly terrain = new Group();
   private readonly beacon = new Group();
+  private beaconLabel: Label | null = null;
   private readonly rocks: InstancedMesh<BufferGeometry, MeshLambertMaterial>;
   private readonly rockLit: InstancedBufferAttribute;
   private readonly rockAt = new Float32Array(MAX_ROCKS * 2);
@@ -249,12 +252,16 @@ export class SurfaceView {
   // Sky paths.
   private pathWindow: { startMs: number; durationH: number } | null = null;
   private pathsDirty = false;
+  private pathJob: { startMs: number; durationH: number; sunH: number; earthH: number; hour: number; body: 0 | 1; sun: number[]; earth: number[]; state: SkyState } | null = null;
   private viewportHeight = 720;
+  private readonly scratch = new Vector3();
 
   constructor(anisotropy: number, options: SurfaceOptions = {}) {
     this.lowPower = options.lowPower ?? false;
     // Anisotropic filtering is by far the largest cost of this scene in a software rasteriser.
     this.anisotropy = this.lowPower ? 1 : anisotropy;
+    this.nearSpacing = this.lowPower ? 1 : 0.5;
+    this.nearN = (2 * NEAR_HALF_M) / this.nearSpacing + 1;
     this.camera.rotation.order = 'YXZ';
 
     this.rocks = new InstancedMesh(rockGeometry(), groundMaterial({ color: 0x555555, flatShading: true }), MAX_ROCKS);
@@ -308,6 +315,8 @@ export class SurfaceView {
     this.composeFine(fine);
     this.model.grids = [fine, ...this.coarse];
     this.model.detail = detailMap;
+    // At a landing site the photo shows the lander and its shadow at the very centre.
+    this.model.detailCalmM = detailMap && site.kind !== 'custom' ? 12 : 0;
     const mid = (this.fineBase.n - 1) / 2;
     this.model.siteHeight = this.fineBase.data[mid * this.fineBase.n + mid];
 
@@ -356,14 +365,19 @@ export class SurfaceView {
     this.step(0, { forward: 0, strafe: 0, rise: 0, fast: false });
   }
 
-  /** GENERATED relief for a site with no survey, faded out around the site itself so the observer stands at the measured height. */
+  /**
+   * GENERATED relief for a site with no survey. Shifted so that it is zero at the site (the
+   * observer stands at the measured height) and flattened within a few metres of it, so the
+   * viewer never starts inside an invented crater.
+   */
   private siteRelief(seed: string, base: Grid): Float32Array {
     const relief = generatedRelief(seed, base.n, base.spacing);
     const n = base.n, c = (n - 1) / 2;
+    const atSite = relief[c * n + c];
     for (let j = 0; j < n; j++) {
       for (let i = 0; i < n; i++) {
-        const t = Math.min(1, Math.max(0, (Math.hypot(i - c, j - c) * base.spacing - 10) / 50));
-        relief[j * n + i] *= t * t * (3 - 2 * t);
+        const t = Math.min(1, Math.max(0, (Math.hypot(i - c, j - c) * base.spacing - 4) / 26));
+        relief[j * n + i] = (relief[j * n + i] - atSite) * t * t * (3 - 2 * t);
       }
     }
     return relief;
@@ -507,7 +521,7 @@ export class SurfaceView {
       normals.anisotropy = this.anisotropy;
       fineMaterial.normalMap = normals;
     }
-    const n = NEAR_N;
+    const n = this.nearN;
     const idx: number[] = [];
     for (let j = 0; j < n - 1; j++) {
       for (let i = 0; i < n - 1; i++) {
@@ -515,7 +529,7 @@ export class SurfaceView {
         idx.push(a, b, d, a, d, c);
       }
     }
-    this.nearField = createField(n, NEAR_SPACING);
+    this.nearField = createField(n, this.nearSpacing);
     const geo = new BufferGeometry();
     geo.setAttribute('position', new Float32BufferAttribute(new Float32Array(n * n * 3), 3));
     geo.setAttribute('uv', new Float32BufferAttribute(new Float32Array(n * n * 2), 2));
@@ -562,7 +576,7 @@ export class SurfaceView {
   private updateNear(east: number, north: number, force = false): void {
     const near = this.near, fine = this.model.grids[0], field = this.nearField;
     if (!near || !fine || !field) return;
-    const reach = ((NEAR_N - 1) / 2) * NEAR_SPACING;
+    const reach = NEAR_HALF_M, NEAR_SPACING = this.nearSpacing;
     if (Math.max(Math.abs(east), Math.abs(north)) > halfExtent(fine) - reach - 8) {
       near.visible = false;
       this.hole.value.z = 0;
@@ -573,7 +587,7 @@ export class SurfaceView {
     if (!force && near.visible && ce === this.nearCentre.east && cn === this.nearCentre.north) return;
     this.nearCentre = { east: ce, north: cn };
 
-    const n = NEAR_N, c = (n - 1) / 2, span = 2 * halfExtent(fine);
+    const n = this.nearN, c = (n - 1) / 2, span = 2 * halfExtent(fine);
     const drawnFine = this.levels[0].grid;
     const pos = near.geometry.getAttribute('position') as Float32BufferAttribute;
     const uv = near.geometry.getAttribute('uv') as Float32BufferAttribute;
@@ -669,13 +683,18 @@ export class SurfaceView {
     }
   }
 
-  /** A marker at the exact site coordinates, shown once the viewer has walked away from it. */
+  /**
+   * A marker at the exact site coordinates: a ring on the ground, a thin beam rising 400 m
+   * from it and the site's name. Shown only once the viewer has walked away from the site,
+   * to find it again.
+   */
   private buildBeacon(): void {
     const g = this.beacon;
     g.clear();
-    const color = new Color(0x8fb8ff);
+    this.beaconLabel?.dispose();
+    const color = new Color(BEACON_COLOR);
     const flat = (opacity: number) => new MeshBasicMaterial({ color, toneMapped: false, transparent: true, opacity, depthWrite: false });
-    // A ring around the spot and a beam above it, leaving the ground at the site itself uncovered.
+    // The ring leaves the ground at the site itself uncovered.
     const seg = 96, pos: number[] = [], idx: number[] = [], p = new Vector3();
     for (let k = 0; k <= seg; k++) {
       const a = (k / seg) * Math.PI * 2;
@@ -692,13 +711,19 @@ export class SurfaceView {
     const ringMat = flat(0.85);
     ringMat.side = DoubleSide;
     const ring = new Mesh(ringGeo, ringMat);
-    const beam = new Mesh(new ConeGeometry(0.3, 600, 8, 1, true), flat(0.3));
-    beam.position.y = this.model.point(0, 0, this.model.heightAt(0, 0), p).y + 325;
+    const beam = new Mesh(new ConeGeometry(0.3, 400, 8, 1, true), flat(0.45));
+    const base = this.model.point(0, 0, this.model.heightAt(0, 0), p).y;
+    beam.position.y = base + 200;
     g.add(ring, beam);
     g.traverse((o) => {
       o.layers.enable(NEAR_LAYER);
       o.layers.enable(FAR_LAYER);
     });
+    const site = this.site!;
+    this.beaconLabel = new Label([site.kind === 'custom' ? (site.name ?? 'Pinned site') : `${site.name ?? site.id} · landing site`], BEACON_COLOR, -0.9);
+    this.beaconLabel.sprite.layers.enable(NEAR_LAYER);
+    this.beaconLabel.sprite.userData.anchor = new Vector3(0, base + 3, 0);
+    g.add(this.beaconLabel.sprite);
   }
 
   // ------------------------------------------------------------------ sky
@@ -781,17 +806,20 @@ export class SurfaceView {
     this.applyLight();
   }
 
-  /** Sunlight for the current sky. Exposure works like a camera's: level ground keeps a steady mid-tone whatever the Sun's height, so a low Sun shows as strong contrast on slopes rather than a dim scene. */
+  /**
+   * Sunlight for the current sky. Exposure works like a camera's: it is set so that level
+   * ground seen at a typical angle keeps a steady mid-tone whatever the Sun's height. A low
+   * Sun then shows as long shadows and strong relief, not as a dim (or burnt-out) scene.
+   */
   private applyLight(): void {
     const s = this.sky;
     if (this.mode === 'real') {
-      const sinElevation = Math.max(s.sun.y, 0.08);
       this.sun.visible = s.sun.y > -0.2;
-      this.sun.intensity = ((Math.PI * 0.62) / sinElevation) * (1 - this.sunBehindEarth);
+      this.sun.intensity = ((Math.PI * 0.62) / levelGroundResponse(s.sun.y)) * (1 - this.sunBehindEarth);
     } else {
       // "Even" lighting: a fixed high light so every site is readable. Not the real Sun.
       this.sun.visible = true;
-      this.sun.intensity = (Math.PI * 0.62) / 0.8;
+      this.sun.intensity = (Math.PI * 0.62) / levelGroundResponse(0.8);
     }
     this.sun.castShadow = this.sun.visible && !this.lowPower && this.mode === 'real';
     this.placeSun();
@@ -904,32 +932,45 @@ export class SurfaceView {
     return this.paths.visible;
   }
 
+  /** Starts recomputing the tracks. The sky model costs about half a millisecond per instant, so the work is spread over frames. */
   private rebuildPaths(): void {
     this.pathsDirty = false;
     const w = this.pathWindow;
     if (!w || !this.site) {
+      this.pathJob = null;
       this.paths.setTracks(null, null);
       this.pathSteps = null;
       return;
     }
     // One mark per step. The Sun moves about half a degree an hour; Earth only wanders a degree or two a day.
     const sunH = niceStepH(Math.max(1, w.durationH / 360)), earthH = niceStepH(Math.max(6, w.durationH / 200));
-    const state: SkyState = { ...this.sky, sun: new Vector3(), earth: new Vector3() };
+    this.pathJob = { ...w, sunH, earthH, hour: 0, body: 0, sun: [], earth: [], state: { ...this.sky, sun: new Vector3(), earth: new Vector3() } };
+  }
+
+  /** Works on the tracks for a few milliseconds; publishes them when both are complete. */
+  private continuePaths(budgetMs: number): void {
+    const job = this.pathJob;
+    if (!job) return;
+    const started = performance.now();
     const minY = Math.sin(-2 * DEG); // marks further below the horizontal would only litter the ground
-    const track = (stepH: number, pick: (s: SkyState) => Vector3): Float32Array => {
-      const out: number[] = [];
-      for (let h = 0; h <= w.durationH + 1e-9; h += stepH) {
-        this.computeSky(w.startMs + h * 3_600_000, null, state);
-        const v = pick(state);
-        if (v.y >= minY) out.push(v.x, v.y, v.z);
+    while (performance.now() - started < budgetMs) {
+      const stepH = job.body === 0 ? job.sunH : job.earthH;
+      if (job.hour > job.durationH + 1e-9) {
+        if (job.body === 1) {
+          this.paths.setTracks(new Float32Array(job.sun), new Float32Array(job.earth));
+          this.pathSteps = { sunH: job.sunH, earthH: job.earthH, startMs: job.startMs, durationH: job.durationH };
+          this.pathJob = null;
+          return;
+        }
+        job.body = 1;
+        job.hour = 0;
+        continue;
       }
-      return new Float32Array(out);
-    };
-    this.paths.setTracks(
-      track(sunH, (s) => s.sun),
-      track(earthH, (s) => s.earth),
-    );
-    this.pathSteps = { sunH, earthH, startMs: w.startMs, durationH: w.durationH };
+      this.computeSky(job.startMs + job.hour * 3_600_000, null, job.state);
+      const v = job.body === 0 ? job.state.sun : job.state.earth;
+      if (v.y >= minY) (job.body === 0 ? job.sun : job.earth).push(v.x, v.y, v.z);
+      job.hour += stepH;
+    }
   }
 
   // ------------------------------------------------------------------ looking and walking
@@ -1016,6 +1057,7 @@ export class SurfaceView {
       if (this.shadowsDirty && now - this.lastSweepAt >= Math.min(250, Math.max(30, this.sweepCostMs * 4))) this.updateShadows();
       if (this.occlusionDirty || cam.position.distanceToSquared(this.occlusionAt) > 0.0625) this.updateOcclusion();
       if (this.pathsDirty) this.rebuildPaths();
+      this.continuePaths(5);
     }
     cam.rotation.set(this.pitch * DEG, -h, 0);
     this.prepareFrame();
@@ -1029,18 +1071,28 @@ export class SurfaceView {
     const sunShowing = this.sunAboveTerrain * (1 - this.sunBehindEarth);
     this.sunDisc.mesh.visible = this.earthGlobe.mesh.visible = this.skyKnown;
     this.sunDisc.update(cam, s.sun, s.sunRadiusDeg, sunShowing);
-    this.earthGlobe.update(cam, s.earth, s.earthRadiusDeg, this.sunFromEarth, this.earthPole, this.earthPrime);
+    this.earthGlobe.update(cam, s.earth, s.earthRadiusDeg, this.sunFromEarth, this.earthPole, this.earthPrime, this.sunBehindEarth);
     this.paths.sky.visible = this.paths.overlay.visible = this.skyKnown;
-    this.paths.update(cam, s.sun, s.earth, this.sunBehindEarth > 0.98 ? 2 : this.sunAboveTerrain < 0.02 ? 1 : 0, this.earthBehindTerrain, this.viewportHeight);
+    this.paths.update(cam, s.sun, s.earth, s.sunRadiusDeg, s.earthRadiusDeg, this.sunBehindEarth > 0.98 ? 2 : this.sunAboveTerrain < 0.02 ? 1 : 0, this.earthBehindTerrain, this.viewportHeight);
 
-    // Fill light: none of it is real skylight (there is no sky), it stands for the eye adapting.
-    // A viewer in shadow or at night sees more of the unlit ground than one dazzled by sunlit regolith.
+    // Fill light. The Moon has no sky light: shadows are lit only by sunlight scattered off
+    // nearby ground, a few percent of the direct light. That is the base level. On top of it
+    // the fill stands for the eye adapting: under a low Sun most of the view is shadow, and in
+    // shadow or at night there is no glare, so more of the unlit ground can be made out.
+    const lowSun = 1 - Math.min(1, Math.max(0, (s.sun.y - 0.035) / 0.22));
     const dazzle = real && s.sun.y > -0.02 ? sunShowing : 0;
-    this.ambient.intensity = real ? 0.28 - 0.18 * dazzle : 0.3;
+    this.ambient.intensity = real ? 0.34 - (0.24 - 0.14 * lowSun) * dazzle : 0.3;
 
-    // The site marker appears once the viewer has left the site.
+    // The site marker appears once the viewer has left the site. Its name is drawn over the
+    // terrain, towards the site, so the way back can be found from behind a rise.
     const away = Math.hypot(cam.position.x, cam.position.z);
     this.beacon.visible = away > 25;
+    if (this.beaconLabel && this.beacon.visible) {
+      const anchor = this.beaconLabel.sprite.userData.anchor as Vector3;
+      const to = this.scratch.copy(anchor).sub(cam.position);
+      const d = to.length();
+      this.beaconLabel.place(cam, to.multiplyScalar(Math.min(1, 1000 / d)).add(cam.position), 0, this.viewportHeight);
+    }
 
     const cx = Math.abs(cam.position.x), cz = Math.abs(cam.position.z);
     for (const level of this.levels) {
@@ -1101,6 +1153,8 @@ export class SurfaceView {
   /** The sky as placed at the current instant, or null before a site and a time are set. */
   get skyNow(): SurfaceSky | null {
     if (!this.skyKnown) return null;
+    // Asked for between frames (an action right after a time change): bring the terrain test up to date first.
+    if (this.occlusionDirty && this.levels.length) this.updateOcclusion();
     const s = this.sky, sun = sceneToAzEl(s.sun), earth = sceneToAzEl(s.earth);
     return {
       timeMs: this.timeMs,
@@ -1121,6 +1175,8 @@ export class SurfaceView {
   private clearTerrain(): void {
     this.near = null;
     this.nearField = null;
+    this.beaconLabel?.dispose();
+    this.beaconLabel = null;
     this.levels = [];
     this.rocks.count = 0;
     this.model.detail = null;
@@ -1142,6 +1198,21 @@ export class SurfaceView {
     this.terrain.clear();
   }
 }
+
+/**
+ * How bright level ground looks under a Sun at the given sine of elevation, relative to a
+ * matte surface lit from straight above: the lunar reflectance of materials.ts evaluated for
+ * a middling view (emission cosine 0.2, looking across the Sun's direction at 60 degrees
+ * phase, where L = 0.42). The Sun is treated as at least 1.7 degrees up, so the last moments
+ * of a sunset dim instead of flaring.
+ */
+function levelGroundResponse(sinElevation: number): number {
+  const mu0 = Math.max(0.03, sinElevation);
+  return 0.42 * Math.min((2 * mu0) / (mu0 + 0.2), 0.8) + 0.58 * mu0;
+}
+
+/** Colour of the site marker (design token --accent). */
+const BEACON_COLOR = '#8fb8ff';
 
 /** Direction of the artificial key light in "even" mode. */
 const EVEN_LIGHT = new Vector3(0.35, 0.8, 0.5).normalize();

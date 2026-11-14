@@ -118,5 +118,11 @@ describe('Ground', () => {
     expect(g.detailAt(280, 0)).toBeCloseTo(0.25, 6); // 20 m from the edge of the surveyed square
     expect(g.detailAt(400, 0)).toBe(0);
     expect(g.heightAt(2000, 0)).toBe(0);
+    // Left out around a landing site, where the photo shows hardware and its shadow.
+    g.detailCalmM = 12;
+    expect(g.detailAt(0, 0)).toBe(0);
+    expect(g.detailAt(7, 9)).toBe(0); // 11.4 m from the site
+    expect(g.detailAt(18, 0)).toBeCloseTo(0.25, 6); // half-way back in
+    expect(g.detailAt(0, -30)).toBeCloseTo(0.5, 6);
   });
 });

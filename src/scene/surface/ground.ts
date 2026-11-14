@@ -168,6 +168,12 @@ export class Ground {
   /** Finest first; the first grid is the one walked on. */
   grids: Grid[] = [];
   detail: DetailMap | null = null;
+  /**
+   * Radius around the site within which the photo-derived relief is left out, metres (it fades
+   * back in over the same distance again). At a landing site the photo shows the lander and
+   * its shadow there, which shading analysis mistakes for a pit and a mound.
+   */
+  detailCalmM = 0;
 
   /** The finest grid that covers a point. */
   gridAt(east: number, north: number): Grid {
@@ -186,8 +192,13 @@ export class Ground {
     if (fx < 0 || fy < 0 || fx >= d.size - 1 || fy >= d.size - 1) return 0;
     const x = Math.floor(fx), y = Math.floor(fy), a = fx - x, b = fy - y, h = d.heights, n = d.size;
     const v = (1 - b) * ((1 - a) * h[y * n + x] + a * h[y * n + x + 1]) + b * ((1 - a) * h[(y + 1) * n + x] + a * h[(y + 1) * n + x + 1]);
+    let calm = 1;
+    if (this.detailCalmM > 0) {
+      const t = Math.min(1, Math.max(0, Math.hypot(east, north) / this.detailCalmM - 1));
+      calm = t * t * (3 - 2 * t);
+    }
     // Ease out towards the edge of the surveyed square.
-    return v * Math.min(1, (d.half - Math.max(Math.abs(east), Math.abs(north))) / 40);
+    return v * calm * Math.min(1, (d.half - Math.max(Math.abs(east), Math.abs(north))) / 40);
   }
 
   /** Height above the sphere at a local east/north offset, metres. */

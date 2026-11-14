@@ -82,7 +82,7 @@ export function microNormalMap(): CanvasTexture {
   // Small craters, same D^-2 size law as the larger generated ones.
   const count = Math.round((0.03 * MICRO_TILE_M * MICRO_TILE_M) / 0.15 ** 2);
   for (let k = 0; k < count; k++) {
-    const d = Math.min(3, 0.15 / Math.sqrt(1 - rand()));
+    const d = Math.min(0.8, 0.15 / Math.sqrt(1 - rand())); // nothing wider than 0.8 m: larger craters would visibly repeat with the tile
     const r = d / 2 / px;
     const cx = rand() * n, cy = rand() * n;
     const depth = d * (0.03 + 0.15 * rand() ** 2), rim = depth * 0.2;

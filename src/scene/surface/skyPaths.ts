@@ -58,8 +58,16 @@ function shapeTexture(shape: Shape): CanvasTexture {
   return t;
 }
 
-function trackMaterial(shape: Shape, color: string, sizePx: number, overlay: boolean): PointsMaterial {
-  return new PointsMaterial({
+/** Where the Sun and Earth are now, so that hollow marks are not drawn across their discs. */
+interface BodyMask {
+  uSunDir: { value: Vector3 };
+  uSunCos: { value: number };
+  uEarthDir: { value: Vector3 };
+  uEarthCos: { value: number };
+}
+
+function trackMaterial(shape: Shape, color: string, sizePx: number, overlay: boolean, mask: BodyMask): PointsMaterial {
+  const material = new PointsMaterial({
     map: shapeTexture(shape),
     color,
     size: sizePx,
@@ -70,6 +78,20 @@ function trackMaterial(shape: Shape, color: string, sizePx: number, overlay: boo
     depthTest: !overlay,
     toneMapped: false,
   });
+  if (overlay) {
+    // The hollow marks are drawn over everything, which would include the Sun and Earth themselves: leave those out.
+    material.onBeforeCompile = (shader) => {
+      Object.assign(shader.uniforms, mask);
+      shader.vertexShader =
+        'uniform vec3 uSunDir;\nuniform float uSunCos;\nuniform vec3 uEarthDir;\nuniform float uEarthCos;\n' +
+        shader.vertexShader.replace(
+          '#include <project_vertex>',
+          '#include <project_vertex>\n\tvec3 lunyxDir = normalize( position );\n\tif ( dot( lunyxDir, uSunDir ) > uSunCos || dot( lunyxDir, uEarthDir ) > uEarthCos ) gl_Position = vec4( 2.0, 2.0, 2.0, 1.0 );',
+        );
+    };
+    material.customProgramCacheKey = () => 'lunyx-track-overlay';
+  }
+  return material;
 }
 
 /** A short text drawn to a texture, for a label that keeps its size on screen. */
@@ -95,29 +117,30 @@ function textTexture(text: string, color: string): { texture: Texture; aspect: n
   return { texture: new CanvasTexture(c), aspect: w / h };
 }
 
-class Label {
+/** A text label that keeps its size on screen and is drawn over everything. */
+export class Label {
   readonly sprite: Sprite;
   private readonly variants: { texture: Texture; aspect: number }[];
   private shown = 0;
 
-  constructor(texts: string[], color: string) {
+  /** @param anchorY where the label hangs relative to its point, in label heights: 1.5 = just under it, -0.9 = just above. */
+  constructor(texts: string[], color: string, anchorY = 1.5) {
     this.variants = texts.map((t) => textTexture(t, color));
     this.sprite = new Sprite(new SpriteMaterial({ map: this.variants[0].texture, sizeAttenuation: false, transparent: true, depthTest: false, depthWrite: false, toneMapped: false }));
-    // Anchored above the label, so it hangs just under the body it names.
-    this.sprite.center.set(0.5, 1.9);
+    this.sprite.center.set(0.5, anchorY);
     this.sprite.renderOrder = 11;
     this.sprite.frustumCulled = false;
   }
 
-  place(camera: PerspectiveCamera, direction: Vector3, variant: number, viewportHeightPx: number): void {
+  /** Puts the label at a world position, 20 CSS pixels tall whatever the zoom and distance. */
+  place(camera: PerspectiveCamera, position: Vector3, variant: number, viewportHeightPx: number): void {
     if (variant !== this.shown) {
       this.shown = variant;
       const m = this.sprite.material;
       m.map = this.variants[variant].texture;
       m.needsUpdate = true;
     }
-    this.sprite.position.copy(camera.position).addScaledVector(direction, OVERLAY_DISTANCE);
-    // 20 CSS pixels tall whatever the zoom.
+    this.sprite.position.copy(position);
     const k = (20 * 2 * Math.tan((camera.fov * Math.PI) / 360)) / Math.max(1, viewportHeightPx);
     this.sprite.scale.set(k * this.variants[variant].aspect, k, 1);
   }
@@ -143,6 +166,9 @@ export class SkyPaths {
   private readonly earthLabel = new Label(['Earth', 'Earth (behind terrain)'], EARTH_COLOR);
   private tracksOn = true;
   private labelsOn = true;
+  private readonly at = new Vector3();
+  private readonly down = new Vector3();
+  private readonly mask: BodyMask = { uSunDir: { value: new Vector3(0, 1, 0) }, uSunCos: { value: 2 }, uEarthDir: { value: new Vector3(0, 1, 0) }, uEarthCos: { value: 2 } };
 
   constructor() {
     // Sun: circles. Earth: diamonds. Filled in the sky, hollow over the terrain.
@@ -153,8 +179,8 @@ export class SkyPaths {
   private makeTrack(filled: Shape, hollow: Shape, color: string, sizePx: number): Track {
     const geometry = new BufferGeometry();
     geometry.setAttribute('position', new Float32BufferAttribute(new Float32Array(0), 3));
-    const sky = new Points(geometry, trackMaterial(filled, color, sizePx, false));
-    const overlay = new Points(geometry, trackMaterial(hollow, color, sizePx, true));
+    const sky = new Points(geometry, trackMaterial(filled, color, sizePx, false, this.mask));
+    const overlay = new Points(geometry, trackMaterial(hollow, color, sizePx, true, this.mask));
     sky.frustumCulled = overlay.frustumCulled = false;
     sky.renderOrder = 0; // before the Sun and Earth, which then cover the marks under them
     overlay.renderOrder = 10;
@@ -185,18 +211,33 @@ export class SkyPaths {
   }
 
   /**
-   * Call every frame. `sun` / `earth`: unit vectors towards the bodies; `sunState` 0 visible,
-   * 1 behind terrain, 2 behind Earth; `earthHidden` true when terrain hides Earth.
-   * Labels are dropped for a body well below the horizontal, where it would sit on the ground.
+   * Call every frame. `sun` / `earth`: unit vectors towards the bodies and their apparent
+   * radii; `sunState` 0 visible, 1 behind terrain, 2 behind Earth; `earthHidden` true when
+   * terrain hides Earth. Labels hang just under each disc, and are dropped for a body well
+   * below the horizontal, where they would sit on the ground.
    */
-  update(camera: PerspectiveCamera, sun: Vector3, earth: Vector3, sunState: 0 | 1 | 2, earthHidden: boolean, viewportHeightPx: number): void {
+  update(camera: PerspectiveCamera, sun: Vector3, earth: Vector3, sunRadiusDeg: number, earthRadiusDeg: number, sunState: 0 | 1 | 2, earthHidden: boolean, viewportHeightPx: number): void {
+    const rad = Math.PI / 180;
     this.sky.position.copy(camera.position);
     for (const t of this.tracks) t.overlay.position.copy(camera.position);
-    const minY = Math.sin((-3 * Math.PI) / 180);
+    // Half a mark, as an angle at this zoom.
+    const markDeg = (4 * camera.fov) / Math.max(1, viewportHeightPx);
+    this.mask.uSunDir.value.copy(sun);
+    this.mask.uSunCos.value = Math.cos((sunRadiusDeg + markDeg) * rad);
+    this.mask.uEarthDir.value.copy(earth);
+    this.mask.uEarthCos.value = Math.cos((earthRadiusDeg + markDeg) * rad);
+
+    const minY = Math.sin(-3 * rad);
     this.sunLabel.sprite.visible = this.labelsOn && sun.y > minY;
     this.earthLabel.sprite.visible = this.labelsOn && earth.y > minY;
-    this.sunLabel.place(camera, sun, sunState, viewportHeightPx);
-    this.earthLabel.place(camera, earth, earthHidden ? 1 : 0, viewportHeightPx);
+    // "Down" on screen, to hang each label from the lower limb of its disc.
+    this.down.set(0, -1, 0).applyQuaternion(camera.quaternion);
+    const under = (dir: Vector3, radiusDeg: number) => this.at.copy(camera.position).addScaledVector(dir, OVERLAY_DISTANCE).addScaledVector(this.down, OVERLAY_DISTANCE * Math.tan(radiusDeg * rad));
+    // When the Sun is at or behind Earth's disc its label goes one line under Earth's, instead of on top of it.
+    const together = sun.dot(earth) > Math.cos((earthRadiusDeg + sunRadiusDeg + 0.3) * rad);
+    this.sunLabel.sprite.center.y = together ? 2.6 : 1.5;
+    this.sunLabel.place(camera, together ? under(earth, earthRadiusDeg) : under(sun, sunRadiusDeg), sunState, viewportHeightPx);
+    this.earthLabel.place(camera, under(earth, earthRadiusDeg), earthHidden ? 1 : 0, viewportHeightPx);
   }
 
   dispose(): void {

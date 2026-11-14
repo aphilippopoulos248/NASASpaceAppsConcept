@@ -6,8 +6,12 @@
 //    ground keeps the faint fill light.
 //  - an optional square hole (where a denser mesh takes over),
 //  - optional smooth (bicubic) magnification of the ground photo,
+//  - lunar reflectance instead of a matte (Lambert) surface: regolith scatters sunlight back
+//    the way it came, so ground seen at a grazing angle under a low Sun is far brighter than
+//    a matte surface would be, and the contrast depends on whether one looks down-Sun or
+//    up-Sun. Without this, a polar scene is white slopes on black ground.
 //  - a soft shoulder on highlights, so Sun-facing slopes at a low Sun do not clip to flat white.
-import { MeshLambertMaterial, type MeshLambertMaterialParameters, type Vector3 } from 'three';
+import { MeshLambertMaterial, ShaderChunk, type MeshLambertMaterialParameters, type Vector3 } from 'three';
 
 export interface GroundMaterialOptions extends MeshLambertMaterialParameters {
   /** Square cut out of the mesh: x, z of its centre and its half-size, scene units (half-size 0 = no hole). */
@@ -38,6 +42,22 @@ const SMOOTH_MAP = /* glsl */ `#ifdef USE_MAP
 	vec4 sampledDiffuseColor = mix( smoothMap( map, vMapUv ), texture2D( map, vMapUv ), smoothstep( 0.4, 1.0, texelsPerPixel ) );
 	diffuseColor *= sampledDiffuseColor;
 #endif`;
+
+const LAMBERT_TERM = 'vec3 irradiance = dotNL * directLight.color;';
+/**
+ * The "lunar-Lambert" photometric function used for orbital lunar imagery (McEwen 1996):
+ *   2 L mu0 / (mu0 + mu) + (1 - L) mu0,
+ * a blend of the Lommel-Seeliger law and Lambert's, with L falling from 1 (looking down-Sun)
+ * to 0 (looking towards the Sun) as a cubic in the phase angle. mu0 and mu are the cosines of
+ * the incidence and emission angles. The Lommel-Seeliger part is capped at 0.8: uncapped it
+ * doubles towards the horizon and washes distant ground out to white under a low Sun.
+ */
+const LUNAR_TERM = /* glsl */ `
+	float lunyxMu = saturate( dot( geometryNormal, geometryViewDir ) );
+	float lunyxPhase = degrees( acos( clamp( dot( directLight.direction, geometryViewDir ), -1.0, 1.0 ) ) );
+	float lunyxL = clamp( 1.0 + lunyxPhase * ( -0.019 + lunyxPhase * ( 2.42e-4 - 1.46e-6 * lunyxPhase ) ), 0.0, 1.0 );
+	float lunyxLS = min( 2.0 * dotNL / ( dotNL + lunyxMu + 1e-3 ), 0.8 );
+	vec3 irradiance = ( lunyxL * lunyxLS + ( 1.0 - lunyxL ) * dotNL ) * directLight.color;`;
 
 /** Compresses linear values above 0.6 smoothly towards 1 (identity below). */
 const SHOULDER = /* glsl */ `
@@ -70,6 +90,8 @@ export function groundMaterial(options: GroundMaterialOptions = {}): MeshLambert
       }`,
     );
     if (smoothMapSize) must('#include <map_fragment>', SMOOTH_MAP);
+    if (ShaderChunk.lights_lambert_pars_fragment.includes(LAMBERT_TERM)) must('#include <lights_lambert_pars_fragment>', ShaderChunk.lights_lambert_pars_fragment.replace(LAMBERT_TERM, LUNAR_TERM));
+    else console.warn('Surface ground material: lunar reflectance not applied (three.js shader has changed).');
     // The Sun is the only direct light in this scene.
     must('#include <lights_fragment_end>', '#include <lights_fragment_end>\n\treflectedLight.directDiffuse *= vSunLit;');
     must('#include <opaque_fragment>', `${SHOULDER}\t#include <opaque_fragment>`);

@@ -44,7 +44,7 @@ void main() {
 	float mu = sqrt( max( 0.0, 1.0 - min( rho * rho, 1.0 ) ) );
 	vec3 discColor = mix( vec3( 1.0, 0.86, 0.66 ), vec3( 1.0, 0.99, 0.95 ), mu ) * 1.6;
 	float fall = max( rho - 1.0, 0.0 );
-	float halo = uGlare * ( 0.5 * exp( - fall / uSigma ) + 0.12 * exp( - fall / ( 3.0 * uSigma ) ) );
+	float halo = uGlare * ( 0.45 * exp( - fall / uSigma ) + 0.07 * exp( - fall / ( 2.5 * uSigma ) ) );
 	halo *= 1.0 - smoothstep( 0.75, 1.0, r );
 	vec3 color = discColor * disc + vec3( 1.0, 0.95, 0.86 ) * halo * ( 1.0 - disc );
 	gl_FragColor = vec4( color, 1.0 );
@@ -77,10 +77,10 @@ export class SunDisc {
    * @param visible      fraction of the disc not hidden by terrain or Earth, 0..1 (scales the glare only)
    */
   update(camera: PerspectiveCamera, direction: Vector3, radiusDeg: number, visible: number): void {
-    // Glare width: a little over one solar radius when zoomed in, wider (in solar radii) at a
-    // wide field of view so the 5-pixel disc can still be found.
-    const sigmaDeg = Math.max(1.2 * radiusDeg, 0.012 * camera.fov);
-    const quadDeg = 7 * sigmaDeg + radiusDeg;
+    // Glare width: under one solar radius when zoomed in, wider (in solar radii) at a wide
+    // field of view so the 5-pixel disc can still be found.
+    const sigmaDeg = Math.max(0.7 * radiusDeg, 0.012 * camera.fov);
+    const quadDeg = 6 * sigmaDeg + radiusDeg;
     this.uniforms.uSigma.value = sigmaDeg / radiusDeg;
     this.uniforms.uQuadRadii.value = Math.tan(quadDeg * DEG) / Math.tan(radiusDeg * DEG);
     this.uniforms.uGlare.value = Math.max(0, Math.min(1, visible));
@@ -107,6 +107,7 @@ const EARTH_FRAGMENT = /* glsl */ `
 uniform sampler2D uMap;
 uniform float uHasMap;
 uniform vec3 uSunDir;
+uniform float uBacklit;
 varying vec3 vNormalW;
 varying vec3 vViewW;
 varying vec2 vUv;
@@ -118,16 +119,23 @@ void main() {
 	vec3 albedo = uHasMap > 0.5 ? texture2D( uMap, vUv ).rgb : vec3( 0.06, 0.16, 0.38 );
 	vec3 color = albedo * ( 0.35 + 1.9 * max( ndl, 0.0 ) );
 	// Air: a blue veil that thickens towards the limb.
-	float rim = pow( 1.0 - max( dot( n, normalize( vViewW ) ), 0.0 ), 2.5 );
+	float edge = 1.0 - max( dot( n, normalize( vViewW ) ), 0.0 );
+	float rim = pow( edge, 2.5 );
 	color += vec3( 0.16, 0.34, 0.80 ) * ( 0.18 + 0.9 * rim ) * sqrt( max( ndl, 0.0 ) );
-	gl_FragColor = vec4( color * day, 1.0 );
+	color *= day;
+	// Display aids on the night side: a barely visible limb, so the dark disc can be made out
+	// against the black sky, and, while Earth hides the Sun, the thin ring of sunlit air
+	// around it (drawn schematically: its real brightness and colour vary).
+	float limb = pow( edge, 8.0 );
+	color += ( vec3( 0.020, 0.028, 0.045 ) + uBacklit * vec3( 0.95, 0.38, 0.16 ) ) * limb * ( 1.0 - day );
+	gl_FragColor = vec4( color, 1.0 );
 	#include <colorspace_fragment>
 }`;
 
 /** Earth at its true angular size, lit from the Sun's actual direction and turned to show the face it shows at that instant. */
 export class EarthGlobe {
   readonly mesh: Mesh;
-  private readonly uniforms = { uMap: { value: null as Texture | null }, uHasMap: { value: 0 }, uSunDir: { value: new Vector3(1, 0, 0) } };
+  private readonly uniforms = { uMap: { value: null as Texture | null }, uHasMap: { value: 0 }, uSunDir: { value: new Vector3(1, 0, 0) }, uBacklit: { value: 0 } };
   private readonly basis = new Matrix4();
   private readonly z = new Vector3();
 
@@ -156,8 +164,10 @@ export class EarthGlobe {
    * @param radiusDeg   apparent radius of the disc
    * @param sunFromEarth unit vector from Earth towards the Sun, scene frame (sets the phase)
    * @param pole, prime Earth's north pole and Greenwich-meridian direction, scene frame
+   * @param sunCovered  fraction of the Sun's disc that Earth hides, 0..1 (lights the ring of air around the night side)
    */
-  update(camera: PerspectiveCamera, direction: Vector3, radiusDeg: number, sunFromEarth: Vector3, pole: Vector3, prime: Vector3): void {
+  update(camera: PerspectiveCamera, direction: Vector3, radiusDeg: number, sunFromEarth: Vector3, pole: Vector3, prime: Vector3, sunCovered = 0): void {
+    this.uniforms.uBacklit.value = Math.max(0, Math.min(1, sunCovered));
     this.mesh.position.copy(camera.position).addScaledVector(direction, SKY_DISTANCE);
     // A sphere of radius r at distance D spans asin(r / D).
     this.mesh.scale.setScalar(SKY_DISTANCE * Math.sin(radiusDeg * DEG));
