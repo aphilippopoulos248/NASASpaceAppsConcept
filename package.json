@@ -1,0 +1,28 @@
+{
+  "name": "moon-landings-3d",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "fetch-textures": "node scripts/fetch-textures.mjs",
+    "fetch-horizons": "node scripts/fetch-horizons.mjs",
+    "check-ephemeris": "node scripts/check-ephemeris.mjs",
+    "fetch-terrain": "node scripts/fetch-terrain.mjs",
+    "fetch-apollo-terrain": "node scripts/fetch-apollo-terrain.mjs",
+    "derive-detail": "node scripts/derive-detail.mjs"
+  },
+  "dependencies": {
+    "astronomy-engine": "^2.1.19",
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "^0.187.0",
+    "geotiff": "^3.0.5",
+    "sharp": "^0.35.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.8"
+  }
+}

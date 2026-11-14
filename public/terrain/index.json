@@ -1,0 +1,413 @@
+{
+ "radius": 1737400,
+ "size": 129,
+ "levels": [
+  {
+   "name": "inner",
+   "spacing": 60
+  },
+  {
+   "name": "outer",
+   "spacing": 480
+  }
+ ],
+ "sites": {
+  "luna-9": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1343
+  },
+  "surveyor-1": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1886
+  },
+  "luna-13": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2175
+  },
+  "surveyor-3": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1424,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "surveyor-3_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), orthophoto NAC_DTM_APOLLO12_M120005333_50CM.IMG (0.5 m)",
+    "orthoTime": "2010-02-05T10:34:26Z",
+    "detail": {
+     "file": "surveyor-3_detail.webp",
+     "size": 1536,
+     "range": 0.687,
+     "agreement": 0.55,
+     "sunAzimuth": -86.7,
+     "sunElevation": 37.8
+    }
+   }
+  },
+  "surveyor-5": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2052
+  },
+  "surveyor-6": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -765
+  },
+  "surveyor-7": {
+   "source": "SLDEM2015 512 ppd",
+   "height": 72,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "surveyor-7_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_SURVEYOR7_E413S3485.IMG (2.0 m), orthophoto NAC_DTM_SURVEYOR7_M155307738_50CM.IMG (0.5 m)",
+    "orthoTime": "2011-03-21T00:47:51Z",
+    "detail": {
+     "file": "surveyor-7_detail.webp",
+     "size": 1536,
+     "range": 0.611,
+     "agreement": 0.56,
+     "sunAzimuth": -6.3,
+     "sunElevation": 47.3
+    }
+   }
+  },
+  "apollo-11": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1930,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-11_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO11_E008N0234.IMG (2.0 m), orthophoto NAC_DTM_APOLLO11_M150361817_50CM.IMG (0.5 m)",
+    "orthoTime": "2011-01-22T18:55:49Z",
+    "detail": {
+     "file": "apollo-11_detail.webp",
+     "size": 1536,
+     "range": 0.786,
+     "agreement": 0.56,
+     "sunAzimuth": -89.5,
+     "sunElevation": 27.4
+    }
+   }
+  },
+  "apollo-12": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1425,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-12_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), orthophoto NAC_DTM_APOLLO12_M120005333_50CM.IMG (0.5 m)",
+    "orthoTime": "2010-02-05T10:34:26Z",
+    "detail": {
+     "file": "apollo-12_detail.webp",
+     "size": 1536,
+     "range": 0.648,
+     "agreement": 0.54,
+     "sunAzimuth": -86.7,
+     "sunElevation": 37.9
+    }
+   }
+  },
+  "luna-16": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2452,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "luna-16_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_LUNA16_E005S0563.IMG (2.0 m), orthophoto NAC_DTM_LUNA16_M159582808_50CM.IMG (0.5 m)",
+    "orthoTime": "2011-05-09T12:19:01Z",
+    "detail": {
+     "file": "luna-16_detail.webp",
+     "size": 1536,
+     "range": 0.458,
+     "agreement": 0.45,
+     "sunAzimuth": 88.1,
+     "sunElevation": 45.8
+    }
+   }
+  },
+  "luna-17": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2472
+  },
+  "apollo-14": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1063,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-14_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO14_E034S3425.IMG (2.0 m), orthophoto NAC_DTM_APOLLO14_M150633128_50CM.IMG (0.5 m)",
+    "orthoTime": "2011-01-25T22:17:41Z",
+    "detail": {
+     "file": "apollo-14_detail.webp",
+     "size": 1536,
+     "range": 0.673,
+     "agreement": 0.6,
+     "sunAzimuth": -86.9,
+     "sunElevation": 30.1
+    }
+   }
+  },
+  "apollo-15": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1928,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-15_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), orthophoto NAC_DTM_APOLLO15_M111571816_50CM.IMG (0.5 m)",
+    "orthoTime": "2009-10-30T19:55:49Z",
+    "detail": {
+     "file": "apollo-15_detail.webp",
+     "size": 1536,
+     "range": 0.499,
+     "agreement": 0.36,
+     "sunAzimuth": 131.5,
+     "sunElevation": 51.4
+    }
+   }
+  },
+  "luna-20": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -1776,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "luna-20_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_LUNA20_E037N0566.IMG (2.0 m), orthophoto NAC_DTM_LUNA20_1_M152505885_60CM.IMG (0.6 m)",
+    "orthoTime": "2011-02-16T14:30:17Z",
+    "detail": {
+     "file": "luna-20_detail.webp",
+     "size": 1536,
+     "range": 0.786,
+     "agreement": 0.48,
+     "sunAzimuth": -92.8,
+     "sunElevation": 52.2
+    }
+   }
+  },
+  "apollo-16": {
+   "source": "SLDEM2015 512 ppd",
+   "height": 11,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-16_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO16_E091S0155.IMG (2.0 m), orthophoto NAC_DTM_APOLLO16_2_M152770233_50CM.IMG (0.5 m)",
+    "orthoTime": "2011-02-19T15:56:06Z",
+    "detail": {
+     "file": "apollo-16_detail.webp",
+     "size": 1536,
+     "range": 0.66,
+     "agreement": 0.5,
+     "sunAzimuth": -74.6,
+     "sunElevation": 54.9
+    }
+   }
+  },
+  "apollo-17": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2628,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "apollo-17_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG (5.0 m), orthophoto NAC_DTM_APOLLO17_9_M1190504960_120CM.IMG (1.2 m)",
+    "orthoTime": "2015-07-02T19:34:53Z",
+    "detail": {
+     "file": "apollo-17_detail.webp",
+     "size": 1536,
+     "range": 0.703,
+     "agreement": 0.52,
+     "sunAzimuth": -111.3,
+     "sunElevation": 41.5
+    }
+   }
+  },
+  "luna-21": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2687,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "luna-21_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_LUNOKHOD2_1_E258N0306.IMG (5.0 m), orthophoto NAC_DTM_LUNOKHOD2_1_M1105709502_130CM.IMG (1.3 m)",
+    "orthoTime": "2012-10-24T09:17:15Z",
+    "detail": {
+     "file": "luna-21_detail.webp",
+     "size": 1536,
+     "range": 0.3,
+     "agreement": 0.23,
+     "sunAzimuth": 119.6,
+     "sunElevation": 44.3
+    }
+   }
+  },
+  "luna-23": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -3671,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "luna-23_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), orthophoto NAC_DTM_LUNA24_M144212439_50CM.IMG (0.5 m)",
+    "orthoTime": "2010-11-12T14:46:11Z",
+    "detail": {
+     "file": "luna-23_detail.webp",
+     "size": 1536,
+     "range": 0.442,
+     "agreement": 0.32,
+     "sunAzimuth": 104.2,
+     "sunElevation": 44.2
+    }
+   }
+  },
+  "luna-24": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -3673,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "luna-24_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), orthophoto NAC_DTM_LUNA24_M144212439_50CM.IMG (0.5 m)",
+    "orthoTime": "2010-11-12T14:46:11Z",
+    "detail": {
+     "file": "luna-24_detail.webp",
+     "size": 1536,
+     "range": 0.568,
+     "agreement": 0.44,
+     "sunAzimuth": 104.3,
+     "sunElevation": 44.2
+    }
+   }
+  },
+  "change-3": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2628,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "change-3_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_CHANGE3_E444N3406.IMG (5.0 m), orthophoto NAC_DTM_CHANGE3_M1144922100_160CM.IMG (1.6 m)",
+    "orthoTime": "2014-01-21T05:40:33Z",
+    "detail": {
+     "file": "change-3_detail.webp",
+     "size": 1536,
+     "range": 0.3,
+     "agreement": 0.27,
+     "sunAzimuth": -126.9,
+     "sunElevation": 33.7
+    }
+   }
+  },
+  "change-4": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -5930,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "change-4_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_CHANGE4_E458S1775.IMG (5.0 m), orthophoto NAC_DTM_CHANGE4_M1303619844_140CM.IMG (1.4000000000000001 m)",
+    "orthoTime": "2019-02-01T00:22:57Z",
+    "detail": {
+     "file": "change-4_detail.webp",
+     "size": 1536,
+     "range": 0.383,
+     "agreement": 0.45,
+     "sunAzimuth": 59.2,
+     "sunElevation": 27.3
+    }
+   }
+  },
+  "change-5": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -2544,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "change-5_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_CHANGE501_E430N3081.IMG (3.0 m), orthophoto NAC_DTM_CHANGE501_M1374407232LE_100CM.IMG (1 m)",
+    "orthoTime": "2021-04-30T07:32:45Z",
+    "detail": {
+     "file": "change-5_detail.webp",
+     "size": 1536,
+     "range": 0.414,
+     "agreement": 0.31,
+     "sunAzimuth": 162.7,
+     "sunElevation": 44.8
+    }
+   }
+  },
+  "chandrayaan-3": {
+   "source": "LOLA ldem_60s_60m",
+   "height": 529
+  },
+  "slim": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -912,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "slim_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_THEOPHILUS_E133S0253.IMG (3.0 m), orthophoto NAC_DTM_THEOPHILUS3_M1236429945_90CM.IMG (0.9 m)",
+    "orthoTime": "2016-12-15T08:31:18Z",
+    "detail": {
+     "file": "slim_detail.webp",
+     "size": 1536,
+     "range": 0.782,
+     "agreement": 0.55,
+     "sunAzimuth": -72.2,
+     "sunElevation": 48.4
+    }
+   }
+  },
+  "im-1": {
+   "source": "LOLA ldem_60s_60m",
+   "height": 2593
+  },
+  "change-6": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -5256,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "change-6_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_CHANGE6_E421S2060.IMG (4.0 m), orthophoto NAC_DTM_CHANGE6_M1487691414_110CM.IMG (1.1 m)",
+    "orthoTime": "2024-12-01T11:22:27Z",
+    "detail": {
+     "file": "change-6_detail.webp",
+     "size": 1536,
+     "range": 0.3,
+     "agreement": 0.3,
+     "sunAzimuth": -44.9,
+     "sunElevation": 40.2
+    }
+   }
+  },
+  "blue-ghost-1": {
+   "source": "SLDEM2015 512 ppd",
+   "height": -3652,
+   "fine": {
+    "size": 513,
+    "spacing": 3,
+    "ortho": "blue-ghost-1_ortho.webp",
+    "source": "LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG (4.0 m), orthophoto NAC_DTM_CRISHORSE01_M1356089436_110CM.IMG (1.1 m)",
+    "orthoTime": "2020-09-30T07:16:09Z",
+    "detail": {
+     "file": "blue-ghost-1_detail.webp",
+     "size": 1536,
+     "range": 0.35,
+     "agreement": 0.4,
+     "sunAzimuth": -108.3,
+     "sunElevation": 46.6
+    }
+   }
+  },
+  "im-2": {
+   "source": "LOLA ldem_80s_20m",
+   "height": 5321
+  }
+ }
+}
