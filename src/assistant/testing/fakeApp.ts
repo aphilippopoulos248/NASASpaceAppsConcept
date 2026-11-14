@@ -60,10 +60,10 @@ export interface FakeState {
 
 export const T0 = Date.UTC(2026, 2, 1, 12, 0);
 
-export const LANDINGS: (FakeSite & { program: string; country: string; year: number; crewed: boolean })[] = [
-  { id: 'apollo-11', name: 'Apollo 11', kind: 'landing', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA', year: 1969, crewed: true },
-  { id: 'im-2', name: 'IM-2 Athena', kind: 'landing', latDeg: -84.7906, lonDegEast: 29.1957, program: 'CLPS', country: 'USA', year: 2025, crewed: false },
-  { id: 'chandrayaan-3', name: 'Chandrayaan-3', kind: 'landing', latDeg: -69.373, lonDegEast: 32.319, program: 'Chandrayaan', country: 'India', year: 2023, crewed: false },
+export const LANDINGS: (FakeSite & { program: string; country: string; year: number; crewed: boolean; landedMs: number })[] = [
+  { id: 'apollo-11', name: 'Apollo 11', kind: 'landing', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA', year: 1969, crewed: true, landedMs: Date.UTC(1969, 6, 20, 20, 17) },
+  { id: 'im-2', name: 'IM-2 Athena', kind: 'landing', latDeg: -84.7906, lonDegEast: 29.1957, program: 'CLPS', country: 'USA', year: 2025, crewed: false, landedMs: Date.UTC(2025, 2, 6, 17, 28) },
+  { id: 'chandrayaan-3', name: 'Chandrayaan-3', kind: 'landing', latDeg: -69.373, lonDegEast: 32.319, program: 'Chandrayaan', country: 'India', year: 2023, crewed: false, landedMs: Date.UTC(2023, 7, 23, 12, 33) },
 ];
 
 export const EVENTS = [
@@ -90,6 +90,8 @@ export interface FakeAppOptions {
   analysisActions?: boolean;
   /** Include the awaiting getAnalysis query. */
   getAnalysis?: boolean;
+  /** Include what later core builds add: selectSite { atLanding }, setMissionWindow "landing", showPanel. */
+  landingActions?: boolean;
   /** Rows returned by rankNearby (the reference row is derived from the current site). */
   nearby?: FakeRow[];
   /** `getState` reports the analysis as loading this many times before it is ready. */
@@ -172,15 +174,22 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     defineAction({ name: 'pause', title: 'Pause', description: 'Stops the clock.', effect: 'command', params: none, run: () => { state.playing = false; return timeOut(); } }),
     defineAction<{ secondsPerSecond: number }, unknown>({ name: 'setRate', title: 'Set playback speed', description: 'Sets the speed.', effect: 'command', params: { type: 'object', properties: { secondsPerSecond: { type: 'number', description: 'rate', minimum: 1 } }, required: ['secondsPerSecond'] }, run: ({ secondsPerSecond }) => { state.rate = secondsPerSecond; return timeOut(); } }),
     defineAction<{ mode: 'real' | 'even' }, unknown>({ name: 'setLightMode', title: 'Set lighting', description: 'Lighting.', effect: 'command', params: { type: 'object', properties: { mode: { type: 'string', description: 'mode', enum: ['real', 'even'] } }, required: ['mode'] }, run: ({ mode }) => { state.lightMode = mode; if (mode === 'even') state.playing = false; return { lightMode: state.lightMode, playing: state.playing }; } }),
-    defineAction<{ site: string; surface?: boolean }, unknown>({
+    defineAction<{ site: string; surface?: boolean; atLanding?: boolean }, unknown>({
       name: 'selectSite', title: 'Select landing site', description: 'Selects a catalogued landing site by id or name.', effect: 'command',
-      params: { type: 'object', properties: { site: { type: 'string', description: 'id or name' }, surface: { type: 'boolean', description: 'enter surface' } }, required: ['site'] },
-      run: ({ site, surface }) => {
+      params: { type: 'object', properties: { site: { type: 'string', description: 'id or name' }, surface: { type: 'boolean', description: 'enter surface' }, ...(options.landingActions ? { atLanding: { type: 'boolean' as const, description: 'at touchdown' } } : {}) }, required: ['site'] },
+      run: ({ site, surface, atLanding }) => {
         const key = site.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
         const hit = LANDINGS.find((l) => l.id.replace(/[^a-z0-9]/g, '') === key || l.name.toLowerCase().replace(/[^a-z0-9]/g, '') === key || l.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(key));
         if (!hit) throw new ActionError(`No catalogued landing matches "${site}". Known sites: ${LANDINGS.map((l) => l.name).join(', ')}.`);
         state.site = { id: hit.id, name: hit.name, kind: 'landing', latDeg: hit.latDeg, lonDegEast: hit.lonDegEast };
         state.view = surface ? 'surface' : 'globe';
+        if (atLanding) {
+          state.timeMs = hit.landedMs;
+          state.windowStartMs = hit.landedMs;
+          state.delayH = 0;
+          state.playing = false;
+          return { ...viewOut(), ...timeOut(), missionWindow: { startUtc: isoUtc(state.windowStartMs), durationH: state.windowDurationH, delayH: 0 } };
+        }
         return viewOut();
       },
     }),
@@ -220,7 +229,17 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       params: { type: 'object', properties: { startUtc: { type: 'string', description: 'start' }, durationH: { type: 'number', description: 'h', minimum: 1, maximum: 8760 } } },
       run: ({ startUtc, durationH }) => {
         if (startUtc === undefined && durationH === undefined) throw new ActionError('Give `startUtc` and/or `durationH`.');
-        if (startUtc !== undefined) state.windowStartMs = startUtc === 'now' ? state.timeMs : parseUtc(startUtc);
+        if (startUtc === 'landing' && options.landingActions) {
+          const landing = LANDINGS.find((l) => l.id === state.site?.id);
+          if (!landing) throw new ActionError('"landing" needs a selected catalogued landing.');
+          state.windowStartMs = landing.landedMs;
+        } else if (startUtc !== undefined) {
+          try {
+            state.windowStartMs = startUtc === 'now' ? state.timeMs : parseUtc(startUtc);
+          } catch (err) {
+            throw new ActionError((err as Error).message);
+          }
+        }
         if (durationH !== undefined) state.windowDurationH = durationH;
         return { windowStartUtc: isoUtc(state.windowStartMs), windowDurationH: state.windowDurationH, delayH: state.delayH };
       },
@@ -356,20 +375,41 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       defineAction<{ slot?: 'current' | 'A' | 'B' }, unknown>({
         name: 'getAnalysis', title: 'Read the site analysis', description: 'Waits for the analysis and returns it.', effect: 'query',
         params: { type: 'object', properties: { slot: { type: 'string', description: 'slot', enum: ['current', 'A', 'B'] } } },
-        run: () => {
-          if (!state.site) return { state: 'idle' };
+        run: ({ slot = 'current' }) => {
+          if (!state.site) return { slot, state: 'idle', error: 'No site is selected. Select a landing site or drop a pin first.' };
           const next = (type: string) => {
             const e = EVENTS.find((x) => x.type === type && x.timeMs > state.timeMs + 30_000);
-            return e ? { timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg } : null;
+            return e ? { timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg, inHours: (e.timeMs - state.timeMs) / 3_600_000 } : null;
           };
           const m = currentMetrics();
+          const terrain = { distanceKm: 4.2, heightM: 1385, latDeg: -84.66, lonDegEast: 28.9, demName: 'LOLA 60 m polar grid', demResolutionM: 60 };
           return {
-            state: 'ready', scenario: { label: label() }, metrics: m, slope: { slopeDeg: m.slopeDeg },
-            now: { timeUtc: isoUtc(state.timeMs), sun: { azDeg: 143.2, elDeg: 3.4, clearanceDeg: 1.1 }, earth: { azDeg: 351.0, elDeg: 5.6, clearanceDeg: -0.8 } },
+            slot, state: 'ready', scenario: { label: label(), site: siteOut(state.site), durationH: state.windowDurationH, mastHeightM: state.mastHeightM },
+            metrics: { illuminationPct: m.illuminationPct, longestDarknessH: m.longestDarknessH, earthVisiblePct: m.earthVisiblePct, longestEarthGapH: m.longestEarthGapH },
+            slope: { slopeDeg: m.slopeDeg, demName: 'LOLA 60 m polar grid' },
+            now: {
+              timeUtc: isoUtc(state.timeMs),
+              sun: { azDeg: 143.2, elDeg: 3.4, skylineElDeg: 2.3, clearanceDeg: 1.1, centreAboveSkyline: true, skylineTerrain: terrain, explanation: 'The Sun is 1.10° above the skyline at azimuth 143.2°.' },
+              earth: { azDeg: 351.0, elDeg: 5.6, skylineElDeg: 6.4, clearanceDeg: -0.8, centreAboveSkyline: false, skylineTerrain: terrain, explanation: 'Earth is hidden by terrain 4.20 km away towards azimuth 351.0°: the skyline there is at 6.40° and the centre of the disc at 5.60°.' },
+            },
             nextEvents: { sunrise: next('sunrise'), sunset: next('sunset'), earthrise: next('earthrise'), earthset: next('earthset') },
+            requirements: {
+              sunElevationBand: { minDeg: state.sunBand.min, maxDeg: state.sunBand.max, windowMinSunElDeg: -1.2, windowMaxSunElDeg: 4.6, metForWholeWindow: state.sunBand.min <= -1.2 && state.sunBand.max >= 4.6 },
+              maxEarthGap: state.maxEarthGapH === null ? null : { limitH: state.maxEarthGapH, longestEarthGapH: m.longestEarthGapH, met: m.longestEarthGapH <= state.maxEarthGapH },
+            },
+            provenance: { ephemeris: 'model', elevationData: [{ name: 'LOLA 60 m polar grid', resolutionM: 60, fromKm: 0, toKm: 30 }, { name: 'LOLA whole-Moon grid', resolutionM: 1895, fromKm: 30, toKm: 400 }], assumptions: [] },
             warnings: [],
           };
         },
+      }),
+    );
+  }
+  if (options.landingActions) {
+    actions.push(
+      defineAction<{ panel: string; open: boolean }, unknown>({
+        name: 'showPanel', title: 'Show or fold a panel', description: 'Folds the site details or the filters sheet.', effect: 'command',
+        params: { type: 'object', properties: { panel: { type: 'string', description: 'panel', enum: ['site-details', 'filters'] }, open: { type: 'boolean', description: 'open' } }, required: ['panel', 'open'] },
+        run: ({ panel, open }) => ({ panel, open }),
       }),
     );
   }

@@ -89,6 +89,7 @@ function comparisonText(r: Json): string {
     const highlights = given && Array.isArray(given.highlights) ? given.highlights.filter((h): h is string => typeof h === 'string') : [];
     if (highlights.length) lines.push(highlights.join(' '));
   }
+  if (!(a.data && b.data) && typeof r.error === 'string') lines.push(r.error);
   lines.push('The comparison is open on screen.');
   return lines.join('\n');
 }
@@ -122,7 +123,7 @@ const help: Intent = (step) => {
     const add = (needs: string[], text: string) => {
       if (needs.every((n) => ctx.has(n))) lines.push(`- ${text}`);
     };
-    add(['selectSite'], 'Sites: "go to Apollo 11", "select Chang\'e 4", "clear the pin"');
+    add(['selectSite'], 'Sites: "go to Apollo 11", "show IM-2 at its landing time", "select Chang\'e 4", "clear the pin"');
     add(['dropPin'], 'Coordinates: "drop a pin at 89.45 S, 137.2 W", "go to lat -85.3 lon 31.2"');
     add(['enterSurface', 'exitSurface'], 'Views: "enter the surface", "back to the globe"');
     add(['setTime'], 'Time: "set time to 2026-03-01 12:00", "forward 6 hours", "back 2 days", "play", "pause"');
@@ -383,6 +384,43 @@ const eventType = (word: string): string => word.replace(' ', '');
 const eventWhich = (word: string | undefined): 'next' | 'previous' => (word && /previous|last|prior|preceding/.test(word) ? 'previous' : 'next');
 const EVENT_NAME: Record<string, string> = { sunrise: 'sunrise', sunset: 'sunset', earthrise: 'Earthrise', earthset: 'Earthset' };
 
+/** The terrain that forms the skyline under a body, whichever action reported it. */
+interface Blocking {
+  azDeg?: number;
+  elDeg?: number;
+  skylineElDeg?: number;
+  clearanceDeg?: number;
+  blocked?: boolean;
+  distanceM?: number;
+  heightM?: number;
+  demName?: string;
+  demResolutionM?: number;
+  explanation?: string;
+}
+
+/** From `explainBlockage`. */
+function blockingFromAction(b: Json): Blocking {
+  return {
+    azDeg: num(b, 'bodyAzDeg'), elDeg: num(b, 'bodyElDeg'), skylineElDeg: num(b, 'skylineElDeg'), clearanceDeg: num(b, 'clearanceDeg'),
+    blocked: typeof b.blocked === 'boolean' ? b.blocked : undefined,
+    distanceM: num(b, 'ridgeDistanceM'), heightM: num(b, 'ridgeHeightM'), demName: str(b, 'demName'), demResolutionM: num(b, 'demResolutionM'), explanation: str(b, 'explanation'),
+  };
+}
+
+/** From `getAnalysis`: `now.sun` / `now.earth` at the simulated time. */
+function blockingFromAnalysis(a: Json, body: string): Blocking | null {
+  const n = at(a, `now.${body}`);
+  if (!isObject(n) || num(n, 'azDeg') === undefined) return null;
+  const km = num(n, 'skylineTerrain.distanceKm');
+  const above = n.centreAboveSkyline;
+  return {
+    azDeg: num(n, 'azDeg'), elDeg: num(n, 'elDeg'), skylineElDeg: num(n, 'skylineElDeg'), clearanceDeg: num(n, 'clearanceDeg'),
+    blocked: typeof above === 'boolean' ? !above : undefined,
+    distanceM: km === undefined ? undefined : km * 1000, heightM: num(n, 'skylineTerrain.heightM'),
+    demName: str(n, 'skylineTerrain.demName'), demResolutionM: num(n, 'skylineTerrain.demResolutionM'), explanation: str(n, 'explanation'),
+  };
+}
+
 const blockage: Intent = (step) => {
   const aboutTerrain = /\bridge\b/.test(step) || (/\b(blocks?|blocked|blocking|blockage|obstruct\w*|hidden|hides?|hiding|behind)\b/.test(step) && /\b(sun|earth|sunlight|view|line of sight|signal|contact|terrain|mountain|hill|crater rim)\b/.test(step));
   if (!aboutTerrain && !/^why\b.*\b(dark|shadow|no (sun|sunlight|earth|contact|signal))\b/.test(step)) return null;
@@ -399,37 +437,33 @@ const blockage: Intent = (step) => {
   return plan(`explain the terrain that blocks ${bodyName}${event ? ` at ${EVENT_NAME[event]}` : ''}`, async (ctx) => {
     const lines: string[] = [];
     let eventAz: number | undefined;
-    await ctx.analysis();
+    if (!ctx.has('getAnalysis')) await ctx.analysis();
     if (event) {
       const j = await ctx.run('jumpToEvent', { type: event, which: eventWhich(ev![1]) });
       eventAz = num(j, 'azDeg');
       lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${utc(str(j, 'timeUtc'))}.`);
     }
-    let b: Json | null = null;
-    let unavailable = '';
-    if (ctx.has('explainBlockage')) b = await ctx.run('explainBlockage', { body });
-    else unavailable = 'The blocking-terrain explanation is not available in this build.';
+    // The blocking terrain comes from the dedicated action when the build has it, otherwise
+    // from the analysis readout at the simulated time. Both describe the same skyline.
+    let b: Blocking | null = null;
+    if (ctx.has('explainBlockage')) b = blockingFromAction(await ctx.run('explainBlockage', { body }));
+    else if (ctx.has('getAnalysis')) b = blockingFromAnalysis(await ctx.analysis(), body);
+    const unavailable = b ? '' : 'The blocking-terrain explanation is not available in this build.';
     if (turn) {
       const st = await ctx.state();
       if (str(st, 'view') !== 'surface') await ctx.run('enterSurface');
-      const azDeg = num(b, 'bodyAzDeg') ?? eventAz;
+      const azDeg = b?.azDeg ?? eventAz;
       if (azDeg === undefined) throw new Halt(`${[...lines, unavailable].filter(Boolean).join(' ')} I do not have a direction to turn the view to.`);
-      const skyline = num(b, 'skylineElDeg');
+      const skyline = b?.skylineElDeg;
       const look = await ctx.run('lookAt', { azDeg, ...(skyline !== undefined ? { elDeg: Math.max(-85, Math.min(85, skyline)) } : {}) });
       lines.push(`Turned the surface view to azimuth ${degrees(num(look, 'look.azDeg') ?? azDeg)}${event ? `, where ${bodyName} meets the skyline` : ''}.`);
     }
     if (b) {
-      const explanation = str(b, 'explanation');
-      const dem = str(b, 'demName');
-      const res = num(b, 'demResolutionM');
+      lines.push(b.explanation ?? `${bodyName} is ${b.blocked === true ? 'blocked' : b.blocked === false ? 'not blocked' : 'here'}: elevation ${degrees(b.elDeg, 2)}, skyline ${degrees(b.skylineElDeg, 2)} at azimuth ${degrees(b.azDeg)}.`);
       lines.push(
-        explanation ??
-          `${bodyName} is ${b.blocked === true ? 'blocked' : 'not blocked'}: elevation ${degrees(num(b, 'bodyElDeg'), 2)}, skyline ${degrees(num(b, 'skylineElDeg'), 2)} at azimuth ${degrees(num(b, 'bodyAzDeg'))}.`,
+        `Ridge: ${distance(b.distanceM)} away, ${b.heightM !== undefined ? `${Math.round(b.heightM)} m above the reference sphere` : 'height unavailable'}; clearance ${degrees(b.clearanceDeg, 2)}.${b.demName ? ` Elevation data: ${b.demName}${b.demResolutionM !== undefined ? ` (${b.demResolutionM} m)` : ''}.` : ''}`,
       );
-      lines.push(
-        `Ridge: ${distance(num(b, 'ridgeDistanceM'))} away, ${num(b, 'ridgeHeightM') !== undefined ? `${Math.round(num(b, 'ridgeHeightM')!)} m above the reference sphere` : 'height unavailable'}; clearance ${degrees(num(b, 'clearanceDeg'), 2)}.${dem ? ` Elevation data: ${dem}${res !== undefined ? ` (${res} m)` : ''}.` : ''}`,
-      );
-    } else if (unavailable) {
+    } else {
       lines.push(unavailable);
     }
     if (body === 'earth') lines.push(EARTH_NOTE);
@@ -443,7 +477,8 @@ const events: Intent = (step) => {
     const type = eventType(jump[2]);
     const which = eventWhich(jump[1]);
     return plan(`move the clock to the ${which} ${EVENT_NAME[type]}`, async (ctx) => {
-      await ctx.analysis();
+      // Older builds fail while the analysis is running; newer ones (with getAnalysis) wait themselves.
+      if (!ctx.has('getAnalysis')) await ctx.analysis();
       const j = await ctx.run('jumpToEvent', { type, which });
       const az = num(j, 'azDeg');
       return `Moved the clock to the ${which} ${EVENT_NAME[type]}: ${utc(str(j, 'timeUtc'))}${az !== undefined ? ` (at azimuth ${degrees(az)})` : ''}. Rise and set times are measured against the terrain skyline.`;
@@ -560,11 +595,13 @@ const mission: Intent = (step) => {
   if (/\b(mission )?window\b|\bmission (length|duration)\b|^(arrive|arrival|land|landing|touch ?down)\b/.test(step) && !/^(what|how|why|is|does|when)\b/.test(step)) {
     const dt = findDateTime(step);
     const fromNow = /\b(start\w*|begin\w*|from)\s+(at\s+|from\s+)?(now|here|the current time|the simulated time)\b/.test(step);
+    const atLanding = /\b(start\w*|begin\w*|from|at|on)\s+(the\s+)?(landing|touchdown)\b/.test(step);
     const rest = dt ? step.replace(dt.match, ' ') : step;
     const d = /\b(window|length|duration|for|lasting|long)\b/.test(rest) ? findDuration(rest) : null;
-    if (!dt && !fromNow && !d) return null;
+    if (!dt && !fromNow && !atLanding && !d) return null;
     const params: Json = {};
     if (dt) params.startUtc = dt.utc;
+    else if (atLanding) params.startUtc = 'landing';
     else if (fromNow) params.startUtc = 'now';
     if (d && d.hours > 0) params.durationH = d.hours;
     return plan('set the mission window', async (ctx) => {
@@ -704,6 +741,15 @@ const views: Intent = (step) => {
     return plan('return to the globe', async (ctx) => {
       const r = await ctx.run('exitSurface');
       return `Back on the globe${r.site ? `, with ${str(r, 'site.name') ?? 'the site'} still selected` : ''}.`;
+    });
+  }
+  const panel = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site (?:details|card)|details|filters?(?: panel| sheet)?)$/.exec(step);
+  if (panel) {
+    const open = /show|open|unfold|expand/.test(panel[1]);
+    const which = panel[2].startsWith('filter') ? 'filters' : 'site-details';
+    return plan(`${open ? 'open' : 'close'} the ${which === 'filters' ? 'filters panel' : 'site details'}`, async (ctx) => {
+      const r = await ctx.run('showPanel', { panel: which, open });
+      return `${which === 'filters' ? 'The filters panel' : 'The site details'} ${r.open === true ? 'are open' : 'are folded away'}.`.replace('panel are', 'panel is');
     });
   }
   if (/^(clear|remove|delete|deselect|unselect|forget)\s+(the\s+|this\s+|my\s+)?(site|pin|selection|marker)$/.test(step) || /^(deselect|unselect)$/.test(step)) {
@@ -881,6 +927,17 @@ const questions: Intent = (step) => {
       const a = await ctx.analysis();
       const s = await ctx.state();
       const lines = [`${str(s, 'site.name') ?? 'The selected site'}, mission window from ${utc(str(s, 'missionWindow.startUtc'))} for ${hours(num(s, 'missionWindow.durationH'))}, mast ${num(s, 'mastHeightM') ?? 'unavailable'} m:`, `${metricsText(a)}.`];
+      // Requirements the user set, when the analysis checked them and they are not met.
+      const band = at(a, 'requirements.sunElevationBand');
+      if (isObject(band) && band.metForWholeWindow === false) {
+        lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(num(band, 'windowMinSunElDeg'))} to ${degrees(num(band, 'windowMaxSunElDeg'))}.`);
+      }
+      const gap = at(a, 'requirements.maxEarthGap');
+      if (isObject(gap) && gap.met === false) lines.push(`The longest Earth gap (${hours(num(gap, 'longestEarthGapH'))}) is longer than the tolerated ${hours(num(gap, 'limitH'))}.`);
+      const dem = at(a, 'provenance.elevationData');
+      if (Array.isArray(dem) && dem.some(isObject)) {
+        lines.push(`Elevation data, finest first: ${dem.filter(isObject).slice(0, 3).map((d) => `${str(d, 'name') ?? 'unnamed'} (${num(d, 'resolutionM') ?? '?'} m)`).join('; ')}.`);
+      }
       const notes = warningsText(a).trim();
       if (notes) lines.push(notes);
       lines.push(EARTH_NOTE);
@@ -892,16 +949,35 @@ const questions: Intent = (step) => {
 
 // ---------------------------------------------------------------- sites (last: the most general pattern)
 
+const SURFACE_TAIL = /\s+(?:(?:and|then)\s+)?(?:on|from|at|in)\s+(?:the\s+)?surface(?:\s+view)?$/;
+const LANDING_TAIL = /\s+(?:at|on|for|during)\s+(?:its\s+|the\s+)?(?:landing|touchdown)(?:\s+(?:time|date|day))?$/;
+
 const site: Intent = (step) => {
   const m = /^(?:(?:go|fly|travel|navigate|move|jump|head|take me|bring me|zoom)\s+to|visit|select|open|pick|choose|show(?: me)?|find|see|view|land (?:at|on))\s+(?:the\s+)?(?:(?:landing\s+)?site\s+(?:of\s+)?)?(.+)$/.exec(step);
   if (!m) return null;
   let name = m[1].trim();
-  const surface = /\s+(?:(?:and|then)\s+)?(?:on|from|at|in)\s+(?:the\s+)?surface(?:\s+view)?$/.test(name) || /^land (at|on)\b/.test(step);
-  name = name.replace(/\s+(?:(?:and|then)\s+)?(?:on|from|at|in)\s+(?:the\s+)?surface(?:\s+view)?$/, '').replace(/\s+(?:landing\s+)?site$/, '').trim();
+  // "... at landing" and "... on the surface" may follow the name, in either order.
+  let surface = /^land (at|on)\b/.test(step);
+  let atLanding = false;
+  for (let i = 0; i < 2; i++) {
+    if (SURFACE_TAIL.test(name)) {
+      surface = true;
+      name = name.replace(SURFACE_TAIL, '');
+    }
+    if (LANDING_TAIL.test(name)) {
+      atLanding = true;
+      name = name.replace(LANDING_TAIL, '');
+    }
+  }
+  name = name.replace(/\s+(?:landing\s+)?site$/, '').trim();
   if (!name || name.length > 60) return null;
-  return plan(`select the site "${name}"${surface ? ' and enter the surface view' : ''}`, async (ctx) => {
-    const r = await ctx.run('selectSite', { site: name, ...(surface ? { surface: true } : {}) });
-    return `Selected ${siteText(r.site)}.${r.view === 'surface' ? ' You are standing on the surface there.' : ' The globe is flying there.'}`;
+  return plan(`select the site "${name}"${atLanding ? ' at its landing time' : ''}${surface ? ' and enter the surface view' : ''}`, async (ctx) => {
+    if (atLanding && !('atLanding' in (ctx.api.def('selectSite')?.params.properties ?? {}))) {
+      throw new Halt('This build cannot go to a landing and its date in one step. Select the site, then set the time yourself.');
+    }
+    const r = await ctx.run('selectSite', { site: name, ...(atLanding ? { atLanding: true } : {}), ...(surface ? { surface: true } : {}) });
+    const when = atLanding && str(r, 'timeUtc') ? ` The clock and the mission window start at touchdown, ${utc(str(r, 'timeUtc'))}.` : '';
+    return `Selected ${siteText(r.site)}.${when}${r.view === 'surface' ? ' You are standing on the surface there.' : ' The globe is flying there.'}`;
   });
 };
 

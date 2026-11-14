@@ -94,7 +94,9 @@ describe('deterministic mode on the real core actions', () => {
     expect(s.compareB).toMatchObject({ site: { id: 'im-2' }, startMs: T0 + 24 * 3_600_000, durationH: 24 });
     expect(s.delayH).toBe(24);
     // No analysis store is attached in this test: the reply must say so, not invent numbers.
-    expect(r.text).toContain('A: IM-2 Athena, from 2025-03-14T06:00Z for 24 h, mast 2 m: no analysis available.');
+    // (The automatic slot labels belong to the core actions and may change: only the site is checked.)
+    expect(r.text).toMatch(/^A: IM-2 Athena.*: no analysis available\.$/m);
+    expect(r.text).toMatch(/^B: IM-2 Athena.*: no analysis available\.$/m);
     expect(r.text).not.toMatch(/illumination \d/);
   });
 
