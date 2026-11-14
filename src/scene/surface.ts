@@ -23,6 +23,7 @@ import {
   PerspectiveCamera,
   RepeatWrapping,
   SRGBColorSpace,
+  ShaderMaterial,
   Scene,
   Sphere,
   SphereGeometry,
@@ -248,11 +249,123 @@ function rockGeometry(seed: number, subdivisions: number): BufferGeometry {
   return geo;
 }
 
+/**
+ * Lunar soil reflects most strongly straight back towards its light source, so ground seen with
+ * the Sun behind you is brighter than ground seen looking towards the Sun, with a tight bright
+ * patch around your own shadow. Without this, a high Sun leaves the surface flat and pale.
+ */
+/**
+ * Surface detail for the generated rocks, computed per pixel in each rock's own space so it sticks
+ * to the rock and differs from rock to rock: rough relief, uneven tone, and a coat of soil-coloured
+ * dust on the lower, buried part.
+ * Rocks are small on screen, so a few noise lookups per pixel cost very little.
+ */
+/** The ground under the rocks: its photo (if any), brightness and extent, so rocks can take on its tone. */
+interface RockGround {
+  map: { value: Texture | null };
+  hasMap: { value: number };
+  color: { value: Color };
+  half: { value: number };
+}
+
+function patchRockShader(material: MeshStandardMaterial, ground: RockGround): void {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.uGroundMap = ground.map;
+    shader.uniforms.uGroundHasMap = ground.hasMap;
+    shader.uniforms.uGroundColor = ground.color;
+    shader.uniforms.uGroundHalf = ground.half;
+    shader.vertexShader = shader.vertexShader
+      .replace('void main() {', 'uniform float uGroundHalf;\nvarying vec3 vRockPos;\nvarying vec3 vRockSeed;\nvarying float vRockSize;\nvarying vec2 vGroundUv;\nvoid main() {')
+      .replace(
+        '#include <begin_vertex>',
+        `#include <begin_vertex>
+	vRockPos = position;
+	#ifdef USE_INSTANCING
+		vRockSeed = instanceMatrix[ 3 ].xyz;
+		vRockSize = length( instanceMatrix[ 0 ].xyz );
+		// Where the rock sits on the ground photo (x east, z south; the photo runs west-east, south-north).
+		vGroundUv = vec2( instanceMatrix[ 3 ].x + uGroundHalf, - instanceMatrix[ 3 ].z + uGroundHalf ) / ( 2.0 * uGroundHalf );
+	#else
+		vGroundUv = vec2( 0.5 );
+		vRockSeed = vec3( 0.0 );
+		vRockSize = 1.0;
+	#endif`,
+      );
+    shader.fragmentShader = withBackscatter(
+      shader.fragmentShader
+        .replace(
+          'void main() {',
+          /* glsl */ `uniform sampler2D uGroundMap;
+uniform float uGroundHasMap;
+uniform vec3 uGroundColor;
+varying vec3 vRockPos;
+varying vec3 vRockSeed;
+varying float vRockSize;
+varying vec2 vGroundUv;
+float rHash( vec3 p ) {
+	p = fract( p * 0.3183099 + 0.1 );
+	p *= 17.0;
+	return fract( p.x * p.y * p.z * ( p.x + p.y + p.z ) );
+}
+float rNoise( vec3 p ) {
+	vec3 i = floor( p ), f = fract( p );
+	f = f * f * ( 3.0 - 2.0 * f );
+	return mix(
+		mix( mix( rHash( i ), rHash( i + vec3( 1, 0, 0 ) ), f.x ), mix( rHash( i + vec3( 0, 1, 0 ) ), rHash( i + vec3( 1, 1, 0 ) ), f.x ), f.y ),
+		mix( mix( rHash( i + vec3( 0, 0, 1 ) ), rHash( i + vec3( 1, 0, 1 ) ), f.x ), mix( rHash( i + vec3( 0, 1, 1 ) ), rHash( i + vec3( 1, 1, 1 ) ), f.x ), f.y ),
+		f.z );
+}
+void main() {`,
+        )
+        .replace(
+          '#include <color_fragment>',
+          /* glsl */ `#include <color_fragment>
+	vec3 rP = vRockPos + fract( vRockSeed * 0.137 ) * 40.0;
+	// Start from the tone of the ground the rock sits on (averaged over a few metres), so rocks
+	// belong to their surroundings, then vary it gently across the rock.
+	vec3 rSoil = uGroundColor * ( uGroundHasMap > 0.5 ? texture2D( uGroundMap, vGroundUv, 4.0 ).rgb : vec3( 1.0 ) );
+	diffuseColor.rgb *= rSoil * 1.05 * ( 0.9 + 0.16 * rNoise( rP * 2.5 ) + 0.08 * ( rNoise( rP * 11.0 ) - 0.5 ) );
+	// Dust settles on the lower part, where the rock meets the soil.
+	diffuseColor.rgb = mix( diffuseColor.rgb, rSoil, smoothstep( -0.1, -0.55, vRockPos.y ) * 0.8 );`,
+        )
+        .replace(
+          '#include <normal_fragment_maps>',
+          /* glsl */ `#include <normal_fragment_maps>
+	{
+		// Rough, chipped surface: relief scaled to the rock's size so it reads the same on pebbles and boulders.
+		float rH = ( 0.07 * rNoise( rP * 4.0 ) + 0.035 * rNoise( rP * 9.0 ) ) * vRockSize;
+		vec3 rSigX = dFdx( - vViewPosition ), rSigY = dFdy( - vViewPosition );
+		vec3 rR1 = cross( rSigY, normal ), rR2 = cross( normal, rSigX );
+		float rDet = dot( rSigX, rR1 ) * faceDirection;
+		vec3 rGrad = sign( rDet ) * ( dFdx( rH ) * rR1 + dFdy( rH ) * rR2 );
+		normal = normalize( abs( rDet ) * normal - rGrad );
+	}`,
+        ),
+    );
+  };
+  material.customProgramCacheKey = () => 'lunar-rock';
+}
+
+function withBackscatter(fragmentShader: string): string {
+  return fragmentShader.replace(
+    '#include <lights_fragment_end>',
+    /* glsl */ `#include <lights_fragment_end>
+#if NUM_DIR_LIGHTS > 0
+	{
+		float gBack = max( dot( normalize( vViewPosition ), directionalLights[ 0 ].direction ), 0.0 );
+		reflectedLight.directDiffuse *= 0.84 + 0.42 * gBack * gBack * gBack + 0.22 * pow( gBack, 30.0 );
+	}
+#endif`,
+  );
+}
+
 // Artist-made close-up surface maps (craters of roughly 0.1-2.5 m and fine texture). They are not
 // lunar measurements: they only shade the ground near the viewer, as part of the generated detail,
 // and never move the terrain. Loaded the first time the surface view is used.
 const DETAIL_TILE_M = 12;
 const detailMaps = { normal: { value: null as Texture | null }, tone: { value: null as Texture | null }, ready: { value: 0 } };
+/** 0 with the light on the horizon, 1 with it overhead: tone matters more as shading fades. */
+const lightHeight = { value: 0 };
 let detailRequested = false;
 function requestDetailMaps(anisotropy: number): void {
   if (detailRequested) return;
@@ -292,6 +405,7 @@ function patchNearShader(material: MeshStandardMaterial, mapSize: { value: numbe
     shader.uniforms.uDetailNormal = detailMaps.normal;
     shader.uniforms.uDetailTone = detailMaps.tone;
     shader.uniforms.uDetailReady = detailMaps.ready;
+    shader.uniforms.uLightHeight = lightHeight;
     shader.vertexShader = 'varying vec2 vGroundXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvGroundXZ = position.xz;');
     shader.fragmentShader = shader.fragmentShader
       .replace(
@@ -301,6 +415,7 @@ uniform float uGenerated;
 uniform sampler2D uDetailNormal;
 uniform sampler2D uDetailTone;
 uniform float uDetailReady;
+uniform float uLightHeight;
 varying vec2 vGroundXZ;
 
 vec4 smoothMap( sampler2D tex, vec2 uv ) {
@@ -405,10 +520,10 @@ void main() {`,
 	vec4 sampledDiffuseColor = mix( smoothMap( map, vMapUv ), texture2D( map, vMapUv ), smoothstep( 0.4, 1.0, texelsPerPixel ) );
 	diffuseColor *= sampledDiffuseColor;
 #endif
-	diffuseColor.rgb *= 1.0 + uGenerated * ( 0.16 * ( gNoise( vGroundXZ * 0.6 ) - 0.5 ) + 0.07 * ( gNoise( vGroundXZ * 21.0 ) - 0.5 ) );
+	diffuseColor.rgb *= 1.0 + uGenerated * ( 0.22 * ( gNoise( vGroundXZ * 0.6 ) - 0.5 ) + 0.07 * ( gNoise( vGroundXZ * 21.0 ) - 0.5 ) );
 	// A little of the close-up map's light and dark, so small craters read by tone as well as by shading.
 	vec2 gGround = vec2( vGroundXZ.x, - vGroundXZ.y );
-	if ( uDetailReady > 0.5 ) diffuseColor.rgb *= mix( 1.0, clamp( texture2D( uDetailTone, gGround / ${DETAIL_TILE_M.toFixed(1)} ).r * 2.0, 0.55, 1.35 ), 0.3 * uGenerated );`,
+	if ( uDetailReady > 0.5 ) diffuseColor.rgb *= mix( 1.0, clamp( texture2D( uDetailTone, gGround / ${DETAIL_TILE_M.toFixed(1)} ).r * 2.0, 0.55, 1.35 ), ( 0.35 + 0.4 * uLightHeight ) * uGenerated );`,
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -423,6 +538,11 @@ void main() {`,
 		}
 	}`,
       );
+  };
+  const patch = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, renderer) => {
+    patch.call(material, shader, renderer);
+    shader.fragmentShader = withBackscatter(shader.fragmentShader);
   };
   material.customProgramCacheKey = () => 'ground-near';
 }
@@ -564,6 +684,7 @@ export class SurfaceView {
   private readonly rocks: InstancedMesh[] = [];
   private readonly generatedFlag = { value: 1 };
   private readonly mapSize = { value: 1024 };
+  private readonly rockGround: RockGround = { map: { value: null }, hasMap: { value: 0 }, color: { value: new Color(0.2, 0.2, 0.2) }, half: { value: 1 } };
   private siteId = '';
   /** Whether generated (not real) detail is shown: rocks and sub-metre texture. */
   generated = true;
@@ -604,16 +725,41 @@ export class SurfaceView {
     );
     this.sunGlow.scale.setScalar(0.22);
 
-    const earthMaterial = new MeshStandardMaterial({ color: 0x2a4f8f, roughness: 0.9, metalness: 0 });
+    // The Earth shades itself from the true Sun direction. It cannot use the scene's light, which is
+    // exposure-scaled for the ground and, at night, stands in for the Earth's own glow.
+    const earthMaterial = new ShaderMaterial({
+      uniforms: { map: { value: null as Texture | null }, hasMap: { value: 0 }, sunDir: { value: new Vector3(1, 0, 0) } },
+      vertexShader: /* glsl */ `
+varying vec2 vUv;
+varying vec3 vWorldNormal;
+void main() {
+	vUv = uv;
+	vWorldNormal = normalize( mat3( modelMatrix ) * normal );
+	gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+}`,
+      fragmentShader: /* glsl */ `
+uniform sampler2D map;
+uniform float hasMap;
+uniform vec3 sunDir;
+varying vec2 vUv;
+varying vec3 vWorldNormal;
+void main() {
+	vec3 base = hasMap > 0.5 ? texture2D( map, vUv ).rgb : vec3( 0.05, 0.12, 0.3 );
+	float lit = smoothstep( -0.05, 0.25, dot( normalize( vWorldNormal ), sunDir ) );
+	gl_FragColor = vec4( base * ( 0.015 + 1.15 * lit ), 1.0 );
+	#include <colorspace_fragment>
+}`,
+    });
     new TextureLoader().load(`${import.meta.env.BASE_URL}textures/earth_2k.jpg`, (t) => {
       t.colorSpace = SRGBColorSpace;
-      earthMaterial.map = t;
-      earthMaterial.color.set(0xffffff);
-      earthMaterial.needsUpdate = true;
+      earthMaterial.uniforms.map.value = t;
+      earthMaterial.uniforms.hasMap.value = 1;
     });
     this.earth = new Mesh(new SphereGeometry(1, 64, 32), earthMaterial);
 
-    const rockMaterial = new MeshStandardMaterial({ color: 0xa0a0a0, vertexColors: true, roughness: 1, metalness: 0 });
+    // Lunar rock is about as dark as the soil around it, not pale: a linear albedo near 0.2.
+    const rockMaterial = new MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0 });
+    patchRockShader(rockMaterial, this.rockGround);
     for (let k = 0; k < SMALL_ROCK_SHAPES + BOULDER_SHAPES; k++) {
       const boulder = k >= SMALL_ROCK_SHAPES;
       // 320 triangles is plenty for a rock a hand-span across; boulders get 1280.
@@ -847,7 +993,7 @@ export class SurfaceView {
       shader.vertexShader = 'varying vec2 vGroundXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvGroundXZ = position.xz;');
       shader.fragmentShader =
         'uniform vec3 uHole;\nvarying vec2 vGroundXZ;\n' +
-        shader.fragmentShader.replace('void main() {', 'void main() {\n\tif ( uHole.z > 0.0 && abs( vGroundXZ.x - uHole.x ) < uHole.z && abs( vGroundXZ.y - uHole.y ) < uHole.z ) discard;');
+        withBackscatter(shader.fragmentShader).replace('void main() {', 'void main() {\n\tif ( uHole.z > 0.0 && abs( vGroundXZ.x - uHole.x ) < uHole.z && abs( vGroundXZ.y - uHole.y ) < uHole.z ) discard;');
     };
     fineMaterial.customProgramCacheKey = () => 'ground-with-hole';
 
@@ -868,6 +1014,8 @@ export class SurfaceView {
     const material = new MeshStandardMaterial({ color: 0x777777, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
     requestDetailMaps(this.anisotropy);
     patchNearShader(material, this.mapSize, this.generatedFlag);
+    this.rockGround.half.value = halfExtent(this.grids[0]);
+    this.rockGround.hasMap.value = 0;
     if (hasPhoto) {
       // Share the photo once the fine mesh has it.
       fineMaterial.userData.onMap = () => {
@@ -875,11 +1023,16 @@ export class SurfaceView {
         this.mapSize.value = (fineMaterial.map!.image as HTMLImageElement).width;
         material.color.copy(fineMaterial.color);
         material.needsUpdate = true;
+        this.rockGround.map.value = fineMaterial.map;
+        this.rockGround.hasMap.value = 1;
+        this.rockGround.color.value.copy(fineMaterial.color);
       };
       if (fineMaterial.map) fineMaterial.userData.onMap();
     } else {
       // No photo here: the 20 m imagery is one flat tone at this scale, so use the exposed mid-grey directly.
       material.color.setScalar(0.2);
+      this.rockGround.hasMap.value = 0;
+      this.rockGround.color.value.setScalar(0.2);
     }
     this.nearGeometry = geo;
     this.near = splitForCulling(geo, material, NEAR_N, 6, 1);
@@ -1076,6 +1229,10 @@ export class SurfaceView {
 
     // Until imagery arrives the ground is plain regolith grey.
     const material = new MeshStandardMaterial({ color: 0x777777, roughness: 1, metalness: 0 });
+    material.onBeforeCompile = (shader) => {
+      shader.fragmentShader = withBackscatter(shader.fragmentShader);
+    };
+    material.customProgramCacheKey = () => 'ground-backscatter';
     if (grainMetres > 0) {
       const grain = grainTexture();
       const repeats = ((n - 1) * grid.spacing) / grainMetres;
@@ -1150,30 +1307,46 @@ export class SurfaceView {
     const sunDir = this.toLocal(g.sunDir);
     this.sunGlow.position.copy(sunDir).multiplyScalar(SKY_DISTANCE);
     this.sunGlow.visible = this.mode === 'real';
-    // Exposure, like a camera's: level ground keeps a steady mid-tone whatever the Sun's height,
+    const earthDir = this.toLocal(g.earthDir);
+    (this.earth.material as ShaderMaterial).uniforms.sunDir.value.copy(sunDir);
+
+    // Exposure, like a camera's: level ground keeps a steady mid-tone whatever the light's height,
     // so a low Sun shows up as strong contrast on slopes rather than as a dim scene.
-    let sinElevation = 0.8;
-    if (this.mode === 'real') {
+    let sinElevation = 0.8, exposure = 0.62;
+    this.sun.color.setRGB(1, 1, 1);
+    this.sun.visible = true;
+    if (this.mode !== 'real') {
+      this.sunDirection.set(0.35, 0.8, 0.5).normalize();
+      this.ambient.intensity = 0.3;
+    } else if (sunDir.y > -0.01) {
+      // Day. Sunlit ground all around bounces light into shadows, so they are dim rather than black;
+      // with the Sun high there is little shadow left to fill, so the fill backs off to keep contrast.
+      const high = Math.max(0, sunDir.y);
       this.sunDirection.copy(sunDir);
       sinElevation = Math.max(sunDir.y, 0.08);
-      this.sun.visible = sunDir.y > -0.01;
-      // Fill light so the ground is still readable in shadow and at night.
-      // Sunlit ground all around bounces light into shadows, so they are dim rather than black.
-      this.ambient.intensity = this.sun.visible ? 0.3 : 0.28;
+      exposure = 0.62 + 0.1 * high;
+      this.ambient.intensity = 0.3 - 0.14 * high;
+    } else if (earthDir.y > 0.02) {
+      // Night with the Earth in the sky: the ground is lit by Earthshine, from the Earth's direction,
+      // bluish, and brighter the fuller the Earth (which is fullest when the Moon is new).
+      const earthLit = 1 - g.litFraction;
+      this.sunDirection.copy(earthDir);
+      sinElevation = Math.max(earthDir.y, 0.15);
+      this.sun.color.setRGB(0.72, 0.84, 1);
+      exposure = 0.05 + 0.2 * earthLit;
+      this.ambient.intensity = 0.05;
     } else {
-      this.sunDirection.set(0.35, 0.8, 0.5).normalize();
-      this.sun.visible = true;
-      this.ambient.intensity = 0.3;
+      // Night on the far side: starlight only.
+      this.sun.visible = false;
+      this.ambient.intensity = 0.06;
     }
-    this.sun.intensity = (Math.PI * 0.62) / sinElevation;
+    lightHeight.value = this.sun.visible ? Math.max(0, this.sunDirection.y) : 0;
+    this.sun.intensity = (Math.PI * exposure) / sinElevation;
     this.sun.castShadow = this.sun.visible;
     this.shadowStale = true;
-    // The Earth shares this light, so cancel the exposure boost on it.
-    const earthMaterial = this.earth.material as MeshStandardMaterial;
-    if (earthMaterial.map) earthMaterial.color.setScalar(3.2 / this.sun.intensity);
 
     // Earth at its true direction and apparent size, turned to show the right face.
-    this.toLocal(g.earthDir, this.earth.position).multiplyScalar(SKY_DISTANCE);
+    this.earth.position.copy(earthDir).multiplyScalar(SKY_DISTANCE);
     this.earth.scale.setScalar((SKY_DISTANCE * EARTH_RADIUS_KM) / g.earthDistanceKm);
     const pole = this.toLocal(g.earthPole).normalize();
     const prime = this.toLocal(g.earthPrime);

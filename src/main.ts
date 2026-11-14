@@ -130,6 +130,8 @@ let sitePatch: SitePatch | null = null;
 
 // ---------- surface (ground-level) view ----------
 const surface = new SurfaceView(renderer.capabilities.getMaxAnisotropy());
+// Dev builds only: lets the surface view be inspected from the browser console.
+if (import.meta.env.DEV) (window as unknown as { __surface: SurfaceView }).__surface = surface;
 let inSurface = false;
 /** Set when a site was just chosen: enter the surface view as soon as the fly-in lands. */
 let surfaceWanted = false;
@@ -535,12 +537,15 @@ async function boot() {
   setTime(simTime);
 
   // Deep links: ?site=apollo-11 opens a site, &view=surface drops straight to the ground,
-  // &light=landing sets the Sun to where it was at touchdown.
+  // &light=landing sets the Sun to where it was at touchdown, &time=... to any moment.
   const params = new URLSearchParams(location.search);
   const linked = markers.items.find((m) => m.landing.id === params.get('site'));
   if (linked) {
     select(linked);
     if (params.get('light') === 'landing') setTime(landingDate(linked.landing).getTime());
+    // &time=2026-11-22T03:31Z sets the simulated date and time directly.
+    const linkedTime = Date.parse(params.get('time') ?? '');
+    if (Number.isFinite(linkedTime)) setTime(linkedTime);
     if (params.get('view') === 'surface') {
       camera.position.copy(linked.dir).multiplyScalar(SITE_DISTANCE);
       fly = null;
