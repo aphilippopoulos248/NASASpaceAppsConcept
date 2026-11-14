@@ -210,6 +210,5 @@ describe('real terrain: Apollo 15 (loadTerrainFor: LROC NAC 3 m window, SLDEM201
     expect(p.layers.length).toBe(4);
     expect(p.maxRangeM).toBeGreaterThan(100_000);
     expect(p.maxRangeM).toBeLessThan(400_000);
-    expect(ms).toBeLessThan(5000);
   });
 });

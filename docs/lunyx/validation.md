@@ -294,6 +294,12 @@ mix two accuracy classes in one ranking), several workers (each would decode its
 grids at polar sites), and sharing the far skyline between candidates (candidate skylines would
 then differ from independently computed ones by roughly 0.1 deg).
 
+Runtime is checked deliberately, not in the default test run (a wall-clock limit fails on a
+busy machine for reasons unrelated to the code): `node scripts/bench-analysis.mjs` measures a
+skyline profile, a 14-day `analyse()` and the default scan on IM-2, Apollo 15 and Blue Ghost
+(best of a few repetitions, one thread) against budgets of 500 ms, 1.5 s and 10 s, and exits 1
+when one is exceeded. Last run: 71-88 ms, 133-206 ms, 3.3-4.0 s.
+
 Synthetic checks: a ridge crest outranks the valley floor; a 20 deg wall is rejected at a
 10 deg limit and accepted at 30 deg; candidates without data are rejected as `no-data`.
 Resolution caveat, stated in every candidate's `basis`: slope and skyline rest on 60 m

@@ -167,7 +167,7 @@ describe('rankNearby on real terrain (loadTerrainFor)', () => {
     expect(acc[0].score).toBeGreaterThanOrEqual(ref.score);
     expect(acc[0].basis).toMatch(/Slope over 120 m from .*60 m site window \(60 m grid\)/);
     expect(acc[0].basis).toMatch(/Skyline every 1 deg/);
-    expect(ms).toBeLessThan(60_000);
+    // No wall-clock limit here: it would fail on a busy machine (T-28). Runtime is checked by scripts/bench-analysis.mjs.
   }, 120_000);
   it('Apollo 15 (3 m survey near the site only): slopes come from the 60 m window for every candidate', async () => {
     const site = { id: 'apollo-15', name: 'Apollo 15', kind: 'landing' as const, lat: 26.13239, lon: 3.6333 };
