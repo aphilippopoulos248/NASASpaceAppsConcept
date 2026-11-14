@@ -149,7 +149,9 @@ export function mountFiltersPanel(region: HTMLElement): void {
     row.append(sw, el('span', undefined, c.label));
     coverLegend.append(row);
   }
-  coverLegend.append(el('p', 'ly-note', 'Outlines show where each grid exists. Everywhere else rests on the LOLA whole-Moon grid (1.9 km per sample); for a pin, a 60 m window is built on request when the elevation server can be reached.'));
+  coverLegend.append(
+    el('p', 'ly-note', 'Squares show where each elevation grid exists: three around the south pole (LRO LOLA polar grids) and one set around each of the 28 catalogued landing sites (SLDEM2015, LOLA and LROC NAC models). Everywhere else rests on the LOLA whole-Moon grid (1.9 km per sample); for a pin, a 60 m window is built on request when the elevation server can be reached. No north-polar grid is bundled.'),
+  );
   panel.append(reliefField, reliefNote, cover, coverLegend);
 
   // ---- Lighting ----

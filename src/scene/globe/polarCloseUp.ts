@@ -73,6 +73,8 @@ export class PolarCloseUp {
   private wide: Piece | null = null;
   private fine: Piece | null = null;
   private swept = { ux: NaN, uy: NaN, el: NaN, at: 0 };
+  /** The rest of a shadow update in progress: one sweep per frame. */
+  private steps: (() => unknown)[] = [];
   private lastFineAt = 0;
   private opacity = 0;
   /** Why the close-up could not be built, when it could not. */
@@ -184,6 +186,7 @@ export class PolarCloseUp {
       this.wide.uniforms.uCut.value.set((c0 + inset + 0.5) / n, (r0 + inset + 0.5) / n, (c1 - inset + 0.5) / n, (r1 - inset + 0.5) / n);
       // In the feathered border both are drawn: there the wide piece is lowered so the window always lies in front.
       this.wide.uniforms.uSink.value.set((c0 + 0.5) / n, (r0 + 0.5) / n, (c1 + 0.5) / n, (r1 + 0.5) / n);
+      this.steps = [];
       this.swept.el = NaN; // sweep again, now with the window
       this.onData?.();
       return;
@@ -266,34 +269,53 @@ export class PolarCloseUp {
     return { grid, z: heightsAbovePolarPlane(grid), ground: groundCell(grid), low: new Float32Array(count), high: new Float32Array(count), lit, shadow, normal, mesh, material, uniforms, sourceM };
   }
 
-  /** Recomputes the shadows when the Sun has moved enough to see, at most a few times a second. */
+  /**
+   * Recomputes the shadows when the Sun has moved enough to see. One sweep of one piece per
+   * frame (four frames for a full update), so a running clock does not stall the picture.
+   */
   private sweep(view: PolarView): void {
     if (!this.wide) return;
+    if (this.steps.length) {
+      this.steps.shift()!();
+      return;
+    }
     const sun = sunOverSouthPole(view.sunDir);
     const len = Math.hypot(sun.ux, sun.uy) || 1;
     const ux = sun.ux / len, uy = sun.uy / len;
     const turned = Math.acos(Math.min(1, Math.max(-1, ux * this.swept.ux + uy * this.swept.uy)));
     const moved = !(turned < 0.0015) || !(Math.abs(sun.elevationRad - this.swept.el) < 0.0002); // 0.09 deg round the horizon, 0.01 deg in height
-    if (!moved || view.nowMs - this.swept.at < 150) return;
+    if (!moved) return;
     this.swept = { ux, uy, el: sun.elevationRad, at: view.nowMs };
     const tanLow = Math.tan(sun.elevationRad + SUN_RADIUS_RAD), tanHigh = Math.tan(sun.elevationRad - SUN_RADIUS_RAD);
-    const wide = this.wide;
-    sweepShadowHeight({ n: wide.grid.n, z: wide.z, cellM: wide.ground }, ux, uy, tanLow, wide.low);
-    sweepShadowHeight({ n: wide.grid.n, z: wide.z, cellM: wide.ground }, ux, uy, tanHigh, wide.high);
-    litFraction(wide.z, wide.low, wide.high, wide.lit);
-    wide.shadow.needsUpdate = true;
-    const fine = this.fine;
+    const wide = this.wide, fine = this.fine;
+    const grid = (p: Piece) => ({ n: p.grid.n, z: p.z, cellM: p.ground });
+    // Shadows arriving at the window's border come from the wide piece (terrain up to 300 km away).
+    const edge = (field: Float32Array) => (col: number, row: number) => {
+      const [c, r] = gridCell(wide.grid, gridX(fine!.grid, col), gridY(fine!.grid, row));
+      return sampleField(field, wide.grid.n, c, r);
+    };
+    const publish = (p: Piece) => {
+      litFraction(p.z, p.low, p.high, p.lit);
+      p.shadow.needsUpdate = true;
+    };
+    this.steps = [
+      () => sweepShadowHeight(grid(wide), ux, uy, tanLow, wide.low),
+      () => {
+        sweepShadowHeight(grid(wide), ux, uy, tanHigh, wide.high);
+        publish(wide);
+      },
+    ];
     if (fine) {
-      // Shadows arriving at the window's border come from the wide piece (terrain up to 300 km away).
-      const edge = (field: Float32Array) => (col: number, row: number) => {
-        const [c, r] = gridCell(wide.grid, gridX(fine.grid, col), gridY(fine.grid, row));
-        return sampleField(field, wide.grid.n, c, r);
-      };
-      sweepShadowHeight({ n: fine.grid.n, z: fine.z, cellM: fine.ground }, ux, uy, tanLow, fine.low, edge(wide.low));
-      sweepShadowHeight({ n: fine.grid.n, z: fine.z, cellM: fine.ground }, ux, uy, tanHigh, fine.high, edge(wide.high));
-      litFraction(fine.z, fine.low, fine.high, fine.lit);
-      fine.shadow.needsUpdate = true;
+      this.steps.push(
+        () => this.fine === fine && sweepShadowHeight(grid(fine), ux, uy, tanLow, fine.low, edge(wide.low)),
+        () => {
+          if (this.fine !== fine) return;
+          sweepShadowHeight(grid(fine), ux, uy, tanHigh, fine.high, edge(wide.high));
+          publish(fine);
+        },
+      );
     }
+    this.steps.shift()!();
   }
 
   private disposePiece(piece: Piece | null): void {

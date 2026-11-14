@@ -16,22 +16,22 @@ import { latLonToVec3, programColor } from '../../data/landings';
 import { coverageRegions, demLayers } from '../../terrain/api';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
-import { SitePatch } from '../sitePatch';
+import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
+import { CoverageOutlines, windowClasses } from './coverageOutlines';
 import { globeDisplay, registerDisplayActions } from './displayState';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { effectiveRelief } from './reliefTiles';
-import { createSurfaceUniforms, MAX_COVERAGE_SITES, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
+import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
 /** The camera comes no closer to the terrain under the screen centre than this, Moon radii (about 10 km). */
 const MIN_CLEARANCE = 0.006;
 const MIN_DISTANCE = 1 + MIN_CLEARANCE;
-/** Site imagery is equirectangular: poleward of this latitude it is stretched into streaks and is not drawn. */
-const IMAGERY_MAX_LAT = 80;
+
 const Z = new Vector3(0, 0, 1);
 const MOON = new Sphere(new Vector3(), 1);
 
@@ -63,6 +63,8 @@ export class GlobeView {
   /** Shared by every surface material: exaggeration, Sun direction, overlay, coverage. */
   private readonly uniforms = createSurfaceUniforms(OVERLAY_RAMP, SUN_BAND_COLOUR, COVERAGE_STYLE.map((c) => c.colour));
   private relief: ReliefGlobe | null = null;
+  /** Outlines of the elevation windows around the landing sites (shown with the coverage display). */
+  private coverage: CoverageOutlines | null = null;
   /** Poleward of about 80S the surface is drawn from the polar elevation layers, with real Sun shadows. */
   private readonly polar = new PolarCloseUp(this.uniforms);
   /** The multi-year average maps, as textures for the avg-* overlays. */
@@ -192,6 +194,7 @@ export class GlobeView {
   private applyOverlay(): void {
     const s = store.get();
     setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage);
+    if (this.coverage) this.coverage.root.visible = globeDisplay.get().coverage;
     this.uniforms.uBand.value.set(s.sunElMinDeg, s.sunElMaxDeg);
   }
 
@@ -204,20 +207,11 @@ export class GlobeView {
       const polar = layers.filter((l) => l.role === 'polar' && l.pole === 'S' && l.halfWidthM).sort((a, b) => a.resolutionM - b.resolutionM);
       const half = (i: number) => (polar[i] ? polar[i].halfWidthM! / MOON_RADIUS_M : 0);
       u.uPolarHalf.value.set(half(0), half(1), half(2));
-      const windows = regions.filter((r) => r.sites && !r.onDemand).sort((a, b) => b.resolutionM - a.resolutionM);
-      const outer = windows[0], inner = windows.find((w) => w.resolutionM < (outer?.resolutionM ?? 0) && w.resolutionM >= 30), survey = windows.find((w) => w.resolutionM < 30);
-      const sinHalf = (r?: { sites?: { halfWidthM: number }[] }) => (r?.sites?.length ? Math.sin(r.sites[0].halfWidthM / MOON_RADIUS_M) : 0);
-      u.uSiteHalf.value.set(sinHalf(outer), sinHalf(inner), sinHalf(survey));
-      const sites = (outer?.sites ?? []).slice(0, MAX_COVERAGE_SITES);
-      sites.forEach((site, i) => {
-        const d = latLonToVec3(site.lat, site.lon);
-        const surveyed = survey?.sites?.some((x) => Math.abs(x.lat - site.lat) < 1e-6 && Math.abs(x.lon - site.lon) < 1e-6) ?? false;
-        u.uSiteDir.value[i].set(d.x, d.y, d.z, surveyed ? 1 : 0);
-        // East at the site: d(position)/d(longitude), normalised.
-        const lon = (site.lon * Math.PI) / 180;
-        u.uSiteEast.value[i].set(-Math.sin(lon), 0, -Math.cos(lon));
-      });
-      u.uSiteCount.value = sites.length;
+      // The windows around the landing sites: outlines of their own, in the legend's colours (480 m, 60 m, 3 m).
+      this.coverage = new CoverageOutlines(windowClasses(regions, COVERAGE_STYLE.slice(3).map((c) => c.colour)));
+      this.coverage.root.visible = globeDisplay.get().coverage;
+      this.scene.add(this.coverage.root);
+      this.placed.version = -1; // place them with the markers
     } catch (err) {
       console.warn('Elevation coverage could not be read', err);
     }
@@ -343,6 +337,7 @@ export class GlobeView {
     this.sky.update(cam, this.right, this.up);
     this.updateRelief(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
+    if (this.coverage?.root.visible) this.coverage.update(cam);
     const pinned = store.get().site;
     this.pin.visible = pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
     if (this.pin.visible) this.pin.scale.setScalar(cam.position.distanceTo(this.pin.position) * 0.006);
@@ -380,6 +375,7 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
+      this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {

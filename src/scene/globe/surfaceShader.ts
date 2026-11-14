@@ -9,8 +9,6 @@
 import { Color, Material, Texture, Vector2, Vector3, Vector4, type IUniform } from 'three';
 import { lunarFragmentShader } from '../sky';
 
-/** Landing-site elevation windows the coverage overlay can outline. */
-export const MAX_COVERAGE_SITES = 32;
 /** Colours of the 0..100 % ramp, low to high (same list as the legend). */
 export const RAMP_STEPS = 6;
 
@@ -35,13 +33,8 @@ export interface SurfaceUniforms {
   uAvgHalf: IUniform<Vector4>;
   /** Half-widths of the three south-polar elevation squares, Moon radii, finest first. */
   uPolarHalf: IUniform<Vector3>;
+  /** Colours of the three polar squares, finest first. */
   uCoverColor: IUniform<Color[]>;
-  uSiteCount: IUniform<number>;
-  /** Site direction (xyz) and 1 in w where a 3 m survey exists. */
-  uSiteDir: IUniform<Vector4[]>;
-  uSiteEast: IUniform<Vector3[]>;
-  /** Sine of the angular half-width of the 480 m, 60 m and 3 m site windows. */
-  uSiteHalf: IUniform<Vector3>;
   /** Base tiles are not drawn where the unit direction's y is below this (the polar close-up covers that part). -2 = draw everything. */
   uCapHole: IUniform<number>;
 }
@@ -60,11 +53,7 @@ export function createSurfaceUniforms(ramp: readonly string[], bandColor: string
     uAvgNorthDetail: { value: null },
     uAvgHalf: { value: new Vector4(0, 0, 0, 0) },
     uPolarHalf: { value: new Vector3(0, 0, 0) },
-    uCoverColor: { value: coverColors.map((c) => new Color(c)) },
-    uSiteCount: { value: 0 },
-    uSiteDir: { value: Array.from({ length: MAX_COVERAGE_SITES }, () => new Vector4()) },
-    uSiteEast: { value: Array.from({ length: MAX_COVERAGE_SITES }, () => new Vector3()) },
-    uSiteHalf: { value: new Vector3(0, 0, 0) },
+    uCoverColor: { value: coverColors.slice(0, 3).map((c) => new Color(c)) },
     uCapHole: { value: -2 },
   };
 }
@@ -113,11 +102,7 @@ uniform float uCapHole;
 #endif
 #if LUNYX_COVERAGE == 1
 	uniform vec3 uPolarHalf;
-	uniform vec3 uCoverColor[ 6 ];
-	uniform int uSiteCount;
-	uniform vec4 uSiteDir[ ${MAX_COVERAGE_SITES} ];
-	uniform vec3 uSiteEast[ ${MAX_COVERAGE_SITES} ];
-	uniform vec3 uSiteHalf;
+	uniform vec3 uCoverColor[ 3 ];
 #endif
 #ifdef LUNYX_POLAR
 	uniform sampler2D uShadowMap;
@@ -146,9 +131,8 @@ vec3 lunyxRamp( float t ) {
 #endif
 
 #if LUNYX_COVERAGE == 1
-// One nested outline: fills lightly inside the half-width, with a line on its edge.
-vec4 lunyxSquare( float m, float halfW, vec3 colour, float fill ) {
-	float w = max( fwidth( m ) * 1.5, 1e-7 );
+// One nested outline: fills lightly inside the half-width, with a line on its edge ("w" is a pixel and a half).
+vec4 lunyxSquare( float m, float halfW, vec3 colour, float fill, float w ) {
 	float inside = 1.0 - smoothstep( halfW - w, halfW, m );
 	float line = inside * smoothstep( halfW - 3.0 * w, halfW - 1.5 * w, m );
 	return vec4( colour, max( inside * fill, line * 0.9 ) );
@@ -192,26 +176,16 @@ vec3 lunyxOverlay( vec3 colour, vec3 d ) {
 	#endif
 	#if LUNYX_COVERAGE == 1
 	{
+		// The three south-polar elevation squares. (The small windows around landing sites are drawn as
+		// outlines of their own, coverageOutlines.ts: a per-pixel loop over them is too slow without a GPU.)
+		// The size of a pixel on the Moon, in the units the outlines are measured in (Moon radii): found once.
+		float w = max( length( fwidth( d ) ) * 1.5, 1e-7 );
 		if ( d.y < - 0.9 ) {
 			vec2 xy = abs( lunyxPolarXY( d, - 1.0 ) );
 			float m = max( xy.x, xy.y );
-			vec4 a = lunyxSquare( m, uPolarHalf.z, uCoverColor[ 2 ], 0.22 );
-			vec4 b = lunyxSquare( m, uPolarHalf.y, uCoverColor[ 1 ], 0.26 );
-			vec4 c = lunyxSquare( m, uPolarHalf.x, uCoverColor[ 0 ], 0.3 );
-			colour = mix( colour, a.rgb, a.a );
-			colour = mix( colour, b.rgb, b.a );
-			colour = mix( colour, c.rgb, c.a );
-		}
-		for ( int i = 0; i < ${MAX_COVERAGE_SITES}; i ++ ) {
-			if ( i >= uSiteCount ) break;
-			vec3 s = uSiteDir[ i ].xyz;
-			vec3 e = uSiteEast[ i ];
-			float m = max( abs( dot( d, e ) ), abs( dot( d, cross( s, e ) ) ) );
-			// Only on the site's own side of the Moon, and near it.
-			m = dot( d, s ) > 0.9995 ? m : 1.0;
-			vec4 a = lunyxSquare( m, uSiteHalf.x, uCoverColor[ 3 ], 0.2 );
-			vec4 b = lunyxSquare( m, uSiteHalf.y, uCoverColor[ 4 ], 0.24 );
-			vec4 c = lunyxSquare( m, uSiteHalf.z * uSiteDir[ i ].w, uCoverColor[ 5 ], 0.3 );
+			vec4 a = lunyxSquare( m, uPolarHalf.z, uCoverColor[ 2 ], 0.22, w );
+			vec4 b = lunyxSquare( m, uPolarHalf.y, uCoverColor[ 1 ], 0.26, w );
+			vec4 c = lunyxSquare( m, uPolarHalf.x, uCoverColor[ 0 ], 0.3, w );
 			colour = mix( colour, a.rgb, a.a );
 			colour = mix( colour, b.rgb, b.a );
 			colour = mix( colour, c.rgb, c.a );

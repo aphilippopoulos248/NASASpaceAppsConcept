@@ -17,7 +17,7 @@ export const OVERLAYS: OverlayInfo[] = [
     label: 'Sun in required band (now)',
     kind: 'band',
     meaning: (min, max) =>
-      `Shaded where the Sun's elevation at the simulated time is between ${min}° and ${max}° above the local horizontal. Computed for a smooth Moon: terrain shadows are not included, so check the surface view or the site analysis for a site.`,
+      `Shaded where the Sun's elevation at the simulated time is between ${min}° and ${max}° above the local horizontal (degrees). Whole Moon, from the app's Sun position for that UTC instant. Computed for a smooth Moon: terrain shadows are not included, so check the surface view or the site analysis for a site.`,
   },
   {
     mode: 'avg-illumination',

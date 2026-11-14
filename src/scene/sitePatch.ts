@@ -36,6 +36,9 @@ export const DETAIL_LAYER: ImageryLayer = {
 };
 const LAYERS = [CONTEXT_LAYER, DETAIL_LAYER];
 
+/** The imagery is equirectangular: poleward of this latitude it is stretched into streaks, so it is not drawn there. */
+export const IMAGERY_MAX_LAT = 80;
+
 export const SITE_IMAGERY_CREDIT = `${LAYERS.map((l) => l.credit).join(' · ')}, via NASA Moon Trek`;
 
 const MAX_COLS = 40;

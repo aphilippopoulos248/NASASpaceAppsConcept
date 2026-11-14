@@ -16,7 +16,7 @@ import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
 import { formatCoords, formatDate, Landing, landingDate, programColor, quickmapUrl, trekUrl } from '../../data/landings';
-import { SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
+import { IMAGERY_MAX_LAT, SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
 import { button, el, isTypingTarget } from '../dom';
@@ -292,6 +292,13 @@ export function mountSiteCard(region: HTMLElement): void {
     facts.set('type', l ? (l.crewed ? 'Crewed' : 'Robotic') : null);
     facts.set('region', l?.region ?? null);
     facts.set('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}; longitude east-positive`);
+    // What the close-up on the globe is made of at this latitude.
+    credit.textContent =
+      Math.abs(site.lat) <= IMAGERY_MAX_LAT
+        ? `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`
+        : site.lat < 0
+          ? 'Close-up on the globe: shaded relief computed from LOLA polar elevation (40, 80 and 160 m grids), with the shadows the terrain casts at the simulated time. Not a photograph: photographic maps are stretched this close to the pole.'
+          : 'No close-up on the globe this close to the north pole: photographic maps are stretched here and no north-polar elevation layer is bundled.';
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';
     links.hidden = !l;

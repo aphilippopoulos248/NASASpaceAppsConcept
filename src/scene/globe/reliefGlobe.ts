@@ -38,8 +38,8 @@ export class ReliefGlobe {
   private fineRequested = false;
   /** Set when a grid could not be loaded: shown instead of pretending there is relief. */
   problem: string | null = null;
-  /** Called when new height data has arrived (markers and patches re-read their heights). */
-  onData: (() => void) | null = null;
+  /** Settles when the grid being fetched (if any) has been taken in. */
+  private pending: Promise<void> = Promise.resolve();
 
   constructor(private readonly material: Material) {
     for (const t of rootTiles()) this.build(t);
@@ -51,8 +51,13 @@ export class ReliefGlobe {
   }
 
   /** The small whole-Moon grid (4 samples per degree): quick to load, enough for the view from orbit. */
-  async loadOverview(): Promise<void> {
-    await this.load(4);
+  loadOverview(): Promise<void> {
+    return (this.pending = this.load(4));
+  }
+
+  /** Resolves when no elevation grid is being fetched any more (tests, and callers that want to wait). */
+  settled(): Promise<void> {
+    return this.pending;
   }
 
   private async load(ppd: 4 | 16): Promise<void> {
@@ -63,7 +68,6 @@ export class ReliefGlobe {
       this.pyramid.add(d, 1);
       this.version++;
       this.problem = null;
-      this.onData?.();
     } catch (err) {
       this.problem = `The ${ppd} px/deg whole-Moon elevation grid could not be loaded (${err instanceof Error ? err.message : String(err)}).`;
       console.warn(this.problem);
@@ -161,7 +165,7 @@ export class ReliefGlobe {
     const chosen = selectTiles(view, available, inView);
     if (wantsFiner && !this.fineRequested) {
       this.fineRequested = true;
-      void this.load(16);
+      this.pending = this.load(16);
     }
     for (const tile of this.tiles.values()) tile.mesh.visible = false;
     for (const id of chosen) {
