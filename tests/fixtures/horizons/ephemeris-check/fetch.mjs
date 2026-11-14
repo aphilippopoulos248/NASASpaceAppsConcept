@@ -9,7 +9,7 @@
 // Standalone on purpose: Node built-ins only, and it imports nothing from src/ or scripts/, so the
 // reference data cannot inherit a mistake from the code it is used to check.
 import { createHash } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SCHEMA, assertMoonHeader, assertSiteHeader, parseHorizonsTable, rowsFromTables, serialiseSet } from './lib.mjs';
@@ -49,8 +49,10 @@ function timeSpec(set) {
     const { start, stop, stepMinutes } = set.range;
     const utc = [];
     for (let t = Date.parse(start); t <= Date.parse(stop); t += stepMinutes * 60000) utc.push(new Date(t).toISOString().replace('.000Z', 'Z'));
+    const stamp = (iso) => iso.slice(0, 16).replace(':', '') + 'Z'; // 2025-03-02T0900Z
     return {
-      key: set.id.split('.').slice(1).join('.'), utc,
+      // The Moon's sub-points do not depend on the site, so sets with the same instants share one reply.
+      key: `${stamp(start)}_${stamp(stop)}_${stepMinutes}m`, utc,
       params: { START_TIME: `'${hTime(start)}'`, STOP_TIME: `'${hTime(stop)}'`, STEP_SIZE: `'${stepMinutes} m'` },
       describe: { scale: 'UTC', start, stop, stepMinutes, count: utc.length },
     };
@@ -83,8 +85,11 @@ let log = {};
 try { log = await readJson(logPath); } catch { /* first run */ }
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 
+const used = new Set(['retrieval-log.json']);
+
 /** Returns the reply text for a query, from raw/ when already fetched (unless --refresh). */
 async function reply(rawName, params) {
+  used.add(rawName);
   const url = urlOf(params);
   const rawPath = join(HERE, 'raw', rawName);
   const known = log[rawName];
@@ -154,6 +159,13 @@ for (const set of spec.sets) {
 }
 
 if (!ONLY) {
+  // Drop replies and data files that no set refers to any more.
+  for (const name of await readdir(join(HERE, 'raw'))) if (!used.has(name)) { await rm(join(HERE, 'raw', name)); delete log[name]; console.log(`removed stale raw/${name}`); }
+  for (const name of Object.keys(log)) if (!used.has(name)) delete log[name];
+  await writeFile(logPath, JSON.stringify(log, null, 1) + '\n');
+  const wanted = new Set(index.map((s) => s.file.slice(5)));
+  for (const name of await readdir(join(HERE, 'data'))) if (!wanted.has(name)) { await rm(join(HERE, 'data', name)); console.log(`removed stale data/${name}`); }
+
   const total = index.reduce((n, s) => n + s.time.count, 0);
   const out = {
     schema: `${SCHEMA}:index`,

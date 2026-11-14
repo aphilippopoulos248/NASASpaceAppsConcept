@@ -22,35 +22,38 @@
   "rows[].subEarth, rows[].subSolar": "{ lat, lon } deg: the Moon's sub-observer point for an observer at Earth's centre and its sub-solar point (quantities 14 and 15 of target 301 seen from 500@399; lon converted from 0..360 to -180..180). Site-independent. See README: subEarth follows Horizons' light-time-only convention and sits up to 0.006 deg from the direction in which the site rows see Earth."
  },
  "tolerance": {
-  "howToCompare": "Elevation: |el - ref.el|. Azimuth: |wrap180(az - ref.az)| * cos(ref.el), i.e. the arc on the sky, because raw azimuth is ill-conditioned near the zenith and nadir (Apollo 11 has the Sun at 88.9 deg, the antimeridian site has Earth at -88 deg). Sub-points: great-circle distance.",
+  "howToCompare": "Elevation: |el - ref.el|. Azimuth: |wrap180(az - ref.az)| * cos(ref.el), the arc on the sky, because raw azimuth is ill-conditioned near the zenith and nadir (the fixture has the Sun at 87.8 deg and Earth at -88.1 deg). Sub-points: great-circle distance.",
   "topocentricModel": {
-   "elDeg": 0.02,
-   "azArcDeg": 0.02,
-   "appliesTo": "sun and earth, every row"
+   "elDeg": 0.01,
+   "azArcDeg": 0.01,
+   "appliesTo": "Sun and Earth, every row, for a model evaluated at the site itself"
   },
   "moonCentreDirections": {
-   "sunElDeg": 0.02,
-   "sunAzArcDeg": 0.02,
+   "sunElDeg": 0.01,
+   "sunAzArcDeg": 0.01,
    "earthElDeg": 0.3,
    "earthAzArcDeg": 0.3,
-   "appliesTo": "a model that uses the direction from the Moon's centre for every site (the pre-Lunyx baseline): Earth is then wrong by up to asin(1737.4 / 356400) = 0.28 deg"
+   "appliesTo": "a model that uses the direction from the Moon's centre for every site (the pre-Lunyx src/astro/ephemeris.ts): Earth is then off by up to asin(1743 / 356400) = 0.28 deg, which is the effect this fixture exists to expose"
   },
   "angularDiameter": {
-   "relative": 0.002
+   "relative": 0.002,
+   "note": "Covers the usual choices of radius (Sun 695700 vs 696000 km, Earth equatorial vs mean)."
   },
   "range": {
    "relative": 0.0001,
-   "note": "A model that measures from the Moon's centre is off by up to 1737 km (0.45 % of the Earth distance) and fails this on purpose."
+   "note": "38 km on the Earth distance. A distance measured from the Moon's centre is off by up to 1743 km (0.45 %) and is meant to fail."
   },
   "illumPct": {
-   "absolute": 0.1
+   "absolute": 0.5,
+   "note": "Percentage points. Evaluating Earth's phase from the Moon's centre instead of the site changes it by up to 0.23, which is immaterial here."
   },
   "subPoints": {
-   "arcDeg": 0.02
+   "arcDeg": 0.02,
+   "note": "subEarth carries a 0.006 deg convention offset (light-time only, no stellar aberration); see README."
   },
-  "rationale": "PROVISIONAL until the baseline run is recorded in README.md. The reference values are exact to 1e-9 deg. 0.02 deg is 1/13 of the smallest effect the fixture must expose (Earth parallax, 0.26 deg) and 1/13 of the Sun's 0.27 deg radius, while leaving room for what an analytic model legitimately lacks: the IAU lunar rotation series against the DE441 orientation (about 0.005 deg), stellar aberration if not modelled (0.006 deg), and series truncation in a compact ephemeris."
+  "rationale": "The reference is exact for this purpose: an offline SPICE recomputation (DE440, Moon ME frame, LT+S) reproduces every row to 0.000002 deg. Measured over all 1008 rows with SPICE (spice-crosscheck.json, sensitivityArcDeg): the IAU lunar rotation series in place of the DE orientation costs 0.0035 deg, which is the floor for an analytic model and exactly what the old ephemeris.ts shows once the site parallax is added; dropping stellar aberration costs 0.006 deg; ignoring TT-UTC 0.0098 deg (Sun); the principal-axis frame in place of Mean Earth 0.029 deg; ignoring the site (Moon-centre directions) 0.28 deg (Earth). 0.01 deg is three times the floor, so a sound model passes with room to spare, and it fails the frame mix-up and the missing parallax outright. It is 1/27 of the Sun's radius (0.27 deg), far below what the 60 m terrain models resolve in a skyline."
  },
- "rows": 984,
+ "rows": 1008,
  "sets": [
   {
    "id": "blue-ghost-1.surface-2025-03",
@@ -121,7 +124,7 @@
   {
    "id": "apollo-11.epochs-1969-2035",
    "file": "data/apollo-11.epochs-1969-2035.json",
-   "title": "Apollo 11 pin (near-side, equatorial) at 28 instants 1969-2035; the first is its touchdown.",
+   "title": "Apollo 11 pin (near-side, equatorial) at 30 instants 1969-2035; the first is its touchdown.",
    "site": {
     "id": "apollo-11",
     "name": "Apollo 11",
@@ -136,14 +139,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "apollo-17.epochs-1969-2035",
    "file": "data/apollo-17.epochs-1969-2035.json",
-   "title": "Apollo 17 pin (near-side, 20 N) at 28 instants 1969-2035, including its touchdown.",
+   "title": "Apollo 17 pin (near-side, 20 N) at 30 instants 1969-2035, including its touchdown.",
    "site": {
     "id": "apollo-17",
     "name": "Apollo 17",
@@ -158,14 +161,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "blue-ghost-1.epochs-1969-2035",
    "file": "data/blue-ghost-1.epochs-1969-2035.json",
-   "title": "Blue Ghost 1 pin (62 E) at 28 instants 1969-2035, including its touchdown.",
+   "title": "Blue Ghost 1 pin (62 E) at 30 instants 1969-2035, including its touchdown.",
    "site": {
     "id": "blue-ghost-1",
     "name": "Blue Ghost Mission 1",
@@ -180,14 +183,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "im-2.epochs-1969-2035",
    "file": "data/im-2.epochs-1969-2035.json",
-   "title": "IM-2 pin (85 S) at 28 instants 1969-2035, including its touchdown.",
+   "title": "IM-2 pin (85 S) at 30 instants 1969-2035, including its touchdown.",
    "site": {
     "id": "im-2",
     "name": "IM-2 Athena",
@@ -202,14 +205,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "change-4.epochs-1969-2035",
    "file": "data/change-4.epochs-1969-2035.json",
-   "title": "Chang'e 4 pin (far side, 45 S, 177.6 E) at 28 instants 1969-2035, including its touchdown. Earth is always far below the horizon.",
+   "title": "Chang'e 4 pin (far side, 45 S, 177.6 E) at 30 instants 1969-2035, including its touchdown. Earth is always far below the horizon.",
    "site": {
     "id": "change-4",
     "name": "Chang'e 4 / Yutu-2",
@@ -224,14 +227,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "north-pole.epochs-1969-2035",
    "file": "data/north-pole.epochs-1969-2035.json",
-   "title": "Exact north pole at 28 instants 1969-2035.",
+   "title": "Exact north pole at 30 instants 1969-2035.",
    "site": {
     "id": "north-pole",
     "name": "North pole (exact)",
@@ -246,14 +249,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "south-pole.epochs-1969-2035",
    "file": "data/south-pole.epochs-1969-2035.json",
-   "title": "Exact south pole at 28 instants 1969-2035.",
+   "title": "Exact south pole at 30 instants 1969-2035.",
    "site": {
     "id": "south-pole",
     "name": "South pole (exact)",
@@ -268,14 +271,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "near-north-pole.epochs-1969-2035",
    "file": "data/near-north-pole.epochs-1969-2035.json",
-   "title": "89.5 N, 120 E at 28 instants 1969-2035.",
+   "title": "89.5 N, 120 E at 30 instants 1969-2035.",
    "site": {
     "id": "near-north-pole",
     "name": "Near north pole (synthetic)",
@@ -289,14 +292,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "near-south-pole.epochs-1969-2035",
    "file": "data/near-south-pole.epochs-1969-2035.json",
-   "title": "89.5 S, 137.3 W at 28 instants 1969-2035.",
+   "title": "89.5 S, 137.3 W at 30 instants 1969-2035.",
    "site": {
     "id": "near-south-pole",
     "name": "Near south pole (synthetic)",
@@ -310,14 +313,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "limb-east.epochs-1969-2035",
    "file": "data/limb-east.epochs-1969-2035.json",
-   "title": "East limb (0 N, 90 E) at 28 instants 1969-2035. Earth rides the horizon, so parallax and libration decide whether it is up.",
+   "title": "East limb (0 N, 90 E) at 30 instants 1969-2035. Earth rides the horizon, so parallax and libration decide whether it is up.",
    "site": {
     "id": "limb-east",
     "name": "East limb, equator (synthetic)",
@@ -331,14 +334,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "limb-west.epochs-1969-2035",
    "file": "data/limb-west.epochs-1969-2035.json",
-   "title": "West limb (35 S, 88 W) at 28 instants 1969-2035.",
+   "title": "West limb (35 S, 88 W) at 30 instants 1969-2035.",
    "site": {
     "id": "limb-west",
     "name": "West limb, mid-south (synthetic)",
@@ -352,14 +355,14 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   },
   {
    "id": "antimeridian.epochs-1969-2035",
    "file": "data/antimeridian.epochs-1969-2035.json",
-   "title": "0 N, 180 E (anti-Earth point) at 28 instants 1969-2035.",
+   "title": "0 N, 180 E (anti-Earth point) at 30 instants 1969-2035.",
    "site": {
     "id": "antimeridian",
     "name": "Antimeridian, equator = anti-Earth point (synthetic)",
@@ -374,8 +377,8 @@
     "scale": "UTC",
     "list": "epochs-1969-2035",
     "start": "1969-07-20T20:17:00Z",
-    "stop": "2035-01-22T18:16:00Z",
-    "count": 28
+    "stop": "2035-04-23T19:32:00Z",
+    "count": 30
    }
   }
  ]
