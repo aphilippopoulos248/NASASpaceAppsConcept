@@ -61,6 +61,8 @@ export interface HorizonProfile {
   /** How far out terrain was searched, metres. */
   maxRangeM: number;
   layers: DemLayerUse[];
+  /** Per azimuth: index into `layers` of the data that forms the skyline there. */
+  skylineLayer: Uint8Array;
   warnings: string[];
 }
 
@@ -79,6 +81,8 @@ export interface SkySeries {
   /** Fraction of the disc above the skyline, 0..1. */
   sunVisible: Float32Array;
   earthVisible: Float32Array;
+  /** Fraction of the solar disc covered by Earth's disc (an eclipse of the Sun as seen from the site), 0..1. Already included in `sunVisible`. */
+  sunEclipsed: Float32Array;
   source: EphemerisSource;
 }
 
@@ -109,6 +113,8 @@ export interface WindowMetrics {
   darkIntervals: Interval[];
   earthIntervals: Interval[];
   earthGapIntervals: Interval[];
+  /** Spans when Earth covers part or all of the Sun (seen from the site, geometric, Earth's atmosphere ignored). */
+  eclipseIntervals: Interval[];
 }
 
 export interface SkyEvent {
@@ -176,6 +182,9 @@ export interface NearbyOptions {
   /** Relative weights of sunlight and Earth contact in the ranking score. */
   weightSun: number;
   weightEarth: number;
+  /** Optional speed/accuracy settings for the scan (defaults in DEFAULT_NEARBY_OPTIONS). */
+  azStepDeg?: number;
+  stepMin?: number;
 }
 
 export interface NearbyCandidate {
@@ -192,6 +201,10 @@ export interface NearbyCandidate {
   score: number;
   /** 1 = best; 0 when rejected. */
   rank: number;
+  /** True for the scenario's own site (always included, even when over the slope limit). */
+  isReference: boolean;
+  /** What the skyline and slope rest on and which settings were traded for speed, in words. */
+  basis: string;
 }
 
 /** Signed differences B - A between two analyses, plus sentences a person can read. */
