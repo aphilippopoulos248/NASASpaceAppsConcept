@@ -81,6 +81,8 @@ export interface SkySeries {
   /** Fraction of the disc above the skyline, 0..1. */
   sunVisible: Float32Array;
   earthVisible: Float32Array;
+  /** Fraction of the solar disc covered by Earth's disc (an eclipse of the Sun as seen from the site), 0..1. Already included in `sunVisible`. */
+  sunEclipsed: Float32Array;
   source: EphemerisSource;
 }
 
@@ -111,6 +113,8 @@ export interface WindowMetrics {
   darkIntervals: Interval[];
   earthIntervals: Interval[];
   earthGapIntervals: Interval[];
+  /** Spans when Earth covers part or all of the Sun (seen from the site, geometric, Earth's atmosphere ignored). */
+  eclipseIntervals: Interval[];
 }
 
 export interface SkyEvent {

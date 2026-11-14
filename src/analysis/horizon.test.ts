@@ -100,7 +100,7 @@ describe('computeHorizon with analytic relief', () => {
 describe('slopeAt', () => {
   it('measures a 10 degree plane tilted down to the east', () => {
     const site = { lat: 0, lon: 0 };
-    const src = fnSource('plane', 20, (lat, lon) => -Math.tan(10 * RAD) * lon * RAD * R);
+    const src = fnSource('plane', 20, (_lat, lon) => -Math.tan(10 * RAD) * lon * RAD * R);
     const s = slopeAt(stackOf(src), site, 100);
     expect(s.slopeDeg).toBeCloseTo(10, 2);
     expect(s.aspectDeg).toBeCloseTo(90, 1);
@@ -117,18 +117,43 @@ describe('slopeAt', () => {
   });
 });
 
-describe('real terrain: Apollo 15 site window', () => {
-  it('performance and sanity of the full profile', async () => {
+describe('real terrain: Apollo 15 site window (public/terrain/apollo-15*.bin: LROC NAC 3 m, SLDEM2015 60 m and 480 m)', () => {
+  // Published: "Two major Apennine massifs tower over the Hadley plain to heights of 4.5 and 3.5 km.
+  // These are Mt. Hadley to the northeast and Hadley Delta just south of the landing site"
+  // (NASA SP-289, Apollo 15 Preliminary Science Report, p. 5-4). LROC (lroc.im-ldi.com/images/783):
+  // Mons Hadley ~4 km, Hadley Delta ~3.5 km; NASA SVS 4918: Mons Hadley 4.1 km above the plain.
+  // Gazetteer feature centres: Mons Hadley 26.68N 4.12E (about 21 km at bearing ~38 deg from the LM),
+  // Hadley Delta 25.72N 3.71E (about 12.7 km at ~170 deg).
+  const sector = (p: ReturnType<typeof computeHorizon>, a: number, b: number) => {
+    let bi = Math.round(a / p.azStepDeg);
+    for (let i = bi; i <= Math.round(b / p.azStepDeg); i++) if (p.elevDeg[i] > p.elevDeg[bi]) bi = i;
+    return { el: p.elevDeg[bi], az: bi * p.azStepDeg, d: p.distM[bi], rise: p.heightM[bi] - p.siteElevationM };
+  };
+  it('Mons Hadley (NE) and Hadley Delta (S) stand where the published heights and positions put them; < 1 s', async () => {
     const st = await readSiteTerrain('apollo-15');
     const t0 = performance.now();
     const p = computeHorizon(st, st, 2);
     const ms = performance.now() - t0;
-    console.log(`apollo-15 profile: ${ms.toFixed(0)} ms, layers ${JSON.stringify(p.layers)}`);
-    const pr = (az: number) => {
-      const i = Math.round(az / p.azStepDeg);
-      return `${az}: el ${p.elevDeg[i].toFixed(2)} d ${(p.distM[i] / 1000).toFixed(1)} km h ${p.heightM[i].toFixed(0)}`;
-    };
-    console.log([0, 30, 45, 60, 90, 135, 160, 180, 200, 225, 270, 315].map(pr).join('\n'));
+    const ne = sector(p, 20, 60), s = sector(p, 150, 210);
+    console.log(`apollo-15: ${ms.toFixed(0)} ms; Mons Hadley sector ${JSON.stringify(ne)}; Hadley Delta sector ${JSON.stringify(s)}`);
     expect(ms).toBeLessThan(1000);
+    // Mons Hadley: 4.0-4.5 km above the plain, ~20 km away, NE.
+    expect(ne.rise).toBeGreaterThan(3600);
+    expect(ne.rise).toBeLessThan(4700);
+    expect(ne.d).toBeGreaterThan(15_000);
+    expect(ne.d).toBeLessThan(25_000);
+    expect(ne.az).toBeGreaterThan(30);
+    expect(ne.az).toBeLessThan(55);
+    // Its elevation angle is what the exact formula gives for that terrain.
+    expect(ne.el).toBeCloseTo(elevOf(ne.d, p.heightM[Math.round(ne.az / p.azStepDeg)], p.siteElevationM + 2), 3);
+    expect(ne.el).toBeGreaterThan(10);
+    expect(ne.el).toBeLessThan(12.5);
+    // Hadley Delta: the skyline to the south is its north face, about 10-13 km away, 11-16 deg high.
+    expect(s.d).toBeGreaterThan(8000);
+    expect(s.d).toBeLessThan(14_000);
+    expect(s.el).toBeGreaterThan(11);
+    expect(s.el).toBeLessThan(16);
+    // West, over the mare and Hadley Rille: low skyline.
+    expect(sector(p, 240, 300).el).toBeLessThan(4);
   });
 });

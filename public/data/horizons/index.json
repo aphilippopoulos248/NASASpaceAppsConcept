@@ -2,33 +2,33 @@
  "windows": [
   {
    "id": "blue-ghost-1-2025-03",
-   "label": "Blue Ghost Mission 1, Mare Crisium: landing 2025-03-02 to end of surface operations, includes the 2025-03-14 total lunar eclipse",
+   "label": "Blue Ghost Mission 1, Mare Crisium: 2025-03-01 to 2025-04-01 (landing 2025-03-02, the 2025-03-14 eclipse of the Sun by Earth, end of operations)",
    "siteId": "blue-ghost-1",
    "site": {
     "lat": 18.562,
     "lon": 61.81,
     "heightM": -3652
    },
-   "startMs": 1740902400000,
+   "startMs": 1740787200000,
    "stepMs": 600000,
-   "n": 2161,
+   "n": 4465,
    "file": "blue-ghost-1-2025-03.json",
-   "bytes": 78822
+   "bytes": 163120
   },
   {
    "id": "im-2-2025-03",
-   "label": "IM-2 Athena, Mons Mouton (south polar region): 14 days from landing on 2025-03-06",
+   "label": "IM-2 Athena, Mons Mouton (south polar region): 2025-03-05 to 2025-04-05 (landing 2025-03-06)",
    "siteId": "im-2",
    "site": {
     "lat": -84.79,
     "lon": 29.2,
     "heightM": 5321
    },
-   "startMs": 1741280400000,
+   "startMs": 1741132800000,
    "stepMs": 600000,
-   "n": 2017,
+   "n": 4465,
    "file": "im-2-2025-03.json",
-   "bytes": 70185
+   "bytes": 157363
   }
  ]
 }

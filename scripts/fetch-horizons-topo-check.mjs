@@ -1,5 +1,5 @@
 // Fetches JPL Horizons topocentric airless Sun/Earth az/el for a spread of lunar sites
-// and dates (1969-2035) and writes src/analysis/__fixtures__/horizons-topo-check.json,
+// and dates (1950-2099) and writes src/analysis/__fixtures__/horizons-topo-check.json,
 // the reference the skyAt() test suite runs against with no network.
 // Run with: node scripts/fetch-horizons-topo-check.mjs
 import { mkdir, writeFile } from 'node:fs/promises';
@@ -20,9 +20,9 @@ const SITES = [
   { name: 'IM-2 (south polar)', lat: -84.79, lon: 29.2, altKm: 5.321 },
 ];
 const DATES = [
-  '1969-07-20T20:17:00Z', '1972-12-11T19:54:00Z', '1979-03-03T07:00:00Z', '1985-05-01T00:00:00Z', '1993-09-17T15:45:00Z',
+  '1950-06-01T00:00:00Z', '1969-07-20T20:17:00Z', '1972-12-11T19:54:00Z', '1979-03-03T07:00:00Z', '1985-05-01T00:00:00Z', '1993-09-17T15:45:00Z',
   '2000-01-01T12:00:00Z', '2006-07-07T04:20:00Z', '2013-12-14T13:11:00Z', '2019-01-03T02:26:00Z', '2025-03-06T17:28:00Z',
-  '2025-03-14T06:58:00Z', '2030-06-15T03:00:00Z', '2035-11-30T22:30:00Z',
+  '2025-03-14T06:58:00Z', '2030-06-15T03:00:00Z', '2035-11-30T22:30:00Z', '2060-02-29T12:00:00Z', '2099-12-01T00:00:00Z',
 ];
 const rows = [];
 for (const site of SITES) {

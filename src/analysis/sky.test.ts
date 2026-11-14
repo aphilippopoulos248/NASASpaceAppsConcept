@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -10,30 +11,36 @@ const sep = (az1: number, el1: number, az2: number, el2: number) => {
 };
 const azDiff = (a: number, b: number) => Math.abs(((a - b + 540) % 360) - 180);
 
-/** Tolerance for agreement with JPL Horizons (degrees). Target from the brief: 0.05 deg. Measured worst case is about 0.0034 deg. */
+/** Tolerance for agreement with JPL Horizons (degrees). Target from the brief: 0.05 deg. Measured worst case 1950-2035 is about 0.0034 deg. */
 const TOL_DEG = 0.01;
+/** After 2035 both systems extrapolate Delta-T (TT - UT) differently: about 40 s by 2060 and 155 s by 2099, which moves the
+ *  Sun by up to ~0.021 deg in the site's sky. With the time shifted by that offset the agreement is again < 0.003 deg. */
+const TOL_FUTURE_DEG = 0.03;
+const tolFor = (utc: string) => (utc < '2036' ? TOL_DEG : TOL_FUTURE_DEG);
 
 setBundleReader(async (p) => readFileSync(join(process.cwd(), 'public', p), 'utf8'));
 
 interface Row { site: string; lat: number; lon: number; heightM: number; utc: string; sun: { az: number; el: number; distKm: number }; earth: { az: number; el: number; distKm: number } }
-const check = JSON.parse(readFileSync(join(__dirname, '__fixtures__', 'horizons-topo-check.json'), 'utf8')) as { rows: Row[] };
+const check = JSON.parse(readFileSync(join(process.cwd(), 'src', 'analysis', '__fixtures__', 'horizons-topo-check.json'), 'utf8')) as { rows: Row[] };
 
 describe('skyAt vs JPL Horizons (topocentric, airless), own reference set', () => {
   const worst = { sun: 0, earth: 0, sunEl: 0, earthEl: 0 };
-  it(`agrees within ${TOL_DEG} deg for ${check.rows.length} site/date pairs 1969-2035`, () => {
+  it(`agrees within ${TOL_DEG} deg (to 2035; ${TOL_FUTURE_DEG} deg after) for ${check.rows.length} site/date pairs 1950-2099`, () => {
     for (const r of check.rows) {
       const s = skyAt({ lat: r.lat, lon: r.lon }, r.heightM, Date.parse(r.utc));
       for (const body of ['sun', 'earth'] as const) {
         const ref = r[body];
         const e = sep(s[body].azDeg, s[body].elDeg, ref.az, ref.el);
-        worst[body] = Math.max(worst[body], e);
-        worst[body === 'sun' ? 'sunEl' : 'earthEl'] = Math.max(worst[body === 'sun' ? 'sunEl' : 'earthEl'], Math.abs(s[body].elDeg - ref.el));
-        expect(e, `${r.site} ${r.utc} ${body}`).toBeLessThan(TOL_DEG);
+        if (r.utc < '2036') {
+          worst[body] = Math.max(worst[body], e);
+          worst[body === 'sun' ? 'sunEl' : 'earthEl'] = Math.max(worst[body === 'sun' ? 'sunEl' : 'earthEl'], Math.abs(s[body].elDeg - ref.el));
+        }
+        expect(e, `${r.site} ${r.utc} ${body}`).toBeLessThan(tolFor(r.utc));
       }
       expect(Math.abs(s.earth.distanceKm - r.earth.distKm)).toBeLessThan(30);
       expect(Math.abs(s.sun.distanceKm - r.sun.distKm) / r.sun.distKm).toBeLessThan(2e-5);
     }
-    console.log(`worst angular error vs Horizons: sun ${(worst.sun * 3600).toFixed(1)}", earth ${(worst.earth * 3600).toFixed(1)}"; elevation only: sun ${(worst.sunEl * 3600).toFixed(1)}", earth ${(worst.earthEl * 3600).toFixed(1)}"`);
+    console.log(`worst angular error vs Horizons 1950-2035: sun ${(worst.sun * 3600).toFixed(1)}", earth ${(worst.earth * 3600).toFixed(1)}"; elevation only: sun ${(worst.sunEl * 3600).toFixed(1)}", earth ${(worst.earthEl * 3600).toFixed(1)}"`);
   });
 
   it('pole azimuth convention (north = limit along the site meridian) matches Horizons at exactly +-90', () => {
@@ -41,8 +48,8 @@ describe('skyAt vs JPL Horizons (topocentric, airless), own reference set', () =
     expect(rows.length).toBeGreaterThan(20);
     for (const r of rows) {
       const s = skyAt({ lat: r.lat, lon: r.lon }, r.heightM, Date.parse(r.utc));
-      expect(azDiff(s.sun.azDeg, r.sun.az)).toBeLessThan(0.01);
-      expect(azDiff(s.earth.azDeg, r.earth.az)).toBeLessThan(0.01);
+      expect(azDiff(s.sun.azDeg, r.sun.az)).toBeLessThan(tolFor(r.utc));
+      expect(azDiff(s.earth.azDeg, r.earth.az)).toBeLessThan(tolFor(r.utc));
     }
   });
 });
@@ -120,7 +127,7 @@ describe('bundled Horizons windows', () => {
       // Interpolated table between rows stays close to the model.
       const eph = horizonsEphemeris(table, table.site, table.site.heightM);
       const m = modelEphemeris(table.site, table.site.heightM);
-      const o1 = new Float64Array(4), o2 = new Float64Array(4);
+      const o1 = new Float64Array(6), o2 = new Float64Array(6);
       const tm = table.startMs + 1000.5 * table.stepMs;
       eph.at(tm, o1); m.at(tm, o2);
       expect(sep(o1[0], o1[1], o2[0], o2[1])).toBeLessThan(TOL_DEG);

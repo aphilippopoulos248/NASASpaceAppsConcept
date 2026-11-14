@@ -1,3 +1,4 @@
+/// <reference types="node" />
 // Test-only helpers: synthetic height sources with known answers, and a minimal
 // reader for the per-site grids in public/terrain/ (used until src/terrain's
 // loaders land). Not imported by app code.

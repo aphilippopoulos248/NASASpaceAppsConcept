@@ -12,15 +12,15 @@ const STEP_MIN = 10;
 const WINDOWS = [
   {
     id: 'blue-ghost-1-2025-03',
-    label: 'Blue Ghost Mission 1, Mare Crisium: landing 2025-03-02 to end of surface operations, includes the 2025-03-14 total lunar eclipse',
+    label: 'Blue Ghost Mission 1, Mare Crisium: 2025-03-01 to 2025-04-01 (landing 2025-03-02, the 2025-03-14 eclipse of the Sun by Earth, end of operations)',
     siteId: 'blue-ghost-1', lat: 18.562, lon: 61.81, heightM: -3652,
-    start: '2025-03-02 08:00', stop: '2025-03-17 08:00',
+    start: '2025-03-01 00:00', stop: '2025-04-01 00:00',
   },
   {
     id: 'im-2-2025-03',
-    label: 'IM-2 Athena, Mons Mouton (south polar region): 14 days from landing on 2025-03-06',
+    label: 'IM-2 Athena, Mons Mouton (south polar region): 2025-03-05 to 2025-04-05 (landing 2025-03-06)',
     siteId: 'im-2', lat: -84.79, lon: 29.2, heightM: 5321,
-    start: '2025-03-06 17:00', stop: '2025-03-20 17:00',
+    start: '2025-03-05 00:00', stop: '2025-04-05 00:00',
   },
 ];
 

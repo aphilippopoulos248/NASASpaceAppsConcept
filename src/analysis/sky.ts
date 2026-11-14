@@ -1,7 +1,7 @@
 // Sun and Earth in a site's sky: the in-app model (src/astro/topocentric.ts) and
 // bundled JPL Horizons tables, behind one "ephemeris" interface used by the series code.
 import type { LatLon } from '../core/types';
-import { topocentricSky } from '../astro/topocentric';
+import { EARTH_R_KM, SUN_R_KM, topocentricSky } from '../astro/topocentric';
 import type { EphemerisSource, SkyInstant } from './types';
 
 /** Measured agreement of the model with JPL Horizons (see docs/lunyx/validation.md). */
@@ -51,7 +51,7 @@ export interface HorizonsTable {
 export interface Ephemeris {
   source: EphemerisSource;
   note: string;
-  /** Writes [sunAz, sunEl, earthAz, earthEl] (degrees) for an instant. */
+  /** Writes [sunAz, sunEl, earthAz, earthEl, sunRadius, earthRadius] (degrees) for an instant; `out` needs 6 slots. */
   at(timeMs: number, out: Float64Array): void;
   /** Full instant (distances, phase, libration) for display. */
   instant(timeMs: number): SkyInstant;
@@ -64,6 +64,7 @@ export function modelEphemeris(site: LatLon, elevationM: number): Ephemeris {
     at(t, out) {
       const s = topocentricSky(site.lat, site.lon, elevationM, t);
       out[0] = s.sun.azDeg; out[1] = s.sun.elDeg; out[2] = s.earth.azDeg; out[3] = s.earth.elDeg;
+      out[4] = s.sun.angularRadiusDeg; out[5] = s.earth.angularRadiusDeg;
     },
     instant: (t) => skyAt(site, elevationM, t),
   };
@@ -98,6 +99,17 @@ export function tableCovers(table: HorizonsTable, site: LatLon, startMs: number,
  */
 export function horizonsEphemeris(table: HorizonsTable, site: LatLon, elevationM: number): Ephemeris {
   const last = table.startMs + (table.n - 1) * table.stepMs;
+  const model = modelEphemeris(site, elevationM);
+  const mo = new Float64Array(6);
+  const hourlyEvery = Math.max(1, Math.round(3_600_000 / table.stepMs));
+  /** Distance from the table's hourly column (linear), or NaN when the table has none. */
+  const distAt = (col: number[] | undefined, t: number) => {
+    if (!col || col.length < 2) return NaN;
+    const x = (t - table.startMs) / (table.stepMs * hourlyEvery);
+    const i = Math.max(0, Math.min(col.length - 2, Math.floor(x)));
+    return col[i] + (col[i + 1] - col[i]) * (x - i);
+  };
+  const radius = (rKm: number, dKm: number) => Math.asin(Math.min(1, rKm / dKm)) / RAD;
   const rowAt = (t: number) => {
     if (!(t >= table.startMs && t <= last)) throw new RangeError(`time ${new Date(t).toISOString()} is outside Horizons table ${table.id}`);
     const x = (t - table.startMs) / table.stepMs;
@@ -112,10 +124,17 @@ export function horizonsEphemeris(table: HorizonsTable, site: LatLon, elevationM
       const s = interpAzEl(table.sun.az[i], table.sun.el[i], table.sun.az[i + 1], table.sun.el[i + 1], f);
       const e = interpAzEl(table.earth.az[i], table.earth.el[i], table.earth.az[i + 1], table.earth.el[i + 1], f);
       out[0] = s[0]; out[1] = s[1]; out[2] = e[0]; out[3] = e[1];
+      const ds = distAt(table.sun.distKmHourly, t), de = distAt(table.earth.distKmHourly, t);
+      if (Number.isFinite(ds) && Number.isFinite(de)) {
+        out[4] = radius(SUN_R_KM, ds); out[5] = radius(EARTH_R_KM, de);
+      } else {
+        model.at(t, mo);
+        out[4] = mo[4]; out[5] = mo[5];
+      }
     },
     instant(t) {
       const m = skyAt(site, elevationM, t);
-      const o = new Float64Array(4);
+      const o = new Float64Array(6);
       eph.at(t, o);
       return { ...m, sun: { ...m.sun, azDeg: o[0], elDeg: o[1] }, earth: { ...m.earth, azDeg: o[2], elDeg: o[3] }, source: 'horizons' };
     },
