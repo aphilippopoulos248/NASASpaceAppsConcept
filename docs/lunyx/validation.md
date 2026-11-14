@@ -114,3 +114,22 @@ Eclipse check: at the Blue Ghost site the Sun is fully behind Earth (geometric d
 (05:09-08:47 UTC); Mare Crisium lies on the Moon's trailing limb, so it enters the shadow late.
 Convergence: halving the step (10 -> 5 min) changes Apollo 15 illumination by 0.001 points
 and event times by < 1 min.
+
+## 5. Nearby alternatives (`rankNearby`, `src/analysis/nearby.ts`)
+
+Default scan: radius 2 km, spacing 300 m (137 candidates including the site itself), slope
+limit 10 deg over a baseline of 2x the finest grid, skyline every 1 deg (main analysis:
+0.5 deg) with coarser far-field marching, window sampled every 30 min (main: 10 min). The
+Sun/Earth directions are computed once for the site and re-projected into each candidate's
+local horizon (checked against a direct computation 2 km away: < 0.001 deg).
+
+| Site, 14-day window | Candidates within slope limit | Runtime (Node, one thread) |
+| --- | --- | --- |
+| IM-2 (LOLA 60 m / 480 m) | 131 of 137 | 6.9 s |
+| Apollo 15 (NAC 3 m near field, SLDEM 60 m / 480 m) | 130 of 137 | 8.5 s |
+
+Synthetic checks: a ridge crest outranks the valley floor; a 20 deg wall is rejected at a
+10 deg limit and accepted at 30 deg; candidates without data are rejected as `no-data`.
+Resolution caveat, stated in every candidate's `basis`: slope and skyline rest on 60 m
+grids (3 m only where a NAC model exists near an Apollo site); metre-scale boulders,
+craters and slopes are invisible to this scan.

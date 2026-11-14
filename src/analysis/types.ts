@@ -182,6 +182,9 @@ export interface NearbyOptions {
   /** Relative weights of sunlight and Earth contact in the ranking score. */
   weightSun: number;
   weightEarth: number;
+  /** Optional speed/accuracy settings for the scan (defaults in DEFAULT_NEARBY_OPTIONS). */
+  azStepDeg?: number;
+  stepMin?: number;
 }
 
 export interface NearbyCandidate {
@@ -198,6 +201,10 @@ export interface NearbyCandidate {
   score: number;
   /** 1 = best; 0 when rejected. */
   rank: number;
+  /** True for the scenario's own site (always included, even when over the slope limit). */
+  isReference: boolean;
+  /** What the skyline and slope rest on and which settings were traded for speed, in words. */
+  basis: string;
 }
 
 /** Signed differences B - A between two analyses, plus sentences a person can read. */

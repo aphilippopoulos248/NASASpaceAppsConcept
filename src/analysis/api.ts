@@ -1,14 +1,16 @@
 // Entry points of the science core. UI, comparison and assistant code call ONLY these
 // (plus the types in ./types). Owned by the ephemeris/analysis worker.
 //
-// Functions not yet implemented throw NotImplemented, which callers surface as
-// "analysis unavailable" rather than showing placeholder numbers.
+// NotImplemented is kept for callers that test for it; every entry point is implemented. Callers surface
+// any rejection as "analysis unavailable" rather than showing placeholder numbers.
 import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
 import { loadTerrainFor } from '../terrain/api';
 import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, SiteAnalysis, SkyEvent } from './types';
 import { findBundledTable, type HorizonsTable } from './sky';
-import { runAnalysis } from './engine';
+import { runAnalysis, runNearby } from './engine';
+import type { NearbyProgress } from './nearby';
+export { DEFAULT_NEARBY_OPTIONS } from './nearby';
 import * as win from './window';
 
 export { skyAt } from './sky';
@@ -32,16 +34,20 @@ const CACHE_MAX = 32;
 let worker: Worker | null = null;
 let workerBroken = false;
 let nextId = 1;
-const pending = new Map<number, { resolve: (a: SiteAnalysis) => void; reject: (e: Error) => void }>();
+const pending = new Map<number, { resolve: (a: any) => void; reject: (e: Error) => void; progress?: NearbyProgress }>();
 
 function getWorker(): Worker | null {
   if (workerBroken || typeof Worker === 'undefined' || typeof window === 'undefined') return null;
   if (!worker) {
     try {
       worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-      worker.onmessage = (ev: MessageEvent<{ id: number; result?: SiteAnalysis; error?: string }>) => {
+      worker.onmessage = (ev: MessageEvent<{ id: number; result?: unknown; error?: string; progress?: { done: number; total: number } }>) => {
         const p = pending.get(ev.data.id);
         if (!p) return;
+        if (ev.data.progress) {
+          p.progress?.(ev.data.progress.done, ev.data.progress.total);
+          return;
+        }
         pending.delete(ev.data.id);
         if (ev.data.result) p.resolve(ev.data.result);
         else p.reject(new Error(ev.data.error ?? 'analysis worker failed'));
@@ -59,13 +65,13 @@ function getWorker(): Worker | null {
   return worker;
 }
 
-function inWorker(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null): Promise<SiteAnalysis> | null {
+function inWorker<T>(kind: 'analyse' | 'nearby', scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null, options?: NearbyOptions, progress?: NearbyProgress): Promise<T> | null {
   const w = getWorker();
   if (!w) return null;
   const id = nextId++;
-  return new Promise<SiteAnalysis>((resolve, reject) => {
-    pending.set(id, { resolve, reject });
-    w.postMessage({ id, scenario, descriptors: stack.sources.map((s) => s.descriptor), notes: stack.notes, table });
+  return new Promise<T>((resolve, reject) => {
+    pending.set(id, { resolve, reject, progress });
+    w.postMessage({ id, kind, scenario, descriptors: stack.sources.map((s) => s.descriptor), notes: stack.notes, table, options });
   });
 }
 
@@ -73,7 +79,7 @@ function inWorker(scenario: Scenario, stack: TerrainStack, table: HorizonsTable 
 export async function analyseStack(scenario: Scenario, stack: TerrainStack): Promise<SiteAnalysis> {
   const endMs = scenario.startMs + scenario.durationH * 3_600_000;
   const table = await findBundledTable(scenario.site, scenario.startMs, endMs);
-  const viaWorker = inWorker(scenario, stack, table);
+  const viaWorker = inWorker<SiteAnalysis>('analyse', scenario, stack, table);
   if (viaWorker) {
     try {
       return await viaWorker;
@@ -111,9 +117,31 @@ export function nextEvents(analysis: SiteAnalysis, timeMs: number): Record<SkyEv
   return win.nextEvents(analysis, timeMs);
 }
 
-/** Scans alternatives around the scenario's site and ranks those within the slope limit. */
-export function rankNearby(_scenario: Scenario, _options: NearbyOptions): Promise<NearbyCandidate[]> {
-  return Promise.reject(new NotImplemented('rankNearby'));
+/** Scan with a stack already loaded (worker when possible, inline otherwise). */
+export async function rankNearbyStack(scenario: Scenario, stack: TerrainStack, options: NearbyOptions, onProgress?: NearbyProgress): Promise<NearbyCandidate[]> {
+  const endMs = scenario.startMs + scenario.durationH * 3_600_000;
+  const table = await findBundledTable(scenario.site, scenario.startMs, endMs);
+  const viaWorker = inWorker<NearbyCandidate[]>('nearby', scenario, stack, table, options, onProgress);
+  if (viaWorker) {
+    try {
+      return await viaWorker;
+    } catch {
+      // fall through to inline
+    }
+  }
+  return runNearby(scenario, stack, table, options, onProgress);
+}
+
+/**
+ * Scans alternatives around the scenario's site and ranks those within the slope limit.
+ * The scenario's own site is always included (isReference). `onProgress(done, total)` reports
+ * candidates analysed. Uses coarser scan settings than analyse() (see DEFAULT_NEARBY_OPTIONS and
+ * each candidate's `basis`).
+ */
+export async function rankNearby(scenario: Scenario, options: NearbyOptions, onProgress?: NearbyProgress): Promise<NearbyCandidate[]> {
+  if (!(scenario.durationH > 0)) throw new RangeError('rankNearby: the window needs a positive duration');
+  const stack = await loadTerrainFor(scenario.site);
+  return rankNearbyStack(scenario, stack, options, onProgress);
 }
 
 /** Differences B - A between two analyses, with the headline differences in words. */
