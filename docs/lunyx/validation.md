@@ -117,12 +117,32 @@ beyond, searched to 204 km; observer 2 m above the LM site at -1927 m).
 | Feature | Published | Lunyx skyline from the DEM |
 | --- | --- | --- |
 | Mons Hadley (NE) | "Two major Apennine massifs tower over the Hadley plain to heights of 4.5 and 3.5 km. These are Mt. Hadley to the northeast and Hadley Delta just south of the landing site" (NASA SP-289, Apollo 15 Preliminary Science Report, p. 5-4); ~4 km (LROC, lroc.im-ldi.com/images/783); 4.1 km (NASA SVS 4918). Gazetteer feature centre ~21 km at bearing ~38 deg. | Highest skyline in 20-60 deg: **11.13 deg at azimuth 43 deg**, set by terrain **19.7 km** away, **4.0 km** above the site. |
-| Hadley Delta (S) | ~3.5 km (SP-289; LROC); 3.6 km (LTO-41B4 via Wikipedia); "about 5 kilometers northwest of Hadley Delta" (NASA SP-4214). Feature centre ~12.7 km at ~170 deg. | Highest skyline in 150-210 deg: **13.46 deg at azimuth 180 deg**, set by terrain **10.6 km** away, **2.57 km** above the site. |
+| Hadley Delta (S) | ~3.5 km (SP-289; LROC); 3.6 km (LTO-41B4 via Wikipedia); "about 5 kilometers northwest of Hadley Delta" (NASA SP-4214). Feature centre ~12.7 km at ~170 deg. | Highest skyline in 150-210 deg: **13.47 deg at azimuth 180 deg**, set by terrain **10.6 km** away, **2.56 km** above the site. |
 
 Mons Hadley agrees with the published height and position. For Hadley Delta the skyline is
 formed by its north face, 2.6 km above the site, about 1 km lower than the published summit
 height: the summit lies beyond the face as seen from the LM, and from 10 km out the data is
 the 480 m grid, which flattens peaks. No published elevation angle from the LM was found.
+
+**The skyline does not depend on the marching step.** Plain marching takes the highest of
+its samples (0.7 of a grid cell apart near the site, 0.4 % of the distance far out) and so
+reads low wherever the terrain peaks between two samples: by up to 0.27 deg at a pin on
+Shackleton's rim and 0.47 deg on the Malapert massif (steep ground a few hundred metres away,
+80 m data), 0.03-0.09 deg at the catalogued sites. The march therefore searches finely (to
+1/48 of the two steps around it) around every sampled local maximum that a hidden peak could
+lift above the best sample. Measured against a march twenty times finer
+(`src/analysis/horizon.test.ts`, 180 azimuths per site):
+
+| Site | Without the fine search: max / rms | With it (default settings): max / rms | Scan settings (1 % far steps) |
+| --- | --- | --- | --- |
+| IM-2 | 0.035 / 0.0061 deg | 0.001 / 0.0003 deg | 0.001 / 0.0002 deg |
+| Apollo 15 | 0.052 / 0.0153 | 0.003 / 0.0005 | 0.004 / 0.0007 |
+| Pin on Shackleton's rim (89.45 S, 137.2 W) | 0.272 / 0.0390 | 0.004 / 0.0010 | 0.004 / 0.0010 |
+| Pin on the Malapert massif (86.0 S, 2.9 E) | 0.472 / 0.1277 | 0.016 / 0.0037 | 0.016 / 0.0037 |
+
+So what remains is the data, not the sampling: the skyline is that of the bilinearly
+interpolated grids, and relief finer than a grid is not in it (within a few hundred metres of
+a pin that only has 80 m data, that is the larger uncertainty by far).
 
 **Speed, without changing the result.** The march skips elevation layers that cannot reach
 the current distance (their reach is predicted from each grid's description and checked
@@ -134,12 +154,12 @@ checked); and the skyline at 10 sites (IM-2, Apollo 15, Chandrayaan-3, Chang'e 4
 rim pin, both exact poles, pins at the edges of the 85S and 80S squares, the antimeridian) is
 identical with pruning alone and equal to rounding (< 0.000005 deg) with the direct lookups.
 
-| Full profile (720 azimuths), min of 12 runs, one thread | Before | Now |
+| Full profile (720 azimuths), min of 12 runs, one thread | First version | Now, fine search included |
 | --- | --- | --- |
-| IM-2 (60 m window, 80 m and 160 m polar layers, 1.9 km grid; to 189 km) | 202 ms | 68 ms |
-| Apollo 15 (3 m, 60 m, 480 m windows, 1.9 km grid; to 204 km) | 175 ms | 61 ms |
-| Blue Ghost 1 (same layers; to 229 km) | 194 ms | 63 ms |
-| Chandrayaan-3 (60 m, 480 m windows, 1.9 km grid; to 174 km) | 93 ms | 30 ms |
+| IM-2 (60 m window, 80 m and 160 m polar layers, 1.9 km grid; to 189 km) | 202 ms | 89 ms |
+| Apollo 15 (3 m, 60 m, 480 m windows, 1.9 km grid; to 204 km) | 175 ms | 72 ms |
+| Blue Ghost 1 (same layers; to 229 km) | 194 ms | 75 ms |
+| Chandrayaan-3 (60 m, 480 m windows, 1.9 km grid; to 174 km) | 93 ms | 38 ms |
 
 ## 4. Mission-window analysis (`src/analysis/window.ts`)
 
@@ -149,14 +169,17 @@ terrain stacks (2 m mast, 10 min step):
 | Scenario | Ephemeris | Illumination | Any Sun | Longest darkness | Earth line of sight | Longest Earth gap | Events |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Blue Ghost 1, 14 d from 2025-03-02 08:34 | Horizons (bundled) | 98.94 % | 99.32 % | 2.28 h (Earth in front of the Sun, 2025-03-14) | 100 % | 0 h | none |
-| Blue Ghost 1, 15 d from 2025-03-02 08:34 | Horizons (bundled) | 95.23 % | 95.74 % | 13.06 h (runs into the window edge) | 100 % | 0 h | sunset 2025-03-16 19:30:10 at azimuth 269.9 |
-| IM-2, 14 d from 2025-03-06 17:28 | Horizons (bundled) | 92.47 % | 93.77 % | 18.2 h (edge) | 88.91 % | 37.3 h (edge) | Earthset 2025-03-19 04:11:30, sunset 2025-03-19 23:17:27 |
-| Apollo 15, 14 d from 1971-07-30 22:16 | model | 95.62 % | 96.05 % | 10.65 h (edge) | 100 % | 0 h | sunset 1971-08-13 11:37:00 |
+| Blue Ghost 1, 15 d from 2025-03-02 08:34 | Horizons (bundled) | 95.23 % | 95.74 % | 13.07 h (runs into the window edge) | 100 % | 0 h | sunset 2025-03-16 19:30:00 at azimuth 269.9 |
+| IM-2, 14 d from 2025-03-06 17:28 | Horizons (bundled) | 92.47 % | 93.77 % | 18.2 h (edge) | 88.90 % | 37.3 h (edge) | Earthset 2025-03-19 04:09:38, sunset 2025-03-19 23:17:08 |
+| Apollo 15, 14 d from 1971-07-30 22:16 | model | 95.62 % | 96.05 % | 10.65 h (edge) | 100 % | 0 h | sunset 1971-08-13 11:36:42 |
+| Chandrayaan-3, 14 d from 2023-08-23 12:33 | model | 83.88 % | 84.35 % | 52.6 h (edge) | 100 % | 0 h | sunset 2023-09-04 07:58:51 at azimuth 276.9 |
 
-Skyline ranges: IM-2 -1.47..4.07 deg, Blue Ghost -0.18..2.34 deg, Apollo 15 0.19..13.46 deg.
-Runtime with the terrain already loaded (min of 4, one thread): 14 days 73-78 ms with a
-Horizons table, 139 ms with the model; 60 days (model) about 0.4 s. First call per site adds
-the terrain download and decoding (about 1.2 s for IM-2's polar layers under Node).
+Skyline ranges: IM-2 -1.47..4.07 deg, Blue Ghost -0.17..2.35 deg, Apollo 15 0.23..13.47 deg,
+Chandrayaan-3 0.49..2.45 deg.
+Runtime with the terrain already loaded (min of 5, one thread, DSN geometry of section 6
+included): 14 days 130-145 ms with a Horizons table, 165-205 ms with the model; 60 days
+(model) about 0.6 s. First call per site adds the terrain download and decoding (about 1.2 s
+for IM-2's polar layers under Node).
 Convergence: halving the step (10 -> 5 min) changes Apollo 15 illumination by 0.001 points
 and event times by < 1 min. With the model instead of the Horizons table the Blue Ghost
 illumination differs by < 0.05 points and the sunset by < 1 min.
@@ -221,7 +244,7 @@ Three outside checks:
 
 **Blue Ghost's sunset, 16 March 2025: not a clean check.** Computed over the real skyline (2 m
 above the ground): the skyline starts to cut the Sun's disc at 18:25 UTC, half of it is gone at
-18:58, the last limb at 19:30:10. The skyline there (+0.59 deg at azimuth 270) is a real rise
+18:57, the last limb at 19:30:00. The skyline there (+0.59 deg at azimuth 270) is a real rise
 of about 10 m, 0.75-0.85 km west of the lander, present in both the 3 m LROC model and the
 60 m SLDEM2015 window (which agree to 3.3 m rms over the model's extent). Being so near, it
 makes the time depend on the eye height: 19:16 for 0.5 m, 19:58 for 5 m. Firefly's release of
@@ -237,7 +260,7 @@ Source: https://fireflyspace.com/news/firefly-aerospace-successfully-completes-1
 **In the browser.** `analyse()` and `rankNearby()` post only the scenario (about 400 bytes) to
 one Web Worker, which loads terrain and ephemeris tables itself. Checked in headless Chromium
 against the dev server and against the production build through the app's own analysis store:
-the same numbers as under Node (IM-2 92.47 % / 88.91 %), one worker, no errors; an `analyse()`
+the same numbers as under Node (IM-2 92.47 % / 88.90 %), one worker, no errors; an `analyse()`
 call issued while a nearby scan is running is answered in 0.6-0.8 s because the scan yields
 between slices; the page's main thread is not blocked by either.
 
@@ -255,17 +278,21 @@ the candidates, over a baseline of twice its grid (60 m window, 120 m baseline a
 catalogued site with the default radius). A 3 m survey that only reaches a few hundred metres
 is not used to judge some candidates while a 60 m grid judges the rest.
 
-| Site, 14-day window, defaults | Within the slope limit | Best alternative | Runtime (Node, one thread, min of 2) |
+| Site, 14-day window, defaults | Within the slope limit | Best alternative | Runtime (Node, one thread, min of 3) |
 | --- | --- | --- | --- |
-| IM-2 | 131 of 137 | 300 m W, 600 m S: 98.2 % sunlight, Earth 87.6 %, longest darkness 2.8 h, slope 2.3 deg (site itself: 92.5 %, 18.2 h, rank 16) | 3.1 s (was 6.9 s on the test-only stack; about 8 s on the merged stack) |
-| Apollo 15 | 129 of 137 | all within about 1 point of each other | 2.8 s (was 8.5 s) |
-| Blue Ghost 1 | 136 of 137 | | 3.3 s |
+| IM-2 | 131 of 137 | 300 m W, 600 m S: 98.1 % sunlight, Earth 87.7 %, longest darkness 2.8 h, slope 2.3 deg (site itself: 92.5 %, 18.2 h, rank 17) | 3.9 s |
+| Apollo 15 | 129 of 137 | 1800 m W: 96.7 % against 95.6 % at the site (all candidates lie within about 1 point of each other) | 3.3 s |
+| Blue Ghost 1 | 136 of 137 | none better than the site itself (rank 1) | 4.1 s |
+| Chandrayaan-3 | 137 of 137 | 1200 m E, 1500 m S: 84.4 % against 83.9 % | 3.1 s |
 
-The whole gain comes from the faster skyline (section 3); results are unchanged. In the
-browser's worker under headless software rendering the IM-2 scan takes 7-8 s. Not done: a
-coarse pre-rank with a full pass on the best few (it would mix two accuracy classes in one
-ranking), and sharing the far skyline between candidates (candidate skylines would then differ
-from independently computed ones by roughly 0.1 deg).
+The first version took 6.9 s (IM-2) and 8.5 s (Apollo 15) on a test-only stack without the
+polar layers and the whole-Moon grid, and 8-12 s on the merged stack; the gain is the faster
+skyline of section 3, and a candidate's skyline now has the same accuracy as the main
+analysis' (table in section 3). In the browser's worker under headless software rendering the
+IM-2 scan takes 6-9 s. Not done: a coarse pre-rank with a full pass on the best few (it would
+mix two accuracy classes in one ranking), several workers (each would decode its own 100 MB of
+grids at polar sites), and sharing the far skyline between candidates (candidate skylines would
+then differ from independently computed ones by roughly 0.1 deg).
 
 Synthetic checks: a ridge crest outranks the valley floor; a 20 deg wall is rejected at a
 10 deg limit and accepted at 30 deg; candidates without data are rejected as `no-data`.
@@ -324,14 +351,16 @@ to about 50 km (37 km from Earth's motion during the light-time, 12 km from the 
 | Site | DSS-14 receive / transmit | DSS-43 | DSS-63 | Any station, receive | Any station, transmit | Earth's centre in view |
 | --- | --- | --- | --- | --- | --- | --- |
 | Blue Ghost 1 from 2025-03-02 08:34 | 51.6 % / 48.4 % | 36.0 % / 32.6 % | 54.5 % / 51.1 % | 100 % | 99.42 % (longest gap 0.30 h) | 100 % |
-| IM-2 from 2025-03-06 17:28 | 41.7 % / 39.0 % | 37.9 % / 34.9 % | 42.0 % / 39.2 % | 88.77 % (longest gap 26.4 h, runs into the window edge) | 87.95 % | 88.91 % |
+| IM-2 from 2025-03-06 17:28 | 41.7 % / 39.0 % | 37.9 % / 34.9 % | 42.0 % / 39.2 % | 88.77 % (longest gap 26.4 h, runs into the window edge) | 87.95 % | 88.90 % |
+| Apollo 15 from 1971-07-30 22:16 | 42.0 % / 38.5 % | 49.6 % / 46.5 % | 37.9 % / 34.3 % | 99.91 % (longest gap 0.2 h) | 96.77 % (1.30 h) | 100 % |
+| Chandrayaan-3 from 2023-08-23 12:33 | 40.6 % / 37.0 % | 47.4 % / 44.3 % | 41.0 % / 37.1 % | 99.74 % (0.4 h) | 96.24 % (1.55 h) | 100 % |
 
 At IM-2 Earth hangs near the skyline, so it matters where on Earth's disc a station sits: seen
 from this south-polar site, Canberra stands about 1 deg higher above the lunar skyline than
-Goldstone or Madrid (its clearance ranges over -0.99..13.29 deg against -1.99..12.28 and
--1.81..12.17). On a smooth Moon: a far-side site has no opportunity at all; a site at 0 N 0 E
+Goldstone or Madrid (its clearance ranges over -0.99..13.29 deg against -2.00..12.28 and
+-1.81..12.16). On a smooth Moon: a far-side site has no opportunity at all; a site at 0 N 0 E
 over 28 days has 43.8-45.1 % per station and 99.83 % for any station (receive).
 
-Cost: about 50 ms added to a 14-day analysis (which then takes 125 ms with a Horizons table).
+Cost: about 50 ms of a 14-day analysis (130-145 ms in all with a Horizons table).
 Neither Blue Ghost Mission 1 nor IM-2 is claimed here to have used these stations: which
 ground stations the missions used was not looked up.

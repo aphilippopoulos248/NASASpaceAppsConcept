@@ -98,6 +98,53 @@ describe('computeHorizon with analytic relief', () => {
   });
 });
 
+describe('the skyline does not depend on the marching step', () => {
+  it('a narrow ridge between two marching samples is found at its crest', () => {
+    // A ring ridge 500 m high and about 190 m wide (FWHM) at 20.03 km, on 100 m data. With steps of 1 % of
+    // the distance the march advances 200 m per sample out there, so no sample needs to land on the crest.
+    const ridge = radialSource('narrow ridge', 100, 0, 0, (d) => 500 * Math.exp(-(((d - 20_030) / 80) ** 2)));
+    const exact = elevOf(20_030, 500, 2);
+    const coarse = computeHorizon(stackOf(ridge), { lat: 0, lon: 0 }, 2, { azStepDeg: 5, growth: 0.01, refine: false });
+    const fine = computeHorizon(stackOf(ridge), { lat: 0, lon: 0 }, 2, { azStepDeg: 5, growth: 0.01 });
+    const worst = (p: typeof fine) => p.elevDeg.reduce((m, v) => Math.max(m, Math.abs(v - exact)), 0);
+    expect(worst(coarse)).toBeGreaterThan(0.3); // the plain march misses most of the ridge
+    expect(worst(fine)).toBeLessThan(0.05);
+    expect(Math.abs(fine.distM[3] - 20_030)).toBeLessThan(30);
+    expect(fine.heightM[3]).toBeGreaterThan(480);
+  });
+
+  it.each([
+    ['im-2', 'landing', -84.79, 29.2],
+    ['apollo-15', 'landing', 26.13239, 3.6333],
+    ['pin: Shackleton rim', 'custom', -89.45, -137.2],
+    ['pin: Malapert massif', 'custom', -86.0, 2.9],
+  ] as const)('%s: default settings agree with a march twenty times finer', async (id, kind, lat, lon) => {
+    const site = { id, name: id, kind, lat, lon };
+    const st = await loadTerrainFor(site, { remote: false });
+    // Reference: no fine search, but steps of 0.035 of a grid cell and 0.1 % of distance.
+    const ref = computeHorizon(st, site, 2, { azStepDeg: 2, resFraction: 0.035, growth: 0.001, refine: false });
+    const def = computeHorizon(st, site, 2, { azStepDeg: 2 });
+    const plain = computeHorizon(st, site, 2, { azStepDeg: 2, refine: false });
+    const scan = computeHorizon(st, site, 2, { azStepDeg: 2, growth: 0.01 });
+    const stat = (p: typeof ref) => {
+      let max = 0, sum2 = 0;
+      for (let i = 0; i < p.elevDeg.length; i++) {
+        const dv = p.elevDeg[i] - ref.elevDeg[i];
+        max = Math.max(max, Math.abs(dv));
+        sum2 += dv * dv;
+      }
+      return { max, rms: Math.sqrt(sum2 / p.elevDeg.length) };
+    };
+    const a = stat(def), b = stat(plain), c = stat(scan);
+    console.log(`${id}: against a 20x finer march, default ${a.max.toFixed(3)} deg max / ${a.rms.toFixed(4)} rms; scan settings ${c.max.toFixed(3)} / ${c.rms.toFixed(4)}; without the fine search ${b.max.toFixed(3)} / ${b.rms.toFixed(4)}`);
+    expect(a.max).toBeLessThan(0.04);
+    expect(a.rms).toBeLessThan(0.006);
+    expect(c.max).toBeLessThan(0.04);
+    expect(c.rms).toBeLessThan(0.006);
+    expect(a.rms).toBeLessThan(b.rms);
+  }, 120_000);
+});
+
 describe('slopeAt', () => {
   it('measures a 10 degree plane tilted down to the east', () => {
     const site = { lat: 0, lon: 0 };

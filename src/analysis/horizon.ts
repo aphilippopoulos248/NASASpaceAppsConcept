@@ -27,6 +27,12 @@ export interface HorizonOptions {
   resFraction?: number;
   /** Set false to look every height up through HeightSource.sample() only (slower; for cross-checks). */
   fast?: boolean;
+  /**
+   * Set false to skip the fine search around the samples that form (or nearly form) the skyline.
+   * With it (the default) the result is the highest point of the interpolated terrain along each
+   * ray to about 1/60 of a marching step, instead of the highest of the marching samples.
+   */
+  refine?: boolean;
 }
 
 const samplerCache = new WeakMap<HeightSource, UnitSampler | null>();
@@ -216,17 +222,57 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   });
   const usedFrom = new Float64Array(nSrc).fill(Infinity), usedTo = new Float64Array(nSrc).fill(-Infinity);
   const coarsest = resOf[nSrc - 1];
+  const refineOn = options.refine !== false;
+  // The marching samples of the current ray (distance, tangent of elevation), kept for the fine search.
+  let cap = 2048;
+  let dArr = new Float64Array(cap), tArr = new Float64Array(cap), sArr = new Float64Array(cap);
 
   // Local frame at the site (same convention as src/astro/topocentric.ts).
   const { up, east, north } = frameOf(site.lat, site.lon);
 
+  // State of the ray being marched, shared with the fine search below.
+  let tx = 0, ty = 0, tz = 0;
+  let evalH = NaN, evalIdx = -1;
+  /** Tangent of the elevation of the terrain at distance d along the current ray (-Infinity where no source has data). */
+  const tanAt = (d: number): number => {
+    const th = d / R;
+    const ct = Math.cos(th), st = Math.sin(th);
+    const px = ct * up[0] + st * tx, py = ct * up[1] + st * ty, pz = ct * up[2] + st * tz;
+    let lat = NaN, lon = NaN;
+    for (let k = 0; k < nSrc; k++) {
+      if (d < rMin[k] || d > rOut[k]) continue;
+      const f = fast[k];
+      let v: number;
+      if (f) v = f(px, py, pz);
+      else {
+        if (lat !== lat) {
+          lat = Math.asin(pz > 1 ? 1 : pz < -1 ? -1 : pz) / RAD;
+          lon = Math.atan2(py, px) / RAD;
+        }
+        v = sources[k].sample(lat, lon);
+      }
+      if (v === v && v !== Infinity && v !== -Infinity) {
+        evalH = v;
+        evalIdx = k;
+        const Rh = R + v;
+        return (Rh * ct - R0) / (Rh * st);
+      }
+    }
+    evalH = NaN;
+    evalIdx = -1;
+    return -Infinity;
+  };
+
   for (let a = 0; a < nAz; a++) {
     const az = a * azStepDeg * RAD;
     const ca = Math.cos(az), sa = Math.sin(az);
-    const tx = ca * north[0] + sa * east[0], ty = ca * north[1] + sa * east[1], tz = ca * north[2] + sa * east[2];
+    tx = ca * north[0] + sa * east[0];
+    ty = ca * north[1] + sa * east[1];
+    tz = ca * north[2] + sa * east[2];
     let bestD = NaN, bestH = NaN, bestIdx = 0;
     // Elevations are compared through their tangents (the horizontal component is always positive).
     let tanBest = -Infinity;
+    let m = 0;
     let d = resFrac * resOf[here.idx];
     while (d <= maxRange) {
       const th = d / R;
@@ -253,6 +299,7 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
         if (v === v && v !== Infinity && v !== -Infinity) { h = v; idx = k; break; }
       }
       let res: number;
+      let t = -Infinity;
       if (idx < 0) {
         gaps++;
         res = coarsest;
@@ -261,14 +308,73 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
         if (d < usedFrom[idx]) usedFrom[idx] = d;
         if (d > usedTo[idx]) usedTo[idx] = d;
         const Rh = R + h;
-        const t = (Rh * ct - R0) / (Rh * st);
+        t = (Rh * ct - R0) / (Rh * st);
         if (t > tanBest) {
           tanBest = t;
           bestD = d; bestH = h; bestIdx = idx;
         }
       }
+      if (refineOn) {
+        if (m === cap) {
+          cap *= 2;
+          const d2 = new Float64Array(cap), t2 = new Float64Array(cap), s2 = new Float64Array(cap);
+          d2.set(dArr); t2.set(tArr); s2.set(sArr);
+          dArr = d2; tArr = t2; sArr = s2;
+        }
+        dArr[m] = d;
+        tArr[m] = t;
+        sArr[m] = res;
+        m++;
+      }
       if (d > reachedMax) reachedMax = d;
       d += Math.max(resFrac * res, growth * d);
+    }
+
+    // Fine search. Between two marching samples the terrain's elevation can peak higher than at
+    // either (a crest, or simply a grid line crossed between them). Every sampled local maximum that
+    // such a peak could lift above the best sample is searched at 1/12 and then 1/48 of its bracket
+    // (the two steps around it).
+    if (refineOn && tanBest > -Infinity) {
+      const coarseBest = tanBest;
+      for (let i = 0; i < m; i++) {
+        const t = tArr[i];
+        if (!(t > -Infinity)) continue;
+        if ((i > 0 && t < tArr[i - 1]) || (i < m - 1 && t < tArr[i + 1])) continue;
+        // The largest change between neighbouring samples around here bounds what was missed.
+        let swing = 0;
+        for (let j = Math.max(1, i - 1); j <= Math.min(m - 1, i + 2); j++) {
+          const a0 = tArr[j - 1], a1 = tArr[j];
+          if (a0 > -Infinity && a1 > -Infinity) {
+            const dv = a1 > a0 ? a1 - a0 : a0 - a1;
+            if (dv > swing) swing = dv;
+          }
+        }
+        const lo = i > 0 ? dArr[i - 1] : dArr[0] * 0.5;
+        const hi = i < m - 1 ? dArr[i + 1] : dArr[i];
+        // Far out, where the steps are longer than the data's own sampling, a crest can sit between
+        // two samples with only its flanks seen: allow for the steepest ground that could hide
+        // there, a 35 deg slope over half a step. (Where the steps follow the grid this cannot
+        // happen: interpolated data has no detail finer than its samples.)
+        const step = (hi - lo) / (i > 0 && i < m - 1 ? 2 : 1);
+        const hidden = step > 1.05 * resFrac * sArr[i] ? (0.35 * step) / dArr[i] : 0;
+        if (t + (swing > hidden ? swing : hidden) < coarseBest) continue;
+        let localBest = t, localD = dArr[i];
+        const w1 = (hi - lo) / 12;
+        for (let k = 0; k < 12; k++) {
+          const dd = lo + (k + 0.5) * w1;
+          const tv = tanAt(dd);
+          if (tv > localBest) { localBest = tv; localD = dd; }
+          if (tv > tanBest) { tanBest = tv; bestD = dd; bestH = evalH; bestIdx = evalIdx; }
+        }
+        const w2 = w1 / 4;
+        for (let k = -4; k <= 4; k++) {
+          if (k === 0) continue;
+          const dd = localD + k * w2;
+          if (dd <= 0) continue;
+          const tv = tanAt(dd);
+          if (tv > tanBest) { tanBest = tv; bestD = dd; bestH = evalH; bestIdx = evalIdx; }
+        }
+      }
     }
     elevDeg[a] = tanBest === -Infinity ? -90 : Math.atan(tanBest) / RAD;
     distM[a] = bestD;
