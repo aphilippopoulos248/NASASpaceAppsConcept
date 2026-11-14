@@ -283,6 +283,14 @@ describe('LXG container', () => {
     expect(out.header.grids).toHaveLength(2);
   });
 
+  it('reads from an unaligned view into a larger buffer (how Node hands files over)', async () => {
+    const f = new Float32Array([1.5, -2.5, 3.25, 4]);
+    const body = encodeLxg(header([{ dtype: 'float32', encoding: 'raw', width: 2, height: 2 }]), [f]);
+    const pool = new Uint8Array(body.length + 7);
+    pool.set(body, 3);
+    expect((await decodeLxg(pool.subarray(3, 3 + body.length))).arrays[0]).toEqual(f);
+  });
+
   it('refuses damaged input instead of guessing', async () => {
     await expect(decodeLxg(new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9]))).rejects.toThrow(/not a Lunyx grid/);
     const body = encodeLxg(header([{ dtype: 'int16', encoding: 'raw', width: 4, height: 4 }]), [new Int16Array(16)]);

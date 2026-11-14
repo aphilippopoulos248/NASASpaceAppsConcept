@@ -8,7 +8,7 @@ import type { SiteRef } from '../core/types';
 import type { CoverageRegion, HeightGridDescriptor, HeightProvenance, HeightSource, TerrainStack } from './types';
 import { decodeLxg, type LxgGrid } from './lxg';
 import { localOffset, polarXY, surfaceDistanceM } from './geo';
-import { readTerrainFile, readTerrainJson, TerrainFileMissing } from './reader';
+import { readTerrainFile, readTerrainJson, siteUrl, TerrainFileMissing } from './reader';
 import { createSource } from './sources';
 
 export { setTerrainReader, TerrainFileMissing, type BinaryReader } from './reader';
@@ -79,7 +79,7 @@ export function setTerrainWindowFetcher(fetcher: WindowFetcher | null | undefine
 }
 
 const defaultWindowFetcher: WindowFetcher = async (lat, lon, signal) => {
-  const res = await fetch(`${import.meta.env.BASE_URL}api/terrain?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`, { signal });
+  const res = await fetch(siteUrl(`api/terrain?lat=${lat.toFixed(5)}&lon=${lon.toFixed(5)}`), { signal });
   if (!res.ok) {
     let detail = '';
     try {
@@ -209,6 +209,12 @@ const NAC_PROVENANCE: HeightProvenance = {
   citation: 'Henriksen, M. R., et al. (2017). Extracting accurate and precise topography from LROC narrow angle camera stereo observations. Icarus, 283, 122-137.',
 };
 
+/** Provenance sent along by the elevation server, if it is complete. */
+function asProvenance(v: unknown): HeightProvenance | null {
+  const p = v as Partial<HeightProvenance> | null | undefined;
+  return p && typeof p.product === 'string' && typeof p.url === 'string' && typeof p.processing === 'string' && typeof p.citation === 'string' ? { product: p.product, url: p.url, processing: p.processing, citation: p.citation } : null;
+}
+
 function windowProvenance(source: string): HeightProvenance {
   return /SLDEM/i.test(source) ? SLDEM_PROVENANCE : LOLA_POLAR_PROVENANCE;
 }
@@ -278,7 +284,7 @@ function loadRemoteWindow(lat: number, lon: number): Promise<{ sources: HeightSo
         const { header, arrays } = await decodeLxg(await fetcher(lat, lon, abort.signal));
         const sources = header.grids.map((g, k) => {
           const d = descriptorFromGrid(g, arrays[k]);
-          return createSource(d, windowProvenance(d.name));
+          return createSource(d, asProvenance(g.provenance) ?? windowProvenance(d.name));
         });
         const notes = Array.isArray(header.notes) ? header.notes.filter((s): s is string => typeof s === 'string') : [];
         return { sources, notes };
@@ -353,7 +359,15 @@ export async function loadTerrainFor(site: SiteRef, options: LoadTerrainOptions 
 
   // 2. Custom coordinates: a window built on request, and any neighbouring site's window that happens to cover the point.
   if (!own || sources.length === 0) {
-    const remote = options.remote === false ? { sources: [], notes: [] } : await loadRemoteWindow(site.lat, site.lon);
+    // Deep inside a bundled polar layer that is finer than the window's 60 m grid, the server has nothing to add.
+    const windowReach = windows ? ((windows.size - 1) / 2) * Math.max(...windows.levels.map((l) => l.spacing)) : 30720;
+    const windowFinest = windows ? Math.min(...windows.levels.map((l) => l.spacing)) : 60;
+    const alreadyFiner = (dem?.layers ?? []).some((l) => {
+      if (l.role !== 'polar' || !l.pole || !l.halfWidthM || l.resolutionM > windowFinest || (l.pole === 'S') !== site.lat < 0) return false;
+      const { x, y } = polarXY(l.pole, site.lat, site.lon);
+      return l.halfWidthM - Math.max(Math.abs(x), Math.abs(y)) >= windowReach;
+    });
+    const remote = options.remote === false || alreadyFiner ? { sources: [], notes: [] } : await loadRemoteWindow(site.lat, site.lon);
     remote.sources.forEach(add);
     notes.push(...remote.notes);
     if (windows) {

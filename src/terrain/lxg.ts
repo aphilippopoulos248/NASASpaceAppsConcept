@@ -92,8 +92,9 @@ export async function decodeLxg(input: ArrayBuffer | Uint8Array): Promise<LxgFil
     if (g.dtype === 'int16' && g.encoding === 'plane-delta') {
       arrays.push(decodePlaneDelta(chunk, g.width, g.height));
     } else if (g.encoding === 'raw') {
-      // Copy: the chunk may not be aligned for a typed-array view.
-      const copy = chunk.slice().buffer;
+      // Copy into a buffer of its own: the chunk may not be aligned for a typed-array view,
+      // and it may be a Node Buffer, whose slice() would only make another view.
+      const copy = new Uint8Array(chunk).buffer;
       arrays.push(g.dtype === 'int16' ? new Int16Array(copy) : new Float32Array(copy));
     } else {
       throw new Error(`LXG: unsupported encoding ${String(g.encoding)} for ${String(g.dtype)}`);
