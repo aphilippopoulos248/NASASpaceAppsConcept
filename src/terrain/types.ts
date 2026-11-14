@@ -1,4 +1,4 @@
-// Terrain access contract. Owned by the globe/terrain worker (implementations
+// Terrain access contract. Owned by the elevation-data worker (implementations
 // live beside this file); consumed by the horizon and slope code in src/analysis.
 //
 // Heights are metres above the 1737.4 km sphere. Every source says what it is
@@ -48,6 +48,18 @@ export type HeightGridDescriptor =
       nodata?: number;
     };
 
+/** Where a height grid came from, for credits and "about this data" panels. */
+export interface HeightProvenance {
+  /** Archive product(s), e.g. "LRO LOLA LDEM_16 (PDS, V3.1)". */
+  product: string;
+  /** Where the product can be downloaded. */
+  url: string;
+  /** What Lunyx did to it (cropping, averaging, rounding), in plain words. */
+  processing: string;
+  /** How to cite it. */
+  citation: string;
+}
+
 export interface HeightSource {
   /** Human-readable product name, e.g. "SLDEM2015 512 ppd (site window)". Shown in provenance labels. */
   readonly name: string;
@@ -55,6 +67,8 @@ export interface HeightSource {
   readonly resolutionM: number;
   /** The data behind this source, for transfer to a worker. */
   readonly descriptor: HeightGridDescriptor;
+  /** Origin of the data, when known. Not carried by the descriptor: read it before posting to a worker. */
+  readonly provenance?: HeightProvenance;
   /** True when the source has data at this point. */
   covers(lat: number, lon: number): boolean;
   /** Height in metres at a point (bilinear), or NaN where the source has no data. */
@@ -76,4 +90,8 @@ export interface CoverageRegion {
   latMin?: number;
   latMax?: number;
   sites?: { lat: number; lon: number; halfWidthM: number }[];
+  /** Plain-language detail, e.g. the exact footprint of a square polar grid. */
+  note?: string;
+  /** True when the data is not bundled: the elevation server builds it on request (needs network access). */
+  onDemand?: boolean;
 }

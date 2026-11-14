@@ -1,0 +1,17 @@
+.region-person { right: calc(var(--edge) + 210px); bottom: var(--edge); display: grid; justify-items: center; gap: 2px; }
+.person-btn { width: 44px; height: 44px; color: var(--sun); background: var(--surface-1); backdrop-filter: var(--blur); touch-action: none; cursor: grab; }
+.person-btn:active { cursor: grabbing; }
+.person-hint { pointer-events: none; text-shadow: 0 1px 4px #000; }
+.person-ghost {
+  position: fixed;
+  z-index: var(--z-tooltip);
+  pointer-events: none;
+  color: var(--text-muted);
+  transform: translate(-50%, -100%);
+  filter: drop-shadow(0 2px 6px #000);
+}
+.person-ghost.on-moon { color: var(--sun); }
+@media (max-width: 700px) {
+  .region-person { right: calc(var(--edge) + 52px); bottom: 160px; }
+  .person-hint { display: none; }
+}
