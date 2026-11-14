@@ -45,6 +45,8 @@ export interface Memory {
 /** How long to wait for a site analysis before giving up, and how often to look. */
 const ANALYSIS_POLL_MS = 400;
 const ANALYSIS_POLLS = 90;
+/** How many polls an analysis may stay "idle" after a change before that is taken as final. */
+const IDLE_POLLS = 6;
 
 export class Ctx {
   constructor(
@@ -95,11 +97,17 @@ export class Ctx {
       return r;
     }
     if (slot !== 'current') throw new Halt('Reading the analysis of a comparison slot is not available in this build.');
-    // The analysis starts shortly after a change; give it a moment, then wait for it to finish.
+    // The app starts an analysis a moment after a change (it debounces), so for a short while the
+    // status can still be idle, or be the finished analysis of the previous scenario. Wait that out.
     await this.wait(ANALYSIS_POLL_MS);
     for (let i = 0; i < ANALYSIS_POLLS; i++) {
       const s = await this.peek('getState');
-      if (!isObject(s?.analysis) || s.analysis.state !== 'loading') break;
+      const a = s?.analysis;
+      if (!isObject(a)) break;
+      const siteName = isObject(s?.site) && typeof s.site.name === 'string' ? s.site.name : undefined;
+      const stale = a.state === 'ready' && siteName !== undefined && typeof a.scenario === 'string' && !a.scenario.startsWith(siteName);
+      const notStarted = a.state === 'idle' && siteName !== undefined && i < IDLE_POLLS;
+      if (a.state !== 'loading' && !stale && !notStarted) break;
       await this.wait(ANALYSIS_POLL_MS);
     }
     const st = await this.state();
@@ -113,8 +121,17 @@ export class Ctx {
   /** Runs `compare` and waits until both sides have finished analysing. */
   async comparison(): Promise<Json> {
     let r = await this.run('compare');
-    const loading = (v: Json | null) => [v?.analysisA, v?.analysisB].some((a) => isObject(a) && a.state === 'loading');
-    for (let i = 0; i < ANALYSIS_POLLS && loading(r); i++) {
+    const pending = (v: Json, allowIdle: boolean) =>
+      (['A', 'B'] as const).some((tag) => {
+        const a = v[`analysis${tag}`];
+        if (!isObject(a)) return false;
+        if (a.state === 'loading') return true;
+        // Just saved: the analysis has not started yet (the app debounces).
+        if (a.state === 'idle') return allowIdle;
+        // A finished analysis of the scenario that was in this slot before is not the answer.
+        return a.state === 'ready' && typeof v[tag] === 'string' && typeof a.scenario === 'string' && a.scenario !== v[tag];
+      });
+    for (let i = 0; i < ANALYSIS_POLLS && pending(r, i < IDLE_POLLS); i++) {
       await this.wait(ANALYSIS_POLL_MS);
       r = (await this.peek('compare')) ?? r;
     }

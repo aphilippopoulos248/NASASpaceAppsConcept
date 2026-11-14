@@ -18,10 +18,8 @@
   width: min(380px, 100vw);
   display: flex;
   flex-direction: column;
-  background: rgba(11, 13, 18, 0.985);
+  background: #0b0d12;
   border-left: 1px solid var(--border);
-  backdrop-filter: var(--blur);
-  -webkit-backdrop-filter: var(--blur);
   box-shadow: var(--shadow);
   transform: translateX(100%);
   visibility: hidden;

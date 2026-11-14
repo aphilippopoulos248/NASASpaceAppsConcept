@@ -94,6 +94,11 @@ export interface FakeAppOptions {
   nearby?: FakeRow[];
   /** `getState` reports the analysis as loading this many times before it is ready. */
   analysisLoadingPolls?: number;
+  /**
+   * Mimics the real analysis store after a scenario is saved: `compare` reports both sides
+   * as idle for this many calls (the debounce), then loading for as many again, then ready.
+   */
+  compareSettleCalls?: number;
 }
 
 export const NEARBY: FakeRow[] = [
@@ -127,6 +132,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
+  let compareCalls = 0;
   const nearbyRows = options.nearby ?? NEARBY;
   const none = { type: 'object', properties: {} } as const;
   const siteOut = (s: FakeSite | null) => (s ? { id: s.id, name: s.name, kind: s.kind, latDeg: s.latDeg, lonDegEast: s.lonDegEast } : null);
@@ -254,6 +260,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const saved = { label: given ?? label(), metrics: currentMetrics() };
         if (slot === 'A') state.compareA = saved;
         else state.compareB = saved;
+        compareCalls = 0;
         return { slot, scenario: { label: saved.label, siteId: site.id, startUtc: isoUtc(state.windowStartMs + state.delayH * 3_600_000), durationH: state.windowDurationH, mastHeightM: state.mastHeightM } };
       },
     }),
@@ -263,7 +270,10 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const missing = [!state.compareA && 'A', !state.compareB && 'B'].filter(Boolean);
         if (missing.length) throw new ActionError(`Save a scenario in slot ${missing.join(' and ')} first (saveScenario).`);
         state.comparing = true;
-        const side = (s: NonNullable<FakeState['compareA']>) => ({ state: 'ready', scenario: s.label, ...s.metrics, warnings: [] });
+        const settle = options.compareSettleCalls ?? 0;
+        const call = compareCalls++;
+        const side = (s: NonNullable<FakeState['compareA']>) =>
+          call < settle ? { state: 'idle' } : call < 2 * settle ? { state: 'loading', scenario: s.label } : { state: 'ready', scenario: s.label, ...s.metrics, warnings: [] };
         return { comparing: true, A: state.compareA!.label, B: state.compareB!.label, analysisA: side(state.compareA!), analysisB: side(state.compareB!) };
       },
     }),

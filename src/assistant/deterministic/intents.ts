@@ -80,9 +80,9 @@ function comparisonText(r: Json): string {
     const add = (label: string, v: number | undefined, unit: string) => {
       if (v !== undefined) parts.push(`${label} ${signed(v)}${unit}`);
     };
-    add('illumination', diff('illuminationPct', 'metrics.illuminationPct'), ' %');
+    add('illumination', diff('illuminationPct', 'metrics.illuminationPct'), ' percentage points');
     add('longest darkness', diff('longestDarknessH', 'metrics.longestDarknessH'), ' h');
-    add('Earth line of sight', diff('earthVisiblePct', 'metrics.earthVisiblePct'), ' %');
+    add('Earth line of sight', diff('earthVisiblePct', 'metrics.earthVisiblePct'), ' percentage points');
     add('longest Earth gap', diff('longestEarthGapH', 'metrics.longestEarthGapH'), ' h');
     add('slope', diff('slopeDeg', 'slope.slopeDeg'), '°');
     if (parts.length) lines.push(`B minus A: ${parts.join(', ')}.`);

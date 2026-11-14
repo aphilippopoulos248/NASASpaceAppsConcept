@@ -294,8 +294,20 @@ describe('deterministic mode: comparison and nearby alternatives', () => {
     expect(state.comparing).toBe(true);
     expect(r.text).toContain(`A: IM-2 Athena, from 2026-03-01T12:00Z for 24 h, mast 2 m: illumination ${a.illuminationPct.toFixed(1)} %`);
     expect(r.text).toContain(`illumination ${b.illuminationPct.toFixed(1)} %`);
-    expect(r.text).toContain(`B minus A: illumination ${(b.illuminationPct - a.illuminationPct).toFixed(1)} %, longest darkness +${(b.longestDarknessH - a.longestDarknessH).toFixed(1)} h`);
+    expect(r.text).toContain(`B minus A: illumination ${(b.illuminationPct - a.illuminationPct).toFixed(1)} percentage points, longest darkness +${(b.longestDarknessH - a.longestDarknessH).toFixed(1)} h`);
     expect(ran()).toEqual(['selectSite', 'setDelay', 'saveScenario', 'setDelay', 'saveScenario', 'compare']);
+  });
+
+  it('waits while the app has not started, or not finished, analysing the saved scenarios', async () => {
+    state = installFakeApp({ analysisActions: true, compareSettleCalls: 3 });
+    const e = engine();
+    await e.reply('go to IM-2');
+    const r = await e.reply('compare with a 24 h delay');
+    expect(r.text).not.toContain('no analysis available');
+    expect(r.text).not.toContain('still being analysed');
+    expect(r.text).toContain('B minus A: illumination -6.0 percentage points');
+    // The waiting is silent: one compare in the action log.
+    expect(ran().filter((n) => n === 'compare')).toHaveLength(1);
   });
 
   it('compares two mast heights', async () => {
@@ -305,7 +317,7 @@ describe('deterministic mode: comparison and nearby alternatives', () => {
     expect(state.mastHeightM).toBe(10);
     expect(r.text).toContain('mast 2 m');
     expect(r.text).toContain('mast 10 m');
-    expect(r.text).toContain('B minus A: illumination +4.0 %');
+    expect(r.text).toContain('B minus A: illumination +4.0 percentage points');
   });
 
   it('saves scenarios, opens and closes the comparison', async () => {
