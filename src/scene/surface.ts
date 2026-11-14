@@ -16,6 +16,7 @@ import {
   Quaternion,
   Matrix4,
   Mesh,
+  MirroredRepeatWrapping,
   MeshBasicMaterial,
   MeshStandardMaterial,
   Material,
@@ -27,6 +28,7 @@ import {
   SphereGeometry,
   Sprite,
   SpriteMaterial,
+  Texture,
   TextureLoader,
   Vector3,
 } from 'three';
@@ -246,6 +248,35 @@ function rockGeometry(seed: number, subdivisions: number): BufferGeometry {
   return geo;
 }
 
+// Artist-made close-up surface maps (craters of roughly 0.1-2.5 m and fine texture). They are not
+// lunar measurements: they only shade the ground near the viewer, as part of the generated detail,
+// and never move the terrain. Loaded the first time the surface view is used.
+const DETAIL_TILE_M = 12;
+const detailMaps = { normal: { value: null as Texture | null }, tone: { value: null as Texture | null }, ready: { value: 0 } };
+let detailRequested = false;
+function requestDetailMaps(anisotropy: number): void {
+  if (detailRequested) return;
+  detailRequested = true;
+  const loader = new TextureLoader();
+  const prepare = (t: Texture) => {
+    // The maps do not tile seamlessly, so they are mirrored at each repeat (the shader flips the normals to match).
+    t.wrapS = t.wrapT = MirroredRepeatWrapping;
+    t.anisotropy = anisotropy;
+    return t;
+  };
+  Promise.all([
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_normal.jpg`),
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_tone.jpg`),
+  ]).then(
+    ([normal, tone]) => {
+      detailMaps.normal.value = prepare(normal);
+      detailMaps.tone.value = prepare(tone);
+      detailMaps.ready.value = 1;
+    },
+    (err) => console.warn('Close-up surface maps unavailable; using computed craters instead', err),
+  );
+}
+
 /**
  * Shader additions for the ground near the viewer:
  *  - smooth (bicubic) magnification of the photo, which otherwise shows its pixel grid as blocky diamonds;
@@ -258,12 +289,18 @@ function patchNearShader(material: MeshStandardMaterial, mapSize: { value: numbe
   material.onBeforeCompile = (shader) => {
     shader.uniforms.uMapSize = mapSize;
     shader.uniforms.uGenerated = generated;
+    shader.uniforms.uDetailNormal = detailMaps.normal;
+    shader.uniforms.uDetailTone = detailMaps.tone;
+    shader.uniforms.uDetailReady = detailMaps.ready;
     shader.vertexShader = 'varying vec2 vGroundXZ;\n' + shader.vertexShader.replace('#include <begin_vertex>', '#include <begin_vertex>\n\tvGroundXZ = position.xz;');
     shader.fragmentShader = shader.fragmentShader
       .replace(
         'void main() {',
         /* glsl */ `uniform float uMapSize;
 uniform float uGenerated;
+uniform sampler2D uDetailNormal;
+uniform sampler2D uDetailTone;
+uniform float uDetailReady;
 varying vec2 vGroundXZ;
 
 vec4 smoothMap( sampler2D tex, vec2 uv ) {
@@ -324,13 +361,31 @@ float gLayer( float size, float footprint ) {
 }
 float gHeight( vec2 p, float footprint ) {
 	float h = 0.0, w;
-	w = gLayer( 0.6, footprint ); if ( w > 0.0 ) h += gCraters( p, 1.6 ) * w;
-	w = gLayer( 0.27, footprint ); if ( w > 0.0 ) h += gCraters( p + 31.7, 0.7 ) * w;
-	w = gLayer( 0.11, footprint ); if ( w > 0.0 ) h += gCraters( p + 77.1, 0.3 ) * w;
+	if ( uDetailReady < 0.5 ) {
+		// Fallback craters, used only until (or unless) the close-up maps have loaded.
+		w = gLayer( 0.6, footprint ); if ( w > 0.0 ) h += gCraters( p, 1.6 ) * w;
+		w = gLayer( 0.27, footprint ); if ( w > 0.0 ) h += gCraters( p + 31.7, 0.7 ) * w;
+		w = gLayer( 0.11, footprint ); if ( w > 0.0 ) h += gCraters( p + 77.1, 0.3 ) * w;
+	}
 	w = gLayer( 0.43, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 2.3 ) - 0.5 ) * 0.035 * w;
 	w = gLayer( 0.11, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 9.0 ) - 0.5 ) * 0.012 * w;
 	w = gLayer( 0.032, footprint ); if ( w > 0.0 ) h += ( gNoise( p * 31.0 ) - 0.5 ) * 0.004 * w;
 	return h;
+}
+// Close-up map lookup at a ground position (x east, y north). The map is mirrored on alternate
+// repeats, so its sideways tilt is flipped there to keep craters as craters. Returns east, north, up.
+vec3 gDetailSample( vec2 q ) {
+	vec2 odd = mod( floor( q ), 2.0 );
+	vec3 n = texture2D( uDetailNormal, q ).xyz * 2.0 - 1.0;
+	n.xy *= 1.0 - 2.0 * odd;
+	return n;
+}
+// Two copies at different sizes, one turned a quarter turn, mixed by a slowly varying mask so the repeat is hard to spot.
+vec3 gDetailNormal( vec2 p ) {
+	vec3 a = gDetailSample( p / ${DETAIL_TILE_M.toFixed(1)} );
+	vec3 b = gDetailSample( vec2( - p.y, p.x ) / ${(DETAIL_TILE_M * 0.79).toFixed(2)} + 0.37 );
+	b.xy = vec2( b.y, - b.x );
+	return normalize( mix( a, b, smoothstep( 0.35, 0.65, gNoise( p * 0.045 + 11.0 ) ) ) );
 }
 // Tilts the shading normal for a height change given per screen pixel (metres).
 vec3 gPerturb( vec3 surfPos, vec3 surfNorm, vec2 dHdxy, float faceDir ) {
@@ -350,7 +405,10 @@ void main() {`,
 	vec4 sampledDiffuseColor = mix( smoothMap( map, vMapUv ), texture2D( map, vMapUv ), smoothstep( 0.4, 1.0, texelsPerPixel ) );
 	diffuseColor *= sampledDiffuseColor;
 #endif
-	diffuseColor.rgb *= 1.0 + uGenerated * ( 0.16 * ( gNoise( vGroundXZ * 0.6 ) - 0.5 ) + 0.07 * ( gNoise( vGroundXZ * 21.0 ) - 0.5 ) );`,
+	diffuseColor.rgb *= 1.0 + uGenerated * ( 0.16 * ( gNoise( vGroundXZ * 0.6 ) - 0.5 ) + 0.07 * ( gNoise( vGroundXZ * 21.0 ) - 0.5 ) );
+	// A little of the close-up map's light and dark, so small craters read by tone as well as by shading.
+	vec2 gGround = vec2( vGroundXZ.x, - vGroundXZ.y );
+	if ( uDetailReady > 0.5 ) diffuseColor.rgb *= mix( 1.0, clamp( texture2D( uDetailTone, gGround / ${DETAIL_TILE_M.toFixed(1)} ).r * 2.0, 0.55, 1.35 ), 0.3 * uGenerated );`,
       )
       .replace(
         '#include <normal_fragment_maps>',
@@ -358,6 +416,11 @@ void main() {`,
 	if ( uGenerated > 0.5 ) {
 		float gH = gHeight( vGroundXZ, length( fwidth( vGroundXZ ) ) );
 		normal = gPerturb( - vViewPosition, normal, vec2( dFdx( gH ), dFdy( gH ) ), faceDirection );
+		if ( uDetailReady > 0.5 ) {
+			// East/north tilt from the map, turned into view space (north is -Z in this scene).
+			vec3 gN = gDetailNormal( gGround );
+			normal = normalize( normal + mat3( viewMatrix ) * vec3( gN.x, 0.0, - gN.y ) * 0.85 / max( gN.z, 0.2 ) );
+		}
 	}`,
       );
   };
@@ -803,6 +866,7 @@ export class SurfaceView {
     geo.setIndex(idx);
     // Drawn slightly in front where it overlaps the fine mesh at its rim.
     const material = new MeshStandardMaterial({ color: 0x777777, roughness: 1, metalness: 0, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2 });
+    requestDetailMaps(this.anisotropy);
     patchNearShader(material, this.mapSize, this.generatedFlag);
     if (hasPhoto) {
       // Share the photo once the fine mesh has it.
