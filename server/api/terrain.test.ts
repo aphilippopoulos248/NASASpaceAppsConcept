@@ -5,7 +5,9 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { offsetPoint } from '../../src/terrain/geo';
 import { decodeLxg } from '../../src/terrain/lxg';
+import { EquirectSource, LocalSource } from '../../src/terrain/sources';
 import { syntheticArchive, syntheticHeight } from '../../src/terrain/testArchive';
 import type { RangeReader } from '../../src/terrain/windowBuilder';
 import defaultHandler, { createTerrainHandler } from './terrain';
@@ -199,6 +201,44 @@ describe.skipIf(!process.env.LUNYX_LIVE)('live: the real PDS archive', () => {
       for (let k = 0; k < 2; k++) for (let i = 0; i < 129 * 129; i++) worst = Math.max(worst, Math.abs(arrays[k][i] - expected[k * 129 * 129 + i]));
       console.log(`${id}: ${String(header.grids[0].name)} | worst difference from the bundled window ${worst.toExponential(2)} m | ${Date.now() - t0} ms`);
       expect(worst, id).toBeLessThan(0.01);
+    }
+  }, 180_000);
+
+  it('north-polar windows match the whole-Moon grid, and only the right way round', async () => {
+    // The bundled windows are all south of 45N, so the north-polar products get their own check:
+    // a window from each of them against the 16 px/deg grid (whose orientation the DEM tests pin down).
+    const g = await decodeLxg(await readFile(new URL('../../public/data/dem/lola_global_16ppd.lxg', import.meta.url)));
+    const h = g.header.grids[0] as unknown as { width: number; height: number; latN: number; latS: number; lonW: number; lonE: number; scale: number; offset: number };
+    const global = new EquirectSource({ kind: 'equirect', name: 'global', resolutionM: 1895, width: h.width, height: h.height, latN: h.latN, latS: h.latS, lonW: h.lonW, lonE: h.lonE, data: g.arrays[0] as Int16Array, scale: h.scale, offset: h.offset });
+    const handler = createTerrainHandler({ cacheDir: null });
+    for (const [lat, lon, product] of [[85.2, 30, 'LOLA LDEM_80N_20M'], [70, -120, 'LOLA LDEM_60N_60M']] as const) {
+      const res = await handler(get({ lat: String(lat), lon: String(lon) }));
+      expect(res.status, JSON.stringify(res.json)).toBe(200);
+      const { header, arrays } = await decodeLxg(res.body!);
+      expect(header.grids[1].name).toBe(`${product}, 480 m site window (built on request)`);
+      const window = new LocalSource({ kind: 'local', name: 'window', resolutionM: 480, lat0: lat, lon0: lon, n: 129, spacingM: 480, data: arrays[1] as Float32Array });
+      const correlation = (flipEast: number): number => {
+        let n = 0, sw = 0, sg = 0, sww = 0, sgg = 0, swg = 0;
+        for (let j = -7; j <= 7; j++) {
+          for (let i = -7; i <= 7; i++) {
+            // The window averaged over one cell of the whole-Moon grid (4 x 4 samples of 480 m).
+            let m = 0;
+            for (let b = 0; b < 4; b++) for (let a = 0; a < 4; a++) {
+              const p = offsetPoint(lat, lon, i * 3840 + (a - 1.5) * 480, j * 3840 + (b - 1.5) * 480);
+              m += window.sample(p.lat, p.lon);
+            }
+            const q = offsetPoint(lat, lon, flipEast * i * 3840, j * 3840);
+            const v = global.sample(q.lat, q.lon);
+            n++; sw += m / 16; sg += v; sww += (m / 16) ** 2; sgg += v * v; swg += (m / 16) * v;
+          }
+        }
+        return (swg - (sw * sg) / n) / Math.sqrt((sww - (sw * sw) / n) * (sgg - (sg * sg) / n));
+      };
+      const right = correlation(1);
+      const mirrored = correlation(-1);
+      console.log(`${lat}, ${lon}: ${product} | correlation with the whole-Moon grid ${right.toFixed(3)}, east-west mirrored ${mirrored.toFixed(3)}`);
+      expect(right).toBeGreaterThan(0.98);
+      expect(mirrored).toBeLessThan(0.6);
     }
   }, 180_000);
 });

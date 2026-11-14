@@ -104,6 +104,10 @@ degrees where the others meet. Same recipe as the bundled windows.
 - Live (`LUNYX_LIVE=1 npx vitest run server/api/terrain.test.ts`): Apollo 11, Surveyor 6,
   Chandrayaan-3 and IM-2 windows rebuilt from PDS are identical to the bundled files, sample
   for sample (0 m difference), 5 to 8 s each.
+- North pole, live: windows at 85.2N 30E (LDEM_80N_20M) and 70N 120W (LDEM_60N_60M) correlate
+  0.997 with the whole-Moon grid, against -0.11 and 0.46 when east and west are swapped. (The
+  bundled windows are all south of 45N, so this is the only real-data check of the north-polar
+  products; it is part of the same opt-in live test.)
 - Headless Chromium: `loadTerrainFor` on the main thread and in a module worker returns the same
   values as under Node; the 16 px/deg grid loads and decodes in about 0.7 s, the three polar
   layers in about 1.5 s (localhost). End to end through `server/plugin.ts` from @globe's branch:
