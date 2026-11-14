@@ -12,7 +12,8 @@
     "check-ephemeris": "node scripts/check-ephemeris.mjs",
     "fetch-terrain": "node scripts/fetch-terrain.mjs",
     "fetch-apollo-terrain": "node scripts/fetch-apollo-terrain.mjs",
-    "derive-detail": "node scripts/derive-detail.mjs"
+    "derive-detail": "node scripts/derive-detail.mjs",
+    "fetch-gcat": "node scripts/fetch-gcat-landers.mjs"
   },
   "dependencies": {
     "astronomy-engine": "^2.1.19",

@@ -1,4 +1,5 @@
 import { Landing, programColor } from '../data/landings';
+import { displayCountry } from '../data/ownership';
 
 export type TypeFilter = 'all' | 'crewed' | 'robotic';
 
@@ -117,7 +118,7 @@ export class Filters {
     panel.append(el('h3', undefined, 'Country'));
     const chips = el('div', 'chips');
     for (const country of this.allCountries) {
-      const chip = el('button', 'chip', country);
+      const chip = el('button', 'chip', displayCountry(country));
       chip.type = 'button';
       chip.addEventListener('click', () => toggle(s.countries, country));
       this.sync.push(() => chip.setAttribute('aria-pressed', String(s.countries.has(country))));

@@ -23,6 +23,8 @@ import { LightMode, Sky } from './scene/sky';
 import { elevation, moonGeometry, MoonGeometry, phaseName } from './astro/ephemeris';
 import { SurfaceView } from './scene/surface';
 import { Filters } from './ui/filters';
+import { flagCode, labelDisagrees, loadOwnership, OwnershipIndex, stateLabel, stateShortName } from './data/ownership';
+import { flagCanvas, FlagMarkers } from './scene/flags';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -163,6 +165,9 @@ async function enterSurface() {
       surface.detail === 'measured'
         ? 'Built from orbital data, not a ground photograph: LROC high-resolution elevation and photo within about 770 m of the landing point, with finer relief worked out from shading in the photo; the 60 m model beyond. Rocks and texture finer than about a metre are generated, not real. The lander is not modelled in 3D.'
         : 'No high-resolution survey exists for this site. Hills and large craters are real (60 m model); the small craters, bumps and rocks within about 770 m are generated, not real.';
+    const site = markers?.selection?.landing;
+    const owner = site ? ownership?.byLanding.get(site.id) : undefined;
+    $('surface-owner').textContent = owner ? `Hardware at this site belongs to ${stateShortName(owner)} (GCAT).` : '';
     document.body.classList.add('surface');
     $('card-surface').textContent = 'Orbit view';
     tooltip.hidden = true;
@@ -226,12 +231,66 @@ function stepFly(dt: number) {
 // ---------- info card ----------
 const card = $('card');
 
+let ownership: OwnershipIndex | null = null;
+
+// ---------- country flags on the globe ----------
+let flags: FlagMarkers | null = null;
+const flagsToggle = $<HTMLButtonElement>('flags-toggle');
+const FLAGS_KEY = 'moon-landings:flags';
+// On by default for a link with ?flags=1; otherwise remembered per browser.
+let flagsWanted = new URLSearchParams(location.search).get('flags') === '1';
+try {
+  flagsWanted ||= localStorage.getItem(FLAGS_KEY) === '1';
+} catch {
+  /* storage unavailable: start with flags off */
+}
+
+function setFlags(on: boolean) {
+  flagsWanted = on;
+  flags?.setEnabled(on);
+  flagsToggle.setAttribute('aria-pressed', String(on));
+  flagsToggle.textContent = on ? 'Hide country flags' : 'Show country flags';
+  try {
+    localStorage.setItem(FLAGS_KEY, on ? '1' : '0');
+  } catch {
+    /* not remembered; fine */
+  }
+}
+flagsToggle.addEventListener('click', () => setFlags(!flagsWanted));
+
+/** Who the hardware at a site belongs to, as recorded by GCAT; falls back to our own label. */
+function showOwnership(l: Landing) {
+  const o = ownership?.byLanding.get(l.id);
+  const belongs = $('card-country');
+  const mismatch = $('card-mismatch');
+  if (!o || !ownership) {
+    belongs.textContent = `${l.country} (not checked against a catalogue)`;
+    $('card-owner').textContent = '—';
+    mismatch.hidden = true;
+    return;
+  }
+  const link = document.createElement('a');
+  link.href = ownership.sourceUrl;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.textContent = 'GCAT';
+  const src = document.createElement('span');
+  src.className = 'card-source';
+  src.append(' · source: ', link, ` ${o.jcat}`);
+  const flag = flagCanvas(flagCode(o), 18);
+  if (flag) flag.className = 'card-flag';
+  belongs.replaceChildren(...(flag ? [flag] : []), stateLabel(o), src);
+  $('card-owner').textContent = o.ownerName ?? o.owner;
+  mismatch.hidden = !labelDisagrees(l.country, o);
+  mismatch.textContent = `Check: this site's own data says "${l.country}", but the GCAT catalogue records ${o.stateFullName ?? o.state}.`;
+}
+
 function showCard(l: Landing) {
   $('card-swatch').style.background = programColor(l.program);
   $('card-program').textContent = l.program;
   $('card-name').textContent = l.name;
   $('card-date').textContent = formatDate(l.date);
-  $('card-country').textContent = l.country;
+  showOwnership(l);
   $('card-type').textContent = l.crewed ? 'Crewed' : 'Robotic';
   $('card-region').textContent = l.region;
   $('card-coords').textContent = formatCoords(l.lat, l.lon) + (l.approx ? ' (approx.)' : '');
@@ -521,17 +580,22 @@ renderer.setAnimationLoop((now) => {
   sky.update(camera, right, up);
 
   markers?.update(camera, now / 1000);
+  flags?.update(camera);
   sitePatch?.update(altNow);
   renderer.render(scene, camera);
 });
 
 // ---------- boot ----------
 async function boot() {
-  const [moon, landings] = await Promise.all([createMoon(renderer), loadLandings()]);
+  const [moon, landings, owners] = await Promise.all([createMoon(renderer), loadLandings(), loadOwnership()]);
+  ownership = owners;
   landings.sort((a, b) => a.date.localeCompare(b.date));
   scene.add(moon);
   markers = new Markers(landings);
   scene.add(markers.root);
+  flags = new FlagMarkers(markers.items, (id) => ownership?.byLanding.get(id));
+  scene.add(flags.root);
+  setFlags(flagsWanted);
   new Filters(landings, filtersPanel, $('timeline'), applyFilter);
   setLightMode(lightMode);
   setTime(simTime);

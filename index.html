@@ -36,6 +36,9 @@
           <p id="light-readout"></p>
         </div>
       </section>
+      <section class="panel display" aria-label="Display">
+        <button type="button" id="flags-toggle" class="flags-toggle" aria-pressed="false">Show country flags</button>
+      </section>
       <aside class="panel filters" id="filters" aria-label="Filters"></aside>
     </div>
 
@@ -47,7 +50,8 @@
       <h2 id="card-name"></h2>
       <dl>
         <dt>Landed</dt><dd id="card-date"></dd>
-        <dt>Country</dt><dd id="card-country"></dd>
+        <dt>Belongs to</dt><dd id="card-country"></dd>
+        <dt>Owner</dt><dd id="card-owner"></dd>
         <dt>Type</dt><dd id="card-type"></dd>
         <dt>Region</dt><dd id="card-region"></dd>
         <dt>Coordinates</dt><dd id="card-coords"></dd>
@@ -59,6 +63,7 @@
         <a id="card-quickmap" target="_blank" rel="noopener">Open in QuickMap ↗</a>
         <a id="card-trek" target="_blank" rel="noopener">Open in Moon Trek ↗</a>
       </div>
+      <p class="card-mismatch" id="card-mismatch" hidden></p>
       <p class="card-credit" id="card-credit"></p>
       <div class="card-nav">
         <button id="card-prev" type="button">← Earlier</button>
@@ -80,6 +85,7 @@
         <button id="surface-exit" type="button">Back to orbit</button>
       </div>
       <p><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk · <kbd>E</kbd>/<kbd>Q</kbd> rise and descend · <kbd>Shift</kbd> faster · hold left mouse button to look · scroll to zoom · <kbd>Esc</kbd> to leave</p>
+      <p class="surface-owner" id="surface-owner"></p>
       <p class="surface-note" id="surface-note"></p>
     </section>
 
