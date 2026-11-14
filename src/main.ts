@@ -1,5 +1,7 @@
 // Boot: renderer and scenes, the core actions, then each layout region handed to its module.
 // Nobody else edits this file or index.html: new UI goes into the module that owns a region.
+import '@fontsource-variable/inter';
+import '@fontsource-variable/space-grotesk';
 import './styles/index.css';
 import { analysis } from './core/analysisStore';
 import * as actions from './core/actions';
