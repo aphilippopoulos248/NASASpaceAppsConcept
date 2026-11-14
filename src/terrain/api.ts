@@ -6,7 +6,7 @@
 // realm, so calling loadTerrainFor inside a worker avoids copying the large grids across.
 import type { SiteRef } from '../core/types';
 import type { CoverageRegion, HeightGridDescriptor, HeightProvenance, HeightSource, TerrainStack } from './types';
-import { decodeLxg, type LxgGrid } from './lxg';
+import { decodeLxg, type LxgArray, type LxgGrid } from './lxg';
 import { localOffset, polarXY, surfaceDistanceM } from './geo';
 import { readTerrainFile, readTerrainJson, siteUrl, TerrainFileMissing } from './reader';
 import { createSource } from './sources';
@@ -140,7 +140,8 @@ export async function demLayers(): Promise<DemLayerInfo[]> {
   return (await demIndex())?.layers ?? [];
 }
 
-function descriptorFromGrid(g: LxgGrid, data: Int16Array | Float32Array): HeightGridDescriptor {
+function descriptorFromGrid(g: LxgGrid, data: LxgArray): HeightGridDescriptor {
+  if (data instanceof Uint8Array) throw new Error('grid header: a height grid cannot be 8-bit');
   const num = (key: string): number => {
     const v = g[key];
     if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`grid header: ${key} is missing`);

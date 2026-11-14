@@ -1,14 +1,19 @@
-// Left "Filters" panel of the globe view, as in the mockup: date/time (UTC), the point at the
-// screen centre (live, editable), the solar elevation requirement, mission parameters,
+// Left "Filters" panel of the globe view, as in the mockup: the date (arrival, UTC), the point
+// at the screen centre (live, editable), the solar elevation requirement, mission parameters,
 // "Show previous missions" with their filters, and "Show optimal landing area" with a legend.
 // Every control runs an action.
+//
+// The date at the top is the arrival: it starts the mission window and brings the clock there,
+// so the analysis, the time slider and the lighting are all about the date that was typed.
 import { runAction } from '../../core/actions';
+import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
-import { isoUtc } from '../../core/time';
+import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { mountMissionFilters } from '../filters';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
+import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './filtersPanel.css';
 
 let uid = 0;
@@ -49,21 +54,23 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
 
-  // ---- Date and time (UTC) ----
+  // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
-  const dateLab = el('label', 'ly-label', 'Date and time (UTC)');
+  const dateLab = el('label', 'ly-label', 'Arrival date and time (UTC)');
   dateLab.htmlFor = dateId;
   const date = el('input', 'ly-input');
   date.id = dateId;
   date.type = 'datetime-local';
   date.step = '60';
+  date.title = 'Start of the mission window (UTC). Changing it also sets the clock to the arrival; the time slider then scrubs through the window.';
   date.addEventListener('change', async () => {
     if (!date.value) return;
-    const r = await runAction('setTime', { utc: `${date.value}Z` });
+    const r = await runAction('setMissionWindow', { startUtc: `${date.value}Z`, moveClock: true });
     date.setAttribute('aria-invalid', String(!r.ok));
   });
+  const dateNote = el('p', 'ly-note fp-datenote');
   const dateField = el('div', 'ly-field');
-  dateField.append(dateLab, date);
+  dateField.append(dateLab, date, dateNote);
   panel.append(dateField);
 
   // ---- Point at the screen centre ----
@@ -103,12 +110,14 @@ export function mountFiltersPanel(region: HTMLElement): void {
   winLab.htmlFor = winId;
   const win = el('select', 'ly-select');
   win.id = winId;
-  for (const [h, label] of [[24, '24 hours'], [72, '3 days'], [168, '7 days'], [336, '14 days'], [708, '29.5 days (one lunar day)']] as const) win.append(new Option(label, String(h)));
+  for (const [h, label] of [[24, '24 hours'], [72, '3 days'], [168, '7 days'], [336, '14 days'], [708, '29.5 days (lunar day)']] as const) win.append(new Option(label, String(h)));
   win.addEventListener('change', () => void runAction('setMissionWindow', { durationH: Number(win.value) }));
   const winField = el('div', 'fp-num');
   winField.append(winLab, win);
+  const delay = numberField('Arrival delay', 'h', { min: 0, max: 720, step: 1, width: '5em' }, (v) => runAction('setDelay', { hours: v }));
+  delay.input.title = 'Explore a late arrival at the same site: the mission window starts this many hours after the arrival date.';
   const mission = el('div', 'fp-pair');
-  mission.append(mast.wrap, winField);
+  mission.append(mast.wrap, winField, delay.wrap);
   panel.append(mission);
 
   // ---- Lighting ----
@@ -190,7 +199,10 @@ export function mountFiltersPanel(region: HTMLElement): void {
   let lastLegendMs = -Infinity;
   const sync = (changed?: ReadonlySet<string>) => {
     const s = store.get();
-    set(date, isoUtc(s.timeMs).slice(0, 16));
+    set(date, isoUtc(s.windowStartMs).slice(0, 16));
+    dateNote.hidden = s.delayH === 0;
+    dateNote.textContent = s.delayH === 0 ? '' : `With the ${s.delayH} h delay the mission window starts ${formatUtc(effectiveStartMs(s))}.`;
+    set(delay.input, String(s.delayH));
     set(lat.input, s.globeCenter.lat.toFixed(2));
     set(lon.input, s.globeCenter.lon.toFixed(2));
     const alt = s.globeCenter.altitudeKm;
@@ -213,13 +225,22 @@ export function mountFiltersPanel(region: HTMLElement): void {
       lastLegendMs = performance.now();
     }
   };
-  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowDurationH', 'lightMode', 'showMissions', 'overlay'], (_s, changed) => sync(changed));
+  // A field is not overwritten while it has the focus (someone may be typing in it); bring it
+  // back in step when the focus leaves.
+  panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
+  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'overlay'], (_s, changed) => sync(changed));
   sync();
 
-  // Narrow screens: the panel is a sheet opened from the "Filters" button.
+  // Narrow screens: the panel is a sheet opened from the "Filters" button (the showPanel action).
+  initPanels();
   const toggle = document.getElementById('left-toggle');
-  toggle?.addEventListener('click', () => {
-    const open = document.body.classList.toggle('left-open');
-    toggle.setAttribute('aria-expanded', String(open));
-  });
+  const syncSheet = () => {
+    const open = isPanelOpen('filters');
+    document.body.classList.toggle('left-open', open);
+    toggle?.setAttribute('aria-expanded', String(open));
+  };
+  toggle?.addEventListener('click', () => void runAction('showPanel', { panel: 'filters', open: !document.body.classList.contains('left-open') }));
+  onPanelChange((which) => which === 'filters' && syncSheet());
+  window.matchMedia('(max-width: 700px)').addEventListener('change', syncSheet);
+  syncSheet();
 }
