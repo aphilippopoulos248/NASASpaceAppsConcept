@@ -1,0 +1,174 @@
+{
+ "what": "SPICE recomputation of every fixture row minus the Horizons value; worst signed difference.",
+ "method": "spkcpo(target, et, 'MOON_ME', 'OBSERVER', 'LT+S', site, 'MOON', 'MOON_ME'), site on the 1737.4 km sphere + altKm; az/el by east/north/up projection; range = light-time * c.",
+ "spiceToolkit": "CSPICE_N0067",
+ "kernels": {
+  "naif0012.tls": "678e32bdb5a744117a467cd9601cd6b373f0e9bc9bbde1371d5eee39600a039b",
+  "pck00011.tpc": "3dff7b1dbeceaa01f25467767d3fa25816051c85d162d1edf04acb310ee28bb1",
+  "moon_pa_de440_200625.bpc": "60cd55aa401ea2ea97360636f567554bfe4e37bb829f901b4460a455dfaf783f",
+  "moon_de440_250416.tf": "a47c71e9c9f33796bdafb2c9d69a7ee447b6016ecad80f71cd6f3e479f9cf768",
+  "de440s.bsp": "c1c7feeab882263fc493a9d5a5b2ddd71b54826cdf65d8d17a76126b260a49f2"
+ },
+ "rows": 1008,
+ "worst": {
+  "sunElDeg": 1.7103239517979318e-06,
+  "sunAzArcDeg": 7.996397742477857e-07,
+  "earthElDeg": -5.087374301271375e-07,
+  "earthAzArcDeg": 5.094284754297473e-07,
+  "sunRangeKm": -0.00699731707572937,
+  "earthRangeKm": -0.003949223610106856
+ },
+ "subPointArcDegByCorrection": {
+  "subEarth": {
+   "LT": 2.574095686025837e-05,
+   "LT+S": 0.005724622142703631,
+   "NONE": 0.005728721221633213
+  },
+  "subSolar": {
+   "LT": 0.005969929486556571,
+   "LT+S": 3.078324659199975e-06,
+   "NONE": 0.005786560909474936
+  }
+ },
+ "perSet": {
+  "blue-ghost-1.surface-2025-03": {
+   "rows": 352,
+   "sunElDeg": -2.3596687270810435e-07,
+   "sunAzArcDeg": -2.9928308828295426e-07,
+   "earthElDeg": -4.6691931032682987e-07,
+   "earthAzArcDeg": 2.344931321010076e-07
+  },
+  "blue-ghost-1.eclipse-2025-03-14": {
+   "rows": 49,
+   "sunElDeg": -2.453238394650725e-07,
+   "sunAzArcDeg": -3.846599033178285e-07,
+   "earthElDeg": -3.063277880244186e-07,
+   "earthAzArcDeg": 8.181715558371762e-08
+  },
+  "im-2.surface-2025-03": {
+   "rows": 247,
+   "sunElDeg": 1.7103239517979318e-06,
+   "sunAzArcDeg": 7.996397742477857e-07,
+   "earthElDeg": 2.4004620513551345e-08,
+   "earthAzArcDeg": -4.185659809378743e-07
+  },
+  "apollo-11.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -1.338436561582057e-08,
+   "sunAzArcDeg": -3.896352179330663e-09,
+   "earthElDeg": -5.030780130255152e-07,
+   "earthAzArcDeg": 1.6037553616154513e-07
+  },
+  "apollo-17.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -8.952589780619746e-09,
+   "sunAzArcDeg": 1.1577860383353609e-08,
+   "earthElDeg": -3.7595339819063156e-07,
+   "earthAzArcDeg": 3.4997531755679914e-07
+  },
+  "blue-ghost-1.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -9.636089259856817e-09,
+   "sunAzArcDeg": 9.686693113403038e-09,
+   "earthElDeg": -4.571328524605178e-07,
+   "earthAzArcDeg": 2.293871217791058e-07
+  },
+  "im-2.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 3.2457680987363347e-09,
+   "sunAzArcDeg": -1.2579425742900255e-08,
+   "earthElDeg": -6.675392860699958e-08,
+   "earthAzArcDeg": -5.064579168321986e-07
+  },
+  "change-4.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 7.093667875324172e-09,
+   "sunAzArcDeg": 1.1475327829543049e-08,
+   "earthElDeg": -6.445823430567543e-08,
+   "earthAzArcDeg": -5.054165242205111e-07
+  },
+  "north-pole.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -3.226761302599357e-09,
+   "sunAzArcDeg": 1.2743756463276013e-08,
+   "earthElDeg": 4.344312243276249e-08,
+   "earthAzArcDeg": 5.094284754297473e-07
+  },
+  "south-pole.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 3.4237208623721926e-09,
+   "sunAzArcDeg": -1.3294613198456774e-08,
+   "earthElDeg": -4.4819953526342715e-08,
+   "earthAzArcDeg": -5.088476875658602e-07
+  },
+  "near-north-pole.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -3.601011711040769e-09,
+   "sunAzArcDeg": 1.2986336500310111e-08,
+   "earthElDeg": -4.243874096587774e-08,
+   "earthAzArcDeg": 5.092566374941183e-07
+  },
+  "near-south-pole.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 3.270640869246222e-09,
+   "sunAzArcDeg": -1.2619274196772017e-08,
+   "earthElDeg": 4.2066933492179714e-08,
+   "earthAzArcDeg": -5.093218457739732e-07
+  },
+  "limb-east.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 1.32775923589179e-08,
+   "sunAzArcDeg": -4.287403020466629e-09,
+   "earthElDeg": -5.087374301271375e-07,
+   "earthAzArcDeg": 4.35110766786411e-08
+  },
+  "limb-west.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": -9.441876613891509e-09,
+   "sunAzArcDeg": 9.272384871942587e-09,
+   "earthElDeg": 3.925128591042437e-07,
+   "earthAzArcDeg": -3.284983855868855e-07
+  },
+  "antimeridian.epochs-1969-2035": {
+   "rows": 30,
+   "sunElDeg": 1.3175068147575075e-08,
+   "sunAzArcDeg": 4.229393307764491e-09,
+   "earthElDeg": -2.669244878461541e-07,
+   "earthAzArcDeg": -5.052033885341138e-07
+  }
+ },
+ "sensitivityArcDeg": {
+  "exact (as above)": {
+   "sun": 1.8880232451214195e-06,
+   "earth": 5.224513658034728e-07
+  },
+  "no stellar aberration or light-time (geometric)": {
+   "sun": 0.005970618704094641,
+   "earth": 0.00020855912007505323
+  },
+  "light-time only, no stellar aberration": {
+   "sun": 0.005970972732033445,
+   "earth": 0.005910733470159957
+  },
+  "UTC used as if it were TDB (TT-UTC ignored)": {
+   "sun": 0.009803119206201192,
+   "earth": 0.001876204717635716
+  },
+  "principal-axis frame MOON_PA instead of MOON_ME": {
+   "sun": 0.028863415739274718,
+   "earth": 0.028991855159370795
+  },
+  "IAU_MOON rotation model instead of MOON_ME": {
+   "sun": 0.0034755181670063917,
+   "earth": 0.003365555453894185
+  },
+  "altitude ignored (site on the sphere)": {
+   "sun": 3.8319234707351055e-06,
+   "earth": 0.0008435262251956554
+  },
+  "direction from the Moon's centre (no parallax)": {
+   "sun": 0.0006790667690485125,
+   "earth": 0.27624488712763484
+  }
+ }
+}

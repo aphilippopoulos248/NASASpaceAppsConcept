@@ -1,0 +1,48 @@
+{
+ "fixture": {
+  "sets": 15,
+  "rows": 1008
+ },
+ "problems": [],
+ "geometry": {
+  "sepVsSOT": -0.00004988382404036429,
+  "sunDiam": -0.0004996266338821442,
+  "earthDiam": 0.0009515053570794407,
+  "sunFromSubSolar": 0.00019195482336672624,
+  "earthFromSubEarth": 0.005935740118488926
+ },
+ "baseline": {
+  "centre": {
+   "rows": 1008,
+   "sunElDeg": 0.003415197675438464,
+   "sunAzArcDeg": -0.0033014352054633904,
+   "earthElDeg": 0.2773002275244725,
+   "earthAzArcDeg": -0.0034983798785666385,
+   "worstAt": {
+    "sunEl": "near-north-pole.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "earthEl": "limb-east.epochs-1969-2035 2024-10-14T22:32:00Z",
+    "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+   }
+  },
+  "withParallax": {
+   "rows": 1008,
+   "sunElDeg": -0.0028938550080295222,
+   "sunAzArcDeg": -0.0033014352054633904,
+   "earthElDeg": -0.0034320327061365674,
+   "earthAzArcDeg": -0.0034983798785666385,
+   "worstAt": {
+    "sunEl": "im-2.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "sunAz": "blue-ghost-1.epochs-1969-2035 1972-12-11T19:54:00Z",
+    "earthEl": "apollo-17.epochs-1969-2035 1974-10-24T06:47:00Z",
+    "earthAz": "apollo-17.epochs-1969-2035 1972-12-11T19:54:00Z"
+   }
+  },
+  "subEarthArcDeg": 0.007762667754492395,
+  "subSolarArcDeg": 0.0032399552371297348,
+  "pass": true
+ },
+ "skyAt": {
+  "implemented": false
+ }
+}

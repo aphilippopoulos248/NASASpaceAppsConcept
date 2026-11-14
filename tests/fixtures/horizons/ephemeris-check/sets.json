@@ -1,0 +1,101 @@
+{
+ "note": "Input for fetch.mjs: which sites and instants the fixture covers. Edit this, then re-run fetch.mjs; never edit data/*.json by hand.",
+ "conventions": {
+  "time": "UTC, as ISO 8601 strings (Horizons TIME_TYPE=UT). For instants after the last announced leap second Horizons holds TAI-UTC constant, as JavaScript Date does.",
+  "site": "lat north-positive and lon east-positive in -180..180, deg, in the Moon Mean Earth / polar axis frame (Horizons MEAN_ME, DE441 lunar orientation); altKm is height above the 1737.4 km reference sphere, so geodetic = planetocentric.",
+  "azimuth": "deg clockwise from local north: N 0, E 90, S 180, W 270.",
+  "elevation": "deg above the plane perpendicular to the local vertical of the 1737.4 km sphere, of the centre of the body. Terrain and horizon dip are not included.",
+  "apparent": "Horizons airless apparent place (APPARENT=AIRLESS): corrected for light-time, stellar aberration and gravitational light bending; no refraction.",
+  "observer": "CENTER=coord@301, COORD_TYPE=GEODETIC, SITE_COORD=lon,lat,altKm: the site itself, so Earth includes its parallax across the Moon (up to 0.26 deg)."
+ },
+ "fields": {
+  "site": "{ id, name, kind: landing|synthetic, lat, lon, altKm, altSource } - one site per file; every row in the file is for this site and this altitude.",
+  "query": "{ sun, earth, moon }, each { url, raw, sha256, retrievedUtc }: the exact Horizons request, the file holding its unmodified reply, that file's SHA-256 and when it was fetched. Every row of the file comes from these three requests.",
+  "rows[].utc": "instant, ISO 8601 UTC (Date.parse reads it exactly).",
+  "rows[].sun.az, rows[].earth.az": "azimuth of the body centre, deg, 0..360 (Horizons quantity 4).",
+  "rows[].sun.el, rows[].earth.el": "elevation of the body centre, deg, negative below the horizontal (quantity 4).",
+  "rows[].sun.angDiamArcsec, rows[].earth.angDiamArcsec": "angular diameter, arcsec (quantity 13) = 2 asin(R / range) with R = 695700 km (Sun) and 6378.137 km (Earth equatorial). Angular radius in deg = value / 7200.",
+  "rows[].sun.rangeKm, rows[].earth.rangeKm": "distance from the site to the body centre, km (quantity 20, light-time corrected).",
+  "rows[].earth.illumPct": "percent of Earth's disc that is sunlit as seen from the site (quantity 10); lit fraction = value / 100.",
+  "rows[].earth.sunElongDeg": "angle between the Sun and Earth centres in the site's sky, deg (quantity 23, S-O-T). With the two angular radii it gives the eclipse geometry.",
+  "rows[].subEarth, rows[].subSolar": "{ lat, lon } deg: the Moon's sub-observer point for an observer at Earth's centre and its sub-solar point (quantities 14 and 15 of target 301 seen from 500@399; lon converted from 0..360 to -180..180). Site-independent. See README: subEarth follows Horizons' light-time-only convention and sits up to 0.006 deg from the direction in which the site rows see Earth."
+ },
+ "tolerance": {
+  "howToCompare": "Elevation: |el - ref.el|. Azimuth: |wrap180(az - ref.az)| * cos(ref.el), the arc on the sky, because raw azimuth is ill-conditioned near the zenith and nadir (the fixture has the Sun at 87.8 deg and Earth at -88.1 deg). Sub-points: great-circle distance.",
+  "topocentricModel": {
+   "elDeg": 0.01,
+   "azArcDeg": 0.01,
+   "appliesTo": "Sun and Earth, every row, for a model evaluated at the site itself"
+  },
+  "moonCentreDirections": {
+   "sunElDeg": 0.01,
+   "sunAzArcDeg": 0.01,
+   "earthElDeg": 0.3,
+   "earthAzArcDeg": 0.3,
+   "appliesTo": "a model that uses the direction from the Moon's centre for every site (the pre-Lunyx src/astro/ephemeris.ts): Earth is then off by up to asin(1743 / 356400) = 0.28 deg, which is the effect this fixture exists to expose"
+  },
+  "angularDiameter": {
+   "relative": 0.002,
+   "note": "Covers the usual choices of radius (Sun 695700 vs 696000 km, Earth equatorial vs mean)."
+  },
+  "range": {
+   "relative": 0.0001,
+   "note": "38 km on the Earth distance. A distance measured from the Moon's centre is off by up to 1743 km (0.45 %) and is meant to fail."
+  },
+  "illumPct": {
+   "absolute": 0.5,
+   "note": "Percentage points. Evaluating Earth's phase from the Moon's centre instead of the site changes it by up to 0.23, which is immaterial here."
+  },
+  "subPoints": {
+   "arcDeg": 0.02,
+   "note": "subEarth carries a 0.006 deg convention offset (light-time only, no stellar aberration); see README."
+  },
+  "rationale": "The reference is exact for this purpose: an offline SPICE recomputation (DE440, Moon ME frame, LT+S) reproduces every row to 0.000002 deg. Measured over all 1008 rows with SPICE (spice-crosscheck.json, sensitivityArcDeg): the IAU lunar rotation series in place of the DE orientation costs 0.0035 deg, which is the floor for an analytic model and exactly what the old ephemeris.ts shows once the site parallax is added; dropping stellar aberration costs 0.006 deg; ignoring TT-UTC 0.0098 deg (Sun); the principal-axis frame in place of Mean Earth 0.029 deg; ignoring the site (Moon-centre directions) 0.28 deg (Earth). 0.01 deg is three times the floor, so a sound model passes with room to spare, and it fails the frame mix-up and the missing parallax outright. It is 1/27 of the Sun's radius (0.27 deg), far below what the 60 m terrain models resolve in a skyline."
+ },
+ "sites": {
+  "apollo-11": {"landing": "apollo-11"},
+  "apollo-17": {"landing": "apollo-17"},
+  "blue-ghost-1": {"landing": "blue-ghost-1"},
+  "im-2": {"landing": "im-2"},
+  "change-4": {"landing": "change-4"},
+  "north-pole": {"name": "North pole (exact)", "lat": 90, "lon": 0, "altKm": 0, "note": "Azimuth at an exact pole is measured from the meridian of the stated longitude (0 E): at the north pole az 0 points along 180 E, az 90 along 90 E."},
+  "south-pole": {"name": "South pole (exact)", "lat": -90, "lon": 0, "altKm": 0, "note": "Azimuth at an exact pole is measured from the meridian of the stated longitude (0 E): at the south pole az 0 points along 0 E, az 90 along 90 E."},
+  "near-north-pole": {"name": "Near north pole (synthetic)", "lat": 89.5, "lon": 120, "altKm": 0},
+  "near-south-pole": {"name": "Near south pole (synthetic)", "lat": -89.5, "lon": -137.3, "altKm": 0},
+  "limb-east": {"name": "East limb, equator (synthetic)", "lat": 0, "lon": 90, "altKm": 0},
+  "limb-west": {"name": "West limb, mid-south (synthetic)", "lat": -35, "lon": -88, "altKm": 0},
+  "antimeridian": {"name": "Antimeridian, equator = anti-Earth point (synthetic)", "lat": 0, "lon": 180, "altKm": 0, "note": "Earth sits within about 8 deg of the nadir here, so its azimuth swings through all values: compare azimuth as an arc (times cos el)."}
+ },
+ "timeLists": {
+  "epochs-1969-2035": {
+   "note": "26 instants t0 + k * (960 d 17 h 15 min), k = 0..25, t0 = Apollo 11 touchdown. The step was searched for so that the 26 samples spread evenly (largest gap 0.07 of a cycle) over the synodic, anomalistic and draconic months, the eclipse year (lunar seasons) and the calendar year, so phase, libration, sub-solar latitude and distance are all exercised. Plus the touchdown instants (public/data/landings.json) of Apollo 17, Chang'e 4, Blue Ghost 1 and IM-2.",
+   "utc": [
+    "1969-07-20T20:17:00Z", "1972-03-07T13:32:00Z", "1972-12-11T19:54:00Z", "1974-10-24T06:47:00Z",
+    "1977-06-11T00:02:00Z", "1980-01-27T17:17:00Z", "1982-09-14T10:32:00Z", "1985-05-02T03:47:00Z",
+    "1987-12-18T21:02:00Z", "1990-08-05T14:17:00Z", "1993-03-23T07:32:00Z", "1995-11-09T00:47:00Z",
+    "1998-06-26T18:02:00Z", "2001-02-11T11:17:00Z", "2003-09-30T04:32:00Z", "2006-05-17T21:47:00Z",
+    "2009-01-02T15:02:00Z", "2011-08-21T08:17:00Z", "2014-04-08T01:32:00Z", "2016-11-23T18:47:00Z",
+    "2019-01-03T02:26:00Z", "2019-07-12T12:02:00Z", "2022-02-27T05:17:00Z", "2024-10-14T22:32:00Z",
+    "2025-03-02T08:34:00Z", "2025-03-06T17:28:00Z", "2027-06-02T15:47:00Z", "2030-01-18T09:02:00Z",
+    "2032-09-05T02:17:00Z", "2035-04-23T19:32:00Z"
+   ]
+  }
+ },
+ "sets": [
+  {"id": "blue-ghost-1.surface-2025-03", "site": "blue-ghost-1", "title": "Blue Ghost Mission 1, hourly from the first full hour after touchdown (2025-03-02T08:34Z) to 2025-03-17T00:00Z: one lunar day at Mare Crisium, through the 14 March eclipse and local sunset.", "range": {"start": "2025-03-02T09:00:00Z", "stop": "2025-03-17T00:00:00Z", "stepMinutes": 60}},
+  {"id": "blue-ghost-1.eclipse-2025-03-14", "site": "blue-ghost-1", "title": "Blue Ghost Mission 1, every 10 minutes across the 14 March 2025 eclipse (Earth passes in front of the Sun as seen from the site).", "range": {"start": "2025-03-14T03:00:00Z", "stop": "2025-03-14T11:00:00Z", "stepMinutes": 10}},
+  {"id": "im-2.surface-2025-03", "site": "im-2", "title": "IM-2 pin, hourly from the first full hour after touchdown (2025-03-06T17:28Z) to 2025-03-17T00:00Z. The window is a sampling choice for a south-polar site (Sun and Earth both graze the horizon), not a statement about how long the lander operated.", "range": {"start": "2025-03-06T18:00:00Z", "stop": "2025-03-17T00:00:00Z", "stepMinutes": 60}},
+  {"id": "apollo-11.epochs-1969-2035", "site": "apollo-11", "list": "epochs-1969-2035", "title": "Apollo 11 pin (near-side, equatorial) at 30 instants 1969-2035; the first is its touchdown."},
+  {"id": "apollo-17.epochs-1969-2035", "site": "apollo-17", "list": "epochs-1969-2035", "title": "Apollo 17 pin (near-side, 20 N) at 30 instants 1969-2035, including its touchdown."},
+  {"id": "blue-ghost-1.epochs-1969-2035", "site": "blue-ghost-1", "list": "epochs-1969-2035", "title": "Blue Ghost 1 pin (62 E) at 30 instants 1969-2035, including its touchdown."},
+  {"id": "im-2.epochs-1969-2035", "site": "im-2", "list": "epochs-1969-2035", "title": "IM-2 pin (85 S) at 30 instants 1969-2035, including its touchdown."},
+  {"id": "change-4.epochs-1969-2035", "site": "change-4", "list": "epochs-1969-2035", "title": "Chang'e 4 pin (far side, 45 S, 177.6 E) at 30 instants 1969-2035, including its touchdown. Earth is always far below the horizon."},
+  {"id": "north-pole.epochs-1969-2035", "site": "north-pole", "list": "epochs-1969-2035", "title": "Exact north pole at 30 instants 1969-2035."},
+  {"id": "south-pole.epochs-1969-2035", "site": "south-pole", "list": "epochs-1969-2035", "title": "Exact south pole at 30 instants 1969-2035."},
+  {"id": "near-north-pole.epochs-1969-2035", "site": "near-north-pole", "list": "epochs-1969-2035", "title": "89.5 N, 120 E at 30 instants 1969-2035."},
+  {"id": "near-south-pole.epochs-1969-2035", "site": "near-south-pole", "list": "epochs-1969-2035", "title": "89.5 S, 137.3 W at 30 instants 1969-2035."},
+  {"id": "limb-east.epochs-1969-2035", "site": "limb-east", "list": "epochs-1969-2035", "title": "East limb (0 N, 90 E) at 30 instants 1969-2035. Earth rides the horizon, so parallax and libration decide whether it is up."},
+  {"id": "limb-west.epochs-1969-2035", "site": "limb-west", "list": "epochs-1969-2035", "title": "West limb (35 S, 88 W) at 30 instants 1969-2035."},
+  {"id": "antimeridian.epochs-1969-2035", "site": "antimeridian", "list": "epochs-1969-2035", "title": "0 N, 180 E (anti-Earth point) at 30 instants 1969-2035."}
+ ]
+}
