@@ -1,0 +1,120 @@
+# T-4 handover: elevation data and terrain sources
+
+Owner: @ice-targets. Code in `src/terrain/`, `server/api/terrain.ts`, `scripts/build-dem.mjs`;
+data in `public/data/dem/` (new) and `public/terrain/` (existing site windows).
+
+All heights are metres above the 1737.4 km sphere (the LOLA datum), Mean Earth / Polar Axis
+frame, east-positive longitude.
+
+## What to call
+
+```ts
+import { loadTerrainFor, loadGlobalGrid, coverageRegions, sourceFromDescriptor, demLayers } from './terrain/api';
+
+const stack = await loadTerrainFor(site);          // { sources: HeightSource[], notes: string[] }
+for (const s of stack.sources) if (s.covers(lat, lon)) { h = s.sample(lat, lon); break; }   // finest first
+
+const relief = await loadGlobalGrid(4);            // 1440 x 720, 1.5 MB download: quick first drawing
+const full = await loadGlobalGrid(16);             // 5760 x 2880, 15.6 MB
+// relief.descriptor: { kind: 'equirect', width, height, data: Int16Array, scale, offset, latN: 90, latS: -90, lonW: -180, lonE: 180 }
+```
+
+- Works in the browser, inside a Web Worker (also one started from a `blob:` URL) and under
+  vitest with no setup (under Node the files are read from `public/`). Decoded grids are cached
+  per realm: call `loadTerrainFor` inside the worker rather than posting 30 MB arrays.
+- `stack.sources` is sorted finest first and always ends with the whole-Moon grid.
+  `stack.notes` are plain sentences meant to be shown next to results: what the data is, how far
+  each layer reaches from the site, and what is missing.
+- Every source has `name`, `resolutionM`, `descriptor` (structured-clonable) and `provenance`
+  (`product`, `url`, `processing`, `citation`).
+- `setTerrainReader(fn)` replaces how files are read; `setTerrainWindowFetcher(fn | null)`
+  replaces or switches off the call to `/api/terrain`; `clearTerrainCache()` for tests.
+- `src/terrain/geo.ts`: `offsetPoint(lat, lon, eastM, northM)` and its inverse `localOffset`
+  (the site windows' own convention, exact at the poles), `surfaceDistanceM`, `polarXY`.
+
+## What a site gets
+
+| Site | Sources, finest first |
+| --- | --- |
+| Catalogued landing (28) | 3 m LROC NAC model to 0.77 km (19 sites only), 60 m window to 3.84 km, 480 m window to 30.72 km, any polar layer in reach, whole Moon |
+| Custom pin, server reachable | 60 m + 480 m window built on request by `/api/terrain` (5 to 10 s the first time, cached after), any polar layer in reach, whole Moon |
+| Custom pin, no server / offline | bundled polar layers if in reach, a neighbouring landing's windows if they cover the pin, whole Moon; `notes` gives the reason |
+| Custom pin within 45 km of the south pole | no server call at all: the bundled 40 m layer covers the whole window and is finer than its 60 m grid |
+
+A polar layer is included when the site is inside its square or within 1500 samples of its edge
+(60 / 120 / 240 km for the 40 / 80 / 160 m layers).
+
+## Bundled products (39.03 MB added to the repository, largest file 15.63 MB)
+
+| File | Source | Resolution | Extent | Size | Not covered |
+| --- | --- | --- | --- | --- | --- |
+| `lola_south_875s_40m.lxg` | LRO LOLA LDEM_875S_20M (PDS product version V2.0, created 2017-06-15) | 40 m; heights in 0.5 m steps | Square of 151.6 km centred on the south pole (polar stereographic). Complete south of 87.51S; towards its corners (longitudes 45, 135, -135 and -45) it reaches 86.5S. | 7.20 MB | Nothing north of the square. Detail finer than 40 m; the source's own 20 m grid is not bundled. |
+| `lola_south_85s_80m.lxg` | LRO LOLA LDEM_85S_40M (PDS product version V2.0, created 2017-06-15) | 80 m; heights in 1 m steps | Square of 303.3 km. Complete south of 85.01S; corners reach 82.9S. | 6.62 MB | Nothing north of the square. Detail finer than 80 m. |
+| `lola_south_80s_160m.lxg` | LRO LOLA LDEM_80S_80M (PDS product version V2.0, created 2017-06-15) | 160 m; heights in 1 m steps | Square of 607.8 km. Complete south of 80.01S; corners reach 75.9S. | 8.11 MB | Nothing north of the square. Detail finer than 160 m. |
+| `lola_global_16ppd.lxg` | LRO LOLA LDEM_16 (PDS product version V3.1, created 2019-03-15) | 16 px/deg = 1895.21 m; heights in 1 m steps | whole Moon | 15.63 MB | Relief narrower than about 1.9 km: sharp ridges and small craters are smoothed. |
+| `lola_global_4ppd.lxg` | LRO LOLA LDEM_4 (PDS product version V3.0, created 2017-09-15) | 4 px/deg = 7580.84 m; heights in 0.5 m steps | whole Moon | 1.47 MB | Anything smaller than about 7.6 km. For drawing, not analysis. |
+
+Source URLs (NASA PDS Geosciences Node, data set LRO-L-LOLA-4-GDR-V1.0):
+
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_20m.img
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_40m.img
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_80m.img
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.img
+- https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_4.img
+
+Processing: the whole-Moon grids are the source samples, only rearranged to start at 180W (and
+the 16 px/deg heights rounded from 0.5 m to 1 m steps, which saves about 2.5 MB: 15.6 MB
+instead of about 18 MB; the resolution itself was not lowered). The polar layers are 2x2 block means of the source grids in the source
+projection; the source grids themselves (20 / 40 / 80 m) are 115 MB each and would not fit.
+`public/data/dem/index.json` repeats all of this per file, with sha256 checksums.
+
+**Not bundled:** no north-polar layer (the north pole has the 1.9 km grid only; the on-request
+windows do work there). North of the 80S square nothing finer than 1.9 km is bundled except the
+28 landing-site windows.
+
+## `/api/terrain`
+
+`GET /api/terrain?lat=<deg>&lon=<deg>` answers with an LXG file holding a 60 m and a 480 m grid
+(129 x 129 each) around the point, built from SLDEM2015 512 ppd (60S to 60N), LOLA LDEM_60x_60M
+and LDEM_80x_20M (polar caps, both poles), with LDEM_45x_100M filling the thin seam at 60
+degrees where the others meet. Same recipe as the bundled windows.
+
+- 400 bad coordinates, 405 not GET, 429 more than 2 builds running and 6 waiting (retry-after),
+  502 archive unreadable, 504 no complete answer within 40 s. Errors are `{ error }` in words.
+- Cache: `scripts/.cache/terrain-api/window_<lat>_<lon>.lxg` (5 decimals; 135 kB each).
+- PDS refuses clients that ask too fast (HTTP 403 for a few seconds after several hundred rapid
+  requests; measured). A window needs 270 to 500 small range reads, so they are paced at 50 per
+  second, 6 at a time, and a refusal is retried after 1, 2 and 4 s.
+
+## Verified
+
+- `npm test`: 74 vitest cases in `src/terrain/` and `server/api/` (73 run, 1 opt-in live test).
+- Whole-Moon grid: its maximum is 10 686 m at 5.406N 158.656W; LOLA's published highest point is
+  10 786 m at 5.4125N 158.6335W (same cell; a 1.9 km cell averages the summit down).
+- South-polar layers: the deepest ground within 20 km of the pole is Shackleton's floor
+  (-2871.5 m at 89.625S 118.68E, inside the IAU outline 89.67S 129.78E, 20.9 km across). The
+  three layers agree with each other to under 5 m RMS and with the whole-Moon grid to under
+  80 m RMS (averaged over 1.9 km cells).
+- Site windows against the whole-Moon grid, 28 sites: correlation 0.93 to 1.00, RMS 2 to 82 m
+  (worst: Apollo 15 at the Apennine front); with east and west swapped the RMS is over ten times
+  larger, so the windows are the right way round. Site heights agree within 111 m (Luna 20).
+- Window builder against a synthetic archive laid out like the PDS files: 0.3 mm (SLDEM2015,
+  float) and 0.25 m (polar grids, the int16 rounding of the source), across tile and band
+  edges, the 0/360 seam, both poles and the product joins; no holes.
+- Live (`LUNYX_LIVE=1 npx vitest run server/api/terrain.test.ts`): Apollo 11, Surveyor 6,
+  Chandrayaan-3 and IM-2 windows rebuilt from PDS are identical to the bundled files, sample
+  for sample (0 m difference), 5 to 8 s each.
+- Headless Chromium: `loadTerrainFor` on the main thread and in a module worker returns the same
+  values as under Node; the 16 px/deg grid loads and decodes in about 0.7 s, the three polar
+  layers in about 1.5 s (localhost). End to end through `server/plugin.ts` from @globe's branch:
+  a custom pin at 89.45S 137.2W got its window in 9.4 s, 1 ms on the second call.
+
+## Honest limits worth showing
+
+- The 480 m windows (bundled and on request) read every 8th source sample (every 23rd of the
+  20 m polar grid) and interpolate; they are not averages. Against the 60 m windows they differ
+  by 2 to 10 m RMS, 82 m at the worst point (IM-2).
+- A NAC model labelled "(5.0 m)" reports `resolutionM: 5` although its grid spacing is 3 m.
+- Beyond the site window (30.7 km) non-polar sites have only the 1.9 km grid: narrow distant
+  ridges read low. `notes` says where that begins for each site.
+- At the poles the equirectangular sampler returns one value (the mean of the last row).

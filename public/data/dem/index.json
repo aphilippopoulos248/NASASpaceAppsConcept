@@ -1,0 +1,141 @@
+{
+ "format": "lunyx-dem-index/1",
+ "datum": "Heights are metres above a sphere of radius 1737.4 km (the LOLA reference), Mean Earth / Polar Axis frame, east-positive longitude.",
+ "fileFormat": "LXG: gzip-compressed header + int16 grid with a lossless predictor; see src/terrain/lxg.ts. Rebuild with: npm run build-dem",
+ "notBundled": [
+  "North polar layers: the north pole is covered by the whole-Moon grid only (1.9 km).",
+  "North of the 80S square nothing finer than the whole-Moon grid is bundled, apart from the windows around the catalogued landing sites (public/terrain/). The elevation server builds 60 m windows for other coordinates on request (needs network access)."
+ ],
+ "totalBytes": 39025447,
+ "layers": [
+  {
+   "id": "south-875s-40m",
+   "file": "lola_south_875s_40m.lxg",
+   "role": "polar",
+   "kind": "polar",
+   "pole": "S",
+   "name": "LOLA south pole, 87.5S square at 40 m",
+   "resolutionM": 40,
+   "halfWidthM": 75820,
+   "latMin": -90,
+   "latMax": -87.51,
+   "footprintNote": "Square of 151.6 km centred on the south pole (polar stereographic). Complete south of 87.51S; towards its corners (longitudes 45, 135, -135 and -45) it reaches 86.5S.",
+   "heightStepM": 0.5,
+   "heightRangeM": [
+    -4378,
+    2370.5
+   ],
+   "provenance": {
+    "product": "LRO LOLA LDEM_875S_20M (PDS product version V2.0, created 2017-06-15)",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_875s_20m.img",
+    "processing": "Each 40 m sample is the mean of 2x2 samples of the 20 m source grid, rounded to 0.5 m (the source stores 0.5 m steps; largest rounding change 0.25 m). Same projection and extent as the source.",
+    "citation": "Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91. Data: LRO LOLA Gridded Data Records (LRO-L-LOLA-4-GDR-V1.0), NASA Planetary Data System, Geosciences Node."
+   },
+   "notCovered": "Nothing north of the square. Detail finer than 40 m; the source's own 20 m grid is not bundled.",
+   "bytes": 7196737,
+   "sha256": "6998238bf299dba3aa289d9b5c4e39ad0462d92d4476bf46db9ad6c2023044de"
+  },
+  {
+   "id": "south-85s-80m",
+   "file": "lola_south_85s_80m.lxg",
+   "role": "polar",
+   "kind": "polar",
+   "pole": "S",
+   "name": "LOLA south pole, 85S square at 80 m",
+   "resolutionM": 80,
+   "halfWidthM": 151640,
+   "latMin": -90,
+   "latMax": -85.01,
+   "footprintNote": "Square of 303.3 km centred on the south pole (polar stereographic). Complete south of 85.01S; towards its corners (longitudes 45, 135, -135 and -45) it reaches 82.9S.",
+   "heightStepM": 1,
+   "heightRangeM": [
+    -5500,
+    7026
+   ],
+   "provenance": {
+    "product": "LRO LOLA LDEM_85S_40M (PDS product version V2.0, created 2017-06-15)",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_85s_40m.img",
+    "processing": "Each 80 m sample is the mean of 2x2 samples of the 40 m source grid, rounded to 1 m (the source stores 0.5 m steps; largest rounding change 0.5 m). Same projection and extent as the source.",
+    "citation": "Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91. Data: LRO LOLA Gridded Data Records (LRO-L-LOLA-4-GDR-V1.0), NASA Planetary Data System, Geosciences Node."
+   },
+   "notCovered": "Nothing north of the square. Detail finer than 80 m; the source's own 40 m grid is not bundled.",
+   "bytes": 6624185,
+   "sha256": "d9694b531b2a8632520eb1f9f8fc407ff46c7a1b8b49d3ae44f1bda2a827ede1"
+  },
+  {
+   "id": "south-80s-160m",
+   "file": "lola_south_80s_160m.lxg",
+   "role": "polar",
+   "kind": "polar",
+   "pole": "S",
+   "name": "LOLA south pole, 80S square at 160 m",
+   "resolutionM": 160,
+   "halfWidthM": 303920,
+   "latMin": -90,
+   "latMax": -80.01,
+   "footprintNote": "Square of 607.8 km centred on the south pole (polar stereographic). Complete south of 80.01S; towards its corners (longitudes 45, 135, -135 and -45) it reaches 75.9S.",
+   "heightStepM": 1,
+   "heightRangeM": [
+    -7294,
+    7025
+   ],
+   "provenance": {
+    "product": "LRO LOLA LDEM_80S_80M (PDS product version V2.0, created 2017-06-15)",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/polar/img/ldem_80s_80m.img",
+    "processing": "Each 160 m sample is the mean of 2x2 samples of the 80 m source grid, rounded to 1 m (the source stores 0.5 m steps; largest rounding change 0.5 m). Same projection and extent as the source.",
+    "citation": "Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91. Data: LRO LOLA Gridded Data Records (LRO-L-LOLA-4-GDR-V1.0), NASA Planetary Data System, Geosciences Node."
+   },
+   "notCovered": "Nothing north of the square. Detail finer than 160 m; the source's own 80 m grid is not bundled.",
+   "bytes": 8105651,
+   "sha256": "06a7244a93730be246e2ae5f74eac246d5c5a625e0e762d456b6fb7c25dc1c68"
+  },
+  {
+   "id": "global-16ppd",
+   "file": "lola_global_16ppd.lxg",
+   "role": "global",
+   "kind": "equirect",
+   "name": "LOLA whole-Moon grid, 16 px/deg",
+   "resolutionM": 1895.21,
+   "latMin": -90,
+   "latMax": 90,
+   "heightStepM": 1,
+   "heightRangeM": [
+    -8981,
+    10686
+   ],
+   "provenance": {
+    "product": "LRO LOLA LDEM_16 (PDS product version V3.1, created 2019-03-15)",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.img",
+    "processing": "Columns rearranged to run from 180W to 180E (the source runs 0E to 360E); heights rounded from the source's 0.5 m steps to 1 m (largest change 0.5 m). No resampling.",
+    "citation": "Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91. Data: LRO LOLA Gridded Data Records (LRO-L-LOLA-4-GDR-V1.0), NASA Planetary Data System, Geosciences Node."
+   },
+   "notCovered": "Relief narrower than about 1.9 km (each sample stands for a 1.9 km cell at the equator): sharp ridges and small craters are smoothed.",
+   "bytes": 15629605,
+   "sha256": "ae3770e6acce291f71fa40c4d0e1d4da1d180fc41263597a8c67d832d65d6377"
+  },
+  {
+   "id": "global-4ppd",
+   "file": "lola_global_4ppd.lxg",
+   "role": "overview",
+   "kind": "equirect",
+   "name": "LOLA whole-Moon overview, 4 px/deg",
+   "resolutionM": 7580.84,
+   "latMin": -90,
+   "latMax": 90,
+   "heightStepM": 0.5,
+   "heightRangeM": [
+    -8878.5,
+    10504
+   ],
+   "provenance": {
+    "product": "LRO LOLA LDEM_4 (PDS product version V3.0, created 2017-09-15)",
+    "url": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_4.img",
+    "processing": "Columns rearranged to run from 180W to 180E (the source runs 0E to 360E); heights kept at the source's 0.5 m steps. No resampling.",
+    "citation": "Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91. Data: LRO LOLA Gridded Data Records (LRO-L-LOLA-4-GDR-V1.0), NASA Planetary Data System, Geosciences Node."
+   },
+   "notCovered": "Anything smaller than about 7.6 km. Meant for drawing the globe quickly, not for analysis.",
+   "bytes": 1469269,
+   "sha256": "887448c7b6662551d90cf56507e01a7aca5f6936a94e7e9a6264c7d5a4f566ac"
+  }
+ ]
+}

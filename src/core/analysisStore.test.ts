@@ -10,9 +10,12 @@ const site = { id: 'apollo-11', name: 'Apollo 11', kind: 'landing' as const, lat
 const fake = (sc: Scenario) => ({ scenario: sc, metrics: { illuminationPct: 50, longestDarknessH: 1, earthVisiblePct: 100, longestEarthGapH: 0 }, slope: { slopeDeg: 2 }, warnings: [] }) as unknown as SiteAnalysis;
 
 describe('analysis store', () => {
-  it('shows "not available yet" (never numbers) while the science core is missing', async () => {
+  it('shows "not available yet" (never numbers) when a science function is not implemented', async () => {
     const store = new Store(initialState(0));
-    const a = new AnalysisStore(store);
+    const a = new AnalysisStore(store, {
+      analyse: () => Promise.reject(new NotImplemented('analyse')),
+      rankNearby: () => Promise.reject(new NotImplemented('rankNearby')),
+    });
     await a.start();
     expect(a.get('current')).toEqual({ state: 'idle' });
     store.set({ site });
@@ -21,6 +24,32 @@ describe('analysis store', () => {
     expect(a.summary('current')).not.toHaveProperty('illuminationPct');
     const n = await a.requestNearby({ radiusM: 5000, spacingM: 500, slopeLimitDeg: 10, weightSun: 1, weightEarth: 1 });
     expect(n).toMatchObject({ state: 'error', notAvailable: true });
+  });
+
+  it('runs the real science core on bundled terrain, with no network', async () => {
+    // Apollo 11, the 24 h after touchdown: lunar morning on the near side, so the Sun and
+    // Earth are both up the whole time. Chang'e 4 is on the far side: Earth is never visible.
+    const store = new Store(initialState(Date.UTC(1969, 6, 20, 20, 17)));
+    const a = new AnalysisStore(store);
+    store.set({ site });
+    await a.refresh();
+    const near = a.get('current');
+    expect(near.state).toBe('ready');
+    if (near.state !== 'ready') return;
+    expect(near.value.metrics.illuminationPct).toBeGreaterThan(99.9);
+    expect(near.value.metrics.earthVisiblePct).toBe(100);
+    expect(near.value.metrics.longestDarknessH).toBe(0);
+    expect(near.value.horizon.layers.length).toBeGreaterThan(1);
+    expect(a.summary('current')).toMatchObject({ state: 'ready', earthVisiblePct: 100 });
+
+    store.set({ site: { id: 'change-4', name: "Chang'e 4", kind: 'landing' as const, lat: -45.4446, lon: 177.5991 }, windowStartMs: Date.UTC(2019, 0, 3, 2, 26) });
+    await a.refresh();
+    const far = a.get('current');
+    expect(far.state).toBe('ready');
+    if (far.state !== 'ready') return;
+    expect(far.value.metrics.earthVisiblePct).toBe(0);
+    expect(far.value.metrics.longestEarthGapH).toBeCloseTo(24, 0);
+    expect(far.value.metrics.earthGapOpenEnded).toBe(true);
   });
 
   it('analyses the current scenario and slots A/B once each, ignoring stale results', async () => {
