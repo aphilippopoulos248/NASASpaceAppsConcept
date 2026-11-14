@@ -2,3 +2,8 @@ node_modules/
 dist/
 scripts/.cache/
 target/
+coverage/
+e2e/artifacts/
+.env
+.env.*
+!.env.example

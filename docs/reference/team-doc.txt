@@ -1,0 +1,115 @@
+﻿Challenge details: https://www.spaceappschallenge.org/2026/challenges/lunar-landing-site-navigator/
+
+
+Your challenge is to create an intuitive tool or application that lets mission planners, educators, and the public compare landing sites and dates quickly, visualizing Sun and Earth positions relative to the horizon to assess power generation potential and direct-to-Earth communication windows. Also want to help mission planners quickly assess whether a site-date combination is viable.
+
+
+
+
+Lunyx is like Google Earth but for the moon, and with the aim of finding lunar landing sites and information about it—most important info being the sun&earth’s azimuth and elevation angles. There will be two main interfaces: the 1) globe view and 2) street level view. There are conceptual designs drawn out below, with the actual screen being what’s in the limits of the grey box. The main pipeline of user interaction would be for them to select a specific coordinate location on the moon, and then to be able to enter the street level view and get all the information about potential landing location itself. In the 3D globe view we want to be able to show the terrain (like not just a 2D map superimposed onto a sphere).
+  
+
+  
+
+
+
+We want to add the following as well to give us additional features to make it more accessible to more skill levels and differentiate from other teams’ dashboards:
+* Make a LLM integrated into the system such that if any questions arise, the user can ask it. It can take control of the system, navigate anywhere the user prompts it to, and shows whatever the user wants or needs. 
+   * Extra: integrate voice recognition as well so that users can talk to the AI and prompt it by dictating rather than typing out.
+   * Enables mission control people to quickly gain numerical data, whilst letting other users with other skill levels also be able to interact and visualise the otherwise complex data
+* Error tolerance for landing. Like if you aim for certain coordinates, giving a range of results if you land in the worse-case place
+   * Feature to suggest better landing spots nearby? I.e. scan a couple km radius around the user-specified landing site (calculate the gradient using LOLA elevation data, then step to a new coordinate & calculate all the useful things) and rank alternatives based on amount of sunlight and Earth contact you could get as a result. Meanwhile also as a restraint, checking that the slope of the better alternative doesn’t exceed XYZ critical angle that would make it unsafe for a lander to land stably.
+* Could make apparent the extreme differences between lunar and terrestrial conditions (i.e. difference from being on the moon vs on earth)---e.g. No atmosphere so literally goes from bright to dark right away without twilight
+* Could show the effect of libration on the path of the earth with time across the lunar sky in streetview. If user uses the hourly slider, streetview updates the Earth&sun positions to where it is supposed to be (as a result Earth would follow over the dotted path showing libration)
+* On streetview: make it look graphically nice by making the sun vs earth sizes to scale (like earth appears ~4 times bigger than the sun if you’re on the moon). Can show the earth phases. 
+  
+
+What we need from the ephemeris data (JPL Horizons & SPICE kernels):
+1. Sun azimuth and elevation—solar panel / power stuff
+   * In addition to displaying solar elevation we should also display clearance above terrain (i.e. sun elevation - terrain horizon at the sun’s azimuth)
+2. Earth azimuth and elevation—communication purposes
+3. Sun’s direction from landing site—good to create crater shadows in streetview
+* JPL Horizons accepts a surface location on the Moon as the observer, so can request azimuth/elevation tables directly for the specific site coordinates—good for finding date-specific Sun-Earth positions for streetview.
+  
+Horizons inputs. We would use the API version of this, not the website itself
+* Pre-computed SPICE kernel datasets are long-term averages. Use for the background heatmap layer (that shows general good areas for landing) and for nearby better-alternative calculations since that requires scanning across a grid of nearby coordinates—more efficient than using Horizons for these tasks.
+  
+fyi this is what azimuth means
+
+
+
+
+From terrain data (LOLA)
+* Elevation grid (DEM) around each site—use higher res DEMs around the south pole since that’s an area of interest, and lower DEMs elsewhere. Used to get 
+   * 2D array of heights
+* Horizon profile given specific site coordinate input—for generating the streetview; can also use Sun direction found from Horizons to create the crater shadows (adds dimension to the graphic)
+
+
+Whole-Moon map for browsing and picking sites: a low-resolution global DEM (a few hundred metres per pixel is tens to hundreds of MB), or simply display existing map tiles from a service like Moon Trek rather than processing the data yourselves.
+South pole region: high resolution (the 5–30 m polar DEMs), because terrain decides everything there.
+Custom coordinates elsewhere: load only the piece of the global DEM within about 100–150 km of the point when the user clicks, and compute the horizon from that
+
+
+
+
+
+
+From the potential considerations page: consider how to handle the Moon's lack of atmosphere when calculating horizon positions. Without atmospheric refraction, the horizon is determined by local terrain and the edge of the lunar sphere as seen from the landing site.
+
+
+
+
+Pipeline
+Choose a site (latitude, longitude, mast height) → load the LOLA DEM → compute the horizon profile with the curvature correction → get Sun and Earth azimuth/elevation over time from SPICE or Horizons, with no refraction → compare against the horizon at each time step → output illumination percentage, longest darkness, Earth visibility, and slope, plus the horizon chart.
+
+
+E.g. horizon chart
+  
+
+
+
+
+
+Transcription: 
+Topography stuff to find the elevation level and I'm guessing the elevation level is relative to like what like a certain radius then you'd add the radius and the elevation level unless that means altitude like I don't know what they mean by altitude over here like given the specific coordinate so you'd get coordinates from Moonray or equivalent so all these are equivalent right and then afterwards and you'd go to Lola look for that exact coordinate and then see the Number that they give you like whether it includes the radius of the moon or not or it's just like a certain point, how are we going to the shadow of the crater like a crater and stuff and then so that you have the three values you have longitude latitude and altitude then you put it into this JPL or equivalent and then you specify the time settings or whatever and then I'll generate you all that data for that specific point and then regarding the shadows and whatever I think that's more related to like the UI like what you see right and I have an idea for this. I think it would be really cool. If in addition to showing like you know how we talked about showing like the Earth like how it can go from the waning crescent to like waxing forgiveness or whatever like I feel like you could do the same or like do like more visualization interesting things, but for example, like taking the position of the sun so like we already get that data from the FMR data you can get like azimuth and the elevation and based off that like what if you could compute the shadows that are created because like the sun is shining and there's like a what if you could add the shadows onto the terrain like you have the terrain map whatever but like without shadows, it looks kind of like just like yeah, but like what if you could use the sun like you know the angle of the sun then you can like do like trigger or something that's a lot of compute the data set for the moon truck already show the shadows for the  it's it shows the shadows. I think those shadows are from the critter that's like the whole point though oh OK you're saying like literally darker spots because of the material I think the area and like oceans or whatever but like that aren't actually filled of water so this is the notes I have take moon trick or equivalent to get latitude longitude for altitude get the elevation data from Lola from the coordinates so you have three values put that into horizon equivalent to get which values were we supposed to the sun and the earths both elevation and azimuth easy five understand the values that needs and then it'll calculate the actual azimuth. You just have to tell it just azimuth it'll get the values from that and then calculate the azimuth itself. What do you mean why doesn't need to copy the azimuth like like the formula it'll calculate the formula and then the formula function or it'll build the formula function and then it'l I think coding is genuinely
+
+
+
+
+Additional secondary priority (work on this after we have the main design functionalities from):
+* WASD on streetview (would require recomputing the batch of data though… find soln)
+* Showing trajectory of older missions (tracking in space from their approach to landing spot)
+
+
+
+
+
+
+DATA & TOOLS:
+Use jev in some capacity for LLM routing?
+1. Lunar Planner by McClure School of Emerging Communication Technologies
+2. Web Based Calculator by NASA: Calculating lunar geometry, trajectories and landing site data
+3. LOLA South Pole Moon Topography Views, 2023
+4. Lunar Season Calculator
+5. LOLA 118 m/p whole moon
+6. https://pds.lroc.im-ldi.com/data/
+
+
+
+
+From the NASA challenge page
+	Our ideas
+	Interactive site selection and comparison
+	Compare two supported sites using the same dates, equipment height, and assumptions. Keep coordinates and data sources visible. Show the difference between sites directly, rather than making users inspect separate charts. Start with documented sites instead of promising reliable calculations for arbitrary coordinates.
+	Date and time flexibility
+	Use one UTC date range and a shared time slider for both sites. Add a landing delay control that keeps the original schedule visible while showing the revised conditions. Limit the first version to a bounded period with precomputed results so comparisons remain responsive.
+	Sun and Earth position visualization
+	Show the Sun and Earth against the local terrain skyline, with observer height and time visible. Clicking a blocked interval should explain the modeled obstruction. Make the visibility definition explicit. Geometric Earth visibility alone should not be presented as proof of a functioning radio link.
+	Highlighting key metrics (e.g. solar elevation angle, duration of sunlight, Earth visibility windows)
+	Show solar elevation, total illumination, longest darkness, and longest Earth visibility gap together. Let users enter a maximum acceptable gap and highlight violations. Keep illumination distinct from electrical power. A battery model is optional and must display its load, capacity, efficiency, and initial charge assumptions.
+	Multiple visualization approaches (2D, 3D)
+	Give each view a purpose: map for location, timeline for intervals, table for comparing durations, and skyline for explaining obstructions. Link their selections. Start with clear 2D views. Add 3D only if it helps users answer a specific question rather than simply looking impressive.
+	Animations / timeline views
+	Use synchronized timelines for both sites, with play, pause, speed control, and jumps to predicted sunrise, sunset, Earthrise, and Earthset. Selecting an interval updates the skyline. Highlight simultaneous Sun and Earth visibility only when the chosen activity actually requires both at once.
+	Accessibility across skill levels
+	Offer a guided mode with explanations and an expert mode with coordinates, assumptions, and downloadable results. Keep the underlying calculations identical. Test whether users can answer the same comparison questions accurately and quickly. These are proposed usability improvements, not established advantages over existing tools.
