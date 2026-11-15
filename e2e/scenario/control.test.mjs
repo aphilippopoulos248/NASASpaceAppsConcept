@@ -18,6 +18,7 @@ import { closeBrowser, lastSeq, openApp, SLOW, TIMEOUT, until } from '../lib/app
 import { servers } from '../lib/servers.mjs';
 
 const EXAMPLES = JSON.parse(readFileSync(new URL('../../src/assistant/deterministic/examples.json', import.meta.url), 'utf8')).examples;
+const INVENTORY = readFileSync(new URL('../../docs/lunyx/actions.md', import.meta.url), 'utf8');
 const SCRIPTED_LABEL = 'Scripted test model (not a language model)';
 const DETERMINISTIC_LABEL = 'Deterministic mode: no language model';
 
@@ -529,10 +530,11 @@ describe('control: what a model is given', () => {
     assert.equal(events.at(-1).type, 'done');
   });
 
-  test('every registered action has a case below and a phrase in examples.json', SLOW, async () => {
+  test('every registered action has a case below, a phrase in examples.json and a row in actions.md', SLOW, async () => {
     const names = await registered(app.page);
     assert.deepEqual(names.filter((n) => !caseNames.has(n)), [], 'actions without a control case in e2e/scenario/control.test.mjs');
     assert.deepEqual(names.filter((n) => !EXAMPLES.some((e) => e.action === n)), [], 'actions without a phrase in src/assistant/deterministic/examples.json');
+    assert.deepEqual(names.filter((n) => !INVENTORY.includes(`\`${n}\``)), [], 'actions missing from the inventory, docs/lunyx/actions.md');
   });
 });
 
