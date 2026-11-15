@@ -440,6 +440,17 @@ Moon's surface in MEAN_ME; observers -14@399, -43@399, -63@399; apparent, airles
 | Elevation of the lunar site at the station (Blue Ghost, IM-2 and a west-limb point; 2025-03-06/07 hourly, 2025-03-13 around the limits, 1971-07-31, 2034-09-10) | 1154 | 0.00115 deg |
 | Azimuth (as arc) | 1154 | 0.00128 deg |
 | Rise and set times through 6.0 and 10.2 / 10.4 deg (2025-03-13, Horizons at 1 min) | 24 crossings | 0.27 s |
+| The same on three other dates (2023-08-23, 2025-03-17, 2031-04-10; Horizons both ways; independent, @ephemeris-check T-34, `tests/fixtures/validation/ephemeris-check/dsn/`) | 84 crossings | 5.3 s |
+
+**Precision of the crossing times: about 5 s, not 0.3 s.** The crossings are refined by
+bisection to 10 s (`EVENT_PRECISION_MS`), so each is within 5 s of where the geometry puts it;
+the 0.27 s of the first check was that day's luck. The independent check confirms it: the
+elevations agree to 0.001 deg (0.3 s at the horizon) while the edges scatter by up to ±5 s with
+both signs, whatever the series step (3.8 s at 1 min, 5.3 s at 10 min). An earlier version of
+`analysis.dsn.assumptions` said "within 0.3 s"; it now says about 5 s. Edges set by the lunar
+terrain (the station going behind the site's skyline) agree within 1.5 min, because the
+station's elevation there changes by only about 0.001 deg per minute. Station coordinates equal
+Horizons' DSN sites within 0.01 m.
 
 The geometry takes UT1 = UTC (they differ by at most 0.9 s, so about a second in rise and set
 times in general) and ignores polar motion and the 1.3 s of light-time; no refraction. The
@@ -623,3 +634,31 @@ usable power; it must not be quoted as confirming the app's sunrise time.
   sites; PGDA's averaging dates (not stated by PGDA); Earth's atmosphere in eclipse timing.
 - The reference is only as good as the bundled elevation data: agreement says the app computes
   correctly from that data, not that a 40 m grid describes a rim crest to the metre.
+
+### 8a. Round 2 (T-34 by @ephemeris-check, integration cc736f8)
+
+`tests/fixtures/validation/ephemeris-check/T-34-handover.md` (commit a9bc640). Round 2 is being
+finished by Lunyx Science (@validation), which also re-runs the observer-on-the-ground skylines
+against T-31's change.
+
+- *Seasonal outlook* (section 7; IM-2 and the Shackleton rim pin, 12 lunar days from
+  2027-01-01, 2 m): rows within 0.11 points of SPICE against their own skyline, except row 9 at
+  the rim pin (2027-08-25, +0.57 any-Sun points). With the app's own skyline and SPICE the row
+  gives 21.40 % against the app's 21.41 %, so the excess is the cc736f8 skyline, up to 0.05 deg
+  low at that pin. The skyline of section 3a is within 0.004 deg of their reference there; the
+  row has not been re-run on it. Arrival scores within 0.15 and 0.20 points (4253 arrivals 2 h
+  apart); best and worst arrival at the same instants, except a flat minimum at IM-2 (app
+  2027-12-20 06:00, 31.79; theirs 8 h earlier, 31.80). Longest darkness of the year: IM-2
+  411.7 h both; rim pin 4213.3 against 4213.5 h. The in-app model over the year: Sun within
+  0.0038 deg and Earth within 0.0030 deg of SPICE.
+- *Darkness and Earth gap in full* (section 7, `metrics.longestDarknessFull`): five windows,
+  every end found by both, ends within 3.1 min (IM-2 night 379.78 h against 379.79 h).
+- *DSN geometry* (section 6): as above, crossing times within 5.3 s, now stated as about 5 s.
+- *Slope*: recomputed from the files with the app's stated measure, identical to 0.0000 deg at
+  all 28 sites and at the ten best-ranked scan candidates at IM-2. Against published landing
+  tilts the baseline decides: Surveyor 3 "came to rest on a 14 degree slope" (NSSDC 1967-035A),
+  app 12.5 deg over 10 m on the 3 m model, 3.7 deg over 120 m on the 60 m window; Apollo 14 "settled
+  on a seven-degree slope", 7.2 deg and 1.3 deg. Only the 10 m measure on a 3 m model is close
+  to what a lander stands on; sites without a 3 m model, and every nearby candidate, get the
+  120 m measure, which cannot see lander-scale slope (the slope basis sentence of every result
+  names the baseline and the grid).
