@@ -713,7 +713,7 @@ was run on.
   ground at the observer's feet, the app and the reference count the same number of such
   azimuths at all six sites where that happens. `science-validation/skyline-masts/results.txt`.
   Apollo 15, left out of the 2 m test while the T-32 easing changed its ground, is back in
-  `src/analysis/horizon.test.ts` now that the easing is off by default (lunyx-science D-12, which replaced D-10):
+  `src/analysis/horizon.test.ts` now that the easing is off by default (lunyx-science D-13, which replaced D-10 and D-12):
   worst 0.0038 deg.
 - *Both ends of every rise and set* (section 4; build 9bc4878 of lunyx-science): 141 instants in
   48 passages of the Sun and Earth (first cut, centre, last limb; first limb, centre, whole disc
@@ -753,6 +753,6 @@ was run on.
   (60 m window) and last limb 19:30:03 / 19:33:31 UTC, 3.5-3.7 min apart; at the current pin
   (18.5622 N, 61.8102 E) 18:24:16 / 18:30:27 and 19:30:50 / 19:38:22 UTC, 6.2-7.5 min apart. So the
   products put this sunset 3.5 to 7.5 min apart, depending on where within 8 m the lander stood.
-  The app stands on the 3 m model, as stored (lunyx-science D-12). IM-2 and Chandrayaan-3 were not
+  The app stands on the 3 m model, as stored (lunyx-science D-13). IM-2 and Chandrayaan-3 were not
   recomputed at their new pins. `science-validation/blue-ghost-products/results.txt` and
   `new-pin.txt`.
