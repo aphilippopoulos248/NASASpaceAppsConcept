@@ -52,10 +52,91 @@ async function defaultReader(path: string): Promise<ArrayBuffer> {
     const node = await import('./nodeReader');
     return node.readPublicFile(path);
   }
-  const res = await fetch(siteUrl(path));
-  if (res.status === 404) throw new TerrainFileMissing(path, 'HTTP 404');
-  if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
-  // A dev server may answer an unknown path with the app's HTML page instead of a 404.
-  if ((res.headers.get('content-type') ?? '').includes('text/html')) throw new TerrainFileMissing(path, 'server returned a web page');
-  return res.arrayBuffer();
+  const locks = (globalThis as { navigator?: { locks?: LockLike } }).navigator?.locks ?? null;
+  return fetchTerrainBytes(path, siteUrl(path), {
+    fetch: (url, init) => fetch(url, init),
+    sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+    locks,
+  });
+}
+
+// ---------------------------------------------------------------- downloading in the browser
+//
+// The page and the analysis worker are separate JavaScript realms. Each keeps its own cache
+// of decoded grids, so opening a site used to start the same download (the 15.6 MB whole-Moon
+// grid, the south-polar layers) two or three times at once. With several 15 MB writes of one
+// entry under way, Chromium sometimes failed one of them with ERR_CACHE_WRITE_FAILURE, and
+// that grid was then missing (coarser relief, a coarser elevation in the site card).
+// Two measures:
+// - One download of a file at a time across the page and its workers (the Web Locks API).
+//   The second asker waits, then normally gets the file from the browser's HTTP cache.
+// - A failed download is tried again, twice, after a pause, past the HTTP cache.
+
+/** The part of the Web Locks API used here (navigator.locks, in pages and workers). */
+export interface LockLike {
+  request<T>(name: string, options: { signal?: AbortSignal }, callback: () => Promise<T>): Promise<T>;
+}
+
+export interface FetchDeps {
+  fetch: (url: string, init?: RequestInit) => Promise<Response>;
+  sleep: (ms: number) => Promise<void>;
+  /** null where the platform has no Web Locks (non-secure pages, old browsers): no waiting then. */
+  locks: LockLike | null;
+}
+
+/** Pauses before the second and third try. */
+export const RETRY_DELAYS_MS = [500, 2000] as const;
+/** Longest wait for another page's or worker's download of the same file before going ahead alone. */
+export const LOCK_WAIT_MS = 120_000;
+
+/** A failure worth trying again: the network or the server, not a missing file. */
+class Retryable extends Error {}
+
+/** Downloads one terrain file: one download of it at a time across realms, three tries. */
+export async function fetchTerrainBytes(path: string, url: string, deps: FetchDeps): Promise<ArrayBuffer> {
+  const once = async (bypassCache: boolean): Promise<ArrayBuffer> => {
+    let res: Response;
+    try {
+      res = await deps.fetch(url, bypassCache ? { cache: 'no-store' } : undefined);
+    } catch (e) {
+      throw new Retryable(e instanceof Error ? e.message : String(e));
+    }
+    if (res.status === 404) throw new TerrainFileMissing(path, 'HTTP 404');
+    if (res.status >= 500 || res.status === 408 || res.status === 429) throw new Retryable(`HTTP ${res.status}`);
+    if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
+    // A dev server may answer an unknown path with the app's HTML page instead of a 404.
+    if ((res.headers.get('content-type') ?? '').includes('text/html')) throw new TerrainFileMissing(path, 'server returned a web page');
+    try {
+      return await res.arrayBuffer();
+    } catch (e) {
+      // The body can fail half way (the cache-write failure shows up here too).
+      throw new Retryable(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const withRetries = async (): Promise<ArrayBuffer> => {
+    let last = '';
+    for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+      if (attempt > 0) await deps.sleep(RETRY_DELAYS_MS[attempt - 1]);
+      try {
+        // Later tries go past the HTTP cache: the failures seen were the browser failing to write it.
+        return await once(attempt > 0);
+      } catch (e) {
+        if (!(e instanceof Retryable)) throw e;
+        last = e.message;
+      }
+    }
+    throw new Error(`${path}: ${last} (tried ${RETRY_DELAYS_MS.length + 1} times)`);
+  };
+  if (!deps.locks) return withRetries();
+  let started = false;
+  try {
+    return await deps.locks.request(`lunyx-terrain ${path}`, { signal: AbortSignal.timeout(LOCK_WAIT_MS) }, () => {
+      started = true;
+      return withRetries();
+    });
+  } catch (e) {
+    // Waited too long for someone else's download of this file, or locks are refused here: go ahead alone.
+    if (!started) return withRetries();
+    throw e;
+  }
 }

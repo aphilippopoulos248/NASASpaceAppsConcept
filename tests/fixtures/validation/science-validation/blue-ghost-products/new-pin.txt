@@ -1,0 +1,11 @@
+Blue Ghost Mission 1, 16 March 2025 UTC, observer 2 m up: first cut / last limb at the catalogue pin before and after T-38
+(check9b_bg_new_pin.py; run 2026-11-15 under the CPU lock; elevation files as on af1b499 and 7cf48f5, identical)
+
+old pin (validated)      3 m model / stored stack   ground -3651.16 m  first cut 18:23:40  last limb 19:30:03
+old pin (validated)      60 m window alone          ground -3652.27 m  first cut 18:27:22  last limb 19:33:31
+new pin (T-38, 7cf48f5)  3 m model / stored stack   ground -3651.05 m  first cut 18:24:16  last limb 19:30:50
+new pin (T-38, 7cf48f5)  60 m window alone          ground -3651.91 m  first cut 18:30:27  last limb 19:38:22
+
+At the new pin (8.4 m from the old one) the stored stack's times move by +36 s and +47 s; the 60 m window's by +3.1 and +4.9 min.
+The spread between the two products at the new pin: 6.2 min (first cut) and 7.5 min (last limb); at the old pin it was 3.7 / 3.5 min.
+The 60 m product is the one that moves: its ground at the observer is interpolated across a 60 m cell (0.36 m higher at the new pin).

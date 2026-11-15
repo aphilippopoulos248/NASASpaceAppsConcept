@@ -5,6 +5,7 @@
 // All behaviour lives in src/assistant/: this file is the view. The assistant acts only
 // through the action registry (`toolDefinitions()` / `runAction`), like every other control.
 import { DeterministicEngine } from '../../assistant/deterministic/engine';
+import { accuracyNote, isLanguageModel, replyLabel } from '../../assistant/labels';
 import { DETERMINISTIC_LABEL } from '../../assistant/protocol';
 import { AssistantSession, type ChatMessage } from '../../assistant/session';
 import { httpTransport } from '../../assistant/transport';
@@ -187,6 +188,10 @@ export function mountAssistantDrawer(region: HTMLElement): void {
   stop.hidden = true;
   const voiceNote = el('p', 'ly-note ad-voice-note');
   voiceNote.setAttribute('role', 'status');
+  // Always on screen, under the message box (NASA's guidelines for AI applications: where the
+  // answers come from, and that NASA is not responsible for their accuracy). See labels.ts.
+  const disclaimer = el('p', 'ly-note ad-disclaimer');
+  disclaimer.id = 'assistant-disclaimer';
 
   const grow = () => {
     input.style.height = 'auto';
@@ -230,7 +235,7 @@ export function mountAssistantDrawer(region: HTMLElement): void {
   mic.hidden = !dictation;
 
   row.append(mic, hint, stop, send);
-  form.append(label, input, row, voiceNote);
+  form.append(label, input, row, voiceNote, disclaimer);
 
   const submit = () => {
     const text = input.value.trim();
@@ -300,11 +305,12 @@ export function mountAssistantDrawer(region: HTMLElement): void {
       if (v.text.textContent !== m.text) v.text.textContent = m.text;
       v.text.hidden = !m.text;
       if (m.role !== 'assistant') continue;
-      // Every reply says who wrote it: the model by name, or deterministic mode.
-      const who = m.source?.kind === 'deterministic' ? DETERMINISTIC_LABEL : m.source?.kind === 'model' ? m.source.label : '';
+      // Every reply says who wrote it: "AI-generated · <model>", deterministic mode, or the scripted test model.
+      const who = replyLabel(m.source);
       if (v.source.textContent !== who) v.source.textContent = who;
       v.source.hidden = !who;
       v.root.classList.toggle('is-deterministic', m.source?.kind === 'deterministic');
+      v.root.classList.toggle('is-ai-generated', m.source?.kind === 'model' && isLanguageModel(m.source));
       v.root.classList.toggle('is-failed', Boolean(m.failed));
       for (; v.shownActions < m.actions.length; v.shownActions++) v.actions.append(actionItem(m.actions[v.shownActions]));
       v.actions.hidden = m.actions.length === 0;
@@ -317,6 +323,8 @@ export function mountAssistantDrawer(region: HTMLElement): void {
     fresh.disabled = s.messages.length === 0;
 
     const status = s.mode;
+    const note = accuracyNote(status.kind === 'model' ? status.model : null);
+    if (disclaimer.textContent !== note) disclaimer.textContent = note;
     mode.className = `ad-mode ad-mode--${status.kind}`;
     if (status.kind === 'model') {
       mode.textContent = `Language model: ${status.model.label}`;

@@ -6,7 +6,9 @@
 > against LRO LOLA laser altimetry, the stored 3 m models are closer to the ground at their
 > edges than the eased ones, and the step is the 60 m window's error; at Blue Ghost the eased
 > sunset is at least about 9 minutes late, outside the two products' own spread (3.5 to 3.7
-> minutes, @validation). Evidence, figures and the decision:
+> minutes at the catalogue pin before original T-38, 6.2 to 7.5 at the current one; @validation,
+> lunyx-science decision D-12, which replaced D-10). The Blue Ghost figures in this handover are for
+> that earlier pin (18.562 N, 61.81 E). Evidence, figures and the decision:
 > `docs/lunyx/handover/T-32-verification.md`. Below, read "now returns" and "in the stack now"
 > as "with easeEdges: true". The seam measurement (`stack.seams`, the notes, `storedGrid`,
 > `scripts/terrain-seams.mjs`) is in use either way.
@@ -117,7 +119,8 @@ sunrise and sunset (last limb) in the 30 days after each landing:
 Sites without a 3 m model do not change at all: their stacks are the stored grids, the same
 objects as before.
 
-**Blue Ghost, 16 March 2025** is the one event that moves by more than a minute. Due west of
+**Blue Ghost, 16 March 2025** (at the catalogue pin before original T-38, 18.562 N, 61.81 E) is the
+one event that moves by more than a minute. Due west of
 the lander the model's edge stood 1.6 m above the 60 m window and formed the skyline (0.594 deg
 at 768 m, azimuth 270). Eased, the skyline there is the 60 m window's ground just beyond the
 edge (0.492 deg at 839 m).
