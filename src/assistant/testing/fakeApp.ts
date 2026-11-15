@@ -124,10 +124,20 @@ export interface FakeAppOptions {
   catalogActions?: boolean;
   /** The compare panel: openCompare, compareDelayedArrival, compareMastHeights, swap/clear/save/load/delete/listComparisons; rankNearby then opens its "nearby" tab. */
   comparePanel?: boolean;
+  /** Event results name their instant (decision D-8): jumpToEvent gives `label` and `instant`, getAnalysis gives a `label` per event and `eventDefinitions`. */
+  eventLabels?: boolean;
 }
 
+/** As src/core/skyEvents.ts EVENT_INFO. */
+export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
+  sunrise: { label: 'Sun starts rising', instant: "the first part of the Sun's disc appears above the terrain skyline" },
+  sunset: { label: 'Sun fully set', instant: "the last part of the Sun's disc goes behind the terrain skyline" },
+  earthrise: { label: "Earth's centre rises", instant: "the centre of Earth's disc comes above the terrain skyline" },
+  earthset: { label: "Earth's centre sets", instant: "the centre of Earth's disc goes behind the terrain skyline" },
+};
+
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -354,7 +364,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         if (!hit) throw new ActionError(`No ${which} ${type} inside the analysed mission window.`);
         state.playing = false;
         state.timeMs = hit.timeMs;
-        return { event: type, timeUtc: isoUtc(hit.timeMs), azDeg: hit.azDeg };
+        return { event: type, ...(options.eventLabels && EVENT_INFO[type]), timeUtc: isoUtc(hit.timeMs), azDeg: hit.azDeg };
       },
     }),
     defineAction({
@@ -430,7 +440,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           if (!state.site) return { slot, state: 'idle', error: 'No site is selected. Select a landing site or drop a pin first.' };
           const next = (type: string) => {
             const e = EVENTS.find((x) => x.type === type && x.timeMs > state.timeMs + 30_000);
-            return e ? { timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg, inHours: (e.timeMs - state.timeMs) / 3_600_000 } : null;
+            return e ? { ...(options.eventLabels && { label: EVENT_INFO[type].label }), timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg, inHours: (e.timeMs - state.timeMs) / 3_600_000 } : null;
           };
           const m = currentMetrics();
           const terrain = { distanceKm: 4.2, heightM: 1385, latDeg: -84.66, lonDegEast: 28.9, demName: 'LOLA 60 m polar grid', demResolutionM: 60 };
@@ -444,6 +454,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
               earth: { azDeg: 351.0, elDeg: 5.6, skylineElDeg: 6.4, clearanceDeg: -0.8, centreAboveSkyline: false, skylineTerrain: terrain, explanation: 'Earth is hidden by terrain 4.20 km away towards azimuth 351.0°: the skyline there is at 6.40° and the centre of the disc at 5.60°.' },
             },
             nextEvents: { sunrise: next('sunrise'), sunset: next('sunset'), earthrise: next('earthrise'), earthset: next('earthset') },
+            ...(options.eventLabels && { eventDefinitions: Object.fromEntries(Object.entries(EVENT_INFO).map(([k, v]) => [k, `${v.label}: ${v.instant}.`])) }),
             requirements: {
               sunElevationBand: { minDeg: state.sunBand.min, maxDeg: state.sunBand.max, windowMinSunElDeg: -1.2, windowMaxSunElDeg: 4.6, metForWholeWindow: state.sunBand.min <= -1.2 && state.sunBand.max >= 4.6 },
               maxEarthGap: state.maxEarthGapH === null ? null : { limitH: state.maxEarthGapH, longestEarthGapH: m.longestEarthGapH, met: m.longestEarthGapH <= state.maxEarthGapH },

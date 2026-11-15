@@ -125,7 +125,7 @@ function findText(k: Known): string {
   if (!pick) return `None of the ${candidates.length} best-ranked alternatives is both flatter and darker for less time than this pin (slope ${v(reference.slopeDeg, '°')}, longest darkness ${v(reference.longestDarknessH, ' h')}).${basis}`;
   return (
     `Candidate ${v(pick.rank)} (${v(pick.name)}), ${v(pick.distanceM, ' m')} away at bearing ${v(pick.bearingDeg, '°')}, is flatter and has a shorter blackout: slope ${v(pick.slopeDeg, '°')} against ${v(reference.slopeDeg, '°')} here, longest darkness ${v(pick.longestDarknessH, ' h')} against ${v(reference.longestDarknessH, ' h')}; ` +
-    `sunlight ${v(pick.illuminationPct, ' %')} against ${v(reference.illuminationPct, ' %')}, Earth in view ${v(pick.earthVisiblePct, ' %')} against ${v(reference.earthVisiblePct, ' %')}.${basis}`
+    `sunlight ${v(pick.illuminationPct, ' %')} against ${v(reference.illuminationPct, ' %')}, Earth's centre in view ${v(pick.earthVisiblePct, ' %')} against ${v(reference.earthVisiblePct, ' %')}.${basis}`
   );
 }
 
@@ -133,11 +133,11 @@ function compareText(k: Known): string {
   const c = k.get('compare');
   if (!isObject(c)) return 'The comparison did not return.';
   const d = isObject(c.diff) ? c.diff : null;
-  const side = (x: unknown) => (isObject(x) ? `sunlight ${v(x.illuminationPct, ' %')}, longest darkness ${v(x.longestDarknessH, ' h')}, Earth in view ${v(x.earthVisiblePct, ' %')}, longest Earth gap ${v(x.longestEarthGapH, ' h')}, slope ${v(x.slopeDeg, '°')}` : 'unavailable');
+  const side = (x: unknown) => (isObject(x) ? `sunlight ${v(x.illuminationPct, ' %')}, longest darkness ${v(x.longestDarknessH, ' h')}, Earth's centre in view ${v(x.earthVisiblePct, ' %')}, longest Earth-centre gap ${v(x.longestEarthGapH, ' h')}, slope ${v(x.slopeDeg, '°')}` : 'unavailable');
   const sa = isObject(c.scenarioA) ? c.scenarioA : {};
   return [
     `Compared over the same mission window (${v(sa.startUtc)}, ${v(sa.durationH, ' h')}): A = ${v(c.A)}: ${side(c.analysisA)}; B = ${v(c.B)}: ${side(c.analysisB)}.`,
-    d ? `B minus A: sunlight ${v(d.illuminationPct, ' points')}, longest darkness ${v(d.longestDarknessH, ' h')}, Earth in view ${v(d.earthVisiblePct, ' points')}, longest Earth gap ${v(d.longestEarthGapH, ' h')}, slope ${v(d.slopeDeg, '°')}.` : `No difference could be computed: ${v(c.error)}`,
+    d ? `B minus A: sunlight ${v(d.illuminationPct, ' points')}, longest darkness ${v(d.longestDarknessH, ' h')}, Earth's centre in view ${v(d.earthVisiblePct, ' points')}, longest Earth-centre gap ${v(d.longestEarthGapH, ' h')}, slope ${v(d.slopeDeg, '°')}.` : `No difference could be computed: ${v(c.error)}`,
   ].join(' ');
 }
 
@@ -149,7 +149,7 @@ function ridgeText(k: Known): string {
   const when = isObject(j) ? `${v(j.timeUtc)}${typeof j.label === 'string' ? ` (${j.label}${typeof j.instant === 'string' ? `: ${j.instant}` : ''})` : ''}` : 'unavailable';
   return (
     `Earthset is at ${when}. There the skyline is formed by terrain ${v(b.distanceM, ' m')} away, ${v(b.heightM, ' m')} above the reference sphere (${v(b.demName)}, ${v(b.demResolutionM, ' m')}); Earth's centre is at ${v(b.elDeg, '°')} elevation against a skyline of ${v(b.skylineElDeg, '°')} (clearance ${v(b.clearanceDeg, '°')}). ` +
-    `The surface view faces azimuth ${v(at?.azDeg, '°')}. Earth visibility is geometric line of sight, not a radio link.`
+    `The surface view faces azimuth ${v(at?.azDeg, '°')}. Earth figures are geometric line of sight to Earth's centre, not a radio link.`
   );
 }
 

@@ -14,7 +14,7 @@ export type Intent = (step: string, raw: string) => Plan | null;
 
 export const plan = (does: string, run: Plan['run']): Plan => ({ does, run });
 
-export const EARTH_NOTE = 'Earth visibility is geometric line of sight over the terrain, not a guarantee of a working radio link.';
+export const EARTH_NOTE = "Earth figures are geometric line of sight to Earth's centre over the terrain, not a guarantee of a working radio link.";
 
 /** "IM-2 Athena (latitude -84.7900°, longitude 29.2000° (east-positive), landed 2025-03-06 17:28 UTC)". */
 export function siteText(site: unknown): string {

@@ -147,7 +147,7 @@ function averagesText(a: unknown): string {
   if (!sun && !earth) return `Long-term averages: ${str(a, 'sunlight.text') ?? 'no published average map covers this site (polar regions only).'}`;
   const lines = [`Long-term averages at the site (${str(a, 'kind') ?? 'a multi-year average, not the geometry of your mission window'}):`];
   lines.push(`- any sunlight: ${sun ?? 'not mapped here'}`);
-  lines.push(`- any of Earth in view: ${earth ?? 'not mapped here'}`);
+  lines.push(`- any part of Earth's disc in view: ${earth ?? 'not mapped here'}`);
   if (str(a, 'citation')) lines.push(`Source: ${str(a, 'citation')}`);
   return lines.join('\n');
 }

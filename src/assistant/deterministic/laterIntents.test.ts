@@ -169,7 +169,7 @@ describe('deterministic mode: the surface view', () => {
     const r = await e.reply('face the earth');
     expect(names().slice(1)).toEqual(['getState', 'enterSurface', 'lookAtBody', 'getAnalysis']);
     expect(state).toMatchObject({ view: 'surface', look: { azDeg: 351, elDeg: 5.6 } });
-    expect(r.text).toContain('Facing Earth: azimuth 351.0°, elevation 5.6°, 0.80° below the terrain skyline.');
+    expect(r.text).toContain('Facing Earth: azimuth 351.0°, elevation 5.6°, its centre 0.80° below the terrain skyline.');
     expect(r.text).toContain('not a guarantee of a working radio link');
   });
 
@@ -334,6 +334,33 @@ describe('deterministic mode: the catalogue and the compare panel', () => {
     const r = await e.reply('show the nearby sites tab');
     expect(state.panelTab).toBe('nearby');
     expect(r.text).toContain('The compare panel is open on its "Nearby sites" tab.');
+  });
+});
+
+describe('deterministic mode: rise and set times name their instant (D-8)', () => {
+  beforeEach(() => {
+    installFakeApp(ALL_ACTIONS);
+  });
+
+  it('puts the label before the time and the instant after it, from the results', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    const jump = await e.reply('jump to next sunset');
+    expect(jump.text).toContain("Moved the clock to the next sunset: Sun fully set 2026-03-02 08:00 UTC (the last part of the Sun's disc goes behind the terrain skyline), at azimuth 268.9°.");
+    await e.reply('set time to 2026-03-01 12:00');
+    const when = await e.reply('when is the next earthset?');
+    expect(when.text).toContain("The next Earthset: Earth's centre sets 2026-03-01 21:00 UTC (the centre of Earth's disc goes behind the terrain skyline), azimuth 348.4°");
+    const ridge = await e.reply('show me the ridge at earthset');
+    expect(ridge.text).toContain("Moved the clock to the next Earthset: Earth's centre sets 2026-03-01 21:00 UTC (the centre of Earth's disc goes behind the terrain skyline).");
+  });
+
+  it('never quotes a bare "sunset HH:MM"', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    for (const say of ['jump to next sunset', 'when is the next sunrise?', 'jump to previous sunrise']) {
+      const r = await e.reply(say);
+      expect(r.text).not.toMatch(/\b(sunset|sunrise|earthset|earthrise)(:| at| is at)? \d{4}-\d{2}-\d{2} \d{2}:\d{2}/i);
+    }
   });
 });
 
