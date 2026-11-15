@@ -182,8 +182,9 @@ A gap is something a user can do or read that no action covers, or data neither 
 | Path | What ran | Result |
 | --- | --- | --- |
 | **Real language model** | nothing: there is no API key on the build machine. The command is `e2e/scenario/real-model.mjs` (see `e2e/scenario/README.md`) | **not verified** |
-| Scripted test model (not a language model) | every action through the real `/api/assistant` route with its result and the screen checked (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | see the task results of T-1 and T-6 for counts and commits |
-| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`) | as above |
+| Scripted test model (not a language model) | every one of the 61 actions through the real `/api/assistant` route, its result and the control that shows it checked (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | GPU runs at b3550d1: control 63/63, scenario 4/4; assistant 5/5 at the 1a3c37f build |
+| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`) | control 62/62, scenario 7/7 at b3550d1; assistant 10/10 at the 1a3c37f build; vitest src/assistant and server/llm all pass |
+| UI and actions (no assistant) | `e2e/equivalence.test.mjs`: the real control used, its action logged with origin "ui", the same end state from the action alone | 25/25 cases at 89f6d31 (GPU) |
 
 How well a real model chooses and chains these actions is unknown until the real-model run
 has been done; only the plumbing it would use is tested.
