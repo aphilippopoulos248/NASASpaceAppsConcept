@@ -249,20 +249,17 @@ A gap is something a user can do or read that no action covers, or data neither 
 
 ## 5. How each path has been verified
 
-Browser runs on the GPU under the GPU lock (D-7; ANGLE, NVIDIA GTX 1050 Ti), 1280x720, on the
-build of 903b390, 2026-11-15 05:24 to 05:40 UTC. The four files ran once together
-(`/tmp/lunyx-assistant-t1b4b`: 186 of 192 pass). Five checks failed there, all in the tests
-themselves: a new case left Blue Ghost selected for two later cases; result times are to the
-minute; the card now names candidates (F-6) and has "Earth's centre in view" and "Any part of
-Earth in view" rows (T-47). After those fixes, assistant, equivalence and control ran again
-(`/tmp/lunyx-assistant-t1b4c`: 180 pass, 0 fail, 1 todo).
+Browser runs on the GPU under the GPU lock (D-7; ANGLE, NVIDIA GTX 1050 Ti), 1280x720, on a
+git-archive copy of 9231190 (this branch on the T-64 candidate c39c516), 2026-11-15 10:04 to
+10:08 UTC, log `/tmp/lunyx-t17-final-9231190/run.log`: 208 tests, 207 pass, 0 fail, and the F-9
+check (marked todo) passed.
 
 | Path | What ran | Result |
 | --- | --- | --- |
-| **Real language model** | nothing: there is no API key on the build machine. The command is `e2e/scenario/real-model.mjs` (see `e2e/scenario/README.md`) | **not verified** |
-| Scripted test model (not a language model) | every one of the 64 actions through the real `/api/assistant` route, its result and the control that shows it checked, and the tool list a model receives (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | control 69/69 (the 64 actions, "after a scan, compare shows the A/B tab", no page errors; and what a model is given: the renderer, the tool list through the route, every action with a case, a phrase and a row here), scenario 4/4, assistant 5/5 |
-| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`); both ends of a sunset, Earth by its centre and by any part of its disc, the default solar band, the card's owner and explored area and the real clock on the real build (`assistant.test.mjs`) | control 65/65 (the 64 phrases, no page errors), scenario 7/7, assistant 12/12; vitest `src/assistant`, `server/llm`, `src/core`: 365/365 (29 files) |
-| UI and actions (no assistant) | `e2e/equivalence.test.mjs`: the real control used, its action logged with origin "ui", the same end state from the action alone; new: the scrubber's jump buttons (`jumpToEvent { instant }`, T-47) and arrow keys pressed faster than the globe draws (F-7) | 30/30: 29 cases, and the F-9 check (still marked todo) passed |
+| **Real language model** | nothing: there is no API key or Claude login on the build machine. The command is `e2e/scenario/real-model.mjs` (see `e2e/scenario/README.md`) | **not verified** |
+| Scripted test model (not a language model) | every one of the 69 actions through the real `/api/assistant` route, its result and the control that shows it checked, and the tool list a model receives (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | control 74/74 (the 69 actions, "after a scan, compare shows the A/B tab", no page errors; and what a model is given: the renderer, the tool list through the route, every action with a case, a phrase and a row here), scenario 4/4, assistant 5/5 |
+| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`); both ends of a sunset, Earth by its centre and by any part of its disc, the default solar band, the card's owner and explored area and the real clock (`assistant.test.mjs`); a server in the default configuration with no Claude credentials answers in deterministic mode (F-11) | control 70/70 (the 69 phrases, no page errors), scenario 7/7, assistant 15/15; vitest `src/assistant`, `src/ui/assistant`, `server/llm`, `src/core`, `src/ui/surface`, `src/scene/globe`, `src/scene/surface`: 546/546 (52 files) |
+| UI and actions (no assistant) | `e2e/equivalence.test.mjs`: the real control used, its action logged with origin "ui", the same end state from the action alone; new on the T-64 candidate: territory size, "Track Sun", the panels' Fold button, grip arrow keys and "Reset panels" | 33/33: 32 cases, and the F-9 check (still marked todo) passed |
 
 How well a real model chooses and chains these actions is unknown until the real-model run
 has been done; only the plumbing it would use is tested.
