@@ -81,10 +81,11 @@ details of each failure as soon as its test ends.
 
 ## A run with a real language model
 
-Not part of `npm run e2e`. With a key, start the app yourself and use the drawer:
+Not part of `npm run e2e`. Authenticate with your Claude subscription and start the app:
 
 ```bash
-ANTHROPIC_API_KEY=... npm run dev
+ant auth login   # once
+npm run dev
 ```
 
 The drawer's mode line then names the model, and every reply is labelled with it.

@@ -56,10 +56,15 @@ function defaultProvider(cfg: LlmConfig): LlmProvider | null {
     return script ? new ScriptedProvider(script, cfg.script) : null;
   }
   // One SDK client per distinct configuration. The cache key stays in this process.
-  const key = JSON.stringify([cfg.model, cfg.effort, cfg.maxTokens, cfg.betas, cfg.apiKey ?? '', cfg.authToken ?? '', cfg.sdkCredentials, cfg.customBaseUrl]);
+  // The SDK resolves credentials itself (ant auth login, workload identity, env var).
+  const key = JSON.stringify([cfg.model, cfg.effort, cfg.maxTokens, cfg.betas, cfg.customBaseUrl]);
   let p = providerCache.get(key);
   if (!p) {
-    p = new AnthropicProvider(cfg);
+    try {
+      p = new AnthropicProvider(cfg);
+    } catch {
+      return null;
+    }
     providerCache.clear();
     providerCache.set(key, p);
   }
@@ -91,7 +96,7 @@ function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | n
   if (typeof router === 'string') return { cfg, provider: null, router: null, reason: router };
   const provider = deps.provider(cfg);
   if (!provider) {
-    const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'The configured model provider could not be created.';
+    const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'No Claude credentials found. Run `ant auth login` to authenticate with your Claude subscription, then restart the server.';
     return { cfg, provider: null, router: null, reason: why };
   }
   return { cfg, provider, router };

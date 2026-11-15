@@ -10,7 +10,7 @@ import { defaultScript, ScriptedProvider } from './scripted';
 import type { LlmProvider, ProviderRequest } from './types';
 import { validateStepRequest } from './validate';
 
-const KEY = 'sk-ant-test-CANARY-0123456789abcdef';
+const SECRET = 'sk-ant-test-CANARY-0123456789abcdef';
 
 const TOOLS: WireTool[] = [
   { name: 'getState', description: 'Reads the state.', input_schema: { type: 'object', properties: {} } },
@@ -44,21 +44,18 @@ const step = (text: string, extra: Partial<StepRequest> = {}): StepRequest => ({
 afterEach(() => registerRouter(directRouter));
 
 describe('GET /api/assistant', () => {
-  it('reports that no model is available when the server has no key', async () => {
+  it('reports that no model is available when the provider returns null (no credentials)', async () => {
     const res = await createAssistantHandler(deps({}))(httpRequest('GET'));
     expect(res.status).toBe(200);
     const body = res.json as AssistantStatus;
     expect(body).toMatchObject({ available: false, model: null, router: 'direct' });
-    expect(body.reason).toContain('ANTHROPIC_API_KEY');
+    expect(body.reason).toContain('ant auth login');
   });
 
-  it('names the model, never the key, when one is configured', async () => {
-    const seen: LlmConfig[] = [];
+  it('names the model, never a secret, when a provider is available', async () => {
     const fake: LlmProvider = { info: { provider: 'anthropic', model: 'claude-opus-5-5', label: 'Claude Opus 5.5' }, async *step() {} };
-    const res = await createAssistantHandler(deps({ ANTHROPIC_API_KEY: KEY }, (cfg) => (seen.push(cfg), fake)))(httpRequest('GET'));
+    const res = await createAssistantHandler(deps({}, () => fake))(httpRequest('GET'));
     expect(res.json).toEqual({ available: true, model: { provider: 'anthropic', model: 'claude-opus-5-5', label: 'Claude Opus 5.5' }, router: 'direct' });
-    expect(seen[0].apiKey).toBe(KEY);
-    expect(JSON.stringify(res)).not.toContain(KEY);
   });
 
   it('is unavailable, with the reason, for an unknown router or script', async () => {
@@ -71,7 +68,7 @@ describe('GET /api/assistant', () => {
 });
 
 describe('POST /api/assistant', () => {
-  it('answers 503 no_model without a key, so the browser switches to deterministic mode', async () => {
+  it('answers 503 no_model without credentials, so the browser switches to deterministic mode', async () => {
     const res = await createAssistantHandler(deps({}))(httpRequest('POST', step('hello')));
     expect(res.status).toBe(503);
     expect(res.json).toMatchObject({ error: { kind: 'no_model' } });
@@ -99,20 +96,20 @@ describe('POST /api/assistant', () => {
   });
 
   it('turns a provider that throws, or that ends without an answer, into one error event without detail', async () => {
-    const boom: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { throw new Error(`exploded with ${KEY}`); } };
-    const d = deps({ ANTHROPIC_API_KEY: KEY }, () => boom);
+    const boom: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { throw new Error(`exploded with ${SECRET}`); } };
+    const d = deps({}, () => boom);
     const list = await events(await createAssistantHandler(d)(httpRequest('POST', step('hi'))));
     expect(list).toEqual([{ type: 'error', error: { kind: 'server', message: 'The assistant server failed while handling this step.' } }]);
     expect(d.logs.join('\n')).toContain('exploded');
-    expect(d.logs.join('\n')).not.toContain(KEY);
+    expect(d.logs.join('\n')).not.toContain(SECRET);
     const silent: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { yield { type: 'text', delta: 'hm' }; } };
-    const ended = await events(await createAssistantHandler(deps({ ANTHROPIC_API_KEY: KEY }, () => silent))(httpRequest('POST', step('hi'))));
+    const ended = await events(await createAssistantHandler(deps({}, () => silent))(httpRequest('POST', step('hi'))));
     expect(ended.at(-1)).toMatchObject({ type: 'error', error: { kind: 'server' } });
   });
 
-  it('redacts credentials from provider error messages', async () => {
-    const leaky: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { yield { type: 'error', error: { kind: 'auth', message: `rejected ${KEY}` } }; } };
-    const res = await createAssistantHandler(deps({ ANTHROPIC_API_KEY: KEY }, () => leaky))(httpRequest('POST', step('hi')));
+  it('redacts secrets from provider error messages', async () => {
+    const leaky: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { yield { type: 'error', error: { kind: 'auth', message: `rejected ${SECRET}` } }; } };
+    const res = await createAssistantHandler(deps({}, () => leaky))(httpRequest('POST', step('hi')));
     const list = await events(res);
     expect(list).toEqual([{ type: 'error', error: { kind: 'auth', message: 'rejected [redacted]' } }]);
   });
@@ -149,7 +146,7 @@ describe('the router slot', () => {
 
 describe('no secret in any client-visible payload', () => {
   it('holds for status, refusals of service, validation errors and streamed steps', async () => {
-    const env = { ANTHROPIC_API_KEY: KEY, LUNYX_LLM_PROVIDER: 'scripted' };
+    const env = { LUNYX_LLM_PROVIDER: 'scripted' };
     const handler = createAssistantHandler(deps(env));
     const payloads: string[] = [];
     for (const req of [httpRequest('GET'), httpRequest('POST', {}), httpRequest('PUT'), httpRequest('POST', step('call getState')), httpRequest('POST', step('hello'))]) {
@@ -157,9 +154,9 @@ describe('no secret in any client-visible payload', () => {
       payloads.push(JSON.stringify({ status: res.status, json: res.json, headers: res.headers }));
       if (res.stream) payloads.push(JSON.stringify(await events(res)));
     }
-    const off = await createAssistantHandler(deps({ ANTHROPIC_API_KEY: KEY, LUNYX_LLM_PROVIDER: 'off' }))(httpRequest('POST', step('hello')));
+    const off = await createAssistantHandler(deps({ LUNYX_LLM_PROVIDER: 'off' }))(httpRequest('POST', step('hello')));
     payloads.push(JSON.stringify(off));
-    expect(payloads.join('\n')).not.toContain(KEY);
+    expect(payloads.join('\n')).not.toContain(SECRET);
     expect(payloads.join('\n')).not.toMatch(/sk-ant-/);
   });
 });
