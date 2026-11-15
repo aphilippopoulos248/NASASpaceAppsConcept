@@ -25,14 +25,21 @@ export interface HorizonOptions {
   growth?: number;
   /** Marching step as a fraction of the source resolution (default 0.7). */
   resFraction?: number;
+  /**
+   * Close to the observer the marching step is at most this fraction of the distance (default 0.05),
+   * because what a small rise does to the skyline grows as the distance shrinks.
+   */
+  nearFraction?: number;
   /** Set false to look every height up through HeightSource.sample() only (slower; for cross-checks). */
   fast?: boolean;
   /**
-   * Set false to skip the fine search around the samples that form (or nearly form) the skyline.
+   * Set false to skip the fine search between the samples that form (or nearly form) the skyline.
    * With it (the default) the result is the highest point of the interpolated terrain along each
-   * ray to about 1/60 of a marching step, instead of the highest of the marching samples.
+   * ray to about 1/24 of a marching step, instead of the highest of the marching samples.
    */
   refine?: boolean;
+  /** Points tried inside each marching step the fine search looks into (default 6; then half as many around the best at a quarter of that spacing). */
+  searchPoints?: number;
 }
 
 const samplerCache = new WeakMap<HeightSource, UnitSampler | null>();
@@ -173,18 +180,32 @@ export function profileIndex(p: HorizonProfile, azDeg: number): number {
   return ((Math.round((((azDeg % 360) + 360) % 360) / p.azStepDeg) % n) + n) % n;
 }
 
+/** Closest terrain sampled in front of the observer, metres. Nearer than this only the limit at the observer's feet is taken (mast 0). */
+export const NEAR_FIELD_MIN_M = 0.1;
+
 /**
  * The terrain skyline around an observer `mastHeightM` above the ground at `site`.
  * For each azimuth the great circle is marched outwards, sampling the finest source
  * that covers each point, with a step of `resFraction` x that source's resolution that
  * grows to `growth` x distance far out. Marching stops where even the highest terrain
  * on the Moon could no longer rise above the skyline found so far, or at `maxRangeM`.
+ *
+ * Near the observer. Seen from height H above the ground, terrain at a small distance d stands
+ * at about (h(d) - h(0) - H) / d: a rise of 30 cm matters at 40 m and not at 4 km, and with
+ * H = 0 the ground at the observer's own feet is the skyline wherever the ground is convex
+ * (a crest, a rim). So the march starts NEAR_FIELD_MIN_M from the observer (a third of the mast
+ * height if that is more: nearer terrain stands below -70 deg) with steps of `nearFraction` x
+ * distance until those reach the grid step; and for H = 0 the limit at distance zero, the slope
+ * of the interpolated terrain along the ray (extrapolated from the two closest samples), is
+ * included. Such a skyline point is reported with distance 0.
  */
 export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: number, options: HorizonOptions = {}): HorizonProfile {
   const azStep = options.azStepDeg ?? 0.5;
   const maxRange = options.maxRangeM ?? 400_000;
   const growth = options.growth ?? 0.004;
   const resFrac = options.resFraction ?? 0.7;
+  const nearFrac = options.nearFraction ?? 0.05;
+  const nSub = Math.max(2, Math.round(options.searchPoints ?? 6)), nRef = nSub >> 1;
   const nAz = Math.max(1, Math.round(360 / azStep));
   const azStepDeg = 360 / nAz;
   const warnings: string[] = [];
@@ -205,9 +226,6 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
       smoothDipDeg, maxRangeM: 0, layers: [], skylineLayer, warnings: ['No elevation data covers this site: the skyline cannot be computed.'],
     };
   }
-  const h0 = here.h + mast;
-  const R0 = R + h0;
-  const Rmax = R + Math.max(MOON_MAX_HEIGHT_M, h0);
   let gaps = 0;
   let reachedMax = 0;
   const nSrc = sources.length;
@@ -229,6 +247,23 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
 
   // Local frame at the site (same convention as src/astro/topocentric.ts).
   const { up, east, north } = frameOf(site.lat, site.lon);
+
+  // The ground under the observer, looked up the way the rays look terrain up (the fast samplers
+  // reproduce HeightSource.sample() to about a part in a million, which is millimetres here: close
+  // to the observer that would tilt the ground by degrees, so one lookup serves both).
+  let groundM = here.h;
+  const fastHere = fast[here.idx];
+  if (fastHere && rMin[here.idx] <= 0) {
+    const v = fastHere(up[0], up[1], up[2]);
+    if (Number.isFinite(v) && Math.abs(v - here.h) <= 1e-3) groundM = v;
+  }
+  const h0 = groundM + mast;
+  const R0 = R + h0;
+  const Rmax = R + Math.max(MOON_MAX_HEIGHT_M, h0);
+  // Where the march starts, and the grid step at the site: a skyline point nearer than that is "at the observer's feet".
+  const firstStep = resFrac * resOf[here.idx];
+  const startD = Math.min(firstStep, Math.max(NEAR_FIELD_MIN_M, mast / 3));
+  let atFeet = 0;
 
   // State of the ray being marched, shared with the fine search below.
   let tx = 0, ty = 0, tz = 0;
@@ -273,7 +308,16 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
     // Elevations are compared through their tangents (the horizontal component is always positive).
     let tanBest = -Infinity;
     let m = 0;
-    let d = resFrac * resOf[here.idx];
+    // An observer on the ground: the slope at their feet, the limit of the two closest samples
+    // (within one grid cell the interpolated terrain is a polynomial of the distance).
+    if (mast === 0) {
+      const t1 = tanAt(startD), t2 = tanAt(2 * startD);
+      if (t1 > -Infinity && t2 > -Infinity) {
+        tanBest = 2 * t1 - t2;
+        bestD = 0; bestH = groundM; bestIdx = here.idx;
+      }
+    }
+    let d = startD;
     while (d <= maxRange) {
       const th = d / R;
       const ct = Math.cos(th), st = Math.sin(th);
@@ -327,55 +371,59 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
         m++;
       }
       if (d > reachedMax) reachedMax = d;
-      d += Math.max(resFrac * res, growth * d);
+      const gridStep = resFrac * res, nearStep = nearFrac * d, farStep = growth * d;
+      const step = nearStep < gridStep ? nearStep : gridStep;
+      d += step > farStep ? step : farStep;
     }
 
     // Fine search. Between two marching samples the terrain's elevation can peak higher than at
-    // either (a crest, or simply a grid line crossed between them). Every sampled local maximum that
-    // such a peak could lift above the best sample is searched at 1/12 and then 1/48 of its bracket
-    // (the two steps around it).
+    // either (a crest, or simply a grid line crossed between them). Every step that such a peak
+    // could lift above the best sample is searched at 1/6 and then 1/24 of its length (default
+    // `searchPoints`). "Could" is judged from how much the elevation changes from sample to sample
+    // around the step, whether or not a sample there is a local maximum: a peak can rise and fall
+    // between two samples of a slope that only falls.
     if (refineOn && tanBest > -Infinity) {
       const coarseBest = tanBest;
-      for (let i = 0; i < m; i++) {
-        const t = tArr[i];
-        if (!(t > -Infinity)) continue;
-        if ((i > 0 && t < tArr[i - 1]) || (i < m - 1 && t < tArr[i + 1])) continue;
-        // The largest change between neighbouring samples around here bounds what was missed.
+      for (let i = 0; i < m - 1; i++) {
+        const t0 = tArr[i], t1 = tArr[i + 1];
+        const top = t0 > t1 ? t0 : t1;
+        if (!(top > -Infinity)) continue;
+        // The largest change between neighbouring samples around this step bounds what was missed.
         let swing = 0;
-        for (let j = Math.max(1, i - 1); j <= Math.min(m - 1, i + 2); j++) {
+        for (let j = i > 0 ? i : 1; j <= i + 2 && j < m; j++) {
           const a0 = tArr[j - 1], a1 = tArr[j];
           if (a0 > -Infinity && a1 > -Infinity) {
             const dv = a1 > a0 ? a1 - a0 : a0 - a1;
             if (dv > swing) swing = dv;
           }
         }
-        const lo = i > 0 ? dArr[i - 1] : dArr[0] * 0.5;
-        const hi = i < m - 1 ? dArr[i + 1] : dArr[i];
+        const lo = dArr[i], hi = dArr[i + 1];
+        const step = hi - lo;
         // Far out, where the steps are longer than the data's own sampling, a crest can sit between
         // two samples with only its flanks seen: allow for the steepest ground that could hide
-        // there, a 35 deg slope over half a step. (Where the steps follow the grid this cannot
-        // happen: interpolated data has no detail finer than its samples.)
-        const step = (hi - lo) / (i > 0 && i < m - 1 ? 2 : 1);
-        const hidden = step > 1.05 * resFrac * sArr[i] ? (0.35 * step) / dArr[i] : 0;
-        if (t + (swing > hidden ? swing : hidden) < coarseBest) continue;
-        let localBest = t, localD = dArr[i];
-        const w1 = (hi - lo) / 12;
-        for (let k = 0; k < 12; k++) {
+        // there, a 35 deg slope over half a step. (Where the steps follow the grid, the change from
+        // sample to sample already measures it: interpolated data has no detail finer than its samples.)
+        const hidden = step > 1.05 * resFrac * sArr[i] ? (0.35 * step) / lo : 0;
+        if (top + (swing > hidden ? swing : hidden) < coarseBest) continue;
+        let localBest = top, localD = t0 > t1 ? lo : hi;
+        const w1 = step / nSub;
+        for (let k = 0; k < nSub; k++) {
           const dd = lo + (k + 0.5) * w1;
           const tv = tanAt(dd);
           if (tv > localBest) { localBest = tv; localD = dd; }
           if (tv > tanBest) { tanBest = tv; bestD = dd; bestH = evalH; bestIdx = evalIdx; }
         }
         const w2 = w1 / 4;
-        for (let k = -4; k <= 4; k++) {
+        for (let k = -nRef; k <= nRef; k++) {
           if (k === 0) continue;
           const dd = localD + k * w2;
-          if (dd <= 0) continue;
+          if (dd <= lo || dd >= hi) continue;
           const tv = tanAt(dd);
           if (tv > tanBest) { tanBest = tv; bestD = dd; bestH = evalH; bestIdx = evalIdx; }
         }
       }
     }
+    if (bestD < firstStep) atFeet++;
     elevDeg[a] = tanBest === -Infinity ? -90 : Math.atan(tanBest) / RAD;
     distM[a] = bestD;
     heightM[a] = bestH;
@@ -392,6 +440,12 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   for (let a = 0; a < nAz; a++) skylineLayer[a] = layerOf.get(skylineLayer[a]) ?? 0;
 
   if (gaps > 0) warnings.push(`${gaps} terrain samples had no elevation data in any source; the skyline ignores those points.`);
+  if (atFeet > 0) {
+    const res = Math.round(resOf[here.idx]);
+    warnings.push(
+      `With the observer ${mast === 0 ? 'on the ground' : `${mast} m above the ground`}, the skyline in ${atFeet} of ${nAz} directions is the ground within ${Math.round(firstStep)} m of the observer: the slope of the ${res} m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.`,
+    );
+  }
   // Honest coverage: what resolves the near field?
   const near = layers.filter((l) => l.fromM < 30_000);
   const finestNear = near.length ? Math.min(...near.map((l) => l.resolutionM)) : Infinity;

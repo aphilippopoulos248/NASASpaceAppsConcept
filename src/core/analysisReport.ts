@@ -7,6 +7,7 @@ import { blockageAt as realBlockageAt, nextEvents as realNextEvents } from '../a
 import type { Blockage, ComparisonDiff, Interval, SiteAnalysis, SkyEvent } from '../analysis/types';
 import { rounded, type AnalysisSlot, type AnalysisStatus, type ComparisonStatus } from './analysisStore';
 import { describeScenario } from './scenario';
+import { EVENT_INFO, eventDefinitions } from './skyEvents';
 import { isoUtc } from './time';
 import type { AppState, Scenario } from './types';
 
@@ -137,7 +138,7 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
   const endMs = st.scenario.startMs + st.scenario.durationH * HOUR_MS;
   const sun = science.blockageAt(a, 'sun', t), earth = science.blockageAt(a, 'earth', t);
   const next = science.nextEvents(a, t);
-  const event = (e: SkyEvent | null) => (e ? { timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1), inHours: rounded((e.timeMs - t) / HOUR_MS) } : null);
+  const event = (e: SkyEvent | null) => (e ? { label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1), inHours: rounded((e.timeMs - t) / HOUR_MS) } : null);
   const list = <T>(items: readonly T[]) => (items.length > LIST_LIMIT ? { shown: LIST_LIMIT, total: items.length } : undefined);
   return {
     slot,
@@ -167,7 +168,9 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
     },
     /** The first event of each kind after the simulated time, inside the analysed window; null when there is none in it. */
     nextEvents: { sunrise: event(next.sunrise), sunset: event(next.sunset), earthrise: event(next.earthrise), earthset: event(next.earthset) },
-    events: a.events.slice(0, LIST_LIMIT).map((e) => ({ type: e.type, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1) })),
+    events: a.events.slice(0, LIST_LIMIT).map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1) })),
+    /** Which instant each event type is (decision D-8): a rise or set takes time, so a time is never quoted without saying which end of it is meant. */
+    eventDefinitions: eventDefinitions(),
     intervals: {
       darkness: intervalList(m.darkIntervals),
       earthGaps: intervalList(m.earthGapIntervals),
