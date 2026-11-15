@@ -98,10 +98,17 @@ data alone.
   LDEM_85S_40M and LDEM_875S_20M (V2.0, 2017-06-15), data set `LRO-L-LOLA-4-GDR-V1.0`.
 - **URL:** https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/
   (`cylindrical/img/`, `polar/img/`).
-- **Citation:** the data set catalogue (`catalog/gdr_ds.cat`, data set release date
-  2015-12-15) gives "Neumann, G.A., 2009 Lunar Orbiter Laser Altimeter Raw Data Set,
-  LRO-L-LOLA-4-GDR-V1.0, NASA Planetary Data System, 2010." The bundled index also cites Smith,
-  D. E., et al. (2017), *Icarus* 283, 70-91, https://doi.org/10.1016/j.icarus.2016.06.006.
+- **Citation:** the data set's DOI record (DataCite, resolved 2026-11-15): Neumann, G. A. (2011).
+  *LRO MOON LASER ALTIMETER 4 GDR V1.0* [Dataset]. NASA Planetary Data System.
+  https://doi.org/10.17189/1520642. The PDS catalogue (`catalog/gdr_ds.cat`, data set release
+  date 2015-12-15) gives an older form: "Neumann, G.A., 2009 Lunar Orbiter Laser Altimeter Raw
+  Data Set, LRO-L-LOLA-4-GDR-V1.0, NASA Planetary Data System, 2010." The bundled index also
+  cites Smith, D. E., et al. (2017), *Icarus* 283, 70-91, https://doi.org/10.1016/j.icarus.2016.06.006.
+- **Terms:** the product labels state none. The PDS Geosciences Node's site links its
+  "Copyright/Image Use Policy" to the JPL Image Use Policy (https://www.jpl.nasa.gov/jpl-image-use-policy/),
+  which says "Unless otherwise noted, images and video on JPL public web sites (public sites
+  ending with a jpl.nasa.gov address) may be used for any purpose without prior permission" and
+  asks for the credit line "Courtesy NASA/JPL-Caltech."; it says nothing specific about PDS data.
 - **What Lunyx did** (`scripts/build-dem.mjs`): whole-Moon grids rearranged to start at 180°W
   (LDEM_16 heights rounded from 0.5 m to 1 m steps, no resampling); polar layers are 2 × 2
   block means of the source grids in the source projection; stored losslessly in the LXG
@@ -114,9 +121,11 @@ data alone.
   60°N) and the LOLA polar grids `ldem_60s_60m`, `ldem_80s_20m` (`data/lola_gdr/polar/img/`),
   same archive as S1. Which product each site uses is recorded per site in
   `public/terrain/index.json`.
-- **Citation (SLDEM2015):** Barker, M. K., et al. (2016). A new lunar digital elevation model
-  from the Lunar Orbiter Laser Altimeter and SELENE Terrain Camera. *Icarus*, 273, 346-355
-  (the citation the app itself carries in `src/terrain/api.ts`). SLDEM2015 combines LOLA with
+- **Citation (SLDEM2015):** Barker, M. K., Mazarico, E., Neumann, G. A., Zuber, M. T., Haruyama,
+  J., & Smith, D. E. (2016). A new lunar digital elevation model from the Lunar Orbiter Laser
+  Altimeter and SELENE Terrain Camera. *Icarus*, 273, 346-355.
+  https://doi.org/10.1016/j.icarus.2015.07.039 (the app carries the same citation, without the
+  DOI, in `src/terrain/api.ts`). SLDEM2015 combines LOLA with
   JAXA SELENE (Kaguya) Terrain Camera data; it is distributed by the NASA PDS.
 - **What Lunyx did** (`scripts/fetch-terrain.mjs`): read only the rows around each site by HTTP
   range requests and resampled two 129 × 129 grids per site (60 m, 7.7 km across; 480 m, 61 km
@@ -124,8 +133,8 @@ data alone.
 
 ### S4. LROC NAC elevation models and orthophotos
 
-- **Products:** LROC NAC digital terrain models and orthophotos, PDS release `LROLRC_2001`,
-  `DATA/SDP/NAC_DTM/`, read from the PDS Imaging Node store
+- **Products:** LROC NAC digital terrain models and orthophotos, PDS4 bundle
+  `lro-l-lroc-5-rdr`, release `LROLRC_2001`, `DATA/SDP/NAC_DTM/`, read from the PDS Imaging Node store
   (https://pds.mcp.nasa.gov/data/store/img/lunar_reconnaissance_orbiter/pds4/lroc/lro-l-lroc-5-rdr/LROLRC_2001/DATA/SDP/NAC_DTM/).
   The product used for each site, its resolution and the orthophoto time are recorded in
   `public/terrain/index.json` (2 m to 5 m elevation, 0.5 m to 1.6 m imagery).
@@ -137,9 +146,10 @@ data alone.
   the PDS Imaging Node's data store (my reading: a NASA PDS interface).
 - **Credit and citation** (same page): "credit LROC images with the text tag NASA/GSFC/Arizona
   State University"; for research use cite Robinson, M.S., et al. (2010), LROC Instrument
-  Overview, *Space Science Reviews* 150, 81-124, and for the elevation models Henriksen, M.R.,
-  et al. (2017), Extracting accurate and precise topography from LROC narrow angle camera
-  stereo observations, *Icarus* 283, 122-137.
+  Overview, *Space Science Reviews* 150, 81-124, https://doi.org/10.1007/s11214-010-9634-2, and
+  for the elevation models Henriksen, M.R., et al. (2017), Extracting accurate and precise
+  topography from LROC narrow angle camera stereo observations, *Icarus* 283, 122-137,
+  https://doi.org/10.1016/j.icarus.2016.05.012 (both DOIs resolved 2026-11-15).
 - **What Lunyx did** (`scripts/fetch-apollo-terrain.mjs`): read the rows around each landing
   point; resampled heights to a 513 × 513 grid at 3 m and the orthophoto to 0.5 m on the same
   1.5 km square; WebP encoding.
@@ -195,7 +205,10 @@ any AI tool made them are not established (open list L2).**
   elevation every 10 minutes for Blue Ghost Mission 1 (2025-03-01 to 04-01) and IM-2 Athena
   (2025-03-05 to 04-05), queried as recorded in each file (`CENTER='coord@301'`,
   `COORD_TYPE='GEODETIC'`, `QUANTITIES='4,20'`, `APPARENT='AIRLESS'`, "DE441", fetched
-  2026-11-14). Values as Horizons returned them.
+  2026-11-14). Values as Horizons returned them. The planetary and lunar ephemeris behind them:
+  Park, R. S., Folkner, W. M., Williams, J. G., & Boggs, D. H. (2021). The JPL Planetary and Lunar
+  Ephemerides DE440 and DE441. *The Astronomical Journal*, 161(3), 105.
+  https://doi.org/10.3847/1538-3881/abd414.
 - **S11** (`scripts/fetch-horizons.mjs`): Horizons sub-Earth and sub-solar points (quantities 14
   and 15, geocentric observer) at the 28 catalogued landing times, used by
   `npm run check-ephemeris`.
@@ -229,7 +242,12 @@ any AI tool made them are not established (open list L2).**
 - **Record:** Lemelin, M., Li, S., Mazarico, E., Siegler, M. A., Kring, D. A., & Paige, D. A.
   (2021). *Database of water ice-bearing permanently shaded regions in the lunar south polar
   region* [Data set]. Zenodo. https://doi.org/10.5281/zenodo.4646092 (version 1, published
-  2021-03-29). Paper: *Planetary Science Journal* 2, 103, https://doi.org/10.3847/PSJ/abf3c3.
+  2021-03-29). Paper: Lemelin, M., et al. (2021). Framework for Coordinated Efforts in the
+  Exploration of Volatiles in the South Polar Region of the Moon. *The Planetary Science
+  Journal*, 2(3), 103. https://doi.org/10.3847/PSJ/abf3c5 (checked at Crossref 2026-11-15).
+  **The repository's own files cite `10.3847/PSJ/abf3c3`, which doi.org does not know (HTTP
+  404):** `public/data/ice-targets/README.md`, the `lunyx` block of the GeoJSON and
+  `scripts/build-ice-targets.py`. A fix for their owner, reported through @coordinator.
 - **Licence:** `cc-by-4.0` in the Zenodo record's metadata (read through the Zenodo API,
   2026-11-15). Attribution is shown in the app's Filters panel next to the layer.
 - **What Lunyx did** (`scripts/build-ice-targets.py`): polygons from the shapefile and
@@ -242,7 +260,9 @@ any AI tool made them are not established (open list L2).**
 - **Record:** Schorghofer, N., & Williams, J.-P. (2024). *Lunar polar maps derived from Diviner
   temperatures organized by subsolar and ecliptic longitude* (version 3.0) [Data set]. Harvard
   Dataverse. https://doi.org/10.7910/DVN/EGOOCL (version 3.0 released 2024-03-24). Method paper:
-  *Planetary Science Journal* 1, 54 (2020), https://doi.org/10.3847/PSJ/abb6ff.
+  *Planetary Science Journal* 1, 54 (2020), https://doi.org/10.3847/PSJ/abb6ff. Underlying
+  measurements: Williams, J.-P., et al. (2019). Seasonal Polar Temperatures on the Moon. *JGR
+  Planets*, 124(10), 2505-2521. https://doi.org/10.1029/2019JE006028.
 - **Licence:** "CC0 1.0" (SPDX `CC0-1.0`) in the Dataverse record (read through its API,
   2026-11-15).
 - **What it is:** four maps poleward of 80°: **annual maximum** and **annual mean** surface
@@ -258,7 +278,9 @@ any AI tool made them are not established (open list L2).**
 - **Archive:** KPLO ShadowCam Data Archive (PDS4 bundle), ShadowCam SOC,
   https://pds.shadowcam.im-ldi.com/, DOI 10.17189/y89z-kt98. The bundle label
   (`bundle_kplo-shadowcam.xml`, dated 2026-10-02 in the listing) holds citation information
-  (author "ShadowCam SOC", 2026, the DOI) and no licence, rights or usage element.
+  (author "ShadowCam SOC", 2026, the DOI) and no licence, rights or usage element. The DOI
+  registry's citation gives 2024: "ShadowCam SOC. (2024). KPLO ShadowCam Data Archive. NASA
+  Planetary Data System. https://doi.org/10.17189/Y89Z-KT98".
 - **What Lunyx ships:** an index of the 26 controlled mosaics (site, season, dates, pixel
   scale, links) and a 200 m coverage grid rasterised from the archive's published footprints
   (`scripts/build-shadowcam-index.mjs`). **No ShadowCam imagery is bundled or displayed**; the
@@ -286,7 +308,7 @@ list L3, and AI-USE.md section 4).
 
 | # | What | Service | When | Terms and credit |
 | --- | --- | --- | --- | --- |
-| R1 | Close-up imagery around a selected site: `LRO_WAC_Mosaic_Global_303ppd_v02` and `Kaguya_TCortho_Mosaic_Global_4096ppd` | NASA Moon Trek WMTS, https://trek.nasa.gov/tiles/Moon/EQ/ (`src/scene/sitePatch.ts`) | Online only, latitudes up to 80° | The capability documents of both layers carry no credit or licence text. The site card shows "Close-up imagery: LROC WAC (NASA/GSFC/ASU) · Kaguya TC (JAXA/SELENE), via NASA Moon Trek". JAXA's terms for the Kaguya layer were not found (open list L6) |
+| R1 | Close-up imagery around a selected site: `LRO_WAC_Mosaic_Global_303ppd_v02` and `Kaguya_TCortho_Mosaic_Global_4096ppd` | NASA Moon Trek WMTS, https://trek.nasa.gov/tiles/Moon/EQ/ (`src/scene/sitePatch.ts`) | Online only, latitudes up to 80° | Moon Trek's FGDC metadata for each layer (https://trek.nasa.gov/moon/TrekWS/rest/cat/metadata/fgdc/html?label=<layer>, read 2026-11-15). WAC (Arizona State University, "LRO WAC Mosaic v2", 2013): "Access_Constraints: None", "Use_Constraints: None", credit "The LROC Team". Kaguya TC (JAXA, "Kaguya TC Ortho Mosaic", edition 2, 2014): "the copyrights therein are the property of Japan Aerospace Exploration Agency (JAXA) and institutes to collaborate with the Selenological and Engineering Explorer (SELENE) project of JAXA", "The data can be allowed to use for scientific and educational utilization.", credit "The Kaguya Team". The site card shows "Close-up imagery: LROC WAC (NASA/GSFC/ASU) · Kaguya TC (JAXA/SELENE), via NASA Moon Trek". Whether a public submission fits JAXA's terms: open list L6 |
 | R2 | 60 m and 480 m elevation windows for pins outside the bundled coverage | `/api/terrain` reading SLDEM2015 and LOLA from the PDS Geosciences Node by range request (`server/api/terrain.ts`, `src/terrain/windowBuilder.ts`) | On request, needs network | As S1 and S3; each result names its product and carries the SLDEM2015 citation |
 | R3 | Reference ephemerides | `/api/horizons`, a proxy to https://ssd.jpl.nasa.gov/api/horizons.api | On request | As S10 |
 | R4 | Language model for the assistant | Claude API (Anthropic), from the server only | Only when the server has a key | See AI-USE.md section 3 |
@@ -339,7 +361,8 @@ copies; OFL 1.1 asks that each copy of the font software contain its copyright n
 licence. Shipping a third-party notices file with the build would cover both (open list L8).
 
 **On the server only** (the Vite dev or preview server that runs `/api/*`): `@anthropic-ai/sdk`
-1.8.0 (Apache-2.0) and the packages it pulls in: `@babel/runtime` (MIT), `@opentelemetry/api`
+1.8.0 (Apache-2.0; it also ships `LICENSE-MIT`, which says the project moved from MIT to Apache
+2.0 in version 1.0.0) and the packages it pulls in: `@babel/runtime` (MIT), `@opentelemetry/api`
 (Apache-2.0), `@stablelib/base64` (MIT), `fast-sha256` (Unlicense), `json-schema-to-ts` (MIT),
 `standardwebhooks` (MIT), `ts-algebra` (MIT).
 
@@ -468,7 +491,28 @@ inventory rows are added once these files reach `am/lunyx/integration`.
 | `public/data/sources/site-areas.json` (34.3 kB), `scripts/fetch-site-areas.mjs` | Explored area at each site, derived from the CSV, LROC traverse maps and the Apollo Analyst's Notebook (NASA PDS Geosciences Node) | Derived in the repository; sources listed in the file. Drawn 10× wider than true size on the globe, as the note says |
 | `src/scene/flags.ts`, `src/data/ownership.ts` | National flags drawn by code next to each site | No image asset. A branding question for the operator: see AI-USE.md section 6 |
 
-## 8. What is not established
+## 8. Comparison with the teammate's `docs/DATA_SOURCES.md`
+
+The teammate keeps a data-sources note on GitHub `main` (`282249d`, not integrated yet; read
+with `git show 282249d:docs/DATA_SOURCES.md`). This document is the complete register; it was
+checked against that note entry by entry. The note is the teammate's and was not edited.
+
+| Entry in DATA_SOURCES.md | Here | Agrees | Differs or adds |
+| --- | --- | --- | --- |
+| 1. Landing list | S16 | Yes: "entered by hand during development from general knowledge"; only Apollo 11 checked | Adds that the file records no source and that its AI status is not established (L3) |
+| 2. Ownership record (GCAT) | Section 7 | Yes: CC BY 4.0, checked at planet4589.org | Pending integration |
+| 3. Globe colour and relief | S6, S7 | Yes: `lroc_color_poles_8k.tif`, `ldem_16_uint.tif`, `LDEM_64.IMG` from the MIT mirror, relief ×4 | Quotes the SVS and NASA usage statements instead of a summary |
+| 4. Earth texture | S8 | Yes: SVS 2915, cloud-free | Adds the credit line SVS asks for |
+| 5. Site imagery tiles | R1 | Yes: the two layers and the on-screen credit | Its "To check before public release: JAXA's reuse terms" is answered from Moon Trek's metadata (scientific and educational use; L6) |
+| 6. Terrain around each site | S3 | Yes: products, 129 × 129 grids at 60 m and 480 m | Its archive link `…/lro/lro-l-lroc-5-rdr-v1/lrolol_1xxx/data/` answers HTTP 404; the archive is `…/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/` |
+| 7. High-resolution site terrain | S4 | Yes: release `LROLRC_2001`, 19 sites, credit NASA/GSFC/ASU | Adds the LROC terms (PDS products are public domain) and the citations |
+| 8. Photo-derived relief | S5 | Yes | — |
+| 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |
+| 10. Close-up surface maps | S9 | Yes: third-party pack, "origin and licence unknown" | Adds that its AI status is not established (L2) |
+| 11. Explored area at each site | Section 7 | Yes on sources and the 10× display width | Pending integration |
+| Not in that note | S1, S2, S12 to S15, S17, sections 4 to 6 | — | The LOLA grids in `public/data/dem`, PGDA product 69, the ice targets, Diviner, the ShadowCam index, the run-time services, the test references and the software licences |
+
+## 9. What is not established
 
 Licences, provenance and AI status that could not be established from the sources are listed
 once, for the operator, in [AI-USE.md section 8](AI-USE.md#8-open-list-for-the-operator)

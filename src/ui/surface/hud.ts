@@ -2,11 +2,15 @@
 // plain statement of what the picture is built from (elevation products and resolution, what
 // is generated, how the Sun and Earth are placed).
 import { runAction } from '../../core/actions';
+import { analysis } from '../../core/analysisStore';
 import { store } from '../../core/store';
 import { formatUtc } from '../../core/time';
 import { surfaceResolution } from '../../scene/autoResolution';
 import type { SurfaceController } from '../../scene/surface/controller';
 import { button, el } from '../dom';
+import { ensureHudActions } from './hudActions';
+import { hudLayoutPart, requestHudLayout } from './hudLayout';
+import { hudState, onHudState } from './hudState';
 import './hud.css';
 
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
@@ -15,6 +19,7 @@ const metres = (m: number): string => (m < 1000 ? `${Math.round(m)} m` : `${(m /
 const stepText = (h: number): string => (h < 1 ? `${Math.round(h * 60)} min` : h === 1 ? 'hour' : h < 24 ? `${h} h` : h === 24 ? 'day' : `${h / 24} days`);
 
 export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController, onFrame: (fn: () => void) => void): void {
+  ensureHudActions({ store, analysis });
   const view = surface.view;
   const hud = el('div', 'ly-panel surface-hud');
 
@@ -33,8 +38,10 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   paths.title = 'Dotted tracks of the Sun and Earth over the mission window, and their name labels';
   const generated = button('Generated detail', 'ly-btn ly-btn--small', () => void runAction('setGeneratedDetail', { on: !view.generated }));
   generated.title = 'Rocks, sub-metre texture and (where no survey exists) small craters: generated, not measured';
+  const chart = button('Skyline chart', 'ly-btn ly-btn--small', () => void runAction('setChart', { show: hudState().chart === 'hidden' }));
+  chart.title = 'The terrain skyline around the site with the Sun and Earth over the mission window';
   const home = button('Return to site', 'ly-btn ly-btn--small', () => void runAction('walkTo', { eastM: 0, northM: 0 }));
-  controls.append(faceSun, faceEarth, paths, generated, home);
+  controls.append(faceSun, faceEarth, paths, generated, chart, home);
   head.append(el('strong', 'sh-title', 'Surface view'), status, controls);
 
   // Row 2: what the ground is built from, always on screen.
@@ -47,6 +54,20 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   more.append(summary, body);
   hud.append(head, ground, more);
   region.append(hud);
+
+  // The chart shares the lower part of the screen: the strip says whether it is on, and
+  // steps aside where the chart (or, on a phone, the blockage explanation) takes its place.
+  const syncChart = () => {
+    const h = hudState();
+    chart.setAttribute('aria-pressed', String(h.chart !== 'hidden'));
+    hud.classList.toggle('surface-hud--chart-open', h.chart !== 'hidden');
+    hud.classList.toggle('surface-hud--chart-expanded', h.chart === 'expanded');
+    hud.classList.toggle('surface-hud--explaining', h.explanation !== null);
+    requestHudLayout();
+  };
+  onHudState(syncChart);
+  syncChart();
+  hudLayoutPart('strip', hud);
 
   const line = (label: string, text: string): HTMLElement => {
     const p = el('p');
@@ -75,7 +96,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
           'Sun and Earth',
           `placed for this site at ${Number.isFinite(sky.timeMs) ? formatUtc(sky.timeMs) : 'the simulated time'}, ${sky.topocentric ? 'as seen from the site itself (topocentric)' : 'from the Moon\'s centre (interim, Earth up to 0.26° off)'}, with no atmosphere and no refraction. ` +
             `Discs are at true size: Sun ${(sky.sun.radiusDeg * 2).toFixed(2)}°, Earth ${(sky.earth.radiusDeg * 2).toFixed(2)}° across (${ratio.toFixed(1)} times wider). Zoom in to see them large. ` +
-            'Earth\'s phase and the face it shows are computed; its picture is NASA\'s cloud-free Blue Marble, so real clouds are not shown. The Sun\'s glare is a display aid, not a measurement.',
+            'Earth\'s phase and the face it shows are computed; its picture is NASA\'s cloud-free Blue Marble, so real clouds are not shown. The Sun\'s glare is a display aid, not a measurement. ' +
+            'While Earth hides the Sun (an eclipse seen from the Moon), the thin orange ring drawn around Earth stands for sunlight passing through Earth\'s air: it is schematic, and its brightness and colour are not computed.',
         ),
       );
     }

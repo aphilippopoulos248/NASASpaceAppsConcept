@@ -118,7 +118,7 @@ export function windowRows(a: SiteAnalysis | null, b: SiteAnalysis | null): Comp
     numberRow('sunAny', 'Any Sun above the skyline', 'Share of the window with any part of the Sun\'s disc showing.', a, b, (x) => x.metrics.sunAnyPct, (x) => pctText(x.metrics.sunAnyPct), 'points', false),
     numberRow('darkness', 'Longest darkness in the window', 'Longest unbroken spell with the Sun entirely hidden, inside the mission window. "or more" means it runs into the edge of the window.', a, b, (x) => x.metrics.longestDarknessH, (x) => `${hoursText(x.metrics.longestDarknessH)}${x.metrics.darknessOpenEnded && x.metrics.longestDarknessH >= 0.05 ? ' or more' : ''}`, 'h', true),
     fullRow('darknessFull', 'Longest darkness in full', 'The longest darkness that touches the window, followed past the window\'s edges to its real start and end (searched up to 60 days each way).', a, b, (x) => [x.metrics.longestDarknessFull, x.metrics.longestDarknessH]),
-    numberRow('earth', 'Earth in view', 'Share of the window with geometric line of sight to Earth\'s centre over the terrain skyline. Geometry only: not a statement about a radio link.', a, b, (x) => x.metrics.earthVisiblePct, (x) => pctText(x.metrics.earthVisiblePct), 'points', false),
+    numberRow('earth', 'Earth\'s centre in view', 'Share of the window with geometric line of sight to Earth\'s centre over the terrain skyline. Geometry only: not a statement about a radio link.', a, b, (x) => x.metrics.earthVisiblePct, (x) => pctText(x.metrics.earthVisiblePct), 'points', false),
     numberRow('gap', 'Longest Earth gap in the window', 'Longest unbroken spell without line of sight to Earth\'s centre, inside the mission window.', a, b, (x) => x.metrics.longestEarthGapH, (x) => `${hoursText(x.metrics.longestEarthGapH)}${x.metrics.earthGapOpenEnded && x.metrics.longestEarthGapH >= 0.05 ? ' or more' : ''}`, 'h', true),
     fullRow('gapFull', 'Longest Earth gap in full', 'The longest spell without Earth in view that touches the window, followed past the window\'s edges (searched up to 60 days each way).', a, b, (x) => [x.metrics.longestEarthGapFull, x.metrics.longestEarthGapH]),
     slopeRow(a, b),
@@ -156,7 +156,14 @@ function bodyNowText(k: Blockage): string {
   return k.clearanceDeg > 0 ? `${where}, ${degText(k.clearanceDeg)} above the skyline${covered}` : `${where}, ${degText(-k.clearanceDeg)} below the skyline (centre hidden)${covered}`;
 }
 
-const EVENT_LABEL: Record<SkyEvent['type'], string> = { sunset: 'Next sunset', sunrise: 'Next sunrise', earthset: 'Next Earthset', earthrise: 'Next Earthrise' };
+// Which instant each event is (decision D-8): the same words as the time scrubber's buttons.
+const EVENT_LABEL: Record<SkyEvent['type'], string> = { sunset: 'Sun fully set', sunrise: 'Sun starts rising', earthset: 'Earth\'s centre sets', earthrise: 'Earth\'s centre rises' };
+const EVENT_HINT: Record<SkyEvent['type'], string> = {
+  sunset: 'The next time the last part of the Sun\'s disc goes behind the terrain skyline, after the shared clock: darkness begins. Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.',
+  sunrise: 'The next time the first part of the Sun\'s disc appears above the terrain skyline, after the shared clock. The whole disc is clear later; that instant is not listed here yet.',
+  earthset: 'The next time Earth\'s centre goes behind the terrain skyline, after the shared clock.',
+  earthrise: 'The next time Earth\'s centre comes above the terrain skyline, after the shared clock.',
+};
 const EVENT_ORDER: readonly SkyEvent['type'][] = ['sunset', 'sunrise', 'earthset', 'earthrise'];
 
 /** Where the Sun and Earth are for each side at the shared clock, and the next rise and set of each inside its window. */
@@ -189,7 +196,7 @@ export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: 
     }
     rows.push({
       key: type, label: EVENT_LABEL[type],
-      hint: type.startsWith('sun') ? 'Sunset is the last part of the Sun\'s disc going behind the terrain skyline; sunrise the first part appearing.' : 'Earth\'s centre crossing the terrain skyline.',
+      hint: EVENT_HINT[type],
       a: a ? when(ea) : EMPTY, b: b ? when(eb) : EMPTY, delta, tone: 'none',
     });
   }
