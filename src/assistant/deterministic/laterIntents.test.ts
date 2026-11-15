@@ -337,6 +337,46 @@ describe('deterministic mode: the catalogue and the compare panel', () => {
   });
 });
 
+describe('deterministic mode: the surface HUD', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('drives the skyline chart like its buttons, one field at a time', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    const steps: [string, Partial<FakeState['hud']>][] = [
+      ['expand the skyline chart', { chart: 'expanded' }],
+      ['chart against time', { mode: 'time' }],
+      ['show the chart as a table', { table: true }],
+      ['skyline mode chart', { mode: 'skyline' }],
+      ['chart tracks only', { azimuthRange: 'tracks' }],
+      ['shrink the chart', { chart: 'compact' }],
+      ['hide the chart', { chart: 'hidden' }],
+      ['show the skyline chart', { chart: 'compact' }],
+    ];
+    for (const [say, want] of steps) {
+      const r = await e.reply(say);
+      expect(r.understood, say).toBe(true);
+      expect(state.hud, say).toMatchObject(want);
+    }
+    expect((await e.reply('hide the chart')).text).toBe('The skyline chart is hidden.');
+  });
+
+  it('folds and opens the key metrics, and closes the explanation', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    expect((await e.reply('fold the key metrics')).text).toBe('The key metrics are folded: only their title shows.');
+    expect(state.hud.metricsOpen).toBe(false);
+    await e.reply('show the key metrics');
+    expect(state.hud.metricsOpen).toBe(true);
+    state.hud.explanation = true;
+    expect((await e.reply('close the explanation')).text).toBe('The blockage explanation is closed.');
+    expect(state.hud.explanation).toBe(false);
+  });
+});
+
 describe('deterministic mode: rise and set times name their instant (D-8)', () => {
   beforeEach(() => {
     installFakeApp(ALL_ACTIONS);

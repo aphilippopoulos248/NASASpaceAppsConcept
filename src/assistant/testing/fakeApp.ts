@@ -68,6 +68,8 @@ export interface FakeState {
   annotations: { tracks: boolean; labels: boolean };
   /** Compare panel (comparePanel). */
   panelTab: 'compare' | 'nearby';
+  /** Surface HUD (hudActions). */
+  hud: { chart: 'hidden' | 'compact' | 'expanded'; mode: 'skyline' | 'time'; table: boolean; azimuthRange: 'full' | 'tracks'; metricsOpen: boolean; explanation: boolean };
   saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
 }
 
@@ -126,6 +128,8 @@ export interface FakeAppOptions {
   comparePanel?: boolean;
   /** Event results name their instant (decision D-8): jumpToEvent gives `label` and `instant`, getAnalysis gives a `label` per event and `eventDefinitions`. */
   eventLabels?: boolean;
+  /** The surface HUD's actions: setChart, showKeyMetrics, dismissBlockageExplanation. */
+  hudActions?: boolean;
 }
 
 /** As src/core/skyEvents.ts EVENT_INFO. */
@@ -137,7 +141,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -185,6 +189,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     annotations: { tracks: true, labels: true },
     panelTab: 'compare',
     saved: [],
+    hud: { chart: 'compact', mode: 'skyline', table: false, azimuthRange: 'full', metricsOpen: true, explanation: false },
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
   let compareCalls = 0;
@@ -600,6 +605,26 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           annotations: { ...state.annotations, window: null },
         }),
       }),
+    );
+  }
+  if (options.hudActions) {
+    const chartOut = () => ({ chart: state.hud.chart, mode: state.hud.mode, table: state.hud.table, azimuthRange: state.hud.azimuthRange });
+    actions.push(
+      defineAction<{ show?: boolean; expanded?: boolean; mode?: 'skyline' | 'time'; table?: boolean; azimuthRange?: 'full' | 'tracks' }, unknown>({
+        name: 'setChart', title: 'Skyline chart', description: 'The chart.', effect: 'command',
+        params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' }, expanded: { type: 'boolean', description: 'large' }, mode: { type: 'string', description: 'mode', enum: ['skyline', 'time'] }, table: { type: 'boolean', description: 'table' }, azimuthRange: { type: 'string', description: 'range', enum: ['full', 'tracks'] } } },
+        run: ({ show, expanded, mode, table, azimuthRange }) => {
+          if ([show, expanded, mode, table, azimuthRange].every((v) => v === undefined)) throw new ActionError('Give at least one of `show`, `expanded`, `mode`, `table`, `azimuthRange`.');
+          const h = state.hud;
+          h.chart = show === false ? 'hidden' : expanded !== undefined ? (expanded ? 'expanded' : 'compact') : h.chart === 'hidden' ? 'compact' : h.chart;
+          if (mode) h.mode = mode;
+          if (table !== undefined) h.table = table;
+          if (azimuthRange) h.azimuthRange = azimuthRange;
+          return chartOut();
+        },
+      }),
+      defineAction<{ open: boolean }, unknown>({ name: 'showKeyMetrics', title: 'Key metrics panel', description: 'Key metrics.', effect: 'command', params: { type: 'object', properties: { open: { type: 'boolean', description: 'open' } }, required: ['open'] }, run: ({ open }) => { state.hud.metricsOpen = open; return { keyMetricsOpen: open }; } }),
+      defineAction({ name: 'dismissBlockageExplanation', title: 'Close the blockage explanation', description: 'Closes it.', effect: 'command', params: none, run: () => { state.hud.explanation = false; return { explanationShown: false }; } }),
     );
   }
   if (options.catalogActions) {

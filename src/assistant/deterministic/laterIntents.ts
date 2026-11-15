@@ -403,6 +403,49 @@ export const surfaceStatus: Intent = (step) => {
   });
 };
 
+// ---------------------------------------------------------------- the surface HUD: chart, key metrics, explanation
+
+export const hudPanels: Intent = (step) => {
+  if (QUESTION.test(step)) return null;
+  const chartWords = /\b(skyline )?chart\b/;
+  if (chartWords.test(step)) {
+    const params: Json = {};
+    if (/^(hide|close|remove|turn off)\b/.test(step)) params.show = false;
+    else if (/\b(expand|enlarge|bigger|larger|full[- ]size|maximi[sz]e)\b/.test(step)) params.expanded = true;
+    else if (/\b(shrink|smaller|collapse|minimi[sz]e|compact)\b/.test(step)) params.expanded = false;
+    if (/\b(against|over|versus|vs) time\b|\btime (chart|mode|view|plot)\b|\bchart (of|by) time\b/.test(step)) params.mode = 'time';
+    else if (/\bskyline (mode|view|plot)\b|\bchart (of|by) azimuth\b|\bagainst azimuth\b/.test(step)) params.mode = 'skyline';
+    if (/\bas (a )?table\b|\btable (view|mode)\b/.test(step)) params.table = !/^(hide|close)\b.*\btable\b/.test(step);
+    if (/\b(full circle|whole circle|all azimuths|0 to 360)\b/.test(step)) params.azimuthRange = 'full';
+    else if (/\b(tracks only|only the tracks|where the tracks are|fit the tracks)\b/.test(step)) params.azimuthRange = 'tracks';
+    if (!Object.keys(params).length) {
+      if (!/^(show|open|display|turn on)\b/.test(step)) return null;
+      params.show = true;
+    }
+    return plan('change the skyline chart', async (ctx) => {
+      const r = await ctx.run('setChart', params);
+      if (r.chart === 'hidden') return 'The skyline chart is hidden.';
+      const what = r.mode === 'time' ? 'elevation and clearance of the Sun and Earth against time' : 'the terrain skyline around the compass with the Sun and Earth samples over the mission window';
+      return `The skyline chart is ${r.chart === 'expanded' ? 'expanded' : 'shown at its small size'}: ${what}${r.table === true ? ', as a table' : ''}${r.azimuthRange === 'tracks' && r.mode !== 'time' ? ', only the azimuths the tracks cross' : ''}.`;
+    });
+  }
+  const metrics = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?key metrics(?: panel)?$/.exec(step);
+  if (metrics) {
+    const open = /show|open|unfold|expand/.test(metrics[1]);
+    return plan(`${open ? 'open' : 'fold'} the key metrics`, async (ctx) => {
+      const r = await ctx.run('showKeyMetrics', { open });
+      return r.keyMetricsOpen === true ? 'The key metrics are open: the Sun and Earth now, the countdowns to the next rise and set, and the mission-window figures.' : 'The key metrics are folded: only their title shows.';
+    });
+  }
+  if (/^(close|dismiss|hide|remove|clear)\s+(?:the\s+)?(?:ridge |blockage |blocking |terrain )?explanation$/.test(step)) {
+    return plan('close the blockage explanation', async (ctx) => {
+      await ctx.run('dismissBlockageExplanation');
+      return 'The blockage explanation is closed.';
+    });
+  }
+  return null;
+};
+
 // ---------------------------------------------------------------- the landing catalogue
 
 export const listSites: Intent = (step) => {
@@ -503,6 +546,7 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['nearestIceTargets'], 'Ice targets: "nearest ice targets", "how far is the nearest ice"'],
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],
   [['setFieldOfView'], 'Surface view: "face the sun", "field of view 10", "hide the sky paths", "what is the ground made of"'],
+  [['setChart'], 'Surface HUD: "show the skyline chart", "expand the chart", "chart against time", "show the chart as a table", "fold the key metrics", "close the explanation"'],
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],
 ];

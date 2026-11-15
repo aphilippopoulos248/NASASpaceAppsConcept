@@ -9,10 +9,12 @@
 // here, or without a phrase in examples.json, fails the run, so a new action is noticed.
 //
 //   node --test e2e/scenario/control.test.mjs     (needs `npm run build` first; starts its own servers)
+//   E2E_GPU=1 flock /tmp/lunyx-gpu.lock node --test e2e/scenario/control.test.mjs    (GPU rendering, D-7)
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { after, before, describe, test } from 'node:test';
-import { closeBrowser, lastSeq, log, openApp, SLOW, TIMEOUT, until } from '../lib/app.mjs';
+import { GPU, renderer } from './gpu.mjs';
+import { closeBrowser, lastSeq, openApp, SLOW, TIMEOUT, until } from '../lib/app.mjs';
 import { servers } from '../lib/servers.mjs';
 
 const EXAMPLES = JSON.parse(readFileSync(new URL('../../src/assistant/deterministic/examples.json', import.meta.url), 'utf8')).examples;
@@ -112,6 +114,14 @@ function screen(page) {
       locator: { readout: q('.locator-readout')?.textContent ?? '', zoomOutDisabled: Boolean(q('.locator button[aria-label="Zoom the map out"]')?.disabled) },
       hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null },
       drawerOpen: Boolean(q('#assistant-drawer')?.classList.contains('is-open')),
+      compare: (() => {
+        const sheet = q('.cmp-sheet');
+        if (!sheet) return null;
+        const panel = [...sheet.querySelectorAll('[role="tabpanel"]')].find((p) => !p.hidden);
+        return { open: !sheet.hidden, tab: [...sheet.querySelectorAll('[role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null, text: panel?.textContent ?? '', loadButtons: [...sheet.querySelectorAll('button[aria-label^="Load the saved comparison "]')].map((b) => b.getAttribute('aria-label').slice('Load the saved comparison '.length)) };
+      })(),
+      metrics: q('.km') ? { bodyHidden: Boolean(q('.km .km-body')?.hidden), foldExpanded: q('.km .km-fold')?.getAttribute('aria-expanded') ?? null } : null,
+      chart: q('.skc') ? { hidden: q('.skc').hidden, size: q('.skc').dataset.size ?? null, mode: q('.skc').dataset.mode ?? null, explainShown: !q('.skc .skc-explain')?.hidden, explainText: q('.skc .skc-explain')?.textContent ?? '' } : null,
     };
   });
 }
@@ -299,7 +309,70 @@ const CASES = [
     const s = await page.evaluate(async () => window.lunyx.actions.getAction('getState').run({}));
     assert.deepEqual(s.compare, { A: r.A, B: r.B, open: true });
   } },
-  { name: 'stopCompare', check: async (r, page) => assert.equal((await store(page)).comparing, false) },
+  // ---- the compare panel (T-11)
+  { name: 'openCompare', params: { tab: 'compare' }, check: async (r, page) => {
+    assert.equal(r.open, true);
+    assert.equal(r.tab, 'compare');
+    await shows(page, (s) => s.compare?.open === true && s.compare.tab === 'A and B', 'compare panel open on "A and B"');
+  } },
+  { name: 'compareDelayedArrival', params: { delayH: 24 }, check: async (r, page) => {
+    assert.equal(r.analysisA.state, 'ready');
+    assert.equal(r.analysisB.state, 'ready');
+    assert.equal(Date.parse(r.revisedArrivalUtc) - Date.parse(r.plannedArrivalUtc), 24 * 3_600_000);
+    assert.equal((await store(page)).delayH, 0, 'the scenario on screen keeps its own delay');
+    await shows(page, (s) => s.compare?.tab === 'A and B' && s.compare.text.includes(r.A) && s.compare.text.includes(r.B), 'the panel names both sides');
+  } },
+  { name: 'compareMastHeights', params: { heightBM: 10 }, check: async (r, page) => {
+    assert.equal(r.mastHeightBM, 10);
+    assert.equal((await store(page)).mastHeightM, 2, 'the mast on screen is not changed');
+    await shows(page, (s) => s.compare?.text.includes(r.A) && s.compare.text.includes(r.B), 'the panel names both sides');
+  } },
+  { name: 'swapComparison', prepare: async (page) => {
+    const s = await store(page);
+    page.__beforeSwap = [s.compareA?.id, s.compareB?.id];
+  }, check: async (r, page) => {
+    const s = await store(page);
+    assert.deepEqual([s.compareB?.id, s.compareA?.id], page.__beforeSwap);
+  } },
+  { name: 'saveComparison', params: { name: 'Control test' }, check: async (r, page) => {
+    assert.equal(r.saved.name, 'Control test');
+    await shows(page, (s) => s.compare?.loadButtons.includes('Control test'), 'the saved comparison is listed with its Load button');
+  } },
+  { name: 'listComparisons', check: async (r) => assert.ok(r.comparisons.some((c) => c.name === 'Control test'), JSON.stringify(r.comparisons)) },
+  { name: 'loadComparison', params: { name: 'Control test' }, check: async (r, page) => {
+    assert.equal(r.loaded, 'Control test');
+    assert.equal(r.analysisA.state, 'ready');
+    await shows(page, (s) => s.compare?.open === true && s.compare.tab === 'A and B', 'comparison open on "A and B"');
+  } },
+  { name: 'deleteComparison', params: { name: 'Control test' }, check: async (r, page) => {
+    assert.equal(r.deleted, 'Control test');
+    await shows(page, (s) => !s.compare?.loadButtons.includes('Control test'), 'the deleted comparison is gone from the list');
+  } },
+  { name: 'clearComparison', check: async (r, page) => {
+    assert.deepEqual([r.A, r.B], [null, null]);
+    const s = await store(page);
+    assert.deepEqual([s.compareA, s.compareB], [null, null]);
+  } },
+  // ---- nearby alternatives (T-11): a south-polar pin in the 40 m layer, in shadow on the day of IM-2's landing
+  { name: 'rankNearby', prepare: async (page) => {
+    await run(page, 'dropPin', { lat: -88, lon: 136.7 });
+    await run(page, 'setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true });
+  }, check: async (r, page) => {
+    assert.ok(r.reference && r.reference.isReference, JSON.stringify(r.reference));
+    assert.ok(r.candidates.length > 0 && r.rankedCount >= r.candidates.length, `${r.candidates.length} rows of ${r.rankedCount}`);
+    assert.equal(r.candidates[0].rank, 1);
+    page.__nearby = r;
+    await shows(page, (s) => s.compare?.open === true && s.compare.tab === 'Nearby sites', 'the panel shows its "Nearby sites" tab');
+  } },
+  { name: 'selectCandidate', params: { rank: 1 }, check: async (r, page) => {
+    assert.equal(r.site.id, page.__nearby.candidates[0].id);
+    assert.equal((await store(page)).site.id, r.site.id);
+    await shows(page, (s) => s.card?.title === r.site.name, 'the card names the chosen candidate');
+  } },
+  { name: 'stopCompare', check: async (r, page) => {
+    assert.equal((await store(page)).comparing, false);
+    await shows(page, (s) => s.compare === null || s.compare.open === false, 'compare panel closed');
+  } },
   // ---- pins and the surface view
   { name: 'dropPin', params: { lat: -88, lon: 136.7 }, check: async (r, page) => {
     assert.equal(r.site.kind, 'custom');
@@ -346,6 +419,27 @@ const CASES = [
     assert.ok(r.ground.bands.length > 0 && r.ground.bands[0].product, JSON.stringify(r.ground.bands[0]));
     await shows(page, (s) => s.hud.ground.includes(r.ground.summary), 'HUD ground line names the same data');
   } },
+  // ---- the surface HUD (T-10)
+  { name: 'showKeyMetrics', params: { open: false }, check: async (r, page) => {
+    assert.equal(r.keyMetricsOpen, false);
+    await shows(page, (s) => s.metrics?.bodyHidden === true && s.metrics.foldExpanded === 'false', 'key metrics folded');
+    await run(page, 'showKeyMetrics', { open: true });
+  } },
+  { name: 'setChart', params: { expanded: true, mode: 'time' }, check: async (r, page) => {
+    assert.deepEqual([r.chart, r.mode], ['expanded', 'time']);
+    await shows(page, (s) => s.chart?.hidden === false && s.chart.size === 'expanded' && s.chart.mode === 'time', 'chart expanded, against time');
+    await run(page, 'setChart', { expanded: false, mode: 'skyline' });
+  } },
+  { name: 'explainBlockage', params: { body: 'earth' }, check: async (r, page) => {
+    assert.equal(r.body, 'earth');
+    assert.equal(r.shownInHud, true);
+    assert.ok(typeof r.explanation === 'string' && r.explanation.length > 20, r.explanation);
+    await shows(page, (s) => s.chart?.explainShown === true && s.chart.explainText.includes(r.explanation), 'the explanation is on screen, in the same words');
+  } },
+  { name: 'dismissBlockageExplanation', check: async (r, page) => {
+    assert.equal(r.explanationShown, false);
+    await shows(page, (s) => s.chart?.explainShown === false, 'the explanation is closed');
+  } },
   { name: 'exitSurface', check: async (r, page) => {
     assert.equal(r.view, 'globe');
     assert.equal(r.site.id, 'im-2');
@@ -376,6 +470,12 @@ describe('control: what a model is given', () => {
     app = await openApp(srv.scripted);
   }, SLOW);
   after(() => app?.close());
+
+  test('the renderer is the one asked for', SLOW, async (t) => {
+    const name = await renderer(app.page);
+    t.diagnostic(`WebGL renderer: ${name}`);
+    if (GPU) assert.doesNotMatch(name, /swiftshader|llvmpipe|software/i, 'E2E_GPU=1 but the page renders in software');
+  });
 
   test('the tool list is the registry, every definition is complete, and the route accepts all of them', SLOW, async () => {
     const { page } = app;

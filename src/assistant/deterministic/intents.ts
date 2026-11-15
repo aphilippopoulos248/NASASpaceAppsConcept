@@ -1023,7 +1023,7 @@ const INTENTS: Intent[] = [
   timeShift, timeSet,
   later.relief, later.coverage, later.iceOutlines,
   overlays, missions, lighting,
-  later.skyPaths,
+  later.skyPaths, later.hudPanels,
   views,
   later.fieldOfView,
   look, globe, pin, exportResults,
