@@ -4,7 +4,7 @@
 //
 // Layout: a header that always shows (name, coordinates, fold and close buttons), a body that
 // scrolls and can be folded away (the default on phones), and a footer with the actions.
-import { blockageAt, skyAt } from '../../analysis/api';
+import { blockageAt, nextTransitions, skyAt, transitionSummary } from '../../analysis/api';
 import type { Blockage } from '../../analysis/types';
 import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
@@ -104,12 +104,22 @@ export function mountSiteCard(region: HTMLElement): void {
   dataMore.append(dataSummary, dataList, dataNotes);
 
   const skyTitle = el('h3', 'ly-section-title');
-  const sky = factList('sc-sky', [['sun', 'Sun'], ['earth', 'Earth']]);
+  const sky = factList('sc-sky', [['sun', 'Sun'], ['sunNext', 'Sun next'], ['earth', 'Earth'], ['earthNext', 'Earth next']]);
   const skyNote = el('p', 'ly-note sc-skynote');
 
   const winTitle = el('h3', 'ly-section-title', 'Mission window');
   const winWhen = el('p', 'ly-note sc-winwhen');
-  const win = factList('sc-window', [['sunlight', 'Sunlight'], ['dark', 'Longest darkness'], ['earth', 'Earth in view'], ['gap', 'Longest Earth gap'], ['slope', 'Slope']]);
+  // Earth in two definitions, never mixed up: its centre (the app's line of sight) and any part of its
+  // disc (the definition of the long-term PGDA map shown under Site science).
+  const win = factList('sc-window', [
+    ['sunlight', 'Sunlight'],
+    ['dark', 'Longest darkness'],
+    ['earth', "Earth's centre in view"],
+    ['earthAny', 'Any part of Earth in view'],
+    ['gap', "Longest gap, Earth's centre"],
+    ['gapAny', 'Longest gap, whole disc'],
+    ['slope', 'Slope'],
+  ]);
   const winStatus = el('p', 'sc-winstatus');
   winStatus.setAttribute('role', 'status');
   const winNote = el('p', 'ly-note sc-winnote');
@@ -239,9 +249,16 @@ export function mountSiteCard(region: HTMLElement): void {
     if (a) {
       sky.set('sun', bodyText(blockageAt(a, 'sun', t), 'Hidden'));
       sky.set('earth', bodyText(blockageAt(a, 'earth', t), 'Hidden'));
-      skyNote.textContent = `Centre of each disc against the terrain skyline, seen from ${a.horizon.mastHeightM} m above the ground at the site. No atmosphere, so no refraction.`;
+      // The passage of each disc through the skyline under way, or the next one: both ends, named (D-8).
+      const next = nextTransitions(a, t);
+      const passage = (tr: (typeof next)['sun']) => (tr ? `${tr.start.timeMs <= t ? 'under way: ' : ''}${transitionSummary(tr)}` : 'no rise or set found in or near the analysed window');
+      sky.set('sunNext', passage(next.sun));
+      sky.set('earthNext', passage(next.earth));
+      skyNote.textContent = `Centre of each disc against the terrain skyline, seen from ${a.horizon.mastHeightM} m above the ground at the site. No atmosphere, so no refraction. A rise or a set is a span: from the first cut of the disc to its last limb.`;
       return;
     }
+    sky.set('sunNext', null);
+    sky.set('earthNext', null);
     try {
       const s = skyAt(site, 0, t);
       const plain = (b: { elDeg: number; azDeg: number }) => `${deg(b.elDeg)} elevation, azimuth ${deg(b.azDeg, 0)}`;
@@ -282,9 +299,11 @@ export function mountSiteCard(region: HTMLElement): void {
     win.set('sunlight', `${pct(m.illuminationPct)} of the window`);
     win.set('dark', span(m.longestDarknessH, m.darknessOpenEnded));
     win.set('earth', `${pct(m.earthVisiblePct)} of the window`);
+    win.set('earthAny', m.earthAnyPct === undefined ? null : `${pct(m.earthAnyPct)} of the window`);
     win.set('gap', span(m.longestEarthGapH, m.earthGapOpenEnded));
+    win.set('gapAny', m.longestEarthAnyGapH === undefined ? null : span(m.longestEarthAnyGapH, m.earthAnyGapOpenEnded ?? false));
     win.set('slope', Number.isFinite(a.slope.slopeDeg) ? `${deg(a.slope.slopeDeg)} over ${Math.round(a.slope.baselineM)} m` : 'not available: no elevation data here');
-    winNote.textContent = 'Sunlight is the time-averaged visible part of the Sun\'s disc. Earth in view is geometric line of sight to Earth\'s centre, not a radio link. Both are measured against the terrain skyline.';
+    winNote.textContent = 'Sunlight is the time-averaged visible part of the Sun\'s disc. Earth is counted two ways: its centre above the skyline, and any part of its disc (the definition of the 18.6-year map under Site science). Both are geometric line of sight, not a radio link, measured against the terrain skyline.';
     if (store.get().site) renderSky(store.get().site!);
   };
 
