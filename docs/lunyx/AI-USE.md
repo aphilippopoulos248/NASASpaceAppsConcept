@@ -3,14 +3,14 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the tree at `092da7c`: team integration `b8afb23` merged with the original
-  team's T-64 candidate (`am/lunyx/agent/upstream-sync` at `fe0ae02`: release candidate
-  `bce6816` with the teammates' GitHub `main` `081784a`, pull request #2 `a03eff9` and the
-  surface panel actions of T-65), plus this task's documents: the original project's feature set
-  with the mission presets, the T-37 notices, the T-38 landing sources, the T-39 flags, the T-40
-  downloads, the T-43 coordinate entry, the T-46 band rule and compare focus, the T-47 to T-49
-  rise and set spans, the T-50 finer skyline, the T-56 nearby-scan fix and all four of the science
-  project's deliveries; checked on 2026-11-15 (UTC).
+- **State described:** the tree at `3a8d432`: team integration `b8afb23` merged with the original
+  team's T-64 candidate (`am/lunyx/agent/upstream-sync` at `c39c516`: release candidate
+  `bce6816` with the teammates' GitHub `main` up to `d744169`, pull request #2 `a03eff9`,
+  the surface panel actions of T-65 and the T-64 review fixes), plus this task's documents: the
+  original project's feature set with the mission presets, the T-37 notices, the T-38 landing
+  sources, the T-39 flags, the T-40 downloads, the T-43 coordinate entry, the T-46 band rule and
+  compare focus, the T-47 to T-49 rise and set spans, the T-50 finer skyline, the T-56 nearby-scan
+  fix and all four of the science project's deliveries; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
   for the operator to approve (section 5). Items that could not be established are in section 8.
 - **Who wrote this:** an AI agent (Claude, hub handle @submission) from the repository, its git
@@ -111,15 +111,15 @@ last one on L2 and L3, in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `092da7c` the history has 555 commits:
+At `3a8d432` the history has 572 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 276 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 275 (71 "Claude Fable 5.2", 204 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
-| 11 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 9: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix), `4d2d6c4` (the territory size); AI status not recorded (open item L4) |
+| 283 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 282 (71 "Claude Fable 5.2", 211 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 12 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 10: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix), `4d2d6c4` (the territory size), `7dabe03` ("Fixed LLM": the assistant's credentials from the Anthropic SDK); AI status not recorded (open item L4) |
 | 1 non-merge commit from a second teammate's GitHub account | 0 | 1: `48ffb71` (mission selection, the movable surface panels, closing the assistant, area visibility); AI status not recorded (L4) |
 | 1 non-merge commit from the GitHub account that merges pull requests | 0 | 1: `abe1abb` (the Track Sun and Track Earth toggles), from a branch named `codex/sun-moon-tracking-toggle`; whether OpenAI's Codex wrote it is not recorded (L16) |
-| 266 merge commits | 79 | 187 (112 by the hub's integration bot, 2 GitHub pull-request merges, 70 by the local account, 3 by the teammates) |
+| 275 merge commits | 84 | 191 (112 by the hub's integration bot, 2 GitHub pull-request merges, 73 by the local account, 4 by the teammates) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -166,7 +166,7 @@ what it does stays visible in the app.
 | --- | --- | --- | --- |
 | Claude API, server-side relay (`server/llm/anthropic.ts`) | The server has Claude credentials (`ant auth login` or SDK-resolved) | Yes: default model `claude-opus-5-5` (`server/llm/env.ts`); `LUNYX_LLM_MODEL` can name another (labels exist for `claude-fable-5-2`, `claude-sonnet-5-5`, `claude-haiku-5-5`). With the default betas on, a declined request is retried by the API on the model it recommends (server-side fallback; `LUNYX_LLM_BETAS=off` turns it off) | Every reply shows the model's name; the drawer's status line reads "Language model: <name>" |
 | Jev router, TypeSafe AI (`server/llm/jev.ts`) | `LUNYX_LLM_ROUTER=jev` and `TYPESAFE_API_KEY` | Yes: a classification model that decides how much effort the Claude model spends on a request; the user's latest message and the action names are sent to TypeSafe's API. It never removes a tool | Not shown separately |
-| Deterministic mode (`src/assistant/deterministic/`) | No key (the default) | No: a fixed command grammar | "Deterministic mode: no language model" on every reply |
+| Deterministic mode (`src/assistant/deterministic/`) | No Claude credentials (the default) | No: a fixed command grammar | "Deterministic mode: no language model" on every reply |
 | Scripted test model (`server/llm/scripted.ts`) | `LUNYX_LLM_PROVIDER=scripted`, for tests | No | "Scripted test model (not a language model)" |
 | Voice dictation (`src/assistant/voice.ts`) | The user presses the microphone, where the browser offers speech recognition | Yes, the browser vendor's speech recognition ("it may send audio to the browser vendor", per the code); Lunyx receives text only and puts it in the message box for review | Microphone button |
 
@@ -189,7 +189,7 @@ its tests; no real model has been run, see above):
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `092da7c` that is an image, texture, document image or data
+**Scope:** every tracked file at `3a8d432` that is an image, texture, document image or data
 file: everything except source code, configuration and Markdown. **536 files, 176.0 MB**: 193
 images (JPEG, PNG, WebP), 1 PDF, 342 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
@@ -814,7 +814,7 @@ like the rest of `docs/`).
 | --- | --- | --- | --- | --- |
 | W1 | Screenshots of the app (A23, the walkthroughs' A32 under `docs/lunyx/screenshots/`, and any new ones) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 277 of 289 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 284 of 297 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
@@ -830,7 +830,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `092da7c`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `3a8d432`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a
@@ -878,9 +878,10 @@ GitHub `main` at `081784a` (the teammates' second round) and pull request #2 (`a
 the original team's T-64 candidate. They add no image or data file. They change the app: the
 "Territory size exaggeration" control, the globe's relief at true scale with no selector, movable
 and foldable surface panels, "Close ×" and Escape for the assistant's drawer, the landing list,
-and the Track Sun and Track Earth toggles. Their non-merge commits carry no AI trailer (`4d2d6c4`
-and `48ffb71`: L4; `abe1abb`, from a `codex/` branch: L16); one merge, `aab609b`, carries a
-"Claude Fable 5.2" trailer.
+and the Track Sun and Track Earth toggles; the teammate's later `7dabe03` ("Fixed LLM") makes
+the Anthropic SDK find the assistant's credentials. Their non-merge commits carry no AI trailer
+(`4d2d6c4`, `48ffb71` and `7dabe03`: L4; `abe1abb`, from a `codex/` branch: L16); one merge,
+`aab609b`, carries a "Claude Fable 5.2" trailer.
 
 ## 8. Open list for the operator
 
@@ -892,7 +893,7 @@ at the source.
 | L1 | The repository has no `LICENSE` file | Space Apps terms: original content without an OSI licence is distributed by NASA under Apache 2.0 | Choose a licence (or accept the Apache 2.0 default) |
 | L2 | `public/textures/surface_detail_{normal,tone}.jpg` (A11): origin and licence of the "moon-surface" asset pack; whether a person or an AI tool made it | Third-party material must have its licence documented; the submit checkbox confirms no copyrighted material is used without permission; an AI-generated image would need a watermark | Ask the teammate where `moon-surface.zip` came from and under which licence; otherwise W6 |
 | L3 | `public/data/landings.json` (A18): positions and times are sourced since T-38, except three times not confirmed to the minute (Luna 23's time of day, Chandrayaan-3's and IM-2's minutes). Still unknown: who wrote the one-line summaries, and whether the AI model supplied the original values | The summaries are shown in the app; AI-generated text and data must be acknowledged | Ask the teammate; otherwise acknowledge the summaries as possibly AI-written |
-| L4 | The teammates' ten commits without an AI trailer: the teammate's nine (`49fee90`, `418760e`, `8bfd842`, `2ab7daa`, `008be62`, `bf39978`, `f812385`, `2855d22`, `4d2d6c4`: surface scene, close-up textures, country labels, flags, explored areas and their scripts, the territory size) and a second teammate's `48ffb71` (mission selection, movable surface panels, closing the assistant, area visibility) | The code and data acknowledgement in 2.1 should be exact | Ask the teammates whether an AI tool wrote that code |
+| L4 | The teammates' eleven commits without an AI trailer: the teammate's ten (`49fee90`, `418760e`, `8bfd842`, `2ab7daa`, `008be62`, `bf39978`, `f812385`, `2855d22`, `4d2d6c4`, `7dabe03`: surface scene, close-up textures, country labels, flags, explored areas and their scripts, the territory size, the assistant's credentials) and a second teammate's `48ffb71` (mission selection, movable surface panels, closing the assistant, area visibility) | The code and data acknowledgement in 2.1 should be exact | Ask the teammates whether an AI tool wrote that code |
 | L16 | `abe1abb` "feat: add celestial tracking toggles" (the Track Sun and Track Earth toggles, pull request #2, merged on GitHub as `a03eff9`) carries no AI trailer and came from a branch named `codex/sun-moon-tracking-toggle`; `codex/` is the prefix OpenAI's Codex gives the branches of the pull requests it opens. Whether an AI tool wrote it is **not established** (asked of the operator) | If an AI tool other than Claude wrote code, the SI description must name it | Ask the author whether Codex (or another tool) wrote it; if so, name it in 2.1 and in the README's "How AI was used" |
 | L5 | JPL Horizons: no licence or usage terms stated on the manual, API documentation or Horizons page | Licences of data used must be documented | Cite as the manual asks (SOURCES S10); state "terms not stated" |
 | L6 | Kaguya TC tiles via NASA Moon Trek (run time only). Moon Trek's metadata quotes JAXA: the data are JAXA's copyright and "can be allowed to use for scientific and educational utilization" (SOURCES R1) | Displayed with credit, not redistributed; a public hackathon submission may or may not count as educational use | The operator's reading; otherwise drop the Kaguya layer and keep the LROC WAC layer, whose metadata says "Use_Constraints: None" |

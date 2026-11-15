@@ -55,7 +55,7 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   its disc) for each lunar day over the coming months, as a chart and a table.
 - **Assistant.** A drawer (button lower right) where you ask in words; "Close ×" or Escape
   closes it without leaving the surface view. It operates the app through the same actions as
-  the on-screen controls and lists what it ran. Without a language-model key it answers in a
+  the on-screen controls and lists what it ran. Without Claude credentials it answers in a
   labelled deterministic mode (see [The assistant](#the-assistant)).
 
 Every number comes from the datasets in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md), is
@@ -146,21 +146,23 @@ Its tools are generated from the app's action registry (`src/core/actions.ts`), 
 registry every control uses, so it can do what a user can do and leaves the same state on
 screen. It may quote numbers only from the results of those actions.
 
-**Without credentials** (the default) it answers in **deterministic mode** and says so on every
-reply: a fixed set of commands such as `go to IM-2`, `set time to 2026-03-01 12:00`,
+**Without Claude credentials** (the default) it answers in **deterministic mode** and says so:
+`GET /api/assistant` reports `available: false`, and the drawer labels every reply "Deterministic
+mode". It understands a fixed set of commands such as `go to IM-2`, `set time to 2026-03-01 12:00`,
 `compare with a 24 h delay`, `what is the illumination?`. Type `help` for the list and
 `/actions` for every action by name. It does not guess: if part of a request is not
 understood, nothing is run and it says which part.
 
-**With a Claude subscription** it uses Claude through the server. Authenticate once and start:
+**With Claude credentials** it uses Claude through the server. Authenticate once and start:
 
 ```bash
-ant auth login   # opens a browser, log in with your Claude account
+ant auth login   # opens a browser to log in
 npm run dev
 ```
 
-Credentials are resolved by the Anthropic SDK (auth profile from `ant auth login`, workload
-identity, or an `ANTHROPIC_API_KEY` env var) and never reach the browser.
+The Anthropic SDK finds the credentials itself: an auth profile from `ant auth login`, workload
+identity, or an `ANTHROPIC_API_KEY` environment variable. They are read by the server only and
+never reach the browser.
 
 | Variable | Meaning |
 | --- | --- |
@@ -257,7 +259,7 @@ March to April 2025) are bundled. The network is used only for:
   coverage from NASA's PDS (first use takes some seconds); offline, such a pin falls back to the
   1.9 km whole-Moon grid and the result says so;
 - `/api/horizons`, a proxy to JPL Horizons;
-- the language model and the Jev router, when keys are configured;
+- the language model and the Jev router, when credentials are configured;
 - voice dictation, through the browser's speech service.
 
 ## Data sources and credits
@@ -338,10 +340,11 @@ centre.
 - **Ownership, areas and flags.** "Belongs to" is the state responsible for the hardware in the
   GCAT catalogue (USSR hardware is shown as Russia); no country owns lunar ground. Seen from
   orbit, each explored area is drawn enlarged so it can be seen: by default to between 150 and
-  500 km across; Filters > "Territory size exaggeration" sets the drawing between true size (×1)
-  and that default (×100). Close to the ground the areas are true to size. The card gives the
-  true size and the enlargement drawn from orbit. The flags are simplified drawings made by the
-  code.
+  500 km across; Filters > "Territory size exaggeration" is a display setting, not a width
+  multiplier: 1 is true size, 100 (the default) that enlargement, and the settings in between
+  blend linearly between the two. Close to the ground the areas are true to size. The card gives
+  the true size and the enlargement drawn from orbit. The flags are simplified drawings made by
+  the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Nearby tab status line (Q-8): known defect, low, on hold, not fixed in release candidate

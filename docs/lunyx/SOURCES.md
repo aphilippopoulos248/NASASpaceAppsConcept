@@ -5,15 +5,15 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `092da7c`: team integration `b8afb23` merged with the original
-  team's T-64 candidate (`am/lunyx/agent/upstream-sync` at `fe0ae02`: release candidate
-  `bce6816`, the teammates' GitHub `main` `081784a` and pull request #2), plus this task's
-  documents (T-22 mission presets, T-37 licence notices and the DOI fix, T-38 a source for every
-  landing, T-39 the flags, T-40 the notices header, T-46 to T-50, T-56, all four of the science
-  project's deliveries). Since the published `cc736f8`, `public/` gained `public/data/sources/`
-  (S18 to S20), `public/data/presets.json` (S21) and `public/licences/` (section 6);
-  `package.json` gained the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`;
-  the lockfile is unchanged.
+- **State described:** the tree at `3a8d432`: team integration `b8afb23` merged with the original
+  team's T-64 candidate (`am/lunyx/agent/upstream-sync` at `c39c516`: release candidate
+  `bce6816`, the teammates' GitHub `main` up to `d744169` and pull request #2), plus this
+  task's documents (T-22 mission presets, T-37 licence notices and the DOI fix, T-38 a source for
+  every landing, T-39 the flags, T-40 the notices header, T-46 to T-50, T-56, all four of the
+  science project's deliveries). Since the published `cc736f8`, `public/` gained
+  `public/data/sources/` (S18 to S20), `public/data/presets.json` (S21) and `public/licences/`
+  (section 6); `package.json` gained the scripts `fetch-gcat`, `fetch-site-areas` and
+  `build-licences`; the lockfile is unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
   nothing, the entry says so and the item is on the open list in
@@ -332,8 +332,9 @@ any AI tool made them are not established (open list L2).**
   the globe each area is drawn enlarged from orbit, by default to between 150 and 500 km across
   (`AREA_DISPLAY_SCALE`, `MIN_ORBIT_AREA_WIDTH_M` and `MAX_ORBIT_AREA_WIDTH_M` in
   `src/scene/siteAreas.ts`); the "Territory size exaggeration" control (action
-  `setTerritoryScale`) sets the drawing between true size (×1) and that default (×100), and close
-  to the ground the areas are true to size. The site card gives the true size and the enlargement
+  `setTerritoryScale`) is a display setting, not a width multiplier: 1 is true size, 100 (the
+  default) that enlargement, and the settings in between blend linearly; below 100 km of camera
+  altitude the areas ease to true size. The site card gives the true size and the enlargement
   drawn from orbit.
 
 ### S16. Landing catalogue
@@ -557,7 +558,8 @@ double-click enters the surface view), and the Track Sun and Track Earth toggles
 ## 8. Comparison with the teammate's `docs/DATA_SOURCES.md`
 
 The teammate keeps a data-sources note, `docs/DATA_SOURCES.md` (from GitHub `main`, in the
-tree since `0cc5553`; checked again at `081784a`). This document is the complete register; it was checked against that note
+tree since `0cc5553`; checked again on the T-64 candidate `c39c516`, after the original team's
+correction of its section 11). This document is the complete register; it was checked against that note
 entry by entry. The note is the teammate's and was not edited.
 
 | Entry in DATA_SOURCES.md | Here | Agrees | Differs or adds |
@@ -572,7 +574,7 @@ entry by entry. The note is the teammate's and was not edited.
 | 8. Photo-derived relief | S5 | Yes | — |
 | 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |
 | 10. Close-up surface maps | S9 | Yes: third-party pack, "origin and licence unknown" | Adds that its AI status is not established (L2) |
-| 11. Explored area at each site | S19, S20 | Yes on sources. On the display it differs from the code: it says the areas are drawn "10× larger in width (100× in area) than true size by default" and that the "Territory size exaggeration" control "sets it from true size to 50×"; at `081784a` the code draws each area from orbit at 150 to 500 km across by default, and the control's steps run from ×1 (true size) to ×100 (the default) | Adds that the bundled LROC table is byte-identical to the archive's current file |
+| 11. Explored area at each site | S19, S20 | Yes, on the sources and, since the original team's T-64 correction, on the display: about 150 to 500 km across from orbit by default, a display setting from 1 (true size) to 100, easing to true size below 100 km | Adds that the bundled LROC table is byte-identical to the archive's current file |
 | Not in that note | S1, S2, S12 to S15, S17, sections 4 to 6 | — | The LOLA grids in `public/data/dem`, PGDA product 69, the ice targets, Diviner, the ShadowCam index, the run-time services, the test references and the software licences |
 
 ## 9. What is not established
