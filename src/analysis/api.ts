@@ -6,15 +6,17 @@
 // A rejection means "analysis unavailable" with the reason; nothing here returns placeholder numbers.
 import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
-import { analyseScenario, nearbyScenario, runAnalysis, runNearbyInSlices } from './engine';
+import { analyseScenario, nearbyScenario, outlookScenario, runAnalysis, runNearbyInSlices } from './engine';
 import type { NearbyProgress } from './nearby';
 import { findBundledTable } from './sky';
 import { dsnInstant } from './dsn';
-import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, SiteAnalysis, SkyEvent, StationInstant } from './types';
+import { outlookWith } from './outlook';
+import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, Outlook, OutlookOptions, SiteAnalysis, SkyEvent, StationInstant } from './types';
 import * as win from './window';
-import type { WorkerReply, WorkerRequestBody } from './worker';
+import type { WorkerReply, WorkerRequestBody, WorkerResult } from './worker';
 
 export { DEFAULT_NEARBY_OPTIONS, type NearbyProgress } from './nearby';
+export { DEFAULT_OUTLOOK_OPTIONS, SYNODIC_DAYS } from './outlook';
 export { skyAt } from './sky';
 
 /** Kept for callers that test for it: every entry point is implemented. */
@@ -43,7 +45,7 @@ function checkWindow(what: string, s: Scenario): void {
 /** The worker itself failed (could not start, or crashed): the work is then done on the calling thread instead. */
 class WorkerFailure extends Error {}
 
-type Pending = { resolve: (value: SiteAnalysis | NearbyCandidate[]) => void; reject: (e: Error) => void; progress?: NearbyProgress };
+type Pending = { resolve: (value: WorkerResult) => void; reject: (e: Error) => void; progress?: NearbyProgress };
 
 let worker: Worker | null = null;
 let workerBroken = false;
@@ -83,7 +85,7 @@ function getWorker(): Worker | null {
 }
 
 /** Sends a request to the worker; null when there is no worker to send it to. */
-function viaWorker<T extends SiteAnalysis | NearbyCandidate[]>(request: WorkerRequestBody, progress?: NearbyProgress): Promise<T> | null {
+function viaWorker<T extends WorkerResult>(request: WorkerRequestBody, progress?: NearbyProgress): Promise<T> | null {
   const w = getWorker();
   if (!w) return null;
   const id = nextId++;
@@ -99,7 +101,7 @@ function viaWorker<T extends SiteAnalysis | NearbyCandidate[]>(request: WorkerRe
 }
 
 /** Worker first; the calling thread when there is no worker or the worker itself failed. */
-function offThread<T extends SiteAnalysis | NearbyCandidate[]>(request: WorkerRequestBody, inline: () => Promise<T>, progress?: NearbyProgress): Promise<T> {
+function offThread<T extends WorkerResult>(request: WorkerRequestBody, inline: () => Promise<T>, progress?: NearbyProgress): Promise<T> {
   const sent = viaWorker<T>(request, progress);
   if (!sent) return inline();
   return sent.catch((e: unknown) => (e instanceof WorkerFailure ? inline() : Promise.reject(e)));
@@ -156,6 +158,7 @@ export async function analyseStack(scenario: Scenario, stack: TerrainStack): Pro
 export function clearAnalysisCache(): void {
   cache.clear();
   nearbyCache.clear();
+  outlookCache.clear();
 }
 
 /** Why the Sun or Earth is hidden (or how much it clears the skyline by) at an instant. */
@@ -222,4 +225,46 @@ export function rankNearby(scenario: Scenario, options: NearbyOptions, onProgres
 export async function rankNearbyStack(scenario: Scenario, stack: TerrainStack, options: NearbyOptions, onProgress?: NearbyProgress): Promise<NearbyCandidate[]> {
   checkWindow('rankNearby', scenario);
   return runNearbyInSlices(scenario, stack, await findBundledTable(scenario.site, scenario.startMs, windowEndMs(scenario)), options, onProgress);
+}
+
+// ---------- seasonal outlook ----------
+
+const outlookCache = new Map<string, Promise<Outlook>>();
+const OUTLOOK_CACHE_MAX = 4;
+
+/**
+ * The long view for the scenario's site and mast height: sunlight, darkness and Earth line of
+ * sight for each lunar day (or each `windowDays` window) across `months` lunar months from the
+ * scenario's start, and how a mission of the scenario's length scores for every arrival time in
+ * that span, with the best and worst arrivals and what a slip of days costs. One skyline, the
+ * in-app Sun/Earth model throughout; `assumptions` says what each number rests on. Runs off the
+ * main thread; the last few results are remembered.
+ */
+export function outlook(scenario: Scenario, options: OutlookOptions = {}): Promise<Outlook> {
+  try {
+    checkWindow('outlook', scenario);
+  } catch (e) {
+    return Promise.reject(e);
+  }
+  const key = `${scenarioKey(scenario)}|${JSON.stringify(Object.entries(options).sort(([a], [b]) => (a < b ? -1 : 1)))}`;
+  let p = outlookCache.get(key);
+  if (p) {
+    outlookCache.delete(key);
+    outlookCache.set(key, p);
+  } else {
+    p = offThread<Outlook>({ kind: 'outlook', scenario, options }, () => outlookScenario(scenario, options));
+    const mine = p;
+    p.catch(() => {
+      if (outlookCache.get(key) === mine) outlookCache.delete(key);
+    });
+    outlookCache.set(key, p);
+    if (outlookCache.size > OUTLOOK_CACHE_MAX) outlookCache.delete(outlookCache.keys().next().value as string);
+  }
+  return p.then((o) => (o.scenario === scenario ? o : { ...o, scenario }));
+}
+
+/** The outlook with terrain the caller already holds (tools and tests); runs on the calling thread and is not cached. */
+export function outlookStack(scenario: Scenario, stack: TerrainStack, options: OutlookOptions = {}): Outlook {
+  checkWindow('outlook', scenario);
+  return outlookWith(scenario, stack, options);
 }

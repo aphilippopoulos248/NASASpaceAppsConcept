@@ -370,3 +370,73 @@ over 28 days has 43.8-45.1 % per station and 99.83 % for any station (receive).
 Cost: about 50 ms of a 14-day analysis (130-145 ms in all with a Horizons table).
 Neither Blue Ghost Mission 1 nor IM-2 is claimed here to have used these stations: which
 ground stations the missions used was not looked up.
+
+## 7. The long view: `outlook()` and darkness measured in full (`src/analysis/outlook.ts`, `extend.ts`, task T-29)
+
+`outlook(scenario, { months = 12, windowDays? })` evaluates one long stretch for the scenario's
+site and mast height (one skyline; the in-app Sun/Earth model throughout, sampled every 20 min;
+rise and set times refined to 10 s) and cuts three things from it: a row per lunar day
+(29.530589 days, or per `windowDays`), a mission of the scenario's length for every arrival
+time across the span (every 2 h) with the best and worst arrivals by the nearby ranking's score,
+and the darkness and Earth gaps measured in full. Geometry only: nothing about power or
+temperature.
+
+**Model over long spans.** The model's directions are computed every 3 h and interpolated
+with a cubic (`tabulatedEphemeris`): against the model itself over 380 days at four sites the
+worst difference is 0.000018 deg in direction and 5e-8 deg in angular radius
+(`src/analysis/sky.test.ts`). `analyse()` now uses the same tabulation when no Horizons table
+covers the window.
+
+**Rows agree with `analyse()` for the same windows** (`src/analysis/outlook.test.ts`, IM-2, lunar
+days 1, 6 and 12 analysed separately at 10 min): sunlight, any-Sun and Earth percentages within
+0.05 points (observed: identical to three decimals), longest darkness and Earth gap within
+0.1 h, highest Sun within 0.01 deg. The planned arrival agrees with `analyse(scenario)` (bundled
+Horizons table, 10 min) within 0.1 points and 0.1 h.
+
+**IM-2 (84.79 S, 29.2 E), 2 m mast, twelve lunar days from the landing, 2025-03-06 17:28 UTC**
+
+| Lunar day | From (UTC) | Sunlight | Any Sun | Longest darkness | Earth in view | Longest Earth gap | Highest Sun |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 | 2025-03-06 17:28 | 45.1 % | 46.0 % | 379.8 h | 79.1 % | 148.2 h | 5.36 deg |
+| 2 | 2025-04-05 06:12 | 42.4 % | 44.3 % | 395.0 h | 79.4 % | 146.0 h | 4.54 deg |
+| 3 | 2025-05-04 18:56 | 36.6 % | 39.4 % | 409.0 h | 80.6 % | 137.3 h | 3.91 deg |
+| 4 | 2025-06-03 07:40 | 35.4 % | 37.7 % | 410.6 h | 82.0 % | 127.4 h | 3.63 deg |
+| 5 | 2025-07-02 20:24 | 37.7 % | 40.6 % | 402.1 h | 82.3 % | 125.1 h | 3.76 deg |
+| 6 | 2025-08-01 09:08 | 44.1 % | 45.6 % | 385.8 h | 75.7 % | 143.7 h | 4.26 deg |
+| 7 | 2025-08-30 21:52 | 46.7 % | 47.6 % | 369.7 h | 72.2 % | 147.4 h | 5.01 deg |
+| 8 | 2025-09-29 10:36 | 49.8 % | 50.8 % | 348.6 h | 72.2 % | 147.4 h | 5.82 deg |
+| 9 | 2025-10-28 23:20 | 51.9 % | 53.2 % | 331.4 h | 81.8 % | 129.3 h | 6.45 deg |
+| 10 | 2025-11-27 12:04 | 51.8 % | 53.4 % | 330.2 h | 82.5 % | 124.1 h | 6.73 deg |
+| 11 | 2025-12-27 00:48 | 50.2 % | 51.2 % | 346.1 h | 81.5 % | 130.9 h | 6.55 deg |
+| 12 | 2026-01-25 13:32 | 47.6 % | 48.8 % | 362.6 h | 80.4 % | 138.7 h | 5.96 deg |
+
+The Sun's highest point moves by 3.1 deg through the year (the Moon's equator is tilted 1.54
+deg to the ecliptic), and the sunlight per lunar day with it, from 35 % to 52 %. For a 14-day
+mission the score (mean of sunlight % and Earth line-of-sight %) ranges from 29.4 (arriving
+2026-02-08 05:28 UTC: no sunlight) to 100.0 (arriving 2025-11-26 07:28 UTC: unbroken sunlight and
+Earth in view); the actual landing time scores 90.7 (92.5 % sunlight, Earth 88.9 %, longest
+darkness 18.2 h). A slip of 1, 3, 7, 14 or 28 days from it gives 83.5, 69.2, 49.2, 33.5 and
+87.2: a week's delay halves the sunlight (42.5 %) and puts 186 h of darkness into the mission.
+
+**A pin on Shackleton's rim (89.45 S, 137.2 W), same dates:** sunlight per lunar day from
+43.8 % (June 2025, longest darkness 144.6 h) to 100.0 % for five lunar days in a row (from
+2025-09-29), with the Sun's centre never more than 2.1 deg above the horizontal; Earth's centre
+in view 46-55 % of each lunar day (gaps of about 320 h). On a smooth Moon the same code gives:
+0 N 0 E, 49.5-50.2 % in every lunar day and nights of 352-354 h; 0 N 180 E, Earth 0 % in every
+lunar day; 89 S, lunar days from 0 % to 100 %, six lunar days apart, and a polar night of
+2011 h.
+
+**Darkness in full.** `analyse()` keeps `longestDarknessH` and `darknessOpenEnded` as they
+were (the part inside the window, flagged as a lower bound) and adds
+`metrics.longestDarknessFull` and `longestEarthGapFull`: the longest spell that overlaps the
+window, followed beyond the window's edges to its real start and end with the model, up to 60
+days each way (`startFound` / `endFound` say whether the limit was hit). IM-2, 14 days from the
+landing: the window holds 18.2 h of the night that begins 2025-03-19 23:17; in full it lasts
+379.8 h, to 2025-04-04 19:03 UTC. The Earth gap that begins 2025-03-19 04:09 lasts 148.2 h in
+full, to 2025-03-25 08:19. A permanently shadowed floor returns "no start or end within 60
+days ... at least 3000 h" for a 5-day window.
+
+**Runtime** (`node scripts/bench-analysis.mjs`, CPU time on one thread, terrain already
+loaded; measured while the machine was busy, load average 7): 12 months at IM-2 0.36 s, at the
+Shackleton rim pin 0.37 s, at Apollo 15 0.36 s (wall-clock 0.31-0.40 s). The skyline is
+computed once (0.09-0.12 s of it).

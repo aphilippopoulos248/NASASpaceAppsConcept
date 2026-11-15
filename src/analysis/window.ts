@@ -5,10 +5,11 @@ import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
 import { computeHorizon, destination, profileIndex, skylineAt, slopeAt, type HorizonOptions } from './horizon';
 import { dsnOpportunities } from './dsn';
+import { EXTEND_LIMIT_DAYS, fullSpans, longestFull } from './extend';
 import { EVENT_PRECISION_MS, hours, intervalsOf, longest } from './intervals';
-import { skyAt, type Ephemeris } from './sky';
+import { modelEphemeris, skyAt, tabulatedEphemeris, type Ephemeris } from './sky';
 import type {
-  Blockage, ComparisonDiff, HorizonProfile, Interval, SiteAnalysis, SkyEvent, SkySeries, WindowMetrics,
+  Blockage, ComparisonDiff, FullSpan, HorizonProfile, Interval, SiteAnalysis, SkyEvent, SkySeries, WindowMetrics,
 } from './types';
 
 const RAD = Math.PI / 180;
@@ -114,6 +115,27 @@ export function buildSeries(s: Scenario, p: HorizonProfile, eph: Ephemeris): { s
   return { series: { startMs, stepMs, n, ...out, source: eph.source }, sunTop };
 }
 
+/**
+ * Continuous indicators of a skyline and an ephemeris at an instant, each positive while its
+ * state is "on": some of the Sun above the skyline; Earth's disc overlapping the Sun's; some of
+ * the Sun actually shining (above the skyline and not wholly behind Earth); Earth's centre above
+ * the skyline.
+ */
+export function indicators(p: HorizonProfile, eph: Ephemeris) {
+  const o = new Float64Array(6);
+  const sunTop = (t: number) => { eph.at(t, o); return discVisibility(p, o[0], o[1], o[4]).topClearance; };
+  const overlap = (t: number) => { eph.at(t, o); return o[5] + o[4] - separation(o[0], o[1], o[2], o[3]); };
+  const sunAny = (t: number) => {
+    eph.at(t, o);
+    // > 0 while some of the Sun is not behind Earth
+    const notTotal = separation(o[0], o[1], o[2], o[3]) - (o[5] - o[4]);
+    const top = discVisibility(p, o[0], o[1], o[4]).topClearance;
+    return top < notTotal ? top : notTotal;
+  };
+  const earth = (t: number) => { eph.at(t, o); return o[3] - skylineAt(p, o[2]); };
+  return { sunTop, overlap, sunAny, earth };
+}
+
 export interface WindowResult {
   series: SkySeries;
   metrics: WindowMetrics;
@@ -135,12 +157,7 @@ export function evaluateWindow(s: Scenario, p: HorizonProfile, eph: Ephemeris): 
   const timeAt = (i: number) => (i < n ? startMs + i * stepMs : endMs);
 
   // Continuous indicators (positive = "on") for refining the crossings.
-  const gSunTop = (t: number) => { eph.at(t, o); return discVisibility(p, o[0], o[1], o[4]).topClearance; };
-  // > 0 while some of the Sun is not behind Earth.
-  const gNotTotal = (t: number) => { eph.at(t, o); return separation(o[0], o[1], o[2], o[3]) - (o[5] - o[4]); };
-  const gOverlap = (t: number) => { eph.at(t, o); return o[5] + o[4] - separation(o[0], o[1], o[2], o[3]); };
-  const gSunAny = (t: number) => Math.min(gSunTop(t), gNotTotal(t));
-  const gEarth = (t: number) => { eph.at(t, o); return o[3] - skylineAt(p, o[2]); };
+  const { sunTop: gSunTop, overlap: gOverlap, sunAny: gSunAny, earth: gEarth } = indicators(p, eph);
 
   // Above the skyline (sunrise/sunset events) versus actually shining (skyline and Earth eclipses: the metrics).
   const terrain = intervalsOf((i) => (i < n ? sunTop[i] : tail!.sunTop) > 0, gSunTop, timeAt, count, startMs, endMs);
@@ -195,6 +212,56 @@ export function unavailableMetrics(): WindowMetrics {
 
 // ---------- full analysis ----------
 
+/** Steps of the search beyond a window edge: the Sun can slip past a ridge within the hour, Earth barely moves. */
+const FOLLOW_SUN_STEP_MS = 20 * 60_000;
+const FOLLOW_EARTH_STEP_MS = 60 * 60_000;
+
+/**
+ * Follows the darkness and the Earth gap that run past a window edge to their real ends (with the
+ * model, which is valid at any date) and records the longest of each, in full, in the metrics.
+ */
+function addFullSpans(m: WindowMetrics, scenario: Scenario, p: HorizonProfile, warnings: string[]): void {
+  const { startMs, endMs } = sampleTimes(scenario);
+  const limitMs = EXTEND_LIMIT_DAYS * 86_400_000;
+  const obsH = p.siteElevationM + p.mastHeightM;
+  // The model outside the window, tabulated on first use for each side.
+  let before: Ephemeris | null = null, after: Ephemeris | null = null;
+  const direct = modelEphemeris(p.site, obsH);
+  const outside: Ephemeris = {
+    source: 'model',
+    note: direct.note,
+    at(t, out) {
+      if (t < startMs) (before ??= tabulatedEphemeris(p.site, obsH, startMs - limitMs, startMs)).at(t, out);
+      else if (t > endMs) (after ??= tabulatedEphemeris(p.site, obsH, endMs, endMs + limitMs)).at(t, out);
+      else direct.at(t, out);
+    },
+    instant: direct.instant,
+  };
+  const ind = indicators(p, outside);
+  const describe = (what: string, full: FullSpan, inWindowH: number) => {
+    if (full.startFound && full.endFound) {
+      if (full.hours > inWindowH + 0.05) warnings.push(`${what} that touches this window lasts ${f1(full.hours)} h in full, from ${utcMinute(full.startMs).replace(' UTC', '')} to ${utcMinute(full.endMs)}; the window itself holds ${f1(inWindowH)} h of it at most in one stretch.`);
+    } else {
+      const where = !full.startFound && !full.endFound ? 'start or end' : !full.endFound ? 'end' : 'start';
+      warnings.push(`${what} that touches this window has no ${where} within ${full.limitDays} days of the window: it lasts at least ${f1(full.hours)} h.`);
+    }
+  };
+  if (m.darkIntervals.length) {
+    const full = longestFull(fullSpans(m.darkIntervals, ind.sunAny, FOLLOW_SUN_STEP_MS));
+    if (full) {
+      m.longestDarknessFull = full;
+      describe('The longest darkness', full, m.longestDarknessH);
+    }
+  }
+  if (m.earthGapIntervals.length) {
+    const full = longestFull(fullSpans(m.earthGapIntervals, ind.earth, FOLLOW_EARTH_STEP_MS));
+    if (full) {
+      m.longestEarthGapFull = full;
+      describe('The longest spell without Earth in view', full, m.longestEarthGapH);
+    }
+  }
+}
+
 export const DEFAULT_SLOPE_BASELINE_FACTOR = 2;
 
 /** The slope baseline used for a site: twice the finest grid there, at least 10 m. */
@@ -235,6 +302,8 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
   }
   if (res.metrics.darknessOpenEnded) warnings.push('The longest darkness runs into the edge of the window: it is a lower bound.');
   if (res.metrics.earthGapOpenEnded) warnings.push('The longest Earth gap runs into the edge of the window: it is a lower bound.');
+  // What those spells amount to in full, followed beyond the window.
+  if (Number.isFinite(horizon.siteElevationM)) addFullSpans(res.metrics, scenario, horizon, warnings);
   const layersText = horizon.layers.map((l) => `${l.name} (${Math.round(l.resolutionM)} m) from ${(l.fromM / 1000).toFixed(1)} to ${(l.toM / 1000).toFixed(1)} km`).join('; ');
   return {
     scenario,
