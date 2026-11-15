@@ -6,11 +6,13 @@ import './styles/index.css';
 import { analysis } from './core/analysisStore';
 import * as actions from './core/actions';
 import { createCoreActions } from './core/coreActions';
+import { createPresetActions } from './core/presetActions';
 import { applyDeepLink, parseDeepLink, syncUrl } from './core/deepLink';
 import { missionFilter } from './core/missionFilter';
 import { store } from './core/store';
 import { getLandings, setLandings } from './data/catalog';
 import { loadLandings } from './data/landings';
+import { getPresets, loadPresets, setPresets } from './data/presets';
 import { displaySummary } from './scene/globe/displayState';
 import { SceneHost } from './scene/globe/sceneHost';
 import { mountAssistantButton, mountAssistantDrawer } from './ui/assistant/drawer';
@@ -34,7 +36,11 @@ const region = (name: string) => document.getElementById(`region-${name}`) as HT
 
 async function boot() {
   const host = new SceneHost(document.getElementById('scene') as HTMLCanvasElement);
-  setLandings(await loadLandings());
+  // The catalogue is needed to start; the mission presets are an extra and may fail without stopping the app.
+  const [landings, presets] = await Promise.all([loadLandings(), loadPresets().then((list) => ({ list, why: null as string | null }), (err) => ({ list: [], why: err instanceof Error ? err.message : String(err) }))]);
+  setLandings(landings);
+  setPresets(presets.list, presets.why);
+  if (presets.why) console.warn('Mission presets:', presets.why);
   actions.registerActions(
     createCoreActions({
       store,
@@ -42,11 +48,13 @@ async function boot() {
       filters: missionFilter,
       analysis,
       prepareSurface: host.prepareSurface,
+      viewShown: host.viewShown,
       display: displaySummary,
       shell: () => ({ locatorZoom: locatorZoom(), panels: panelSummary() }),
     }),
   );
   registerSiteScienceActions(); // getSiteScience, nearestIceTargets (the site card's science section shows the same readouts)
+  actions.registerActions(createPresetActions({ store, presets: getPresets, landings: getLandings, analysis, prepareSurface: host.prepareSurface, viewShown: host.viewShown }));
   // Expose the registry for the assistant's tests and for debugging in the console.
   (window as unknown as { lunyx: unknown }).lunyx = { store, analysis, actions, scene: host };
 
