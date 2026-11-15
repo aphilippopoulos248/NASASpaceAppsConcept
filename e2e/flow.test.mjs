@@ -170,11 +170,12 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   test('nearby sites: the scan from the "Nearby sites" tab is listed as the analysis ranked it', SLOW, async () => {
     await sheet().getByRole('tab', { name: 'Nearby sites' }).click();
     const scanSettings = page.getByRole('group', { name: 'Scan settings' });
-    // A small grid keeps the test short.
-    await setField(page, scanSettings.getByLabel('Radius'), SCAN.radiusM);
-    await setField(page, scanSettings.getByLabel('Spacing'), SCAN.spacingM);
+    // The slope limit first: committing it redraws the tab, which puts back the last scan's
+    // radius and spacing (finding Q-7, tested on its own below). A small grid keeps the test short.
     await setField(page, scanSettings.getByLabel('Slope at most'), SCAN.slopeLimitDeg);
     await until(page, (v) => window.lunyx.store.get().slopeLimitDeg === v, SCAN.slopeLimitDeg);
+    await setField(page, scanSettings.getByLabel('Radius'), SCAN.radiusM);
+    await setField(page, scanSettings.getByLabel('Spacing'), SCAN.spacingM);
     const from = await lastSeq(page);
     await scanSettings.getByRole('button', { name: 'Scan nearby sites' }).click();
     await until(page, () => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), undefined, 5 * 120_000);
@@ -362,6 +363,35 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
 
   test('the journey raised no page errors', SLOW, async () => {
     assert.deepEqual(app.problems, []);
+  });
+});
+
+// Finding Q-7 (docs/lunyx/qa-findings.md), owner @analysis: in "Nearby sites", committing the
+// slope limit (or any requirement) redraws the tab and puts back the last scan's radius and
+// spacing over what was typed, so the scan runs with the old grid.
+describe('flow: the nearby scan settings keep what was typed', () => {
+  let other, op;
+  before(async () => {
+    other = await openApp(srv.deterministic);
+    op = other.page;
+  }, SLOW);
+  after(async () => {
+    await other?.close();
+  });
+
+  test('a typed radius survives a change of the slope limit before the scan', { ...SLOW, todo: 'Q-7 (@analysis): the slope limit redraws the tab and resets Radius and Spacing to the last scan' }, async () => {
+    const f = op.locator('.filters-panel');
+    await setField(op, f.getByLabel('Latitude', { exact: true }), -89.45);
+    await setField(op, f.getByLabel('Longitude', { exact: true }), -137.2);
+    await f.getByRole('button', { name: 'Drop pin at centre' }).click();
+    await until(op, () => window.lunyx.store.get().site?.kind === 'custom');
+    await op.locator('.cmp-launcher').click();
+    await op.locator('.cmp-sheet').getByRole('tab', { name: 'Nearby sites' }).click();
+    const settings = op.getByRole('group', { name: 'Scan settings' });
+    await setField(op, settings.getByLabel('Radius'), 900);
+    await setField(op, settings.getByLabel('Slope at most'), 25);
+    await until(op, () => window.lunyx.store.get().slopeLimitDeg === 25);
+    assert.equal(await settings.getByLabel('Radius').inputValue(), '900', 'the typed radius was replaced');
   });
 });
 

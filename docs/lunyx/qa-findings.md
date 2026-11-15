@@ -18,6 +18,7 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 | Q-4 | "Compare as B" in a ranked row of "Nearby sites" switches the panel to "A and B", which hides the button that had the focus: the focus falls to the page (`document.body`), so a keyboard user loses their place, and the next Escape closes the panel without giving the focus back to the launcher. Seen with the mouse (walkthrough) and with the keyboard only (`e2e/a11y.test.mjs`). | @analysis (`src/ui/compare/`) | 2f7e813, c366a06 | open: original T-46; e2e todo test |
 | Q-5 | The default solar elevation band (0° to 90°) means "no band" in the compare panel since c331052 ("No requirement: no solar elevation band is set"), but the surface Key metrics still raise "Requirement not met … outside the required band (0° to 90°)" whenever the window includes a night (Apollo 11, 29.5-day window), and `getAnalysis` reports `requirements.sunElevationBand.metForWholeWindow: false`, which the assistant words as "The Sun leaves the required elevation band (0.0° to 90.0°) during the window". One app state, two answers. | @surface (`src/ui/surface/metricsModel.ts` `flags`), the owner of `src/core/analysisReport.ts` (`checkRequirements`); the assistant follows `getAnalysis` | 2f7e813 | open upstream (batch 7: Key metrics, getAnalysis); our @assistant guards the assistant's wording (T-1) |
 | Q-6 | (adds to the original T-40, not a new defect) The polar elevation layers fail too, not only the whole-Moon grid: `lola_south_875s_40m.lxg`, `lola_south_85s_80m.lxg` and `lola_south_80s_160m.lxg` each failed with `net::ERR_CACHE_WRITE_FAILURE`: two of the three in each of four walkthrough page loads, one in the reproduction's (none in the e2e runs, whose requests go through Playwright's request interception). Then the site card names a coarser grid than the analysis beside it used (card "160 m grid", elevation 1,946 m; analysis 40 m layer, 1,948 m), or still says "Loading…" when the analysis is ready, and when the analysis's own copy fails it uses the 1.9 km grid for that distance range (skyline 0.01° different between two loads of the same pin). | owner of T-40 (@surface) | 2f7e813 | for T-40 |
+| Q-7 | Compare > "Nearby sites": committing "Slope at most" (or any requirement) redraws the tab, which puts the last scan's Radius and Spacing back over what was typed; the scan then runs with the old grid. Typed Radius 900 m, then Slope at most 30°: the field reads 2000 again and the scan covers 2 km (its summary says so). Cause: `panel.ts` redraws the tab on every requirement change and `nearbyTab.ts` `render()` refills the fields from the panel state, which only a scan updates. | @analysis (`src/ui/compare/`) | c366a06 | open, new; e2e todo test |
 | Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | **fixed** upstream (T-43, dbc6c59: no turn after the first flight); 0° on c366a06 |
 
 ## Walkthrough record
@@ -93,6 +94,12 @@ mission window the Sun's elevation runs from −88.43° to 89.51°: outside the 
 A and B: "No requirement: no solar elevation band is set" (`27b0f30/1280x720/28-assistant-compare.jpg`).
 Ask the assistant "what is the illumination?": "The Sun leaves the required elevation band
 (0.0° to 90.0°) during the window".
+
+### Q-7
+
+`npm run e2e -- flow`, test "a typed radius survives a change of the slope limit before the scan"
+(todo). By hand: drop a pin, open Compare, "Nearby sites", type 900 in Radius and press Tab, type
+30 in "Slope at most" and press Tab: Radius reads 2000 again; "Scan nearby sites" scans within 2 km.
 
 ### Q-6
 
