@@ -154,7 +154,7 @@ export function mountAbTab(root: HTMLElement, storage: CompareStorage, kit: TabK
   reqInputs.setAttribute('role', 'group');
   reqInputs.setAttribute('aria-label', 'Requirements the two scenarios are checked against');
   reqInputs.append(bandMin.wrap, bandMax.wrap, maxGap.wrap, slopeLimit.wrap);
-  const reqNote = el('p', 'ly-note', 'The Sun\'s elevation is above the local horizontal, over the whole window. An empty Earth-gap field means no limit. The same requirements as in Filters.');
+  const reqNote = el('p', 'ly-note', 'The Sun\'s elevation is above the local horizontal, over the whole window; 0° to 90° (the default) means no band is set. An empty Earth-gap field means no limit. The same requirements as in Filters.');
   const flags = el('ul', 'cmp-flags');
   words.append(el('h3', 'ly-section-title', 'B against A, in words'), state, highlights, el('h3', 'ly-section-title', 'Requirements'), reqInputs, reqNote, flags);
 
@@ -320,9 +320,9 @@ export function mountAbTab(root: HTMLElement, storage: CompareStorage, kit: TabK
     // Requirements in words, what is not met first.
     const lines: RequirementLine[] = [];
     for (const side of [a, b]) if (side.value) lines.push(...requirementLines(side.slot, side.value, s, SCIENCE.blockageAt(side.value, 'sun', s.timeMs).bodyElDeg));
-    const order = { breached: 0, unknown: 1, met: 2 } as const;
+    const order = { breached: 0, unknown: 1, met: 2, info: 3 } as const;
     lines.sort((x, y) => order[x.status] - order[y.status]);
-    const mark = { breached: 'Not met: ', unknown: 'Unknown: ', met: 'Met: ' } as const;
+    const mark = { breached: 'Not met: ', unknown: 'Unknown: ', met: 'Met: ', info: 'No requirement: ' } as const;
     flags.replaceChildren(
       ...lines.map((l) => {
         const li = el('li', `is-${l.status}`);
