@@ -573,6 +573,51 @@ export const outlook: Intent = (step) => {
   });
 };
 
+// ---------------------------------------------------------------- mission presets and flags
+
+const wordsOf = (text: string) => text.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().split(' ').filter((w) => w && !['the', 'mission', 'preset', 'of', 'at', 'a', 'replay'].includes(w));
+
+export const presets: Intent = (step) => {
+  if (/^(?:list|show|which are|what are)\s+(?:the\s+|all\s+)?(?:mission\s+)?(?:presets|replays|missions to replay|missions i can replay)$|^(?:which|what)\s+missions?\s+can\s+i\s+replay$|^what can i replay$/.test(step)) {
+    return plan('list the missions that can be replayed', async (ctx) => {
+      const r = await ctx.run('listPresets');
+      const list = (Array.isArray(r.presets) ? r.presets : []).filter(isObject);
+      if (!list.length) return 'No mission presets are loaded in this build.';
+      return [
+        `${plural(list.length, 'mission')} can be replayed from bundled data${str(r, 'loaded') ? ` (on screen now: ${str(r, 'loaded')})` : ''}:`,
+        ...list.map((x) => `- ${str(x, 'title') ?? str(x, 'id')} (say "replay ${str(x, 'id')}"): ${utc(str(x, 'missionWindow.startUtc'))} for ${span(num(x, 'missionWindow.durationH'))}, clock from ${utc(str(x, 'clockStartsUtc'))}, ${str(x, 'view') === 'surface' ? 'surface view' : 'globe view'}`),
+      ].join('\n');
+    });
+  }
+  const m = /^(?:replay|play back|load)\s+(?:the\s+)?(?:mission\s+)?(?:preset\s+)?(.+?)(?:\s+preset)?$/.exec(step) ?? /^play\s+(?:the\s+)?(eclipse.*|.+\s+(?:landing|preset))$/.exec(step);
+  if (!m || /^(the\s+)?(clock|time|simulation|animation|playback)$/.test(m[1]) || /^comparison\b/.test(m[1])) return null;
+  const wanted = m[1];
+  return plan(`replay the mission "${wanted}"`, async (ctx) => {
+    if (!ctx.has('loadPreset')) throw new Halt('This build of Lunyx has no mission presets to replay.');
+    const list = ((await ctx.run('listPresets')).presets as unknown[] | undefined ?? []).filter(isObject);
+    const w = wordsOf(wanted);
+    const byId = list.filter((x) => (str(x, 'id') ?? '') === wanted.trim() || w.every((t) => wordsOf(str(x, 'id') ?? '').includes(t)));
+    const byTitle = list.filter((x) => w.every((t) => wordsOf(`${str(x, 'title') ?? ''} ${str(x, 'description') ?? ''}`).includes(t)));
+    const hits = byId.length ? byId : byTitle;
+    if (hits.length !== 1) {
+      const names = list.map((x) => `"${str(x, 'id')}" (${str(x, 'title')})`).join(', ');
+      throw new Halt(hits.length ? `"${wanted}" fits ${hits.length} presets: ${hits.map((x) => str(x, 'id')).join(', ')}. Say which.` : `No preset matches "${wanted}". Presets: ${names}.`);
+    }
+    const r = await ctx.run('loadPreset', { id: str(hits[0], 'id')! });
+    return `Replaying ${str(r, 'preset.title') ?? str(hits[0], 'title')}: ${siteText(r.site)}, clock at ${utc(str(r, 'timeUtc'))}${r.playing === true ? `, running at ${span((num(r, 'rateSimSecondsPerSecond') ?? NaN) / 3600)} per second` : ', paused'}, ${str(r, 'view') === 'surface' ? 'in the surface view' : 'on the globe'}; mission window ${utc(str(r, 'missionWindow.startUtc'))} to ${utc(str(r, 'missionWindow.endUtc'))}.`;
+  });
+};
+
+export const flags: Intent = (step) => {
+  const m = /^(show|display|turn on|enable|hide|remove|turn off|disable)\s+(?:the\s+)?(?:country\s+|national\s+)?flags(?:\s+on the (?:markers|globe|landings))?$/.exec(step);
+  if (!m) return null;
+  const show = !/hide|remove|off|disable/.test(m[1]);
+  return plan(`${show ? 'show' : 'hide'} the country flags on the landing markers`, async (ctx) => {
+    const r = await ctx.run('showFlags', { show });
+    return r.showFlags === true ? 'Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia).' : 'The country flags are hidden.';
+  });
+};
+
 /** For the help text: one example per group, shown only when the build has the action. */
 export const LATER_HELP: [needs: string[], text: string][] = [
   [['setReliefExaggeration'], 'Globe drawing: "relief x5", "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
@@ -584,4 +629,6 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
+  [['loadPreset'], 'Replays: "list the presets", "replay the eclipse", "replay IM-2 landing"'],
+  [['showFlags'], 'Flags: "show country flags", "hide the flags"'],
 ];

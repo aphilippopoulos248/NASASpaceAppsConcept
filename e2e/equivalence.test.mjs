@@ -68,6 +68,7 @@ function snapshot() {
       shown: s.missionsShown.shown,
       assistantOpen: raw.assistantOpen,
       comparing: raw.comparing,
+      flags: s.showFlags ?? null,
       display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
       slots: { A: s.compare.A, B: s.compare.B },
       compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
@@ -604,6 +605,17 @@ describe('equivalence: controls added since the 33-action build', () => {
     assert.equal(cover.display.coverage, true);
     const ice = await equivalent({ ui: () => filters().getByLabel('Show mapped ice targets').check(), expect: 'showIceTargets', action: ['showIceTargets', { show: true }], keys: ['display'] });
     assert.equal(ice.display.ice, true);
+  });
+
+  test('Filters: "Go to a landing site", "Show country flags", a mission preset', SLOW, async () => {
+    const picked = await equivalent({ ui: () => filters().getByLabel('Go to a landing site').selectOption('apollo-15'), expect: 'selectSite', action: ['selectSite', { site: 'apollo-15' }], keys: ['siteId', 'view'] });
+    assert.equal(picked.siteId, 'apollo-15');
+    const flags = await equivalent({ ui: () => filters().getByLabel('Show country flags').check(), expect: 'showFlags', action: ['showFlags', { show: true }], keys: ['flags'] });
+    assert.equal(flags.flags, true);
+    await result(page, 'showFlags', { show: false });
+    const preset = await equivalent({ ui: () => page.locator('.pl-button').filter({ hasText: 'Eclipse of 14 March 2025' }).click(), expect: 'loadPreset', action: ['loadPreset', { id: 'eclipse-2025-03-14' }], keys: ['siteId', 'view', 'window', 'rate'], wait: () => until(page, () => document.body.dataset.view === 'surface') });
+    assert.deepEqual([preset.siteId, preset.view], ['blue-ghost-1', 'surface']);
+    await result(page, 'pause');
   });
 
   test('site card: the site-science fold = showPanel { panel: "site-science" }', SLOW, async () => {

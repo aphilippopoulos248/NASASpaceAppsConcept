@@ -425,6 +425,50 @@ describe('deterministic mode: the outlook, the window table and the export', () 
   });
 });
 
+describe('deterministic mode: mission presets, flags, the real "now"', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('lists the presets and replays one by a word of its id or title', async () => {
+    const e = engine();
+    const list = await e.reply('which missions can i replay?');
+    expect(list.text).toContain('3 missions can be replayed from bundled data:');
+    expect(list.text).toContain('- Eclipse of 14 March 2025 at the Blue Ghost site (say "replay eclipse-2025-03-14")');
+    let r = await e.reply('replay the eclipse');
+    expect(state.preset).toBe('eclipse-2025-03-14');
+    expect(r.text).toContain('Replaying Eclipse of 14 March 2025 at the Blue Ghost site');
+    r = await e.reply('replay im-2 landing');
+    expect(state.preset).toBe('im-2-landing');
+    // "Blue Ghost" names one preset by id and another by title: the id decides.
+    await e.reply('replay blue ghost');
+    expect(state.preset).toBe('blue-ghost-landing');
+    r = await e.reply('replay apollo 11');
+    expect(r.text).toContain('No preset matches "apollo 11"');
+  });
+
+  it('shows and hides the flags', async () => {
+    const e = engine();
+    await e.reply('show country flags');
+    expect(state.flags).toBe(true);
+    await e.reply('hide the flags');
+    expect(state.flags).toBe(false);
+  });
+
+  it('starts the mission window at the real time like the "Now" button, and at the simulated time otherwise', async () => {
+    const e = engine();
+    let from = lastSeq();
+    await e.reply('start the mission window now in real time');
+    expect(ranSince(from).map((x) => [x.name, x.params, x.ok])).toEqual([['setMissionWindow', { startUtc: 'real-now', moveClock: true }, true]]);
+    expect(state.windowStartMs).toBe(Date.UTC(2026, 10, 15, 4, 0));
+    expect(state.timeMs).toBe(Date.UTC(2026, 10, 15, 4, 0));
+    from = lastSeq();
+    await e.reply('mission window starts now');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['setMissionWindow', { startUtc: 'now' }]]);
+  });
+});
+
 describe('deterministic mode: rise and set times name their instant (D-8)', () => {
   beforeEach(() => {
     installFakeApp(ALL_ACTIONS);

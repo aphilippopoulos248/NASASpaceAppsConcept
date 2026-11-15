@@ -4,9 +4,10 @@ Audit for decision D-1 of the original project ("the LLM can operate the full na
 original T-1 / T-16, team tasks T-1 and T-6. Owner: @assistant (lunyx-experience).
 
 **State of this document.** 2026-11-15, from branch `am/lunyx-experience/agent/assistant`,
-which merges `am/lunyx/integration` (a958d6b: compare panel slices 1 to 4 with the window
-table, export and seasonal outlook, the surface HUD of original T-10, T-20 / T-33) and
-`am/lunyx-experience/integration` (c4aaba5). **61 actions.** Read from every event handler and
+which merges `am/lunyx/integration` (50aaace: compare panel slices 1 to 4, the surface HUD of
+original T-10, T-20 / T-33, mission presets T-22, the assistant-visible state of T-44, GitHub
+main 282249d with country flags and ownership) and `am/lunyx-experience/integration` (34cd324).
+**64 actions.** Read from every event handler and
 every `runAction` call in `src/ui/` and `src/scene/`, and from the registry at run time.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tools are
@@ -25,29 +26,31 @@ Check columns:
 | **U** | Unit tests of the owner | the module's `*.test.ts` |
 | **H** | Checked by hand | |
 
-## 1. The registry: 61 actions
+## 1. The registry: 64 actions
 
 | Action | Module (owner) | Parameters | Control that runs it | Checks |
 | --- | --- | --- | --- | --- |
-| `setTime` | core (@globe) | `utc?`, `offsetHours?` | scrubber slider and date field; compare panel "Clock to A's/B's arrival"; skyline chart (click, arrow keys, Home / End) | C D E |
+| `setTime` | core (@globe) | `utc?` (UTC or `real-now`), `offsetHours?` | scrubber slider and date field; compare panel "Clock to A's/B's arrival"; skyline chart (click, arrow keys, Home / End) | C D E |
 | `play`, `pause` | core | `rate?` | scrubber play button | C D E |
 | `setRate` | core | `secondsPerSecond` | scrubber speed | C D E |
 | `setLightMode` | core | `mode: real \| even` | Filters: Real / Even | C D E |
 | `jumpToEvent` | core | `type`, `which?` | scrubber jump buttons; key-metrics countdowns | C D U |
-| `selectSite` | core | `site`, `atLanding?`, `surface?`, `fly?` | markers, card "At landing time", "Earlier / Later", arrow keys on the card, deep links | C D E |
+| `selectSite` | core | `site`, `atLanding?`, `surface?`, `fly?` | markers, Filters "Go to a landing site", card "At landing time", "Earlier / Later", arrow keys on the card, deep links | C D E |
 | `dropPin` | core | `lat`, `lon`, `fly?` | globe click, Enter on the globe, "Drop pin at centre", little person | C D E |
 | `clearSite` | core | | card close, Escape on the globe | C D E |
 | `enterSurface`, `exitSurface` | core | | card, little person; surface close, "Back to orbit", Escape | C D E |
 | `setGlobeCamera` | core | `lat`, `lon`, `altitudeKm?` | drag, scroll, keys on the globe; Latitude / Longitude; locator map; "Whole Moon" | C D E |
 | `lookAt` | core | `azDeg`, `elDeg?`, `fovDeg?` (4 to 100) | surface drag and arrow keys (pose); skyline chart and explanation "Turn to" | C D E |
 | `setMastHeight` | core | `metres` | Filters: Mast height | C D E |
-| `setMissionWindow` | core | `startUtc?` (UTC, `now`, `landing`), `durationH?`, `moveClock?` | arrival field, window selectors, "Now", "Start window here" | C D E |
+| `setMissionWindow` | core | `startUtc?` (UTC, `now` = simulated, `real-now` = the computer's clock, `landing`), `durationH?`, `moveClock?` | arrival field, window selectors, "Now", "Start window here" | C D E |
 | `setDelay` | core | `hours` | Filters: Arrival delay | C D E |
 | `setSlopeLimit` | core | `degrees` | compare panel: "Slope at most" | C D |
 | `setMaxEarthGap` | core | `hours?` | compare panel: "Earth gap at most" | C D |
 | `setSunBand` | core | `minDeg`, `maxDeg` | Filters: solar elevation; compare panel: "Sun elevation from / to" | C D E |
 | `setOverlay` | core | `mode` | Filters: "Show optimal landing area" and its selector | C D E |
 | `showMissions` | core | `show` | Filters: "Show previous missions" | C D E |
+| `showFlags` | core | `show` | Filters: "Show country flags" (remembered in the browser) | C D E |
+| `listPresets` (query), `loadPreset` | presets (@globe, T-22) | ; `id`, `play?` | Filters: the mission presets list (each a button) | C D E |
 | `setFilters` | core | `programs?`, `countries?`, `type?`, `fromYear?`, `toYear?`, `reset?` | "Mission filters" | C D E |
 | `saveScenario` | core | `slot`, `label?` | compare panel "Save as A / B" | C D |
 | `compare` | core | | no control of its own: the launcher opens the same A/B view (`openCompare`), and the panel analyses a pair as soon as both slots are saved. `compare` is the assistant's one step that opens it and waits for both analyses | C D |
@@ -98,7 +101,9 @@ each crossing arrives with the science team's spans (T-31), through `getAnalysis
 ### 2.2 Sites, catalogue, pins
 
 `selectSite`, `dropPin`, `clearSite`; `listSites` (T-33) lists the 28 landings, every listed
-name is accepted by `selectSite` (checked in C).
+name is accepted by `selectSite` (checked in C). The Filters list "Go to a landing site" is
+the keyboard way to a landing (`selectSite`). Mission presets replay a landing or the eclipse
+of 14 March 2025 in one step (`listPresets`, `loadPreset`).
 
 ### 2.3 Cameras and the two views
 
@@ -162,8 +167,9 @@ A gap is something a user can do or read that no action covers, or data neither 
 | G-7 | Moon-phase line | @globe | **closed**: `getState.moonPhase` (T-33) |
 | G-8 | Locator zoom not in `getState` | @globe | **closed**: `getState.locatorZoom` (T-33) |
 | G-9 | Hover readouts (marker tooltip, locator pointer) | - | accepted: the information is in `listSites` and `getState` |
-| G-10 | The scrubber's "Now" starts the window at the **real** time; the assistant has no wall clock: `getState` has none, and `setMissionWindow { startUtc: "now" }` means the simulated time. A model asked "start the mission now" can only guess the date. Deterministic mode uses the browser clock, so it is not affected. Proposal: `getState.wallClockUtc` (the browser's time), or `startUtc: "real-now"` | @globe (`src/core/coreActions.ts`) | open, reported in the T-1 gap list |
+| G-10 | The scrubber's "Now" starts the window at the **real** time; the assistant had no wall clock | @globe | **closed** by T-44: `getState.wallClockUtc`, `"real-now"` in `setTime` and `setMissionWindow`; deterministic mode: "start the mission window now in real time" |
 | G-11 | Mission-window table and CSV / JSON export, seasonal outlook | @analysis | **closed**: `exportResults`, `showOutlook` (a958d6b); phrases "export the results as csv", "show the seasonal outlook for 2 months", "show the window table" |
+| G-12 | The card's "Belongs to", "Owner" and "Explored" rows and the ownership mismatch (GitHub main 282249d) were in no action result | @globe | **closed** by T-44: `site.ownership`, `site.exploredArea` in `getState` and the site results |
 
 ## 4. Findings, rechecked on this build
 
@@ -171,8 +177,8 @@ A gap is something a user can do or read that no action covers, or data neither 
 | --- | --- | --- | --- |
 | F-1 | One Escape in the surface view also deselected the site | @globe, @surface | **fixed** by T-33 (`src/ui/globe/cardKeys.ts`); the expected-failure mark in `e2e/equivalence.test.mjs` is removed |
 | F-2 | Card "Sky at ..." one step behind the clock | @globe | **fixed** by T-33 (`src/core/throttle.ts`, trailing run) |
-| F-3 | Poleward of 80.06° the globe camera stops short of the latitude asked for (88.000 gives 87.97): `flyTo` clamps the view direction's y to ±0.985 (`src/scene/globe/globeView.ts`). The Latitude field and `setGlobeCamera` land in the same place, so UI and assistant agree, but neither centres where asked; "Drop pin at centre" after typing polar coordinates pins up to 1.7 km off | @globe | **open** (code unchanged); `e2e/flow.test.mjs` holds it as an expected failure |
-| F-4 | The "Arrival delay" field loses its explanatory tooltip after the first good edit (`numberField` writes the error into `title`, then clears it) | @globe | **open** (code unchanged, `src/ui/globe/filtersPanel.ts`), minor |
+| F-3 | Poleward of 80.06° the globe camera stopped short of the latitude asked for (88.000 gave 87.97) | @globe | **fixed** in b1204d3 (`flyDirection`, exact except within 0.1° of a pole); the expected-failure test in `e2e/flow.test.mjs` is @desktop-workflow's to unmark |
+| F-4 | The "Arrival delay" field lost its explanatory tooltip after the first good edit | @globe | **fixed** in 096ef4f (fields keep their explanation; `src/ui/fieldStatus.ts`) |
 | F-5 | After `rankNearby` the compare panel was on its "Nearby sites" tab, and the core `compare` action left it there, hiding the side-by-side it reports. Found from the code of slice 2 | @analysis | **fixed** in a958d6b: the panel follows a successful `compare` (`src/ui/compare/panel.ts`); `e2e/scenario/control.test.mjs` "after a scan, compare shows the A/B tab" passes |
 | F-6 | On the card a pin or candidate is titled "Pinned location"; its name (for a candidate "Candidate 300 m W, 600 m S of ...", as `selectCandidate` and the nearby list give it) appears nowhere on the card | @globe | open, minor: the coordinates line identifies it |
 | F-7 | Arrow keys and + / - on the globe turn from the centre the globe has published, which it updates once per drawn frame: presses within one frame start from the same centre and all but the last are lost (seen in the equivalence test on the GPU; on a slow software renderer a keyboard user would lose presses) | @globe (`src/scene/globe/globeView.ts`, keyboard handler) | open, minor; the equivalence test presses at a person's pace |
@@ -201,4 +207,4 @@ has been done; only the plumbing it would use is tested.
 - Equivalence cases for the download buttons of the window table and for the outlook tab.
 - The span of each rise and set (T-31) in `getAnalysis` and `jumpToEvent`: deterministic
   replies then say "starts setting ..., fully set ... UTC".
-- G-10, F-5 and F-6 when their owners answer.
+- F-6 and F-7 when their owner answers.

@@ -59,6 +59,9 @@
     {"action":"selectCandidate","say":"select candidate 2","given":["go to IM-2","rank nearby sites"]},
     {"action":"exportResults","say":"export the results as csv","given":["go to IM-2"]},
     {"action":"showOutlook","say":"show the seasonal outlook for 2 months","given":["go to IM-2"]},
+    {"action":"listPresets","say":"list the presets"},
+    {"action":"loadPreset","say":"replay the eclipse"},
+    {"action":"showFlags","say":"show country flags"},
     {"action":"showPanel","say":"fold the site details"},
     {"action":"setAssistantOpen","say":"close the assistant"},
     {"action":"clearConversation","say":"clear the chat"}

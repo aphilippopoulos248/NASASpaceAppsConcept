@@ -601,13 +601,16 @@ const mission: Intent = (step) => {
   if (/\b(mission )?window\b|\bmission (length|duration)\b|^(arrive|arrival|land|landing|touch ?down)\b/.test(step) && !/^(what|how|why|is|does|when)\b/.test(step)) {
     const dt = findDateTime(step);
     const fromNow = /\b(start\w*|begin\w*|from)\s+(at\s+|from\s+)?(now|here|the current time|the simulated time)\b/.test(step);
+    // "Real" now is the scrubber's "Now" button: the computer's clock, not the simulated time.
+    const fromRealNow = /\b(real[- ]?time|real now|actual time|today|the real date|right now in the real world)\b/.test(step) && /\b(start\w*|begin\w*|from|at|now)\b/.test(step);
     const atLanding = /\b(start\w*|begin\w*|from|at|on)\s+(the\s+)?(landing|touchdown)\b/.test(step);
     const rest = dt ? step.replace(dt.match, ' ') : step;
     const d = /\b(window|length|duration|for|lasting|long)\b/.test(rest) ? findDuration(rest) : null;
-    if (!dt && !fromNow && !atLanding && !d) return null;
+    if (!dt && !fromNow && !fromRealNow && !atLanding && !d) return null;
     const params: Json = {};
     if (dt) params.startUtc = dt.utc;
     else if (atLanding) params.startUtc = 'landing';
+    else if (fromRealNow) Object.assign(params, { startUtc: 'real-now', moveClock: true });
     else if (fromNow) params.startUtc = 'now';
     if (d && d.hours > 0) params.durationH = d.hours;
     return plan('set the mission window', async (ctx) => {
@@ -1029,7 +1032,7 @@ const INTENTS: Intent[] = [
   views,
   later.fieldOfView,
   look, globe, pin, exportResults,
-  later.surfaceStatus, later.listSites, later.outlook,
+  later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags,
   questions, site,
 ];
 

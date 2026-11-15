@@ -101,6 +101,7 @@ function screen(page) {
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
+        flags: check('Show country flags'),
         missions: check('Show previous missions'),
         overlayOn: check('Show optimal landing area'),
         overlay: q('.filters-panel select[aria-label="Landing-area overlay"]')?.value,
@@ -238,6 +239,11 @@ const CASES = [
     assert.equal(r.coverageShown, true);
     await shows(page, (s) => s.filters.coverage === true, 'coverage checkbox');
     await run(page, 'showCoverage', { show: false });
+  } },
+  { name: 'showFlags', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.showFlags, true);
+    await shows(page, (s) => s.filters.flags === true, '"Show country flags" ticked');
+    await run(page, 'showFlags', { show: false });
   } },
   { name: 'showIceTargets', params: { show: true }, check: async (r, page) => {
     assert.equal(r.iceTargetsShown, true);
@@ -478,6 +484,19 @@ const CASES = [
   { name: 'clearSite', check: async (r, page) => {
     assert.equal(r.site, null);
     await shows(page, (s) => s.card === null, 'site card closed');
+  } },
+  // ---- mission presets (T-22)
+  { name: 'listPresets', check: async (r) => {
+    assert.ok(r.presets.length >= 3, JSON.stringify(r.presets.map((p) => p.id)));
+    assert.ok(r.presets.some((p) => p.id === 'eclipse-2025-03-14'));
+  } },
+  { name: 'loadPreset', params: { id: 'eclipse-2025-03-14', play: false }, check: async (r, page) => {
+    assert.equal(r.site.id, 'blue-ghost-1');
+    assert.equal(r.view, 'surface');
+    assert.equal(r.playing, false);
+    await shows(page, (s) => s.view === 'surface' && s.scrubber.date === r.timeUtc.slice(0, 16), 'surface view at the preset\'s clock');
+    await run(page, 'exitSurface');
+    await run(page, 'clearSite');
   } },
   // ---- the drawer itself (last: they change the drawer the test types into)
   { name: 'setAssistantOpen', params: { open: false }, check: async (r, page) => {

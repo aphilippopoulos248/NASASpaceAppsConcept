@@ -68,12 +68,17 @@ export interface FakeState {
   annotations: { tracks: boolean; labels: boolean };
   /** Compare panel (comparePanel). */
   panelTab: 'compare' | 'nearby' | 'windows' | 'outlook';
+  /** Mission presets and flags (presetActions). */
+  preset: string | null;
+  flags: boolean;
   /** Surface HUD (hudActions). */
   hud: { chart: 'hidden' | 'compact' | 'expanded'; mode: 'skyline' | 'time'; table: boolean; azimuthRange: 'full' | 'tracks'; metricsOpen: boolean; explanation: boolean };
   saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
 }
 
 export const T0 = Date.UTC(2026, 2, 1, 12, 0);
+/** The stand-in's real clock (what "real-now" means to it). */
+export const REAL_NOW = Date.UTC(2026, 10, 15, 4, 0, 30);
 
 export const LANDINGS: (FakeSite & { program: string; country: string; year: number; crewed: boolean; landedMs: number })[] = [
   { id: 'apollo-11', name: 'Apollo 11', kind: 'landing', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA', year: 1969, crewed: true, landedMs: Date.UTC(1969, 6, 20, 20, 17) },
@@ -130,7 +135,16 @@ export interface FakeAppOptions {
   eventLabels?: boolean;
   /** The surface HUD's actions: setChart, showKeyMetrics, dismissBlockageExplanation. */
   hudActions?: boolean;
+  /** Mission presets (listPresets, loadPreset) and showFlags. */
+  presetActions?: boolean;
 }
+
+/** As public/data/presets.json (ids, titles, sites, views). */
+export const PRESETS = [
+  { id: 'blue-ghost-landing', title: 'Blue Ghost Mission 1, Mare Crisium', siteId: 'blue-ghost-1', view: 'surface' },
+  { id: 'im-2-landing', title: 'IM-2 Athena, Mons Mouton', siteId: 'im-2', view: 'surface' },
+  { id: 'eclipse-2025-03-14', title: 'Eclipse of 14 March 2025 at the Blue Ghost site', siteId: 'blue-ghost-1', view: 'surface' },
+] as const;
 
 /** As src/core/skyEvents.ts EVENT_INFO. */
 export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
@@ -141,7 +155,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -190,6 +204,8 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     panelTab: 'compare',
     saved: [],
     hud: { chart: 'compact', mode: 'skyline', table: false, azimuthRange: 'full', metricsOpen: true, explanation: false },
+    preset: null,
+    flags: false,
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
   let compareCalls = 0;
@@ -282,24 +298,25 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       },
     }),
     defineAction<{ metres: number }, unknown>({ name: 'setMastHeight', title: 'Set mast height', description: 'Mast.', effect: 'command', params: { type: 'object', properties: { metres: { type: 'number', description: 'm', minimum: 0, maximum: 100 } }, required: ['metres'] }, run: ({ metres }) => { state.mastHeightM = metres; return { mastHeightM: metres }; } }),
-    defineAction<{ startUtc?: string; durationH?: number }, unknown>({
+    defineAction<{ startUtc?: string; durationH?: number; moveClock?: boolean }, unknown>({
       name: 'setMissionWindow', title: 'Set mission window', description: 'Window.', effect: 'command',
-      params: { type: 'object', properties: { startUtc: { type: 'string', description: 'start' }, durationH: { type: 'number', description: 'h', minimum: 1, maximum: 8760 } } },
-      run: ({ startUtc, durationH }) => {
-        if (startUtc === undefined && durationH === undefined) throw new ActionError('Give `startUtc` and/or `durationH`.');
+      params: { type: 'object', properties: { startUtc: { type: 'string', description: 'start' }, durationH: { type: 'number', description: 'h', minimum: 1, maximum: 8760 }, moveClock: { type: 'boolean', description: 'move the clock to the start' } } },
+      run: ({ startUtc, durationH, moveClock }) => {
+        if (startUtc === undefined && durationH === undefined && !moveClock) throw new ActionError('Give `startUtc` and/or `durationH`.');
         if (startUtc === 'landing' && options.landingActions) {
           const landing = LANDINGS.find((l) => l.id === state.site?.id);
           if (!landing) throw new ActionError('"landing" needs a selected catalogued landing.');
           state.windowStartMs = landing.landedMs;
         } else if (startUtc !== undefined) {
           try {
-            state.windowStartMs = startUtc === 'now' ? state.timeMs : parseUtc(startUtc);
+            state.windowStartMs = startUtc === 'now' ? state.timeMs : startUtc === 'real-now' ? Math.floor(REAL_NOW / 60_000) * 60_000 : parseUtc(startUtc);
           } catch (err) {
             throw new ActionError((err as Error).message);
           }
         }
         if (durationH !== undefined) state.windowDurationH = durationH;
-        return { windowStartUtc: isoUtc(state.windowStartMs), windowDurationH: state.windowDurationH, delayH: state.delayH };
+        if (moveClock) state.timeMs = state.windowStartMs + state.delayH * 3_600_000;
+        return { windowStartUtc: isoUtc(state.windowStartMs), windowDurationH: state.windowDurationH, delayH: state.delayH, timeUtc: isoUtc(state.timeMs) };
       },
     }),
     defineAction<{ hours: number }, unknown>({ name: 'setDelay', title: 'Set arrival delay', description: 'Delay.', effect: 'command', params: { type: 'object', properties: { hours: { type: 'number', description: 'h', minimum: 0, maximum: 720 } }, required: ['hours'] }, run: ({ hours }) => { state.delayH = hours; return { delayH: hours, effectiveStartUtc: isoUtc(state.windowStartMs + hours * 3_600_000) }; } }),
@@ -627,6 +644,32 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       }),
       defineAction<{ open: boolean }, unknown>({ name: 'showKeyMetrics', title: 'Key metrics panel', description: 'Key metrics.', effect: 'command', params: { type: 'object', properties: { open: { type: 'boolean', description: 'open' } }, required: ['open'] }, run: ({ open }) => { state.hud.metricsOpen = open; return { keyMetricsOpen: open }; } }),
       defineAction({ name: 'dismissBlockageExplanation', title: 'Close the blockage explanation', description: 'Closes it.', effect: 'command', params: none, run: () => { state.hud.explanation = false; return { explanationShown: false }; } }),
+    );
+  }
+  if (options.presetActions) {
+    const T = Date.UTC(2025, 2, 14, 2, 0);
+    const describe = (p: (typeof PRESETS)[number]) => ({ id: p.id, title: p.title, description: p.title, site: { id: p.siteId }, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) }, clockStartsUtc: isoUtc(T), view: p.view, rateSimSecondsPerSecond: 600, playsOnLoad: true, sources: [] });
+    actions.push(
+      defineAction({ name: 'listPresets', title: 'Missions to replay', description: 'Lists the presets.', effect: 'query', params: none, run: () => ({ presets: PRESETS.map(describe), loaded: state.preset }) }),
+      defineAction<{ id: string; play?: boolean }, unknown>({
+        name: 'loadPreset', title: 'Replay a mission', description: 'Loads a preset.', effect: 'command',
+        params: { type: 'object', properties: { id: { type: 'string', description: 'id' }, play: { type: 'boolean', description: 'play' } }, required: ['id'] },
+        run: ({ id, play }) => {
+          const p = PRESETS.find((x) => x.id === id.trim());
+          if (!p) throw new ActionError(`There is no preset "${id}". Presets: ${PRESETS.map((x) => x.id).join(', ')}.`);
+          const l = LANDINGS.find((x) => x.id === p.siteId) ?? { id: p.siteId, name: 'Blue Ghost Mission 1', kind: 'landing' as const, latDeg: 18.562, lonDegEast: 61.81 };
+          state.site = { id: l.id, name: l.name, kind: 'landing', latDeg: l.latDeg, lonDegEast: l.lonDegEast };
+          state.timeMs = T;
+          state.windowStartMs = T;
+          state.windowDurationH = 12;
+          state.view = 'surface';
+          state.playing = play ?? true;
+          state.rate = 600;
+          state.preset = p.id;
+          return { preset: { id: p.id, title: p.title }, view: 'surface', site: siteOut(state.site), timeUtc: isoUtc(T), playing: state.playing, rateSimSecondsPerSecond: 600, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) } };
+        },
+      }),
+      defineAction<{ show: boolean }, unknown>({ name: 'showFlags', title: 'Show country flags', description: 'Flags.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.flags = show; return { showFlags: show }; } }),
     );
   }
   if (options.catalogActions) {
