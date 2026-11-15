@@ -9,6 +9,7 @@ import { formatUtc, isoUtc } from '../../core/time';
 import type { Scenario } from '../../core/types';
 import { el } from '../dom';
 import { basisOf, nowRows, requirementLines, SCIENCE, scenarioRows, splitAssumptions, windowRows, type CompareRow, type RequirementLine } from './model';
+import { redrawKeepingFocus } from './focus';
 import type { CompareStorage } from './storage';
 import { badge, nextId, rowGroup, type TabKit } from './widgets';
 
@@ -362,21 +363,27 @@ export function mountAbTab(root: HTMLElement, storage: CompareStorage, kit: TabK
 
   const renderSaved = () => {
     const all = storage.list();
-    savedList.replaceChildren(
-      ...all.map((c) => {
+    // Load and Delete redraw this list under the button just used: the focus stays in the list (Q-4).
+    redrawKeepingFocus(
+      savedList,
+      all.map((c) => {
         const li = el('li', 'cmp-saveditem');
         const text = el('div', 'cmp-savedtext');
         text.append(el('div', 'cmp-savedname', c.name), el('div', 'ly-note', `A: ${describeScenario(c.a)}`), el('div', 'ly-note', `B: ${describeScenario(c.b)}`));
         if (c.savedUtc) text.append(el('div', 'ly-note', `Saved ${formatUtc(Date.parse(c.savedUtc))}`));
         const load = button('Load', 'ly-btn ly-btn--small', () => void actSaved('loadComparison', { name: c.name }, (r) => `Loaded "${r.loaded}" exactly as saved${r.restored.clockUtc ? `, with the clock at ${formatUtc(Date.parse(r.restored.clockUtc))}` : ''}${r.restored.requirements ? ' and its requirements' : ''}.`));
         load.setAttribute('aria-label', `Load the saved comparison ${c.name}`);
+        load.dataset.focusKey = `load:${c.name}`;
         const del = button('Delete', 'ly-btn ly-btn--small', () => void actSaved('deleteComparison', { name: c.name }, () => `Deleted "${c.name}".`));
         del.setAttribute('aria-label', `Delete the saved comparison ${c.name}`);
+        del.dataset.focusKey = `delete:${c.name}`;
         const buttons = el('div', 'cmp-saveditembuttons');
         buttons.append(load, del);
         li.append(text, buttons);
         return li;
       }),
+      // The last saved comparison was deleted: the name field of "Save this comparison" is next to the empty list.
+      () => nameInput,
     );
     const s = store.get();
     saveBtn.disabled = !s.compareA || !s.compareB;

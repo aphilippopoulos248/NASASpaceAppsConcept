@@ -8,6 +8,7 @@ import { describeScenario, scenarioFromState } from '../../core/scenario';
 import { store } from '../../core/store';
 import { el } from '../dom';
 import { MAX_NEARBY_CANDIDATES, nearbyPointCount } from './actions';
+import { redrawKeepingFocus } from './focus';
 import { bearingText, coordsText, degText, distanceText, hoursText, NOT_AVAILABLE, pctText } from './format';
 import { nearbyView, offsetName } from './nearbyView';
 import type { PanelStore } from './state';
@@ -99,8 +100,10 @@ export function mountNearbyTab(root: HTMLElement, panel: PanelStore, kit: TabKit
     if (rank !== null) {
       const pin = button('Pin', 'ly-btn ly-btn--small', () => void act('selectCandidate', { rank }, (r) => `Pinned candidate ${rank}: ${r.site.name}. It is now the site on screen.`));
       pin.setAttribute('aria-label', `Pin candidate ${rank}, ${name}, as the site on screen`);
+      pin.dataset.focusKey = `pin:${c.site.id}`;
       const asB = button('Compare as B', 'ly-btn ly-btn--small', () => void act('selectCandidate', { rank, asB: true }, (r) => `Candidate ${rank} is pinned and loaded as B, against A: ${r.A}.`));
       asB.setAttribute('aria-label', `Pin candidate ${rank}, ${name}, and load it as scenario B`);
+      asB.dataset.focusKey = `compare-b:${c.site.id}`;
       choose.append(pin, asB);
     }
     tr.append(
@@ -162,7 +165,8 @@ export function mountNearbyTab(root: HTMLElement, panel: PanelStore, kit: TabKit
       const refName = st.scenario.site.name;
       if (view.reference) rows.push(rowOf(view.reference, null, refName, s.site?.id));
       for (const a of view.alternatives.slice(0, MAX_ROWS)) rows.push(rowOf(a.candidate, a.rank, refName, s.site?.id));
-      table.replaceChildren(...rows);
+      // Pin and Compare as B change the site on screen, which redraws the list under the button just used (Q-4).
+      redrawKeepingFocus(table, rows, () => (scan.disabled ? null : scan));
     }
 
     const o = st.options;

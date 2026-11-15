@@ -225,8 +225,9 @@ export function requirementLines(slot: 'A' | 'B', a: SiteAnalysis, s: Requiremen
   const band = r.sunElevationBand;
   const bandText = `${degText(band.minDeg, 0)} to ${degText(band.maxDeg, 0)}`;
   const range = `${degText(m.minSunElDeg)} to ${degText(m.maxSunElDeg)}`;
-  if (!sunBandSet(s)) {
-    // The Filters default (0 to 90 deg) is not something the user asked for: say what the Sun does, not that a band fails.
+  if (!band.required) {
+    // The Filters default (0 to 90 deg) is not something the user asked for: say what the Sun does, not that a band fails
+    // (one rule with getAnalysis and the surface panel: src/core/requirements.ts).
     if (Number.isFinite(m.minSunElDeg) && Number.isFinite(m.maxSunElDeg))
       lines.push({ slot, status: 'info', text: `${who}: no solar elevation band is set. The Sun's elevation ranges from ${range} during the window${m.minSunElDeg < 0 ? ', so it goes below the horizontal' : ''}.` });
   } else if (band.metForWholeWindow === null) lines.push({ slot, status: 'unknown', text: `${who}: the Sun's elevation is not available, so the required band (${bandText}) cannot be checked.` });
@@ -249,12 +250,6 @@ export function requirementLines(slot: 'A' | 'B', a: SiteAnalysis, s: Requiremen
   else lines.push({ slot, status: 'met', text: `${who}: the slope, ${degText(slope)} over ${Math.round(a.slope.baselineM)} m, is within the ${s.slopeLimitDeg}° slope limit.` });
   return lines;
 }
-
-/** The solar elevation band of the Filters panel when nobody has changed it (src/core/store.ts initialState). */
-export const DEFAULT_SUN_BAND = { minDeg: 0, maxDeg: 90 } as const;
-
-/** True when the user has set a solar elevation band (anything but the default 0 to 90 deg). */
-export const sunBandSet = (s: Pick<AppState, 'sunElMinDeg' | 'sunElMaxDeg'>) => s.sunElMinDeg !== DEFAULT_SUN_BAND.minDeg || s.sunElMaxDeg !== DEFAULT_SUN_BAND.maxDeg;
 
 export interface Basis {
   coords: string;

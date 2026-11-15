@@ -12,7 +12,7 @@ import { emitCommand } from './bus';
 import { ALL_MISSIONS, matchesFilter, MissionFilter, MissionFilterStore, MissionType } from './missionFilter';
 import { moonPhaseAt } from './moonPhase';
 import { effectiveStartMs, labelPair, scenarioFromState } from './scenario';
-import { EVENT_INFO, EVENT_TYPES, findEvent, type EventType } from './skyEvents';
+import { EVENT_INFO, EVENT_TYPES, findInstant, INSTANT_CHOICES, spanReport, type EventType, type InstantChoice } from './skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, Store } from './store';
 import { isoUtc, parseUtc } from './time';
 import { AppState, LightMode, MOON_RADIUS_KM, OverlayMode, pinId, SiteRef, ViewMode, wrapLon } from './types';
@@ -339,33 +339,48 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       },
     }),
 
-    defineAction<{ type: EventType; which?: 'next' | 'previous' }, unknown>({
+    defineAction<{ type: EventType; which?: 'next' | 'previous'; instant?: InstantChoice }, unknown>({
       name: 'jumpToEvent',
       title: 'Jump to sunrise / sunset / Earthrise / Earthset',
       description:
         'Moves the clock to the next (or previous) sunrise, sunset, Earthrise or Earthset at the selected site and pauses it. ' +
-        `A rise or set takes time, so each is one defined instant, named in the result's \`instant\`: sunrise = ${EVENT_INFO.sunrise.instant} ("${EVENT_INFO.sunrise.label}"); sunset = ${EVENT_INFO.sunset.instant} ("${EVENT_INFO.sunset.label}"); Earthrise and Earthset = the centre of Earth's disc crossing the skyline. Say which instant a time is when you quote it. ` +
-        'The times come from the site analysis, so they are measured against the terrain skyline, and only events inside the analysed mission window can be reached (lengthen the window with setMissionWindow to look further). Waits for the analysis if it is still running.',
+        'A rise or a set takes time (about an hour for the Sun at mid latitudes, hours near the poles): each event is one instant of a passage of the disc through the terrain skyline, and `instant` chooses which: ' +
+        `"event" (default) = the event itself (sunset = ${EVENT_INFO.sunset.instant}, "${EVENT_INFO.sunset.label}"; sunrise = ${EVENT_INFO.sunrise.instant}, "${EVENT_INFO.sunrise.label}"; Earthrise / Earthset = the centre of Earth's disc crossing the skyline); ` +
+        '"start" = the start of its passage (for a set the moment the skyline starts to cut into the disc, "Sun starts setting"; for a rise the first part of the disc appearing); "end" = its end (for a set the last part going, "Sun fully set"; for a rise the whole disc clear, "Sun fully risen"). ' +
+        'The result names the instant (`label`, `instant`) and gives the whole passage (`span`: both ends with their times, and `span.summary`, e.g. "starts setting 2025-03-16 18:23, fully set 19:30 UTC"). Say which instant a time is when you quote it. ' +
+        'The times come from the site analysis, so they are measured against the terrain skyline; events inside the analysed mission window can be reached (lengthen the window with setMissionWindow to look further), and an end of their passage just outside it too. Waits for the analysis if it is still running.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
           type: { type: 'string', description: 'Event type.', enum: EVENT_TYPES },
           which: { type: 'string', description: 'next (default) or previous, relative to the current simulated time.', enum: ['next', 'previous'] },
+          instant: { type: 'string', description: 'The event itself (default), or the start or the end of its passage through the skyline.', enum: INSTANT_CHOICES },
         },
         required: ['type'],
       },
-      run: async ({ type, which = 'next' }) => {
+      run: async ({ type, which = 'next', instant = 'event' }) => {
         const st = await requireAnalysis().settled('current');
         if (st.state === 'idle') throw new ActionError('No site is selected. Select a landing site or drop a pin first.');
         if (st.state !== 'ready') throw new ActionError(st.state === 'error' ? `The site analysis is not available: ${st.error}` : 'The site analysis has not finished. Ask again in a moment.');
-        const hit = findEvent(st.value.events, type, which, state().timeMs);
+        const hit = findInstant(st.value.events, type, instant, which, state().timeMs);
         if (!hit) {
           const from = isoUtc(st.scenario.startMs), to = isoUtc(st.scenario.startMs + st.scenario.durationH * 3_600_000);
-          throw new ActionError(`There is no ${which} ${type} ${which === 'next' ? 'after' : 'before'} the simulated time inside the analysed mission window (${from} to ${to}). Here "${type}" is the instant ${EVENT_INFO[type].instant}.`);
+          const what = instant === 'event' ? type : `${instant} of a ${type}'s passage`;
+          throw new ActionError(`There is no ${which} ${what} ${which === 'next' ? 'after' : 'before'} the simulated time inside the analysed mission window (${from} to ${to}). Here "${type}" is the instant ${EVENT_INFO[type].instant}.`);
         }
         store.set({ timeMs: hit.timeMs, playing: false });
-        return { event: type, label: EVENT_INFO[type].label, instant: EVENT_INFO[type].instant, timeUtc: isoUtc(hit.timeMs), azDeg: rounded(hit.azDeg, 1), playing: false };
+        return {
+          event: type,
+          instantChoice: instant,
+          label: hit.label,
+          instant: hit.instant,
+          timeUtc: isoUtc(hit.timeMs),
+          azDeg: rounded(hit.azDeg, 1),
+          ...(!hit.inWindow && { outsideAnalysedWindow: true }),
+          span: hit.event.span ? spanReport(hit.event.span) : null,
+          playing: false,
+        };
       },
     }),
 
@@ -816,8 +831,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'getAnalysis',
       title: 'Read the site analysis',
       description:
-        'Waits until the analysis of the scenario on screen (default), or of comparison slot "A" or "B", has finished, then returns it: window metrics (illumination %, longest darkness, Earth line of sight %, longest Earth gap), ground slope, where the Sun and Earth are at the simulated time (azimuth, elevation, clearance above the terrain skyline, the terrain that forms the skyline there), the next sunrise / sunset / Earthrise / Earthset in the window (each a defined instant: see `eventDefinitions` in the result, and say which instant a time is when you quote it), darkness and Earth-gap intervals, the user\'s requirements checked against it, data sources, assumptions and warnings. ' +
-        'Use this after selecting a site or changing the window, mast or delay. `state` is "ready", or "error" / "idle" with the reason in `error`. Earth figures are geometric line of sight, not a radio link.',
+        'Waits until the analysis of the scenario on screen (default), or of comparison slot "A" or "B", has finished, then returns it: window metrics (illumination %, longest darkness, Earth line of sight %, longest Earth gap), ground slope, where the Sun and Earth are at the simulated time (azimuth, elevation, clearance above the terrain skyline, the terrain that forms the skyline there), the next sunrise / sunset / Earthrise / Earthset in the window, each with the whole passage of the disc through the skyline it belongs to (`span`: both ends named, e.g. "Sun starts setting" and "Sun fully set", and `summary`), the passages in progress or next for the Sun and Earth (`nextPassages`, including those ending beyond the window and grazes), darkness and Earth-gap intervals, the user\'s requirements checked against it (a solar elevation band left at its default, 0 to 90°, is no requirement: `requirements.sunElevationBand.required` is false and nothing is checked against it), data sources, assumptions and warnings. ' +
+        'Use this after selecting a site or changing the window, mast or delay. `state` is "ready", or "error" / "idle" with the reason in `error`. Never quote a rise or set time without saying which instant it is (`label`). Earth figures are geometric line of sight, not a radio link, and come in two definitions: `earthVisiblePct` / `longestEarthGapH` for Earth\'s CENTRE, `earthAnyPct` / `longestEarthAnyGapH` for ANY PART of its disc (the definition of the long-term PGDA map): say which.',
       effect: 'query',
       params: { type: 'object', properties: { slot: { type: 'string', description: 'Which analysis: the scenario on screen, or a saved comparison slot.', enum: ['current', 'A', 'B'] } } },
       run: async ({ slot = 'current' }) => reportAnalysis(slot, await requireAnalysis().settled(slot), state(), ctx.science),
