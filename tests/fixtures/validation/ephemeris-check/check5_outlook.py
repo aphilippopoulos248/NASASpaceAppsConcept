@@ -30,11 +30,13 @@ import spice_sky  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument('--write', action='store_true')
 ap.add_argument('--make-series-input', action='store_true', help='write outlook/model-series-input.json for app_skyat.mjs --series and stop')
+ap.add_argument('--app', default='app-now.json', help='app dump under outlook/ to test')
+ap.add_argument('--tag', default='', help='write results-<tag>.* instead of results.* (keeps the earlier record)')
 args = ap.parse_args()
 DIR = os.path.join(common.BASE, 'outlook')
 with open(os.path.join(DIR, 'scenarios.json')) as fh:
     scenarios = json.load(fh)
-with open(os.path.join(DIR, 'app-now.json')) as fh:
+with open(os.path.join(DIR, args.app)) as fh:
     app = json.load(fh)
 by_id = {r['id']: r for r in app['results']}
 hm = lambda t: sg.to_iso(t)[:16].replace('T', ' ')
@@ -184,8 +186,9 @@ for s in scenarios:
 text = '\n'.join(lines).lstrip('\n')
 print(text)
 if args.write:
-    with open(os.path.join(DIR, 'results.json'), 'w') as fh:
+    stem = 'results-%s' % args.tag if args.tag else 'results'
+    with open(os.path.join(DIR, stem + '.json'), 'w') as fh:
         json.dump(report, fh, indent=1)
         fh.write('\n')
-    with open(os.path.join(DIR, 'results.txt'), 'w') as fh:
+    with open(os.path.join(DIR, stem + '.txt'), 'w') as fh:
         fh.write(text + '\n')

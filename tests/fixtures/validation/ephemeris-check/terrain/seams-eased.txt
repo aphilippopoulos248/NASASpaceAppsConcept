@@ -1,0 +1,26 @@
+site             3 m minus 60 m over the overlap      60 m just outside minus 3 m just inside, along the edge      skyline formed on the edge
+                 mean      std                        mean      lowest    highest                               (share of azimuths, 2 m)
+surveyor-3       +0.00 m   1.77 m                     +0.00 m   -0.12 m   +0.19 m      | same points: as stored  -4.76 ..  +3.86, RMS 1.38 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 4.76 m
+surveyor-7       +0.06 m   1.98 m                     +0.10 m   -0.49 m   +0.53 m      | same points: as stored  -4.77 ..  +6.81, RMS 1.64 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 12.63 m
+apollo-11        -0.14 m   3.69 m                     +0.01 m   -0.24 m   +0.33 m      | same points: as stored  -7.41 .. +17.62, RMS 3.61 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 17.62 m
+apollo-12        -0.03 m   1.70 m                     +0.01 m   -0.38 m   +0.31 m      | same points: as stored  -4.87 ..  +9.67, RMS 1.78 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 10.01 m
+luna-16          +0.08 m   2.29 m                     +0.01 m   -0.20 m   +0.26 m      | same points: as stored  -4.97 .. +13.91, RMS 3.28 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 13.91 m
+apollo-14        +0.03 m   1.87 m                     -0.00 m   -0.57 m   +0.28 m      | same points: as stored  -6.35 ..  +6.46, RMS 2.32 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 6.46 m
+apollo-15        -0.04 m   2.02 m                     +0.02 m   -0.15 m   +0.19 m      | same points: as stored  -8.51 ..  +7.34, RMS 1.78 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 8.51 m
+luna-20          -0.10 m   1.93 m                     -0.43 m   -1.19 m   +0.33 m      | same points: as stored  -5.55 .. +10.48, RMS 2.60 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 10.48 m
+apollo-16        +0.00 m   2.43 m                     +0.01 m   -0.50 m   +0.65 m      | same points: as stored  -5.50 .. +15.01, RMS 2.71 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 19.89 m
+apollo-17        +0.02 m   2.71 m                     +0.04 m   -0.79 m   +0.77 m      | same points: as stored  -7.42 .. +21.06, RMS 3.61 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 21.07 m
+luna-21          -0.05 m   3.28 m                     -0.03 m   -0.31 m   +0.21 m      | same points: as stored  -9.14 ..  +8.48, RMS 3.23 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 9.14 m
+luna-23          -0.02 m   2.46 m                     -0.00 m   -0.35 m   +0.21 m      | same points: as stored  -5.93 .. +16.17, RMS 4.16 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 16.17 m
+luna-24          +0.10 m   2.46 m                     +0.03 m   -0.52 m   +0.41 m      | same points: as stored  -6.28 .. +12.49, RMS 3.40 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 12.49 m
+change-3         +0.05 m   2.54 m                     -0.02 m   -0.76 m   +0.55 m      | same points: as stored  -9.61 ..  +8.30, RMS 3.06 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 9.73 m
+change-4         +0.15 m   2.56 m                     -0.04 m   -0.95 m   +0.23 m      | same points: as stored  -5.22 .. +18.70, RMS 4.31 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 18.94 m
+change-5         -0.03 m   3.07 m                     +0.02 m   -0.24 m   +0.28 m      | same points: as stored  -9.94 ..  +8.90, RMS 2.93 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 9.94 m
+slim             +0.01 m   2.09 m                     +0.03 m   -0.55 m   +0.70 m      | same points: as stored  -6.51 .. +17.56, RMS 3.22 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 25.52 m
+change-6         -0.04 m   2.96 m                     -0.04 m   -0.21 m   +0.20 m      | same points: as stored  -9.32 ..  +7.53, RMS 3.11 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 9.51 m
+blue-ghost-1     +0.01 m   3.02 m                     -0.01 m   -0.53 m   +0.22 m      | same points: as stored  -6.09 ..  +7.71, RMS 2.90 m; eased -0.000 .. +0.000, RMS 0.000 m | 80840 nodes moved, at most 7.71 m
+
+A step of 1 m at 768 m is 0.075 deg of skyline; the Sun crosses that in about 9 minutes at the equator.
+Eased mode: the 3 m models as T-32 makes the app load them (rule from its handover; lib/lunyx_dem.py eased_fine). The "just outside minus just inside"
+columns read the two grids 3 m apart, so they keep about 3 m of the ground's own slope; "same points" reads both grids at the same points of the
+edge (0.01 m inside it, every 3 m), T-32's own measure, 60 m window minus 3 m model.
