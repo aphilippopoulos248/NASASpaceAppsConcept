@@ -11,10 +11,26 @@ import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
 import { mountAbTab } from './abTab';
 import { bindWorkingPair, createCompareActions } from './actions';
+import { mountNearbyTab } from './nearbyTab';
+import { mountOutlookTab } from './outlookTab';
+import { mountWindowsTab } from './windowsTab';
 import { COMPARE_TABS, createPanelStore, TAB_TITLE, type CompareTab } from './state';
 import { createCompareStorage } from './storage';
 import { badge, createTabKit, nextId } from './widgets';
 import './compare.css';
+
+/** Hands a finished file to the browser as a download. */
+function browserDownload(filename: string, mimeType: string, text: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.hidden = true;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
+}
 
 /** localStorage, or null where the browser refuses it (private modes, blocked storage). */
 function browserStorage(): Pick<Storage, 'getItem' | 'setItem'> | null {
@@ -30,7 +46,7 @@ export function mountComparePanel(region: HTMLElement): void {
   const storage = createCompareStorage(browserStorage());
   // Before the analysis store starts (main.ts starts it after mounting), so a reload analyses the restored pair once.
   bindWorkingPair(store, storage);
-  registerActions(createCompareActions({ store, analysis, panel, storage }));
+  registerActions(createCompareActions({ store, analysis, panel, storage, download: browserDownload }));
 
   // ---------- launcher: the way in, on screen while the panel is closed ----------
   const launcher = button('', 'ly-btn cmp-launcher', async () => {
@@ -98,7 +114,11 @@ export function mountComparePanel(region: HTMLElement): void {
     if (hadFocus) launcher.focus();
   }
 
-  const ab = mountAbTab(tabPanels.get('compare')!, storage, createTabKit());
+  const abKit = createTabKit();
+  const ab = mountAbTab(tabPanels.get('compare')!, storage, abKit);
+  const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
+  const windows = mountWindowsTab(tabPanels.get('windows')!, panel, createTabKit());
+  const outlookTab = mountOutlookTab(tabPanels.get('outlook')!, panel, createTabKit());
 
   // ---------- rendering ----------
   const renderLauncher = () => {
@@ -132,7 +152,9 @@ export function mountComparePanel(region: HTMLElement): void {
       ab.renderRequirementInputs();
       ab.renderResult();
       ab.renderSaved();
-    }
+    } else if (tab === 'nearby') nearby.render();
+    else if (tab === 'windows') windows.render();
+    else if (tab === 'outlook') outlookTab.render();
   };
   const showing = (tab: CompareTab) => isOpen() && panel.get().tab === tab;
 
@@ -149,21 +171,38 @@ export function mountComparePanel(region: HTMLElement): void {
       renderTab();
     }
     if (changed.has('savedRevision') && showing('compare')) ab.renderSaved();
+    if ((changed.has('nearbyRadiusM') || changed.has('nearbySpacingM')) && showing('nearby')) nearby.render();
+    if (changed.has('tableSlot') && showing('windows')) windows.render();
+    if ((changed.has('outlook') || changed.has('outlookSlot') || changed.has('outlookMonths')) && showing('outlook')) outlookTab.render();
   });
-  store.subscribe(['site', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => showing('compare') && ab.renderSetup());
+  store.subscribe(['site', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => {
+    if (showing('compare')) ab.renderSetup();
+    else if (showing('nearby')) nearby.render();
+    else if (showing('windows')) windows.render();
+    else if (showing('outlook')) outlookTab.render();
+  });
   store.subscribe(['compareA', 'compareB'], () => {
+    // What the A/B tab last said about the pair no longer holds once something else changed it.
+    abKit.clearIfIdle();
     renderLauncher();
+    if (showing('windows')) windows.render();
+    if (showing('outlook')) outlookTab.render();
     if (!showing('compare')) return;
     ab.renderSetup();
     ab.renderResult();
     ab.renderSaved();
   });
   store.subscribe(['sunElMinDeg', 'sunElMaxDeg', 'maxEarthGapH', 'slopeLimitDeg'], () => {
+    if (showing('nearby')) nearby.render();
     if (!showing('compare')) return;
     ab.renderRequirementInputs();
     ab.renderResult();
   });
-  analysis.subscribe((slot) => (slot === 'A' || slot === 'B') && showing('compare') && ab.renderResult());
+  analysis.subscribe((slot) => {
+    if ((slot === 'A' || slot === 'B') && showing('compare')) ab.renderResult();
+    else if (slot === 'nearby' && showing('nearby')) nearby.render();
+    else if (slot !== 'nearby' && showing('windows')) windows.render();
+  });
   // One clock for both sides: follow it a few times a second while it runs, exactly when it stops.
   let lastNowMs = -Infinity;
   let trailing: ReturnType<typeof setTimeout> | null = null;
@@ -191,6 +230,8 @@ export function mountComparePanel(region: HTMLElement): void {
       const inside = target !== null && sheet.contains(target);
       // Another layer with its own Escape (the assistant drawer), or a field outside the sheet, keeps the key.
       if (!inside && target && (target.closest('#region-drawer') || isTypingTarget(target))) return;
+      // Taken: the surface view and the site card leave an Escape that was handled alone.
+      e.preventDefault();
       e.stopPropagation();
       void closePanel();
     },
