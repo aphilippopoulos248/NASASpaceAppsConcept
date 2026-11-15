@@ -1,10 +1,11 @@
 # Lunyx status
 
 Kept by the coordinator of the original hub project `lunyx`. Last updated 2026-11-15
-04:15 UTC, for the published commit `6d4da06` (lunyx-science's transition spans and DSN edges, presets, catalogue sources, the 50-star flag) (mission presets, landing catalogue sources, on top of
-the complete compare panel, the teammate's GitHub `main` work, the sources and AI-use documents and
-the licence notices), with corrections proposed by the `lunyx-experience` project. Acceptance is the desktop website
-(decision D-9).
+04:15 UTC, for the published commit `6d4da06`: lunyx-science's transition spans and DSN edges,
+the mission presets, the landing catalogue sources and the 50-star flag, on top of the complete
+compare panel, the teammate's GitHub `main` work, the sources and AI-use documents and the
+licence notices; with corrections proposed by the `lunyx-experience` project. Acceptance is the
+desktop website (decision D-9).
 "Shipped" means merged through the build gate and published on
 `origin/feature/lunyx-navigator`. Task numbers refer to the project hub board.
 
