@@ -41,6 +41,20 @@ export const IMAGERY_MAX_LAT = 80;
 
 export const SITE_IMAGERY_CREDIT = `${LAYERS.map((l) => l.credit).join(' · ')}, via NASA Moon Trek`;
 
+/**
+ * The close-up imagery is the one thing the app fetches from outside its own server. It may
+ * not arrive (no network, the service down): the globe then keeps its whole-Moon mosaic, and
+ * the interface says so instead of crediting pictures that are not on screen.
+ */
+export type ImageryState = 'loading' | 'shown' | 'unavailable';
+
+/** One sentence for each state, for the site card and for getState. */
+export function imageryText(state: ImageryState, credits: readonly string[]): string {
+  if (state === 'shown') return `Close-up imagery: ${credits.join(' · ')}, via NASA Moon Trek.`;
+  if (state === 'loading') return `Close-up imagery: loading from NASA Moon Trek (${LAYERS.map((l) => l.credit).join(' · ')}).`;
+  return 'Close-up imagery is not shown: NASA Moon Trek could not be reached, so the globe keeps the whole-Moon mosaic here. Nothing else needs it: the elevation data, the analysis and the surface view come with the app.';
+}
+
 const MAX_COLS = 40;
 const TILE = 256;
 
@@ -221,6 +235,10 @@ function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: n
 export class SitePatch {
   readonly root = new Group();
   private readonly mosaics: TileMosaic[] = [];
+  /** 'loading' until every tile of every layer has arrived or failed. */
+  state: ImageryState = 'loading';
+  /** Credits of the layers whose imagery arrived. */
+  credits: string[] = [];
 
   constructor(lat: number, lon: number, anisotropy: number, uniforms: SurfaceUniforms, heightM: HeightSampler) {
     LAYERS.forEach((layer, i) => {
@@ -228,6 +246,10 @@ export class SitePatch {
       mesh.renderOrder = 1 + i;
       this.root.add(mesh);
       this.mosaics.push(mosaic);
+    });
+    void Promise.all(this.mosaics.map((m) => m.ready)).then((arrived) => {
+      this.credits = LAYERS.filter((_, i) => arrived[i]).map((l) => l.credit);
+      this.state = this.credits.length ? 'shown' : 'unavailable';
     });
   }
 

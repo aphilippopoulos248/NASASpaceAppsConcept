@@ -16,7 +16,7 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
 - **Globe view.** A 3D Moon with real relief from the LOLA whole-Moon grid, 28 catalogued
   landings and a pin anywhere. Filters: UTC date and time, the latitude and longitude at the
   centre of the view, the required solar elevation band, mast height, mission window and
-  arrival delay. Overlays with legends: where the Sun is inside the elevation band (smooth
+  arrival delay, and "Missions to replay" (see [Run it](#run-it)). Overlays with legends: where the Sun is inside the elevation band (smooth
   Moon), long-term average sunlight and Earth visibility (NASA PGDA product 69, polar regions
   only), elevation-data coverage and mapped ice-bearing shadowed regions. A compass, a locator
   map and a mission-window time scrubber with jumps to rise and set events. Landing markers are
@@ -49,8 +49,8 @@ computed from them, or is shown as unavailable with the reason. Earth visibility
 terrain, not a radio link budget. Sunlight percentage is a share of time with the Sun's disc
 visible, not electrical power.
 
-**Not built yet:** an eclipse replay preset; the start and the end of each sunset and sunrise
-as a pair (see [How accurate it is](#how-accurate-it-is)); historical mission trajectories.
+**Not built yet:** the start and the end of each sunset and sunrise as a pair (see
+[How accurate it is](#how-accurate-it-is)); historical mission trajectories.
 What is shipped, built and planned is tracked in [docs/lunyx/STATUS.md](docs/lunyx/STATUS.md).
 
 ## Run it
@@ -63,6 +63,19 @@ for pins near the south pole.
 npm ci
 npm run dev        # development server, http://localhost:5173
 ```
+
+Three missions play in one step, offline, from the JPL Horizons tables bundled with the app.
+Open one of these links, or pick it under "Missions to replay" at the top of Filters:
+
+| Link (dev server) | What plays |
+| --- | --- |
+| http://localhost:5173/?preset=blue-ghost-landing | Blue Ghost Mission 1, Mare Crisium: touchdown on 2 March 2025 and 14 days of daylight, with the eclipse of 14 March |
+| http://localhost:5173/?preset=im-2-landing | IM-2 Athena, Mons Mouton, 5° from the south pole: touchdown on 6 March 2025 and 14 days of low Sun, until it goes down behind the terrain on 19 March |
+| http://localhost:5173/?preset=eclipse-2025-03-14 | Earth passing in front of the Sun, seen from the Blue Ghost site on 14 March 2025 |
+
+Each opens the surface view and starts the clock (the landings at 12 h per second, the eclipse
+at 10 min per second); the clock stops at the end of the mission window. With
+`npm run preview` the same links work on port 4173.
 
 ```bash
 npm run build      # type-checks the browser and server code, builds into dist/
@@ -285,19 +298,26 @@ slide deck must show the team name, the names of the team members and the challe
 Navigator's earlier answer on GitHub (discussion 1991) gave the same limits; the guide
 confirms them.
 
-What a demo can show truthfully today, in the desktop build:
+An outline built on the presets (each step still has to be confirmed in the desktop
+walkthrough, task T-2, before it is recorded; at the time of writing the walkthrough had not yet
+reached the presets, the surface view, the compare panel or the assistant):
 
-1. A catalogued site or a pin anywhere on the 3D Moon with real relief, the date set, and the
-   Sun and Earth against the site's skyline in the site card.
-2. The surface view: the Sun and Earth at their computed positions and sizes, the key metrics
-   with countdowns, the skyline chart, and the explanation of what hides the Sun.
-3. Comparison: the same site arriving 24 h later, or another mast height, with the
-   differences in numbers and words; nearby alternatives ranked by sunlight and Earth contact;
-   the mission-window table and its CSV export; the seasonal outlook.
-4. The long-term average overlays at the south pole, labelled as 18.6-year averages.
-5. The assistant operating the app. Without a key it runs in deterministic mode, which must
-   stay labelled as such; showing the language-model mode needs a key and a run that has not
-   happened on the build machine yet.
+- **Video, 30 seconds or less.** The guide's own beats: who you are (0-2 s), the challenge
+  (2-5 s), the project's name (5-10 s), how it works (10-20 s), what it could do (20-30 s). For
+  "how it works", `?preset=blue-ghost-landing` or `?preset=im-2-landing` shows the surface view
+  with the Sun, Earth, key metrics and skyline chart while the clock runs; a full preset plays for
+  about 28 s (the eclipse for 34 s), so record a few seconds of it, or pause it.
+- **Slides, at most seven, title and introduction included.** 1: Lunyx, the team name, the
+  members' names and the challenge. 2: the problem (power and line of sight to Earth depend on
+  the local skyline, site and date). 3: the globe and a site card with its sources. 4: the
+  surface view from a preset (IM-2's low Sun near the pole). 5: the compare panel (arrival 24 h
+  later, nearby alternatives, the mission-window table). 6: NASA data used and how it was
+  checked (with "not fully validated"). 7: how AI was used, and what comes next.
+
+Known problem to steer around: typing coordinates into Filters > Centre of view can leave the
+view, or a pin dropped straight after, somewhere other than the typed point (walkthrough findings
+Q-1, Q-2, F-3; being fixed by the original team as T-43). Use a preset, a catalogued site or a
+click on the globe instead.
 
 What it must not claim: that the results are fully validated; that Earth visibility is a
 working radio link; a sunset or sunrise time without saying which instant it is; that NASA
