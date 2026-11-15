@@ -2,13 +2,18 @@
 // through runAction, and the assistant gets the same list as tools. Each result is a small
 // JSON object read back from real state, and resolves when what it describes is on screen:
 // the panel redraws from the same stores, synchronously, before a waiting action continues.
+import { DEFAULT_NEARBY_OPTIONS } from '../../analysis/api';
+import { candidateOffsets } from '../../analysis/nearby';
 import { ActionError, defineAction, type ActionDef } from '../../core/actions';
 import { reportComparison, scenarioFacts } from '../../core/analysisReport';
-import type { AnalysisStore } from '../../core/analysisStore';
+import type { AnalysisStore, NearbyStatus } from '../../core/analysisStore';
+import { emitCommand } from '../../core/bus';
+import { SITE_ALTITUDE_KM } from '../../core/coreActions';
 import { describeScenario, hasAutoLabel, labelPair, scenarioFromState, scenarioKey, spanText } from '../../core/scenario';
 import { MAX_TIME_MS, MIN_TIME_MS, type Store } from '../../core/store';
 import { isoUtc } from '../../core/time';
-import type { AppState, Scenario } from '../../core/types';
+import type { AppState, Scenario, SiteRef } from '../../core/types';
+import { nearbyRow, nearbyView } from './nearbyView';
 import { COMPARE_TABS, type CompareTab, type PanelStore } from './state';
 import { MAX_NAME_LENGTH, MAX_SAVED, type CompareStorage, type SavedComparison } from './storage';
 
@@ -22,6 +27,10 @@ export interface CompareContext {
 }
 
 const HOUR_MS = 3_600_000;
+/** The science core refuses a scan of more points than this. */
+export const MAX_NEARBY_CANDIDATES = 2000;
+/** Rows of the ranked list put into an action result (the panel lists more). */
+const NEARBY_RESULT_ROWS = 10;
 const NO_PARAMS = { type: 'object', properties: {} } as const;
 const BASIS = { type: 'string', description: 'Which scenario to start from: "A" = the one saved in slot A, "current" = the scenario on screen (it is saved as A). Default: A when it is saved, otherwise the scenario on screen.', enum: ['A', 'current'] } as const;
 
@@ -40,6 +49,13 @@ function labelDerived(a: Scenario, b: Scenario, whatBChanges: string): [Scenario
   if (!hasAutoLabel(a)) return [a, { ...b, label: `${a.label.trim()} (${whatBChanges})`.slice(0, 120) }];
   const [la, lb] = labelPair(a, { ...b, label: describeScenario(b) });
   return [la!, lb!];
+}
+
+/** Points a scan would analyse (the site itself included): the same grid the science core uses, counted without building it when it is far too large. */
+export function nearbyPointCount(radiusM: number, spacingM: number): number {
+  if (!(spacingM > 0) || !(radiusM >= 0)) return NaN;
+  const perSide = 2 * Math.floor(radiusM / spacingM) + 1;
+  return perSide * perSide > 4 * MAX_NEARBY_CANDIDATES ? perSide * perSide : candidateOffsets(radiusM, spacingM).length;
 }
 
 export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[] {
@@ -100,6 +116,30 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
   });
 
   const storageNote = () => (storage.persistent ? {} : { note: 'This browser gives the page no storage, so saved comparisons last only until the page is closed.' });
+
+  const flyTo = (site: SiteRef) => {
+    const delivered = emitCommand('flyTo', { lat: site.lat, lon: site.lon, altitudeKm: SITE_ALTITUDE_KM });
+    // Nothing is rendering the globe (tests, headless): record where it would point.
+    if (!delivered) store.set({ globeCenter: { lat: site.lat, lon: site.lon, altitudeKm: SITE_ALTITUDE_KM } });
+  };
+
+  /** The rankNearby result: the scanned site, the best alternatives, and what was left out and why. */
+  const nearbyResult = (st: Extract<NearbyStatus, { state: 'ready' }>) => {
+    const view = nearbyView(st.value);
+    const o = st.options;
+    return {
+      scenario: scenarioFacts(st.scenario),
+      options: o ? { radiusM: o.radiusM, spacingM: o.spacingM, slopeLimitDeg: o.slopeLimitDeg } : null,
+      scanned: view.total,
+      rankedCount: view.alternatives.length,
+      reference: view.reference ? { ...nearbyRow(view.reference, 0), isReference: true, overSlopeLimit: view.referenceOverSlopeLimit } : null,
+      betterThanReference: view.betterThanReference,
+      candidates: view.alternatives.slice(0, NEARBY_RESULT_ROWS).map((a) => nearbyRow(a.candidate, a.rank)),
+      rejected: view.rejected,
+      ranking: 'score = mean of illuminationPct and earthVisiblePct over the mission window; rank 1 is the highest score',
+      basis: view.basis,
+    };
+  };
 
   return [
     defineAction<{ tab?: CompareTab }, unknown>({
@@ -276,6 +316,91 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
       effect: 'query',
       params: NO_PARAMS,
       run: () => ({ comparisons: storage.list().map(savedSummary), keptInBrowserStorage: storage.persistent, ...storageNote() }),
+    }),
+
+    // ---------- nearby alternatives ----------
+    defineAction<{ radiusM?: number; spacingM?: number; slopeLimitDeg?: number }, unknown>({
+      name: 'rankNearby',
+      title: 'Rank nearby alternative sites',
+      description:
+        'Scans a square grid of candidate points around the selected site (out to `radiusM`, every `spacingM`), leaves out those steeper than the slope limit or without elevation data, analyses each of the others over the same mission window and mast height (its own skyline, sunlight and Earth line of sight), and ranks them by score: the mean of sunlight % and Earth-in-view %. ' +
+        'Opens the "nearby" tab of the compare panel, shows progress, and waits for the scan (seconds; more for a wide or dense grid). Returns the site itself (`reference`), the best alternatives (`candidates`, rank 1 first, at most 10 of `rankedCount`), how many were left out and why, and what the figures rest on (`basis`: the scan is coarser than the full analysis). Follow with selectCandidate. Earth figures are geometric line of sight, not a radio link.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          radiusM: { type: 'number', description: `Search radius around the site, metres (default ${DEFAULT_NEARBY_OPTIONS.radiusM}).`, minimum: 50, maximum: 50_000 },
+          spacingM: { type: 'number', description: `Spacing between candidate points, metres (default ${DEFAULT_NEARBY_OPTIONS.spacingM}).`, minimum: 10, maximum: 10_000 },
+          slopeLimitDeg: { type: 'number', description: 'Steepest acceptable ground slope, degrees. Also sets the app\'s slope limit. Default: the current slope limit.', minimum: 0, maximum: 45 },
+        },
+      },
+      run: async ({ radiusM = DEFAULT_NEARBY_OPTIONS.radiusM, spacingM = DEFAULT_NEARBY_OPTIONS.spacingM, slopeLimitDeg }) => {
+        if (!state().site) throw new ActionError('No site is selected. Select a landing site or drop a pin first, then scan around it.');
+        const points = nearbyPointCount(radiusM, spacingM);
+        if (points > MAX_NEARBY_CANDIDATES) throw new ActionError(`A ${spacingM} m grid out to ${radiusM} m has ${points.toLocaleString('en-US')} points; a scan takes at most ${MAX_NEARBY_CANDIDATES.toLocaleString('en-US')}. Widen the spacing or shorten the radius.`);
+        if (points < 2) throw new ActionError(`A ${spacingM} m grid out to ${radiusM} m holds only the site itself. Shorten the spacing or widen the radius.`);
+        if (slopeLimitDeg !== undefined) store.set({ slopeLimitDeg });
+        panel.set({ tab: 'nearby', nearbyRadiusM: radiusM, nearbySpacingM: spacingM });
+        store.set({ comparing: true });
+        const st = await analysis.requestNearby({ ...DEFAULT_NEARBY_OPTIONS, radiusM, spacingM, slopeLimitDeg: state().slopeLimitDeg });
+        if (st.state === 'error') throw new ActionError(`The scan is not available: ${st.error}`);
+        if (st.state !== 'ready') throw new ActionError('No site is selected. Select a landing site or drop a pin first, then scan around it.');
+        // A newer scan may have replaced this one on screen while it ran: say so rather than describe a list that is not shown.
+        const shown = analysis.nearby();
+        const superseded = !(shown.state === 'ready' && shown.value === st.value);
+        return { ...nearbyResult(st), ...(superseded && { replacedByNewerScan: true }) };
+      },
+    }),
+
+    defineAction<{ rank?: number; id?: string; asB?: boolean }, unknown>({
+      name: 'selectCandidate',
+      title: 'Choose a nearby candidate',
+      description:
+        'Pins one of the alternatives of the last rankNearby scan as the site under study, by `rank` (1 = best) or by `id`, and flies the globe to it. ' +
+        'With `asB: true` it is also loaded into comparison slot B over the scanned mission window and mast height (the scanned site becomes A when slot A is empty) and the comparison opens; the action then waits for both analyses and adds what `compare` returns. ' +
+        'A pinned candidate gets the full analysis, which is finer than the scan, so its figures can differ slightly from the ranked list.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          rank: { type: 'integer', description: 'Rank in the last scan, 1 = best.', minimum: 1 },
+          id: { type: 'string', description: 'Candidate id from the rankNearby result.' },
+          asB: { type: 'boolean', description: 'Also load it as scenario B and open the comparison.' },
+        },
+      },
+      run: async ({ rank, id, asB }) => {
+        if ((rank === undefined) === (id === undefined)) throw new ActionError('Give exactly one of `rank` or `id`.');
+        const st = analysis.nearby();
+        if (st.state === 'loading') throw new ActionError('The scan of nearby sites is still running. Wait for rankNearby to finish.');
+        if (st.state !== 'ready') throw new ActionError('There is no ranked list of nearby sites yet. Run rankNearby first.');
+        const view = nearbyView(st.value);
+        const hit = view.alternatives.find((a) => (rank !== undefined ? a.rank === rank : a.candidate.site.id === id));
+        if (!hit) {
+          if (id !== undefined && view.reference?.site.id === id) throw new ActionError('That id is the scanned site itself, not an alternative.');
+          throw new ActionError(
+            rank !== undefined
+              ? `There is no candidate ranked ${rank}: the last scan (around ${st.scenario.site.name}) ranked ${view.alternatives.length}.`
+              : `No ranked candidate of the last scan (around ${st.scenario.site.name}) has the id "${id}".`,
+          );
+        }
+        const site = hit.candidate.site;
+        if (state().view === 'surface' && state().site?.id !== site.id) store.set({ view: 'globe' });
+        store.set({ site });
+        flyTo(site);
+        const chosen = {
+          view: state().view,
+          site: { id: site.id, name: site.name, kind: site.kind, latDeg: site.lat, lonDegEast: site.lon },
+          candidate: nearbyRow(hit.candidate, hit.rank),
+          scannedAround: st.scenario.site.name,
+        };
+        if (!asB) return chosen;
+        // B is the candidate over the window and mast that were scanned; A stays, or is the scanned site.
+        const core = { site, mastHeightM: st.scenario.mastHeightM, startMs: st.scenario.startMs, durationH: st.scenario.durationH, stepMin: st.scenario.stepMin };
+        const b: Scenario = { ...core, id: scenarioKey(core), label: describeScenario(core) };
+        const [la, lb] = labelPair(state().compareA ?? st.scenario, b);
+        showPair(la!, lb!);
+        return { ...chosen, ...(await compareResult()) };
+      },
     }),
   ];
 }

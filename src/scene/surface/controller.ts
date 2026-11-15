@@ -188,8 +188,11 @@ export class SurfaceController {
     window.addEventListener('keydown', (e) => {
       if (!this.active || e.ctrlKey || e.metaKey || e.altKey) return;
       const t = e.target as HTMLElement | null;
-      // Leave keys alone while the user is in a field, a slider, a chart or pressing a button.
-      if (t && t !== canvas && t !== document.body && t.closest('input, select, textarea, button, summary, a, [contenteditable], [tabindex], [role="slider"], [role="application"]')) return;
+      const inside = (selector: string) => Boolean(t && t !== canvas && t !== document.body && t.closest(selector));
+      // Leave keys alone while the user is in a field, a slider or a chart.
+      if (inside('input, select, textarea, [contenteditable], [tabindex], [role="slider"], [role="application"]')) return;
+      // A button that was just clicked keeps the focus: only Space and Enter belong to it, so looking and walking go on working.
+      if (inside('button, summary, a') && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter')) return;
       const turn = LOOK_KEYS[e.code];
       if (turn) {
         // Applied per key event rather than per frame, so a tap is never lost between two slow frames.
@@ -206,6 +209,8 @@ export class SurfaceController {
         this.view.zoom(1);
         e.preventDefault();
       } else if (e.key === 'Escape') {
+        // Marked as handled: the same key press must not also reach the globe's shortcuts (it used to deselect the site).
+        e.preventDefault();
         void runAction('exitSurface');
       }
     });
