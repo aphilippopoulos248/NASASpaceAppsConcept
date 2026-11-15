@@ -5,12 +5,12 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `51552b6`: `am/lunyx-experience/integration` at `2f7e813`
-  merged with `am/lunyx/integration` at `102cef8` (T-37: licence notices and the DOI fix; T-38:
-  a source for every landing), plus this task's documents. Since the
-  earlier published `cc736f8`, `public/` gained only `public/data/sources/` (S18 to S20),
-  `package.json` gained the scripts `fetch-gcat` and `fetch-site-areas`, and the lockfile is
-  unchanged.
+- **State described:** the tree at `5dce26c`: `am/lunyx-experience/integration` at `b7595e9`
+  merged with `am/lunyx/integration` at `9f949df` (T-22 mission presets, T-37 licence notices
+  and the DOI fix, T-38 a source for every landing), plus this task's documents. Since the
+  published `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20),
+  `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json` gained
+  the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
   nothing, the entry says so and the item is on the open list in
@@ -90,6 +90,7 @@ says so.
 | S18 | Who owns the hardware at each landing (GCAT) | `public/data/sources/gcat-landers.json` | 13.1 kB | **CC BY 4.0** (GCAT's copyright notice) | Site card: "source: GCAT" with a link and the catalogue id; surface view: "(GCAT)" |
 | S19 | LROC catalogue of hardware positions on the Moon | `public/data/sources/lroc-anthropogenic-objects.csv` | 21.0 kB | As S4 (public domain as a PDS product) | Recorded in `site-areas.json`; not shown on screen |
 | S20 | Explored area at each site (made in this repository from S19 and traverse maps) | `public/data/sources/site-areas.json` | 34.3 kB | Derived here | Sources listed in the file |
+| S21 | The three "Missions to replay" (written here: site, window, clock, view) | `public/data/presets.json` | 3.9 kB | Written here; its times come from S16 and its windows lie inside the S10 tables | `sources` field of each preset |
 
 The `README.md` next to each data folder (`public/data/dem/`, `heatmap/`, `ice-targets/`,
 `science/diviner/`, `science/shadowcam/`) carries the same credits for anyone who opens the
