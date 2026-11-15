@@ -194,7 +194,7 @@
     }
    },
    "now": {
-    "commit": "4f007f1",
+    "commit": "32ef35a",
     "source": "horizons",
     "blueGhostSunsetMinusReferenceS": 0.75,
     "im2EarthsetMinusReferenceMin": 1.8828125,
@@ -222,7 +222,7 @@
     "vsSpiceEarthAzArcDeg": 0.003378310025593903
    },
    "now": {
-    "commit": "4f007f1",
+    "commit": "32ef35a",
     "sunAltDeg": 0.06475553151637747,
     "sunAzArcDeg": 0.4004304660464705,
     "earthAltDeg": 0.2607149635873256,

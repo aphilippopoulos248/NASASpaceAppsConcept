@@ -61,13 +61,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 46.31428335679326,
-       "illuminationPct": 44.661935471007915,
-       "earthVisiblePct": 80.79973092002773,
-       "sunAnyMinusOwn": -0.03181741293288809,
-       "illuminationMinusOwn": -0.051792862987802835,
-       "earthMinusOwn": -4.828203306317391e-05,
+       "commit": "32ef35a",
+       "sunAnyPct": 46.314279763054756,
+       "illuminationPct": 44.661935369751845,
+       "earthVisiblePct": 80.79973211794055,
+       "sunAnyMinusOwn": -0.03182100667139309,
+       "illuminationMinusOwn": -0.05179296424387303,
+       "earthMinusOwn": -4.708412024001518e-05,
        "longestDarknessH": 414.91015625,
        "ephemeris": "model"
       }
@@ -99,13 +99,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 46.68478581701872,
-       "illuminationPct": 44.96750590413601,
-       "earthVisiblePct": 81.11606975149346,
-       "sunAnyMinusOwn": -0.029924845681762235,
-       "illuminationMinusOwn": -0.05244871766065984,
-       "earthMinusOwn": -0.0014131519994435848,
+       "commit": "32ef35a",
+       "sunAnyPct": 46.68478342119305,
+       "illuminationPct": 44.967505807156726,
+       "earthVisiblePct": 81.11607334523197,
+       "sunAnyMinusOwn": -0.02992724150742987,
+       "illuminationMinusOwn": -0.052448814639944885,
+       "earthMinusOwn": -0.001409558260931476,
        "longestDarknessH": 413.388671875,
        "ephemeris": "model"
       }
@@ -166,7 +166,7 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
+       "commit": "32ef35a",
        "sunAnyPct": 0,
        "illuminationPct": 0,
        "earthVisiblePct": 0,
@@ -204,7 +204,7 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
+       "commit": "32ef35a",
        "sunAnyPct": 0,
        "illuminationPct": 0,
        "earthVisiblePct": 0,
@@ -271,13 +271,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 1.370865092398371,
-       "illuminationPct": 0.7436445395580171,
-       "earthVisiblePct": 18.116578433199013,
-       "sunAnyMinusOwn": 0.006824490110659109,
-       "illuminationMinusOwn": 0.006993448320465223,
-       "earthMinusOwn": 0.08413340268596414,
+       "commit": "32ef35a",
+       "sunAnyPct": 1.3708662903112043,
+       "illuminationPct": 0.7436445576726448,
+       "earthVisiblePct": 18.116582026937515,
+       "sunAnyMinusOwn": 0.006825688023492482,
+       "illuminationMinusOwn": 0.00699346643509291,
+       "earthMinusOwn": 0.0841369964244656,
        "longestDarknessH": 6362.53515625,
        "ephemeris": "model"
       }
@@ -309,13 +309,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
+       "commit": "32ef35a",
        "sunAnyPct": 13.072779625438532,
-       "illuminationPct": 9.918552608271456,
-       "earthVisiblePct": 30.803653485600513,
+       "illuminationPct": 9.91855269130745,
+       "earthVisiblePct": 30.803660673077513,
        "sunAnyMinusOwn": 0.010128210185074593,
-       "illuminationMinusOwn": 0.024251485559494412,
-       "earthMinusOwn": 0.03730063822709084,
+       "illuminationMinusOwn": 0.024251568595488493,
+       "earthMinusOwn": 0.03730782570409019,
        "longestDarknessH": 4895.982421875,
        "ephemeris": "model"
       }
@@ -400,13 +400,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 48.92667489297368,
-       "illuminationPct": 44.24197806186742,
-       "earthVisiblePct": 34.633699458620065,
-       "sunAnyMinusOwn": 4.719860823238328,
-       "illuminationMinusOwn": 4.777791255350664,
-       "earthMinusOwn": 0.08127528124571626,
+       "commit": "32ef35a",
+       "sunAnyPct": 48.92667249714801,
+       "illuminationPct": 44.24197802873954,
+       "earthVisiblePct": 34.6336970627944,
+       "sunAnyMinusOwn": 4.71985842741266,
+       "illuminationMinusOwn": 4.777791222222781,
+       "earthMinusOwn": 0.08127288542004862,
        "longestDarknessH": 403.876953125,
        "ephemeris": "model"
       }
@@ -438,13 +438,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 87.61915039996872,
-       "illuminationPct": 82.72984768698339,
-       "earthVisiblePct": 53.57738459403597,
-       "sunAnyMinusOwn": -0.006965089620038611,
-       "illuminationMinusOwn": -0.02869510370236128,
-       "earthMinusOwn": -0.019475168606241766,
+       "commit": "32ef35a",
+       "sunAnyPct": 87.61914920205588,
+       "illuminationPct": 82.72984738329873,
+       "earthVisiblePct": 53.57737620864613,
+       "sunAnyMinusOwn": -0.006966287532875981,
+       "illuminationMinusOwn": -0.028695407387019145,
+       "earthMinusOwn": -0.019483553996082037,
        "longestDarknessH": 144.91015625,
        "ephemeris": "model"
       }
@@ -529,13 +529,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
+       "commit": "32ef35a",
        "sunAnyPct": 50.63222964353181,
-       "illuminationPct": 44.511406620790915,
-       "earthVisiblePct": 53.04920685712139,
+       "illuminationPct": 44.51140643461859,
+       "earthVisiblePct": 53.04920446129572,
        "sunAnyMinusOwn": 1.6561800866610028,
-       "illuminationMinusOwn": 1.4093079216317932,
-       "earthMinusOwn": 0.022741770795533967,
+       "illuminationMinusOwn": 1.4093077354594712,
+       "earthMinusOwn": 0.022739374969866333,
        "longestDarknessH": 455.388671875,
        "ephemeris": "model"
       }
@@ -567,13 +567,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 88.99938077489819,
-       "illuminationPct": 84.10832571335327,
-       "earthVisiblePct": 53.49395355893194,
-       "sunAnyMinusOwn": -0.014695093727041808,
-       "illuminationMinusOwn": -0.03714276803545147,
-       "earthMinusOwn": -0.0066137691063303805,
+       "commit": "32ef35a",
+       "sunAnyPct": 88.99938676446236,
+       "illuminationPct": 84.10832541109129,
+       "earthVisiblePct": 53.493946371454946,
+       "sunAnyMinusOwn": -0.014689104162869171,
+       "illuminationMinusOwn": -0.037143070297432246,
+       "earthMinusOwn": -0.006620956583326176,
        "longestDarknessH": 133.16796875,
        "ephemeris": "model"
       }
@@ -658,13 +658,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 40.279197304485294,
-       "illuminationPct": 35.41815383816664,
-       "earthVisiblePct": 49.355388729422735,
-       "sunAnyMinusOwn": 0.7563661842424168,
-       "illuminationMinusOwn": 0.6413105281629825,
-       "earthMinusOwn": 0.07328869568971896,
+       "commit": "32ef35a",
+       "sunAnyPct": 40.27919251283396,
+       "illuminationPct": 35.41815370454048,
+       "earthVisiblePct": 49.3553875315099,
+       "sunAnyMinusOwn": 0.7563613925910815,
+       "illuminationMinusOwn": 0.6413103945368235,
+       "earthMinusOwn": 0.0732874977768816,
        "longestDarknessH": 663.185546875,
        "ephemeris": "model"
       }
@@ -696,13 +696,13 @@
        "ephemeris": "model"
       },
       "now": {
-       "commit": "4f007f1",
-       "sunAnyPct": 86.8126879285653,
-       "illuminationPct": 81.96793833771775,
-       "earthVisiblePct": 52.14530376002797,
-       "sunAnyMinusOwn": -0.01855497983422083,
-       "illuminationMinusOwn": -0.0338207893609308,
-       "earthMinusOwn": -0.0016495350746126292,
+       "commit": "32ef35a",
+       "sunAnyPct": 86.81269272021663,
+       "illuminationPct": 81.9679380755015,
+       "earthVisiblePct": 52.145302562115134,
+       "sunAnyMinusOwn": -0.018550188182885563,
+       "illuminationMinusOwn": -0.03382105157719195,
+       "earthMinusOwn": -0.0016507329874499987,
        "longestDarknessH": 191.279296875,
        "ephemeris": "model"
       }

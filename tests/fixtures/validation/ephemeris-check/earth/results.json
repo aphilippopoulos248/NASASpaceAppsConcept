@@ -76,7 +76,7 @@
      "horizonsEarthOnAppSkylinePct": 79.58246109398702
     },
     "app-now": {
-     "commit": "4f007f1",
+     "commit": "32ef35a",
      "ephemeris": "model",
      "earthVisiblePct": 79.56615306712963,
      "diffPct": -0.011160762180324468,
@@ -199,7 +199,7 @@
      "horizonsEarthOnAppSkylinePct": 33.906117733554154
     },
     "app-now": {
-     "commit": "4f007f1",
+     "commit": "32ef35a",
      "ephemeris": "model",
      "earthVisiblePct": 31.90547236689814,
      "diffPct": 0.048025715994974405,
@@ -318,7 +318,7 @@
      "horizonsEarthOnAppSkylinePct": 56.01291852298618
     },
     "app-now": {
-     "commit": "4f007f1",
+     "commit": "32ef35a",
      "ephemeris": "model",
      "earthVisiblePct": 56.00242332175926,
      "diffPct": 0.0005796479130211196,
@@ -441,7 +441,7 @@
      "horizonsEarthOnAppSkylinePct": 49.249678936747856
     },
     "app-now": {
-     "commit": "4f007f1",
+     "commit": "32ef35a",
      "ephemeris": "model",
      "earthVisiblePct": 49.243616174768526,
      "diffPct": 0.004408739599185196,
@@ -570,7 +570,7 @@
      "horizonsEarthOnAppSkylinePct": 40.07269416389366
     },
     "app-now": {
-     "commit": "4f007f1",
+     "commit": "32ef35a",
      "ephemeris": "model",
      "earthVisiblePct": 38.895851417824076,
      "diffPct": 0.05118196368861305,

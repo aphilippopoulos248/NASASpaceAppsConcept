@@ -9,16 +9,18 @@ files and from outside sources, with code that shares nothing with `src/analysis
 Owner: @ephemeris-check. Two builds were tested side by side:
 
 - **before**: `am/lunyx/integration` at 375f816, the integrated build when this task started;
-- **now**: `am/lunyx/integration` at 4f007f1. It contains @analysis's skyline fix (1828486),
-  which was merged while this task was running (a7b4e70).
+- **now**: `am/lunyx/integration` at 32ef35a. It contains @analysis's skyline fix (1828486,
+  merged in a7b4e70) and their later T-29 work (tabulated model ephemeris), both merged while
+  this task was running.
 
-The fix was first tested from a read-only snapshot of `am/lunyx/agent/analysis` at ecc9793,
-before it was merged. The current integration has the same `src/analysis` and `src/astro` and
-returned identical numbers in all 38 runs, so only the two builds above are kept.
+The fix was tested three times: from a read-only snapshot of `am/lunyx/agent/analysis` at
+ecc9793 before it was merged, on integration at 4f007f1 after the merge (identical numbers in
+all 38 runs), and at 32ef35a after T-29 (skylines identical, one event time moved by 9 s,
+percentages by less than 0.001 points). Only the two builds above are kept.
 
 ## Summary
 
-| Check | Before (375f816) | Now (4f007f1) |
+| Check | Before (375f816) | Now (32ef35a) |
 | --- | --- | --- |
 | 0. Bundled elevation grids against the PDS originals | equal within rounding (30 080 samples) | same data |
 | 1. Skyline, observer 2 m up, 5 sites, 720 azimuths each | **reads low**: up to 1.04 deg (Shackleton rim pin), 0.27 deg (connecting ridge); 0.04-0.07 deg at IM-2, Apollo 15, Chandrayaan-3 | within 0.05 deg everywhere (0.002-0.014 deg at four sites) |

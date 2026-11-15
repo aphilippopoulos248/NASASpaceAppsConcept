@@ -168,12 +168,24 @@ if args.neighbours:
         p = report['sites'][sid]['pgda']['sun']
         az = np.arange(720) * 0.5
         own_grid, pgda_grid = [], []
+        # Nine skylines take about two minutes: keep the own values in the git-ignored cache (they do not depend on the app).
+        cache = os.path.join(common.CACHE, 'spice-series', 'neighbours.%s.%d.%d.json' % (sid, int(t0), hours))
+        cached = None
+        if os.path.exists(cache):
+            with open(cache) as fh:
+                cached = json.load(fh)
         for dr in (-1, 0, 1):
             for dc in (-1, 0, 1):
-                la, lo = pixel_latlon(p['col'] + dc, p['row'] + dr)
-                ref = sk.skyline(stack, la, lo, 0.0, az)
-                own_grid.append(own_metrics(series_cache[sid], sg.Skyline(ref['elev_deg'], 0.5))['sunAnyPct'])
                 pgda_grid.append(float(raster['sun'][p['row'] + dr, p['col'] + dc] * 0.004))
+                if cached is None:
+                    la, lo = pixel_latlon(p['col'] + dc, p['row'] + dr)
+                    ref = sk.skyline(stack, la, lo, 0.0, az)
+                    own_grid.append(own_metrics(series_cache[sid], sg.Skyline(ref['elev_deg'], 0.5))['sunAnyPct'])
+        if cached is not None:
+            own_grid = cached
+        else:
+            with open(cache, 'w') as fh:
+                json.dump(own_grid, fh)
         report['sites'][sid]['neighbours3x3'] = {'ownSunAnyPct': own_grid, 'pgdaSunPct': pgda_grid}
         fmt = lambda g: '  '.join('%5.1f' % v for v in g)
         out('  %-17s own  [%s]   min %5.1f  median %5.1f  max %5.1f' % (sid, fmt(own_grid), min(own_grid), float(np.median(own_grid)), max(own_grid)))

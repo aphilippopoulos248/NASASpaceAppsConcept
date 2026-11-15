@@ -5,20 +5,21 @@ numbers behind them are in `*/results.txt` and `*/results.json`.
 
 ## What to integrate
 
-Branch `am/lunyx/agent/ephemeris-check` (contains integration 4f007f1). It adds
+Branch `am/lunyx/agent/ephemeris-check` (contains integration 32ef35a). It adds
 `tests/fixtures/validation/ephemeris-check/` (4.3 MB, largest file 0.25 MB) and two small result
 files under `tests/fixtures/horizons/ephemeris-check/results/`. Nothing in `src/`, `scripts/`,
 `public/` or `package.json` is touched, and nothing here is run by `npm test` or the build.
 
-On the merged tree `npm run build` passes and `npm test` passes (391 passed, 3 skipped, and
-the 10 science tests).
+On the merged tree (32ef35a plus this) `npm run build` passes and `npm test` passes (428
+passed, 5 skipped, and the 10 science tests).
 
 ## What was tested
 
-Two builds: integration at 375f816 (when the task started) and at 4f007f1 (now). The skyline
-fix by @analysis was merged between the two (a7b4e70), so the comparison shows the defect and
-its repair. Before the merge the fix was tested from a read-only snapshot of @analysis's branch
-(ecc9793); the current integration returned identical numbers in all 38 runs.
+Two builds: integration at 375f816 (when the task started) and at 32ef35a (now). The skyline
+fix by @analysis was merged between the two (a7b4e70), and so was their T-29 work, so the
+comparison shows the defect and its repair. The fix was first tested from a read-only snapshot
+of @analysis's branch (ecc9793), then on integration at 4f007f1 (identical in all 38 runs),
+then at 32ef35a (skylines identical, percentages within 0.001 points).
 
 ## Still open: needs a decision
 
@@ -47,7 +48,7 @@ Before it (375f816) the skyline read low near the observer: up to 1.04 deg at a 
 pin with a 2 m mast (381 of 720 azimuths over 0.1 deg) and 0.27 deg at the connecting ridge pin.
 Measured consequences: Earth visibility +2.0 points at the rim pin with Earthrise and Earthset
 six hours off; +1.2 points and up to 7.7 hours at a west-limb pin that has only the 1.9 km grid;
-Chandrayaan-3 sunset 6.6 min late. Now (4f007f1): skyline within 0.05 deg and every metric
+Chandrayaan-3 sunset 6.6 min late. Now (32ef35a): skyline within 0.05 deg and every metric
 within 0.05 points at 2 m; rise and set times within 23 minutes.
 
 ## What agrees
@@ -61,15 +62,15 @@ within 0.05 points at 2 m; rise and set times within 23 minutes.
 - Blue Ghost eclipse times published by Firefly: within 0.8 min.
 - The Apollo Lunar Surface Journal table: 42 of 43 rows.
 - T-18's sky fixture, re-run on the current integration as promised: `skyAt()` within
-  0.0036 deg on all 1008 rows (`tests/fixtures/horizons/ephemeris-check/results/skyAt-integration-4f007f1.txt`).
+  0.0036 deg on all 1008 rows (`tests/fixtures/horizons/ephemeris-check/results/skyAt-integration-32ef35a.txt`).
 
 ## Not done, and limits
 
 - No published time was found for IM-2, or for sunset at Apollo 15.
 - The site windows were not compared with their PDS sources (only the `.lxg` grids were).
 - The longest darkness over 18.6 years was not recomputed independently.
-- @analysis's newer, unmerged work (T-29: seasonal outlook, tabulated model ephemeris) was not
-  tested. `app_dump.mjs --root` on a snapshot does it in a few minutes when wanted.
+- T-29's new entry points (the seasonal outlook) were not checked; only that `analyse()` and
+  `skyAt()` still give the same numbers with T-29 merged.
 - PGDA on crests cannot settle anything point by point: its own neighbouring pixels differ by
   tens of points.
 - Checks 0 and 3 need network or cached downloads to re-run from scratch (PDS, PGDA rasters,
