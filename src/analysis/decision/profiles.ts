@@ -54,7 +54,9 @@ export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides
   const changed: string[] = [];
   const o = (overrides ?? {}) as Record<string, unknown>;
   if (!isObject(o)) return { profile: base, relaxations: [], refused: ['The overrides must be an object.'] };
-  for (const k of Object.keys(o)) if (!OVERRIDE_KEYS.has(k)) refused.push(`Unknown setting "${k}".`);
+  // Everything below runs in a fixed order (CRITERIA for thresholds and weights; unknown keys sorted),
+  // so relaxations, refusals and the "Changed on request" line never depend on the key order (T-77).
+  for (const k of Object.keys(o).sort()) if (!OVERRIDE_KEYS.has(k)) refused.push(`Unknown setting "${k}".`);
   if (o.allowSafetyRelaxation !== undefined && typeof o.allowSafetyRelaxation !== 'boolean') refused.push('allowSafetyRelaxation must be true or false.');
   const allowRelax = o.allowSafetyRelaxation === true;
 
@@ -62,7 +64,7 @@ export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides
   if (o.window !== undefined) {
     if (!isObject(o.window)) refused.push('window must be an object with startUtc and/or durationH.');
     else {
-      for (const k of Object.keys(o.window)) if (!WINDOW_KEYS.has(k)) refused.push(`Unknown window setting "${k}".`);
+      for (const k of Object.keys(o.window).sort()) if (!WINDOW_KEYS.has(k)) refused.push(`Unknown window setting "${k}".`);
       const { startUtc, durationH } = o.window;
       if (startUtc !== undefined) {
         if (!validStart(startUtc)) refused.push(`window.startUtc must be "current" or a UTC time such as "2025-03-06T17:28Z" between 1950 and 2100 (got ${JSON.stringify(startUtc)}).`);
@@ -90,8 +92,10 @@ export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides
   if (o.thresholds !== undefined) {
     if (!isObject(o.thresholds)) refused.push('thresholds must be an object keyed by criterion.');
     else {
-      for (const [k, v] of Object.entries(o.thresholds)) {
-        if (!isCriterion(k)) { refused.push(`Unknown criterion "${k}" in thresholds (known: ${CRITERIA.join(', ')}).`); continue; }
+      const given = o.thresholds;
+      for (const k of CRITERIA) {
+        if (!(k in given)) continue;
+        const v = given[k];
         if (v === undefined) continue;
         const problem = thresholdProblem(k, v);
         if (problem) { refused.push(problem); continue; }
@@ -109,6 +113,7 @@ export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides
         thresholds[k] = to;
         changed.push(`${noun(k)} ${to === null ? 'no requirement' : `${DEF[k].sense === 'higher-is-better' ? 'at least' : 'at most'} ${fmt(to, DEF[k].unit)}`}`);
       }
+      for (const k of Object.keys(given).sort()) if (!isCriterion(k)) refused.push(`Unknown criterion "${k}" in thresholds (known: ${CRITERIA.join(', ')}).`);
     }
   }
 
@@ -116,12 +121,15 @@ export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides
   if (o.weights !== undefined) {
     if (!isObject(o.weights)) refused.push('weights must be an object keyed by criterion.');
     else {
-      for (const [k, v] of Object.entries(o.weights)) {
-        if (!isCriterion(k)) { refused.push(`Unknown criterion "${k}" in weights (known: ${CRITERIA.join(', ')}).`); continue; }
+      const given = o.weights;
+      for (const k of CRITERIA) {
+        if (!(k in given)) continue;
+        const v = given[k];
         if (v === undefined) continue;
         if (!inRange(v, LIMITS.weight)) { refused.push(`The ${noun(k)} weight must be a number from ${rangeText(LIMITS.weight)} (got ${JSON.stringify(v)}).`); continue; }
         if (v !== weights[k]) { weights[k] = v; changed.push(`${noun(k)} weight ${v}`); }
       }
+      for (const k of Object.keys(given).sort()) if (!isCriterion(k)) refused.push(`Unknown criterion "${k}" in weights (known: ${CRITERIA.join(', ')}).`);
       if (CRITERIA.every((id) => !(weights[id] > 0))) refused.push('At least one weight must be above zero.');
     }
   }

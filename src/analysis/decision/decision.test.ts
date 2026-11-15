@@ -65,9 +65,10 @@ describe('constraints: pass, fail, unknown and bounds', () => {
     expect([at(v(30, 'lower')), at(v(20, 'lower'))]).toEqual(['fail', 'unknown']);
     expect([at(v(20, 'upper')), at(v(30, 'upper'))]).toEqual(['pass', 'unknown']);
   });
-  it('no threshold: nothing to check', () => {
-    expect(verdictOf('lower-is-better', v(null), null)).toBe('pass');
+  it('no threshold: a value passes, a missing value is still unknown (T-77)', () => {
+    expect(verdictOf('lower-is-better', v(null), null)).toBe('unknown');
     expect(verdictOf('higher-is-better', v(5, 'lower'), null)).toBe('pass');
+    expect(verdictOf('lower-is-better', v(7), null)).toBe('pass');
   });
 });
 
@@ -82,7 +83,7 @@ describe('evaluation: feasibility, utility and sentences', () => {
     expect(e.criteria.every((c) => c.weight === 1 / 6)).toBe(true);
     expect(score(e, 'sunlight').reason).toBe('Sunlight 80.0 % meets the minimum of 60.0 %.');
     expect(score(e, 'earthVisibility').reason).toBe('Earth line of sight 90.0 % meets the minimum of 50.0 % (geometry, not a link budget).');
-    expect(e.summary[0]).toBe('a: feasible: every criterion meets the profile "Test profile".');
+    expect(e.summary[0]).toBe('a: feasible: every criterion with a requirement meets the profile "Test profile".');
     expect(e.summary).toContain(UTILITY_NOTE);
   });
 
@@ -98,13 +99,23 @@ describe('evaluation: feasibility, utility and sentences', () => {
     expect(evaluateMetrics(candidate('b', { slope: 45 }), p).criteria.find((c) => c.id === 'slope')!.score).toBe(0);
   });
 
-  it('a value not measured and not required is left out of the utility, which says so', () => {
+  it('a value not measured and not required is unknown, does not block feasibility, and scores 0 (T-77)', () => {
     const p = withProfile({ thresholds: { ...PROFILE.thresholds, roughness: null } });
     const e = evaluateMetrics(candidate('a', { roughness: null }), p);
     expect(e.feasibility).toBe('feasible');
-    expect(score(e, 'roughness')).toMatchObject({ verdict: 'pass', score: null, weight: 0 });
-    expect(score(e, 'sunlight').weight).toBeCloseTo(1 / 5, 12);
-    expect(e.summary).toContain('Not in the utility: roughness (not measured here, and not required by the profile).');
+    expect(score(e, 'roughness')).toMatchObject({ verdict: 'unknown', score: null, weight: 1 / 6 });
+    expect(score(e, 'roughness').reason).toBe('Roughness unknown (not measured in this test); no requirement in this profile.');
+    // Weights stay normalised over all six; the missing value counts 0, so missing data never raises the utility.
+    expect(score(e, 'sunlight').weight).toBeCloseTo(1 / 6, 12);
+    const measured = evaluateMetrics(candidate('a'), p);
+    expect(e.utility).toBeCloseTo(measured.utility! - (1 / 6) * score(measured, 'roughness').score!, 12);
+    expect(e.utility!).toBeLessThan(measured.utility!);
+    expect(e.summary).toContain('Roughness unknown (not measured in this test): scored 0 in the utility.');
+    expect(e.summary[1]).toBe(`Utility ${e.utility!.toFixed(2)} under the profile's weights; roughness limits it most (unknown, scored 0).`);
+    // With no threshold at all and nothing measured, the site is feasible with utility 0.
+    const bare = evaluateMetrics(candidate('bare', Object.fromEntries(CRITERIA.map((c) => [c, null]))), withProfile({ thresholds: Object.fromEntries(CRITERIA.map((c) => [c, null])) as MissionProfile['thresholds'] }));
+    expect(bare).toMatchObject({ feasibility: 'feasible', utility: 0 });
+    expect(bare.criteria.every((c) => c.verdict === 'unknown')).toBe(true);
   });
 
   it('a failure makes a site infeasible; an unknown is never counted as a pass; neither gets a utility', () => {
@@ -178,6 +189,24 @@ describe('ranking, Pareto frontier and explanations', () => {
   });
 });
 
+describe('Pareto frontier with missing values (T-76 case, T-77)', () => {
+  it('compares all six criteria with a missing value as the worst, so the front is never empty', () => {
+    // Nothing else measured and no thresholds: A beats B on sunlight, B beats C on darkness, C beats A on Earth line of sight.
+    const none = withProfile({ thresholds: Object.fromEntries(CRITERIA.map((c) => [c, null])) as MissionProfile['thresholds'] });
+    const only = (id: string, given: Partial<Record<CriterionId, number>>) => candidate(id, { ...Object.fromEntries(CRITERIA.map((c) => [c, null])), ...given });
+    const sites = [only('a', { sunlight: 60, earthVisibility: 40 }), only('b', { sunlight: 50, darkness: 10 }), only('c', { darkness: 20, earthVisibility: 50 })];
+    const r = rankEvaluations(sites.map((m) => evaluateMetrics(m, none)), none, []);
+    expect(r.counts.feasible).toBe(3);
+    expect([...r.paretoFront].sort()).toEqual(['a', 'b', 'c']);
+    expect(r.explanation).toContain('3 of the 3 feasible sites are on the Pareto frontier (no other feasible site is at least as good on every criterion and better on one): ' + r.ranked.map((x) => x.name).join(', ').replace(/, ([^,]*)$/, ' and $1') + '.');
+    // A site missing a value that another has is dominated when it is no better anywhere.
+    const d = only('d', { sunlight: 60, earthVisibility: 40, darkness: 5 });
+    const r2 = rankEvaluations([...sites, d].map((m) => evaluateMetrics(m, none)), none, []);
+    expect(r2.paretoFront).not.toContain('a');
+    expect(r2.paretoFront).toContain('d');
+  });
+});
+
 describe('two candidates', () => {
   const ev = (id: string, given: Partial<Record<CriterionId, Given>>) => evaluateMetrics(candidate(id, given, 'Pin'), PROFILE);
 
@@ -196,9 +225,20 @@ describe('two candidates', () => {
     expect(t.sentences[0]).toBe('Trade-off: A is better on sunlight; B is better on slope.');
     expect(t.perCriterion.find((x) => x.id === 'sunlight')!.note).toBe('A has 10.0 points more sunlight (90.0 % against 80.0 %).');
     expect(compareEvaluations(ev('a', {}), ev('b', {})).dominance).toBe('equal');
+    // A missing value stays "cannot be compared" in its sentence, but dominance reads it as the worst (T-77) and says so.
     const missing = compareEvaluations(ev('a', { slope: null }), ev('b', {}));
-    expect(missing.dominance).toBe('incomparable');
     expect(missing.perCriterion.find((x) => x.id === 'slope')).toMatchObject({ better: 'unknown', note: 'Slope cannot be compared: not available for A (not measured in this test).' });
+    expect(missing.dominance).toBe('b-dominates');
+    expect(missing.sentences.slice(0, 2)).toEqual(['B dominates A, reading a missing value as the worst and a bound as its value: at least as good on every criterion and better on slope.', 'Not comparable as measured: slope.']);
+    // The mirror image: swapping A and B swaps the verdict.
+    expect(compareEvaluations(ev('b', {}), ev('a', { slope: null })).dominance).toBe('a-dominates');
+    expect(compareEvaluations(ev('a', { slope: null }), ev('b', { slope: null })).dominance).toBe('equal');
+  });
+
+  it('values are equal only when they are; a difference the usual precision would hide gets more digits', () => {
+    const c = compareEvaluations(ev('a', { sunlight: 80.0004 }), ev('b', { sunlight: 80 }));
+    expect(c.dominance).toBe('a-dominates');
+    expect(c.perCriterion.find((x) => x.id === 'sunlight')).toMatchObject({ better: 'a', note: 'A has 0.0004 points more sunlight (80.0004 % against 80.0000 %).' });
   });
 
   it('a bound decides only when it settles the question', () => {
@@ -215,7 +255,8 @@ describe('profiles and overrides', () => {
     expect(r.refused).toEqual([]);
     expect(r.relaxations).toEqual([]);
     expect(r.profile.thresholds).toMatchObject({ slope: 8, sunlight: 70 });
-    expect(r.profile.sources.at(-1)).toBe('Changed on request for this evaluation: slope at most 8.0°; sunlight at least 70.0 %.');
+    // In the fixed criterion order, whatever the order of the keys.
+    expect(r.profile.sources.at(-1)).toBe('Changed on request for this evaluation: sunlight at least 70.0 %; slope at most 8.0°.');
     // Loosening a limit that is not a safety limit needs no flag.
     expect(resolveProfile(PROFILE, { thresholds: { darkness: 48 } })).toMatchObject({ refused: [], relaxations: [] });
   });
@@ -231,6 +272,17 @@ describe('profiles and overrides', () => {
     expect(resolveProfile(PROFILE, { thresholds: { roughness: null } }).refused[0]).toMatch(/^Removing the roughness limit \(1\.00 m\) is a safety relaxation/);
     expect(resolveProfile(PROFILE, { thresholds: { roughness: null }, allowSafetyRelaxation: true }).relaxations).toEqual([{ criterion: 'roughness', from: 1, to: null }]);
     expect(resolveProfile(withProfile({ thresholds: { ...PROFILE.thresholds, roughness: null } }), { thresholds: { roughness: 0.5 } })).toMatchObject({ refused: [], relaxations: [] });
+  });
+
+  it('relaxations and the change line come in the fixed criterion order, whatever the key order (T-77)', () => {
+    const one = resolveProfile(PROFILE, { thresholds: { slope: 30, roughness: null }, allowSafetyRelaxation: true });
+    const two = resolveProfile(PROFILE, { thresholds: { roughness: null, slope: 30 }, allowSafetyRelaxation: true });
+    expect(one.relaxations).toEqual([{ criterion: 'slope', from: 10, to: 30 }, { criterion: 'roughness', from: 1, to: null }]);
+    expect(two).toEqual(one);
+    const w1 = resolveProfile(PROFILE, { weights: { roughness: 2, sunlight: 3 }, thresholds: { darkness: 12, sunlight: 70 } });
+    const w2 = resolveProfile(PROFILE, { thresholds: { sunlight: 70, darkness: 12 }, weights: { sunlight: 3, roughness: 2 } });
+    expect(w2).toEqual(w1);
+    expect(w1.profile.sources.at(-1)).toBe('Changed on request for this evaluation: sunlight at least 70.0 %; longest darkness at most 12.0 h; sunlight weight 3; roughness weight 2.');
   });
 
   it('out-of-range values and unknown keys are refused with reasons, and one refusal refuses the whole set', () => {

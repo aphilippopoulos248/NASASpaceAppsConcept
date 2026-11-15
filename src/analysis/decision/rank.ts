@@ -22,7 +22,8 @@ const EARTH_NOTE = "Earth line of sight and blackout are geometry over the terra
 const NAMES_LISTED = 8;
 
 const valueOf = (e: SiteEvaluation, id: CriterionId): MeasuredValue => e.metrics.values[id];
-const verdictCount = (e: SiteEvaluation, v: 'fail' | 'unknown') => e.criteria.filter((c) => c.verdict === v).length;
+/** Failures or unknowns among the criteria with a threshold: the ones that decide feasibility (T-77). */
+const verdictCount = (e: SiteEvaluation, v: 'fail' | 'unknown') => e.criteria.filter((c) => c.threshold !== null && c.verdict === v).length;
 
 /** Feasible sites by utility (ties by site id), then undecided ones (fewest unknowns first), then infeasible ones (fewest failures first). */
 function order(evaluations: readonly SiteEvaluation[]) {
@@ -36,18 +37,26 @@ function order(evaluations: readonly SiteEvaluation[]) {
   return { feasible, unknown, infeasible };
 }
 
-/** x dominates y on the raw values: at least as good on every criterion both have, and strictly better on one. */
+/**
+ * 1, 0 or -1: x better than, equal to or worse than y on one criterion, on the values as measured
+ * (a bound counts as its value) with a missing value the worst of all (T-77). Every criterion is a
+ * total preorder, so dominance over all six is a proper preorder and a front always exists.
+ */
+function cmp(id: CriterionId, x: number | null, y: number | null): number {
+  if (x === null || y === null) return x === y ? 0 : x === null ? -1 : 1;
+  const d = DEF[id].sense === 'higher-is-better' ? x - y : y - x;
+  return d > 0 ? 1 : d < 0 ? -1 : 0;
+}
+
+/** x dominates y: at least as good on all six criteria and strictly better on one. */
 function dominates(x: SiteEvaluation, y: SiteEvaluation): boolean {
-  let better = false, shared = 0;
+  let better = false;
   for (const id of CRITERIA) {
-    const a = valueOf(x, id).value, b = valueOf(y, id).value;
-    if (a === null || b === null) continue;
-    shared++;
-    const diff = DEF[id].sense === 'higher-is-better' ? a - b : b - a;
-    if (diff < 0) return false;
-    if (diff > 0) better = true;
+    const c = cmp(id, valueOf(x, id).value, valueOf(y, id).value);
+    if (c < 0) return false;
+    if (c > 0) better = true;
   }
-  return shared > 0 && better;
+  return better;
 }
 
 /** Site ids of the feasible sites that no other feasible site dominates, in the given order. */
@@ -96,9 +105,9 @@ export function rankEvaluations(evaluations: readonly SiteEvaluation[], profile:
   else if (feasible.length === 1) explanation.push(`${feasible[0].site.name} is the only feasible site (utility ${(feasible[0].utility ?? 0).toFixed(2)}).`);
   else if (n > 0) explanation.push(`No candidate meets every constraint of "${profile.name}".`);
 
-  // Which constraints removed candidates, most first (a site that fails two counts for both).
+  // Which constraints removed candidates, most first (a site that fails two counts for both); only criteria with a threshold decide.
   const tally = (v: 'fail' | 'unknown', from: readonly SiteEvaluation[]) =>
-    CRITERIA.map((id) => ({ id, k: from.filter((e) => e.criteria.some((c) => c.id === id && c.verdict === v)).length }))
+    CRITERIA.map((id) => ({ id, k: from.filter((e) => e.criteria.some((c) => c.id === id && c.threshold !== null && c.verdict === v)).length }))
       .filter((x) => x.k > 0)
       .sort((a, b) => b.k - a.k || CRITERIA.indexOf(a.id) - CRITERIA.indexOf(b.id));
   const removed = tally('fail', infeasible);
@@ -131,9 +140,6 @@ export function rankEvaluations(evaluations: readonly SiteEvaluation[], profile:
 
 // ---------- two candidates ----------
 
-/** Equal at the precision the sentences show. */
-const TIE: Record<string, number> = { '%': 0.05, h: 0.05, deg: 0.05, m: 0.005 };
-
 /** The range a measured value allows: exact, at or above a lower bound, at or below an upper bound. */
 function range(m: MeasuredValue): [number, number] | null {
   if (m.value === null) return null;
@@ -154,12 +160,16 @@ function delta(id: CriterionId, a: SiteEvaluation, b: SiteEvaluation, nameA: str
   const aBetter = higher ? ra[0] > rb[1] : ra[1] < rb[0];
   const bBetter = higher ? rb[0] > ra[1] : rb[1] < ra[0];
   const exact = !ma.bound && !mb.bound;
-  if (exact && Math.abs(ma.value! - mb.value!) < TIE[d.unit]) return out('tie', `Equal ${noun(id)}: ${fmt(ma.value!, d.unit)} and ${fmt(mb.value!, d.unit)}.`);
+  // Exact values are equal only when they are equal (as the dominance reads them); a difference the
+  // usual precision would hide is written with more digits.
+  let extra = 0;
+  if (exact) while (extra < 6 && ma.value !== mb.value && fmt(ma.value!, d.unit, extra) === fmt(mb.value!, d.unit, extra)) extra++;
+  if (exact && ma.value === mb.value) return out('tie', `Equal ${noun(id)}: ${fmt(ma.value!, d.unit)} and ${fmt(mb.value!, d.unit)}.`);
   if (!aBetter && !bBetter) return out('unknown', `${d.label} cannot be compared: ${nameA} ${fmtMeasured(ma)} against ${nameB} ${fmtMeasured(mb)} (a bound does not settle it).`);
   const [w, mw, ml] = aBetter ? [nameA, ma, mb] : [nameB, mb, ma];
   const more = higher ? 'more' : 'less';
-  const amount = exact ? `${fmtDiff(mw.value! - ml.value!, d.unit)} ` : '';
-  return out(aBetter ? 'a' : 'b', `${w} has ${amount}${more} ${noun(id)} (${fmtMeasured(mw)} against ${fmtMeasured(ml)}).`);
+  const amount = exact ? `${fmtDiff(mw.value! - ml.value!, d.unit, extra)} ` : '';
+  return out(aBetter ? 'a' : 'b', `${w} has ${amount}${more} ${noun(id)} (${fmtMeasured(mw, extra)} against ${fmtMeasured(ml, extra)}).`);
 }
 
 /** Criterion-by-criterion comparison of two evaluations under the same profile, with dominance and sentences. */
@@ -167,25 +177,23 @@ export function compareEvaluations(a: SiteEvaluation, b: SiteEvaluation): PairCo
   const distinct = a.site.name !== b.site.name;
   const nameA = distinct ? a.site.name : 'A', nameB = distinct ? b.site.name : 'B';
   const perCriterion = CRITERIA.map((id) => delta(id, a, b, nameA, nameB));
-  const winsA = perCriterion.filter((x) => x.better === 'a'), winsB = perCriterion.filter((x) => x.better === 'b');
   const unknown = perCriterion.filter((x) => x.better === 'unknown');
 
-  let dominance: PairComparison['dominance'];
-  if (winsA.length && winsB.length) dominance = 'tradeoff';
-  else if (unknown.length) dominance = 'incomparable';
-  else if (winsA.length) dominance = 'a-dominates';
-  else if (winsB.length) dominance = 'b-dominates';
-  else dominance = 'equal';
+  // Dominance reads the values as the Pareto frontier does (T-77): a missing value is the worst, a bound counts as its value.
+  const side = CRITERIA.map((id) => ({ id, c: cmp(id, valueOf(a, id).value, valueOf(b, id).value) }));
+  const winsA = side.filter((x) => x.c > 0).map((x) => x.id), winsB = side.filter((x) => x.c < 0).map((x) => x.id);
+  const dominance: PairComparison['dominance'] = winsA.length && winsB.length ? 'tradeoff' : winsA.length ? 'a-dominates' : winsB.length ? 'b-dominates' : 'equal';
+  const rule = unknown.length ? ', reading a missing value as the worst and a bound as its value' : '';
 
-  const labels = (xs: readonly CriterionDelta[]) => list(xs.map((x) => noun(x.id)));
+  const labels = (ids: readonly CriterionId[]) => list(ids.map(noun));
   const sentences: string[] = [];
   switch (dominance) {
-    case 'a-dominates': sentences.push(`${nameA} dominates ${nameB}: at least as good on every criterion and better on ${labels(winsA)}.`); break;
-    case 'b-dominates': sentences.push(`${nameB} dominates ${nameA}: at least as good on every criterion and better on ${labels(winsB)}.`); break;
-    case 'tradeoff': sentences.push(`Trade-off: ${nameA} is better on ${labels(winsA)}; ${nameB} is better on ${labels(winsB)}.`); break;
-    case 'equal': sentences.push(`${nameA} and ${nameB} are equal on every criterion, at the precision shown.`); break;
-    default: sentences.push(`Neither can be said to be better: ${labels(unknown)} could not be compared${winsA.length ? `, and ${nameA} is better on ${labels(winsA)}` : winsB.length ? `, and ${nameB} is better on ${labels(winsB)}` : ''}.`);
+    case 'a-dominates': sentences.push(`${nameA} dominates ${nameB}${rule}: at least as good on every criterion and better on ${labels(winsA)}.`); break;
+    case 'b-dominates': sentences.push(`${nameB} dominates ${nameA}${rule}: at least as good on every criterion and better on ${labels(winsB)}.`); break;
+    case 'tradeoff': sentences.push(`Trade-off${rule}: ${nameA} is better on ${labels(winsA)}; ${nameB} is better on ${labels(winsB)}.`); break;
+    default: sentences.push(`${nameA} and ${nameB} are equal on every criterion${rule}.`);
   }
+  if (unknown.length) sentences.push(`Not comparable as measured: ${labels(unknown.map((x) => x.id))}.`);
 
   // The differences, most important first: the weighted score gap, then the criterion order.
   const weight = (id: CriterionId) => {

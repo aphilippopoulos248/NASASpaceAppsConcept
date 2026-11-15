@@ -44,20 +44,20 @@ const SUFFIX: Record<CriterionDef['unit'], string> = { '%': ' %', h: ' h', deg: 
 /** How a difference is written: "5.2 points", "12.4 h", "2.1°", "0.12 m". */
 const DIFF_SUFFIX: Record<CriterionDef['unit'], string> = { '%': ' points', h: ' h', deg: '°', m: ' m' };
 
-/** A number with its unit, at the precision every sentence uses: "87.1 %", "18.4 h", "6.0°", "0.35 m". */
-export function fmt(v: number, unit: CriterionDef['unit']): string {
-  return `${v.toFixed(DIGITS[unit])}${SUFFIX[unit]}`;
+/** A number with its unit, at the precision every sentence uses: "87.1 %", "18.4 h", "6.0°", "0.35 m" (`extra` more digits where that precision would hide a difference). */
+export function fmt(v: number, unit: CriterionDef['unit'], extra = 0): string {
+  return `${v.toFixed(DIGITS[unit] + extra)}${SUFFIX[unit]}`;
 }
 
 /** A difference with its unit: "5.2 points", "12.4 h". */
-export function fmtDiff(v: number, unit: CriterionDef['unit']): string {
-  return `${Math.abs(v).toFixed(DIGITS[unit])}${DIFF_SUFFIX[unit]}`;
+export function fmtDiff(v: number, unit: CriterionDef['unit'], extra = 0): string {
+  return `${Math.abs(v).toFixed(DIGITS[unit] + extra)}${DIFF_SUFFIX[unit]}`;
 }
 
 /** A measured value as read: "18.4 h or more" for a lower bound, "not available" when missing. */
-export function fmtMeasured(m: MeasuredValue): string {
+export function fmtMeasured(m: MeasuredValue, extra = 0): string {
   if (m.value === null) return 'not available';
-  const text = fmt(m.value, m.unit);
+  const text = fmt(m.value, m.unit, extra);
   return m.bound === 'lower' ? `${text} or more` : m.bound === 'upper' ? `${text} or less` : text;
 }
 
