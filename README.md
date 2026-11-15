@@ -214,21 +214,22 @@ Unless a row says otherwise, the figures above were computed at the catalogue po
 before T-38 moved the landers to LROC's measured positions (IM-2 by 22 m, Blue Ghost 1 by 8 m, Chang'e 4 by 417 m). At IM-2 the
 change is 0.1 point of sunlight and 0.2 h of darkness (validation.md).
 
-**Sunset means "Sun fully set".** Where the app gives a sunset or sunrise as one time, it
-means the instant the last of the Sun's disc goes behind the terrain (or the first of it
-appears), and says so. The start of setting, when the skyline first cuts the disc and power
-begins to fall, is computed by the analysis since the science project's delivery (decision
-D-8). Since the original team's T-47 (`bd46eda`) the time scrubber draws each passage from its
-start to its end, its jump buttons go to each end in turn ("Sun starts setting", then "Sun fully
-set"), the site card gives both ends, and the actions `getAnalysis` and `jumpToEvent` return
-them. The surface view's key metrics and the assistant still give one instant per event,
-labelled with which one it is (STATUS.md lists the rest of this work as T-48 and T-49). This
-matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the catalogue's current position, the
-site card reads "starts setting 2025-03-16 18:24, fully set 19:30 UTC". Setting starts inside
-Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not define the term);
-the Sun is fully set about an hour later (to the second, the analysis gives 18:24:16 and
-19:30:50 UTC; STATUS.md). A higher mast moves both instants later. At the poles the Sun can take
-far longer than an hour to set.
+**Sunset means "Sun fully set".** Where the app gives a sunset or sunrise as one time, it means
+the instant the last of the Sun's disc goes behind the terrain (or the first of it appears), and
+says so. The start of setting, when the skyline first cuts the disc and power begins to fall, is
+computed by the analysis since the science project's delivery (decision D-8). Since the original
+team's T-47 (`bd46eda`) the globe view shows both ends: the time scrubber (also under the
+surface view) draws each passage from its start to its end and its jump buttons go to each end
+in turn ("Sun starts setting", then "Sun fully set"), the site card gives both ends, and the
+actions `getAnalysis` and `jumpToEvent` return them. The surface view's key metrics and the
+compare panel still give one instant per event, labelled with which one it is, until the
+original team's T-48 and T-49 bring both ends there; the assistant's deterministic replies also
+give one labelled instant. This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the
+catalogue's current position, the site card reads "starts setting 2025-03-16 18:24, fully set
+19:30 UTC". Setting starts inside Firefly's reported start of night (about 18:15 to 18:35 UTC;
+Firefly does not define the term); the Sun is fully set about an hour later (to the second, the
+analysis gives 18:24:16 and 19:30:50 UTC; STATUS.md). A higher mast moves both instants later.
+At the poles the Sun can take far longer than an hour to set.
 
 ## What needs the network
 
@@ -317,7 +318,7 @@ centre.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Defects fixed upstream, not yet re-checked** (fixed by the original team at the time of
-  writing; the desktop walkthrough re-checks them on the release candidate, T-8):
+  writing; each entry goes once the desktop walkthrough has confirmed the fix):
   - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
     south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
     coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
