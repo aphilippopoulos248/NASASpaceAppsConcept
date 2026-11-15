@@ -5,6 +5,7 @@
 //
 // A script is a pure function from "what has happened in this turn" to the next step.
 import type { ModelInfo, StepEvent, StopKind, WireError, WireMessage, WireTool } from '../../src/assistant/protocol';
+import { scenarioScript } from './scenarioScript';
 import type { LlmProvider, ProviderRequest } from './types';
 
 export const SCRIPTED_PROVIDER_ID = 'scripted';
@@ -102,7 +103,11 @@ export const defaultScript: Script = (ctx) => {
   return { text: r.ok ? `Scripted test model: current state is ${JSON.stringify(r.value)}` : `Scripted test model: getState failed: ${r.error}` };
 };
 
-const scripts = new Map<string, Script>([['default', defaultScript]]);
+const scripts = new Map<string, Script>([
+  ['default', defaultScript],
+  // The three-step scenario of the brief, played from tool results (server/llm/scenarioScript.ts).
+  ['scenario', scenarioScript],
+]);
 
 export function registerScript(name: string, script: Script): void {
   scripts.set(name, script);

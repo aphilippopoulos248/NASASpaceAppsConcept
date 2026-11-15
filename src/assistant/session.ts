@@ -8,11 +8,12 @@
 // responder answers, and every such reply is labelled.
 import { onAction, type ActionLogEntry } from '../core/actions';
 import type { Responder } from './deterministic/engine';
+import type { ReplySource } from './labels';
 import { LIMITS, type ModelInfo, type StepEvent, type WireError, type WireMessage, type WireTool, type WireToolCall, type WireToolResult } from './protocol';
 import { currentTools, runToolCalls, stateSnapshot } from './tools';
 import type { Transport } from './transport';
 
-export type ReplySource = { kind: 'model'; label: string } | { kind: 'deterministic' };
+export type { ReplySource } from './labels';
 
 export interface ChatMessage {
   id: number;
@@ -194,7 +195,7 @@ export class AssistantSession {
       let done: Extract<StepEvent, { type: 'done' }> | null = null;
       let failure: WireError | null = null;
       for await (const ev of this.deps.transport.step({ messages: this.wire, tools: this.tools() }, signal)) {
-        if (ev.type === 'meta') reply.source = { kind: 'model', label: ev.label };
+        if (ev.type === 'meta') reply.source = { kind: 'model', label: ev.label, provider: ev.provider };
         else if (ev.type === 'text') show((live += ev.delta));
         else if (ev.type === 'reset') show((live = ''));
         else if (ev.type === 'done') done = ev;
@@ -231,7 +232,7 @@ export class AssistantSession {
       this.wire.push(done.message);
       if (done.message.text.trim()) finished.push(done.message.text);
       show('');
-      reply.source = { kind: 'model', label: done.servedBy.label };
+      reply.source = { kind: 'model', label: done.servedBy.label, provider: done.servedBy.provider };
       if (done.notice) reply.note = done.notice;
       if (done.stop !== 'tool_calls' || !done.message.toolCalls.length) return;
 
