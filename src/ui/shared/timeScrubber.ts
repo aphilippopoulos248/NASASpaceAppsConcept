@@ -113,6 +113,9 @@ export function mountTimeScrubber(region: HTMLElement): void {
   row.append(when, now, rate, win, startHere, jumps, eventNote, readout);
   bar.append(play, sliderWrap, row);
   region.append(bar);
+  // On narrow screens the regions above the scrubber stand on its real height (shell.css):
+  // it grows by a row or two when the jump buttons show.
+  new ResizeObserver(() => document.documentElement.style.setProperty('--scrubber-h', `${Math.round(bar.offsetHeight)}px`)).observe(bar);
 
   /** Events of the finished analysis (null while there is none). */
   let events: SkyEvent[] | null = null;
