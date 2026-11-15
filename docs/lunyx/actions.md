@@ -1,3 +1,5 @@
+DRAFT (checkpoint 2026-11-15): inventory of the 33-action build 4f007f1, not of the current registry; see docs/lunyx/handover/T-16-T-17-checkpoint.md
+
 # What a user can do in Lunyx, and the action behind it
 
 Audit for decision D-1 ("the LLM can operate the full navigator") and task T-16.
@@ -10,7 +12,7 @@ assistant drawer lists it). It covers the globe view, the shell, the assistant d
 the surface view as it stands. **Not covered yet**, because they are not built: the
 surface HUD and skyline chart (T-10), the compare panel, nearby alternatives and exports
 (T-11), the rebuilt surface scene (T-9), the overlay drawing (T-13) and the site-science
-readouts (T-20). Section 6 lists what to add when they land.
+readouts (T-20). Section 7 lists what to add when they land.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tool list
 is `toolDefinitions()` over the same registry and its calls are
@@ -98,7 +100,8 @@ their UI equivalence cannot be tested yet.
 | --- | --- | --- | --- |
 | step down to the surface | site card "Enter surface view"; click the little person | `enterSurface` | E |
 | step down where they drop the little person | drag the little person onto the globe | `dropPin` then `enterSurface` | H |
-| return to the globe | surface close button; "Back to orbit"; Escape | `exitSurface` | E |
+| return to the globe | surface close button; "Back to orbit" | `exitSurface` | E |
+| return to the globe from the keyboard | Escape | `exitSurface`, **but see finding F-1** | E (expected failure) |
 
 ### 2.4 Cameras
 
@@ -163,17 +166,29 @@ neither a user nor the assistant can reach.
 
 | # | Gap | Owner | Status |
 | --- | --- | --- | --- |
-| G-1 | Walking on the surface (W A S D, E / Q) has no action with an absolute position; the assistant cannot move the viewer, only turn the view. | @surface | open; surface scene is being rebuilt (T-9) |
+| G-1 | Walking on the surface (W A S D, E / Q) has no action with an absolute position; the assistant cannot move the viewer, only turn the view. | @surface | open, reported (hub m254); the surface scene is being rebuilt (T-9) |
 | G-2 | DSN station opportunities (`analysis.dsn`: Goldstone, Canberra, Madrid, any station) are computed with every analysis but have no control and are not in any action result. | @globe (T-20) | open |
 | G-3 | Long-term polar averages at a site (`src/science/polarAverages.ts`) can be drawn as an overlay but the value at the selected site has no readout and no action. | @globe (T-20) | open |
 | G-4 | Distance to mapped ice-bearing shadowed regions (`src/science/iceTargets.ts`) has no control and no action. | @globe (T-20) | open |
-| G-5 | The landing catalogue cannot be listed through an action: names appear only in the error of a failed `selectSite`, and `setFilters` returns ids. A user sees every marker and its tooltip. | @globe | open, reported |
+| G-5 | The landing catalogue cannot be listed through an action: names appear only in the error of a failed `selectSite`, and `setFilters` returns ids. A user sees every marker and its tooltip. | @globe | open, reported (hub m254) |
 | G-6 | Site card content with no action result: the site's summary text, and the QuickMap / Moon Trek links. | @globe | open, reported |
 | G-7 | Scrubber readout "phase, % lit from Earth" is not in any action result. | @globe | open, reported |
 | G-8 | Locator map zoom is not in `getState` (the action returns it when set). | @globe | open, minor |
 | G-9 | Hover readouts (marker tooltip, locator pointer coordinates) depend on a pointer position. No action; the information itself is covered by G-5 and `getState`. | - | accepted |
 
-## 4. Equivalence checks that are not automated, and why
+## 4. Differences found by the equivalence tests
+
+| # | Finding | Owner | Status |
+| --- | --- | --- | --- |
+| F-1 | One Escape press in the surface view runs `exitSurface` and then `clearSite`: the surface view's key handler and the site card's key handler both act on it. The close button and "Back to orbit" keep the site; so does the action. Repro: `selectSite im-2`, `enterSurface`, Escape; the action log shows both. | @surface, @globe | reported 2026-11-14 (hub m254); the test is marked as an expected failure until fixed |
+| F-2 | The site card's "Sky at ..." heading and Sun / Earth rows can stay one step behind the clock: updates within 250 ms of the previous one are skipped and no final update follows. Found by reading `siteCard.ts`; not yet shown in a test. | @globe | reported 2026-11-14 (hub m254) |
+
+| F-3 | Poleward of 80.06 degrees the globe camera stops short of the latitude asked for: 85.000 gives 84.9435 (1.71 km), 88.000 gives 87.9708 (0.89 km), 89.45 gives 89.4417; exact below 80 degrees; the same at every altitude and longitude, north and south. Cause: `flyTo` in `src/scene/globe/globeView.ts` clamps the target direction's y to +-0.985 and re-normalises. Effects: `setGlobeCamera` and the Latitude field do not centre on what was asked; "Drop pin at centre" after typing coordinates pins a point up to 1.7 km away, while the assistant's `dropPin { lat, lon }` is exact; editing the Longitude field afterwards re-sends the rounded latitude on screen and drifts further. | @globe | found 2026-11-14; reported; `e2e/flow.test.mjs` holds the expected-failure test |
+| F-4 | The "Arrival delay" field loses its explanatory tooltip after the first successful edit: the shared number field writes the error text into `title` and clears it on success (`filtersPanel.ts`, `numberField`). | @globe | found 2026-11-14; reported; minor |
+
+Everything else that was compared matched: see the E rows above.
+
+## 5. Equivalence checks that are not automated, and why
 
 - **Pinch zoom, drag on the locator map, dragging the little person**: touch and drag
   paths that end in the same `setGlobeCamera` / `dropPin` calls as the automated mouse and
@@ -184,7 +199,7 @@ neither a user nor the assistant can reach.
   checked by hand through the button's pressed state.
 - **Phone "Filters" button**: needs a 390 px viewport; checked by hand.
 
-## 5. How the assistant paths have been verified
+## 6. How the assistant paths have been verified
 
 | Path | What ran | Result |
 | --- | --- | --- |
@@ -196,7 +211,7 @@ A real-model run is one command (`ANTHROPIC_API_KEY=... npm run dev`). Until som
 it, how well a real model chooses and chains these actions is unknown; only the plumbing
 it would use is tested.
 
-## 6. To add when the remaining work lands
+## 7. To add when the remaining work lands
 
 - T-10: key metrics, skyline chart (expand, mode), blocked-interval explanation
   (`explainBlockage`), controls for the Earth-gap limit.
