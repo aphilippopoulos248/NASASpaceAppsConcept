@@ -1,5 +1,6 @@
 // The "Window table" tab: every sunlit and dark spell, every passage of Earth in front of the
-// Sun, and every spell with Earth's centre in view or hidden, for the scenario on screen or for
+// Sun, every spell with Earth's centre in view or hidden, and every rise and set with both of its
+// ends named (decision D-8), for the scenario on screen or for
 // slot A or B, with UTC start, end and duration. A spell that runs past an edge of the window is
 // shown in full and says so; the part inside the window is beside it. Download as CSV or JSON.
 // The rows come from windowTable.ts (also used by the exportResults action).
@@ -11,12 +12,13 @@ import { formatUtc } from '../../core/time';
 import { el } from '../dom';
 import { hoursText } from './format';
 import { TABLE_SLOTS, type PanelStore, type TableSlot } from './state';
-import { KIND_TEXT, spellRows, type RowGroup, type SpellRow } from './windowTable';
+import { KIND_TEXT, passageRows, spellRows, type PassageEnd, type PassageRow, type RowGroup, type SpellRow } from './windowTable';
 import type { TabKit } from './widgets';
 
 const SLOT_TEXT: Record<TableSlot, string> = { current: 'On screen', A: 'A', B: 'B' };
 const GROUP_TITLE: Record<RowGroup, string> = { sun: 'Sun', earth: "Earth's centre" };
 const COLUMNS = ['State', 'Start (UTC)', 'End (UTC)', 'Duration', 'Inside the window', 'Note'] as const;
+const PASSAGE_COLUMNS = ['Passage', 'Starts (UTC)', 'Ends (UTC)', 'Duration', 'Inside the window', 'Note'] as const;
 
 export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKit): { render(): void } {
   const { act, button, status } = kit;
@@ -57,7 +59,7 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   const json = button('JSON', 'ly-btn ly-btn--small', () => download('json'));
   json.setAttribute('aria-label', 'Download as JSON');
   exportRow.append(scopeLabel, scope, csv, json);
-  const exportNote = el('p', 'ly-note', 'CSV: one row per spell, the scenario on every row. JSON: the scenario, metrics, events with which instant each is, every spell, the requirements, data sources, assumptions and warnings. Times UTC to the second, longitudes east-positive.');
+  const exportNote = el('p', 'ly-note', 'CSV: one row per spell and one per rise or set (both ends named), the scenario on every row. JSON: the scenario, metrics (Earth by its centre and by any part of its disc), events with which instant each is, every spell and every rise and set, the requirements, data sources, assumptions and warnings. Times UTC to the second, longitudes east-positive.');
 
   const head = el('div', 'cmp-tablehead');
   head.append(pick, exportRow);
@@ -66,7 +68,7 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   const legend = el(
     'p',
     'ly-note',
-    "Sunlit: some of the Sun's disc above the terrain skyline and not wholly behind Earth. Earth's centre in view: geometric line of sight to the centre of Earth's disc, not a radio link. A spell that runs past an edge of the mission window is given in full, followed with the in-app model up to 60 days beyond the edge; its part inside the window is beside it.",
+    "Sunlit: some of the Sun's disc above the terrain skyline and not wholly behind Earth. Earth's centre in view: geometric line of sight to the centre of Earth's disc, not a radio link. A spell that runs past an edge of the mission window is given in full, followed with the in-app model up to 60 days beyond the edge; its part inside the window is beside it. A rise or a set takes time: it runs from the first instant (the skyline starts to cut the disc, or its first part appears) to the last (its last part is gone, or the whole disc is clear).",
   );
   root.append(head, exportNote, status, which, state, tables, legend);
 
@@ -108,6 +110,42 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
     return section;
   };
 
+  const passageEnd = (x: PassageEnd, outside: string) => (x.timeMs === null ? x.instant : `${x.instant} ${formatUtc(x.timeMs)}${x.inWindow ? '' : `, ${outside}`}`);
+  const passageTable = (rows: PassageRow[]) => {
+    const section = el('section', 'cmp-spellgroup');
+    const title = el('h3', 'ly-section-title', rows.length ? `Rises and sets, both ends: ${rows.length} passage${rows.length === 1 ? '' : 's'}` : 'Rises and sets, both ends: none overlap this window');
+    section.append(title);
+    if (!rows.length) return section;
+    const table = el('div', 'cmp-stable');
+    table.setAttribute('role', 'table');
+    table.setAttribute('aria-label', 'Rises and sets of the Sun and Earth with both ends, in the mission window');
+    const headRow = el('div', 'cmp-srow cmp-shead');
+    headRow.setAttribute('role', 'row');
+    headRow.append(...PASSAGE_COLUMNS.map((c) => cell('columnheader', 'cmp-std', c, c)));
+    table.append(headRow);
+    for (const p of rows) {
+      const tr = el('div', `cmp-srow is-passage is-${p.kind}`);
+      tr.setAttribute('role', 'row');
+      const lowerBound = p.start.timeMs === null || p.end.timeMs === null;
+      const note = [
+        ...p.centre.map((c) => `${c.instant} ${formatUtc(c.timeMs)}${c.inWindow ? '' : ' (outside the window)'}.`),
+        p.note,
+        lowerBound ? `In short: ${p.summary}.` : '',
+      ].filter(Boolean).join(' ');
+      tr.append(
+        cell('rowheader', 'cmp-std cmp-sstate', PASSAGE_COLUMNS[0], p.state),
+        cell('cell', 'cmp-std ly-value', PASSAGE_COLUMNS[1], passageEnd(p.start, 'before the window')),
+        cell('cell', 'cmp-std ly-value', PASSAGE_COLUMNS[2], passageEnd(p.end, 'after the window')),
+        cell('cell', 'cmp-std ly-value', PASSAGE_COLUMNS[3], `${lowerBound ? 'at least ' : ''}${hoursText(p.hours)}`),
+        cell('cell', 'cmp-std ly-value', PASSAGE_COLUMNS[4], p.runsPastStart || p.runsPastEnd ? `${hoursText(p.windowHours)}, ${formatUtc(p.windowStartMs).replace(' UTC', '')} to ${formatUtc(p.windowEndMs)}` : 'all of it'),
+        cell('cell', 'cmp-std cmp-snote', PASSAGE_COLUMNS[5], note),
+      );
+      table.append(tr);
+    }
+    section.append(table);
+    return section;
+  };
+
   let drawn: SiteAnalysis | null = null;
   const render = () => {
     const slot = panel.get().tableSlot;
@@ -140,7 +178,7 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
       return;
     }
     const rows = spellRows(value);
-    tables.replaceChildren(groupTable('sun', rows.filter((r) => r.group === 'sun')), groupTable('earth', rows.filter((r) => r.group === 'earth')));
+    tables.replaceChildren(groupTable('sun', rows.filter((r) => r.group === 'sun')), groupTable('earth', rows.filter((r) => r.group === 'earth')), passageTable(passageRows(value)));
   };
   scope.addEventListener('change', () => render());
 

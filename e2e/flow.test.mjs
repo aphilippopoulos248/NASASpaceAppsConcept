@@ -325,6 +325,8 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   });
 
   test('comparing on time against 24 h late: what the assistant reports is what the comparison returned', SLOW, async () => {
+    // A panel left open by a failed earlier test would cover the drawer's button: close it first.
+    if (!(await sheet().isHidden())) await closeComparePanel();
     await openAssistant(page);
     const reply = await ask(page, 'compare with a 24 h delay');
     assert.equal(reply.shownLabel, 'Deterministic mode: no language model');
