@@ -12,7 +12,7 @@
 // measured error recorded in docs/lunyx/validation.md.
 //
 // Pure math: no DOM, no three.js.
-import { Body, C_AUDAY, HelioState, KM_PER_AU, MakeTime, RotationAxis, type AstroTime } from 'astronomy-engine';
+import { Body, C_AUDAY, GeoMoonState, HelioState, KM_PER_AU, MakeTime, RotationAxis, type AstroTime } from 'astronomy-engine';
 
 export const MOON_R_KM = 1737.4;
 /** IAU 2015 nominal solar radius, km (the value Horizons quotes). */
@@ -117,10 +117,12 @@ export function topocentricSky(latDeg: number, lonDeg: number, heightM: number, 
 
   // Heliocentric states, AU and AU/day, J2000 equatorial. The Sun's barycentric motion
   // (~13 m/s) is ignored: it shifts the Sun's direction by < 1e-5 deg over the light time.
-  const moon = HelioState(Body.Moon, time);
+  // The Moon is Earth plus the geocentric Moon: exactly what astronomy-engine's own heliocentric
+  // Moon is, without evaluating Earth's series a second time.
   const earth = HelioState(Body.Earth, time);
-  const moonPos: V3 = [moon.x, moon.y, moon.z];
-  const moonVel: V3 = [moon.vx, moon.vy, moon.vz];
+  const geoMoon = GeoMoonState(time);
+  const moonPos: V3 = [geoMoon.x + earth.x, geoMoon.y + earth.y, geoMoon.z + earth.z];
+  const moonVel: V3 = [geoMoon.vx + earth.vx, geoMoon.vy + earth.vy, geoMoon.vz + earth.vz];
   const earthPos: V3 = [earth.x, earth.y, earth.z];
   const earthVel: V3 = [earth.vx, earth.vy, earth.vz];
 

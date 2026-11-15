@@ -94,6 +94,19 @@ export interface Interval {
   openEnd?: boolean;
 }
 
+/** A darkness or an Earth gap measured in full: followed beyond the analysed window to its real start and end. */
+export interface FullSpan {
+  startMs: number;
+  endMs: number;
+  /** endMs - startMs, hours. A lower bound when `startFound` or `endFound` is false. */
+  hours: number;
+  /** False when the search limit was reached before the real start (end) was found. */
+  startFound: boolean;
+  endFound: boolean;
+  /** How far beyond a window edge the search goes at most, days. */
+  limitDays: number;
+}
+
 export interface WindowMetrics {
   /** Time-averaged visible fraction of the solar disc, percent. */
   illuminationPct: number;
@@ -115,6 +128,15 @@ export interface WindowMetrics {
   earthGapIntervals: Interval[];
   /** Spans when Earth covers part or all of the Sun (seen from the site, geometric, Earth's atmosphere ignored). */
   eclipseIntervals: Interval[];
+  /**
+   * The longest darkness that overlaps the window, measured in full: where it runs past a window
+   * edge it is followed to its real start or end (up to 60 days each way, with the in-app model).
+   * `longestDarknessH` stays the part inside the window. Absent when the window has no darkness,
+   * and in the nearby scan.
+   */
+  longestDarknessFull?: FullSpan;
+  /** The same for the longest spell without line of sight to Earth's centre. */
+  longestEarthGapFull?: FullSpan;
 }
 
 export interface SkyEvent {
@@ -244,6 +266,106 @@ export interface DsnOpportunities {
   anyTransmit: ContactSummary;
   /** Where the station facts come from and what was assumed, in words. */
   assumptions: string[];
+}
+
+/** Settings of the seasonal outlook. */
+export interface OutlookOptions {
+  /** Length of the outlook in synodic months of 29.53 days (default 12, at most 60). */
+  months?: number;
+  /** Length of each row's window, days (default: one lunar day, 29.530589 days). */
+  windowDays?: number;
+  /** Sampling step, minutes (default 20). */
+  stepMin?: number;
+  /** Weights of sunlight and Earth line of sight in the arrival score (defaults 1 and 1, as in the nearby ranking). */
+  weightSun?: number;
+  weightEarth?: number;
+}
+
+/** One window of the outlook: a lunar day unless `windowDays` says otherwise. */
+export interface OutlookRow {
+  /** 1 = the window that starts at the scenario's start. */
+  index: number;
+  startMs: number;
+  endMs: number;
+  /** Time-averaged visible fraction of the solar disc over this window, percent. */
+  illuminationPct: number;
+  /** Percent of this window with any part of the Sun above the skyline. */
+  sunAnyPct: number;
+  /** Longest darkness overlapping this window, measured in full (not cut at the window's edges), hours. */
+  longestDarknessH: number;
+  /** False when that darkness runs beyond what was searched: `longestDarknessH` is then a lower bound. */
+  darknessComplete: boolean;
+  /** The same darkness cut at this window's edges, hours: what analyse() calls longestDarknessH for this window. */
+  longestDarknessInWindowH: number;
+  /** Percent of this window with line of sight to Earth's centre (geometry only). */
+  earthVisiblePct: number;
+  /** Longest spell without that line of sight overlapping this window, in full, hours. */
+  longestEarthGapH: number;
+  earthGapComplete: boolean;
+  longestEarthGapInWindowH: number;
+  maxSunElDeg: number;
+  minSunElDeg: number;
+}
+
+/** A mission-length window that starts at a given arrival time. */
+export interface ArrivalOption {
+  startMs: number;
+  endMs: number;
+  /** Arrival minus the scenario's own start, days. */
+  slipDays: number;
+  illuminationPct: number;
+  sunAnyPct: number;
+  earthVisiblePct: number;
+  /** Longest darkness inside the mission window, hours (cut at its edges). */
+  longestDarknessH: number;
+  /** Weighted mean of illuminationPct and earthVisiblePct: the score of the nearby ranking. */
+  score: number;
+}
+
+/**
+ * The long view for one site and mast height: conditions per lunar day across a span of
+ * months, and how a mission of the scenario's length fares for every arrival date in it.
+ * One skyline, the in-app Sun/Earth model throughout. No statement about power or temperature.
+ */
+export interface Outlook {
+  scenario: Scenario;
+  /** The span covered by `rows`: from the scenario's start. */
+  startMs: number;
+  endMs: number;
+  months: number;
+  windowDays: number;
+  stepMin: number;
+  rows: OutlookRow[];
+  /**
+   * Mission-length windows by arrival time, for charts: arrival i starts at startMs + i * stepMs
+   * and lasts missionH hours. Arrays have n entries. Empty (n = 0) when nothing could be computed.
+   */
+  arrivals: {
+    startMs: number;
+    stepMs: number;
+    n: number;
+    missionH: number;
+    score: Float32Array;
+    illuminationPct: Float32Array;
+    earthVisiblePct: Float32Array;
+    longestDarknessH: Float32Array;
+  };
+  /** The scenario's own arrival, and the best and worst arrivals of the span by score (null when nothing could be computed). */
+  planned: ArrivalOption | null;
+  best: ArrivalOption | null;
+  worst: ArrivalOption | null;
+  /** The planned arrival delayed by 1, 3, 7, 14 and 28 days (those that fit in the span). */
+  slips: ArrivalOption[];
+  /** The longest darkness and the longest Earth gap anywhere in the span, measured in full. */
+  longestDarkness: FullSpan | null;
+  longestEarthGap: FullSpan | null;
+  /** Headline sentences built only from the numbers above. */
+  highlights: string[];
+  /** The elevation data the skyline rests on, by distance range. */
+  dem: DemLayerUse[];
+  /** Span, step, model and terrain basis, in words. */
+  assumptions: string[];
+  warnings: string[];
 }
 
 /** Complete analysis of one scenario. */

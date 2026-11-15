@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { findBundledTable, horizonsEphemeris, modelEphemeris, setBundleReader, skyAt, type HorizonsTable } from './sky';
+import { findBundledTable, horizonsEphemeris, modelEphemeris, setBundleReader, skyAt, tabulatedEphemeris, type HorizonsTable } from './sky';
 
 const RAD = Math.PI / 180;
 const sep = (az1: number, el1: number, az2: number, el2: number) => {
@@ -104,6 +104,40 @@ describe('skyAt behaviour', () => {
     expect(Number.isFinite(skyAt({ lat: 0, lon: 0 }, 0, Date.parse('2100-01-01T00:00:00Z')).sun.elDeg)).toBe(true);
     expect(() => skyAt({ lat: 0, lon: 0 }, 0, NaN)).toThrow(RangeError);
     expect(() => skyAt({ lat: 91, lon: 0 }, 0, t)).toThrow(RangeError);
+  });
+});
+
+describe('tabulated model ephemeris (directions every 3 h, cubic interpolation)', () => {
+  it('reproduces the model to better than 0.0005 deg over more than a year, including the first and last instants', () => {
+    const t0 = Date.parse('2025-03-06T17:28:00Z'), t1 = t0 + 380 * 86_400_000;
+    let seed = 99;
+    const rnd = () => {
+      seed = (seed * 1103515245 + 12345) & 0x7fffffff;
+      return seed / 0x7fffffff;
+    };
+    let worst = 0, worstRadius = 0;
+    for (const [lat, lon, h] of [[-84.79, 29.2, 5323], [0, 0, 0], [-89.45, -137.2, 1000], [0, 89, 0]] as const) {
+      const direct = modelEphemeris({ lat, lon }, h);
+      const tab = tabulatedEphemeris({ lat, lon }, h, t0, t1);
+      expect(tab.source).toBe('model');
+      const a = new Float64Array(6), b = new Float64Array(6);
+      const times = [t0, t0 + 1, t0 + 30 * 60_000, t1, t1 - 1, t1 - 90 * 60_000];
+      for (let k = 0; k < 1500; k++) times.push(t0 + rnd() * (t1 - t0));
+      for (const t of times) {
+        tab.at(t, a);
+        direct.at(t, b);
+        worst = Math.max(worst, sep(a[0], a[1], b[0], b[1]), sep(a[2], a[3], b[2], b[3]));
+        worstRadius = Math.max(worstRadius, Math.abs(a[4] - b[4]), Math.abs(a[5] - b[5]));
+      }
+      // Outside its span it answers with the model itself.
+      tab.at(t0 - 5 * 86_400_000, a);
+      direct.at(t0 - 5 * 86_400_000, b);
+      expect(Array.from(a)).toEqual(Array.from(b));
+      expect(tab.instant(t0).sun.elDeg).toBeCloseTo(b.length ? skyAt({ lat, lon }, h, t0).sun.elDeg : NaN, 12);
+    }
+    console.log(`tabulated ephemeris vs model: worst direction difference ${worst.toExponential(2)} deg, worst angular-radius difference ${worstRadius.toExponential(2)} deg`);
+    expect(worst).toBeLessThan(5e-4);
+    expect(worstRadius).toBeLessThan(1e-6);
   });
 });
 
