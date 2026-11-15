@@ -1,0 +1,85 @@
+Window: 2010-01-01T00:00:00Z + 163044 h (18.6 years), one sample per hour, 163045 instants. Percent of instants.
+PGDA = product 69: 60 m pixels, any part of the disc, hourly over 18.6 years; its label states neither the calendar span nor a height above the ground.
+
+im-2  (-84.7900, 29.2000)  ground 5320.8 m
+  PGDA  Sun  46.55 %  (the 9 pixels around it: 42.58 .. 46.65, median 45.93)     Earth  92.26 %  (84.26 .. 93.00, median 91.11)
+  0 m above ground
+    own            any Sun  46.35 %   disc average  44.71 %   Earth centre  80.80 %   any Earth  92.46 %   (skyline every 0.5 deg instead of 0.1: any Sun  46.34, Earth centre  80.80)
+    app 375f816    any Sun  46.32 % (-0.02)   disc average  44.67 % (-0.04)   Earth centre  80.85 % (+0.05)   longest darkness 415 h
+    app 32ef35a    any Sun  46.31 % (-0.03)   disc average  44.66 % (-0.05)   Earth centre  80.80 % (-0.00)   longest darkness 415 h
+    app 9bc4878    any Sun  46.31 % (-0.03)   disc average  44.66 % (-0.05)   Earth centre  80.80 % (-0.00)   longest darkness 415 h   any Earth  92.44 % (-0.02; PGDA  +0.19)
+  2 m above ground
+    own            any Sun  46.71 %   disc average  45.02 %   Earth centre  81.12 %   any Earth  93.34 %   (skyline every 0.5 deg instead of 0.1: any Sun  46.71, Earth centre  81.12)
+    app 375f816    any Sun  46.69 % (-0.02)   disc average  44.98 % (-0.04)   Earth centre  81.13 % (+0.01)   longest darkness 413 h
+    app 32ef35a    any Sun  46.68 % (-0.03)   disc average  44.97 % (-0.05)   Earth centre  81.12 % (-0.00)   longest darkness 413 h
+    app 9bc4878    any Sun  46.68 % (-0.03)   disc average  44.97 % (-0.05)   Earth centre  81.12 % (-0.00)   longest darkness 413 h   any Earth  93.31 % (-0.03; PGDA  +1.05)
+shackleton-floor  (-89.6700, 129.7800)  ground -2788.8 m
+  PGDA  Sun   0.00 %  (the 9 pixels around it:  0.00 ..  0.00, median  0.00)     Earth   0.00 %  ( 0.00 ..  0.00, median  0.00)
+  0 m above ground
+    own            any Sun   0.00 %   disc average   0.00 %   Earth centre   0.00 %   any Earth   0.00 %   (skyline every 0.5 deg instead of 0.1: any Sun   0.00, Earth centre   0.00)
+    app 375f816    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h
+    app 32ef35a    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h
+    app 9bc4878    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h   any Earth   0.00 % (+0.00; PGDA  +0.00)
+  2 m above ground
+    own            any Sun   0.00 %   disc average   0.00 %   Earth centre   0.00 %   any Earth   0.00 %   (skyline every 0.5 deg instead of 0.1: any Sun   0.00, Earth centre   0.00)
+    app 375f816    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h
+    app 32ef35a    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h
+    app 9bc4878    any Sun   0.00 % (+0.00)   disc average   0.00 % (+0.00)   Earth centre   0.00 % (+0.00)   longest darkness 163044 h   any Earth   0.00 % (+0.00; PGDA  +0.00)
+shackleton-rim  (-89.7800, -155.7300)  ground 1730.4 m
+  PGDA  Sun   6.26 %  (the 9 pixels around it:  0.00 .. 85.19, median 55.62)     Earth  29.31 %  (15.68 .. 55.03, median 49.97)
+  0 m above ground
+    own            any Sun   1.36 %   disc average   0.74 %   Earth centre  18.03 %   any Earth  25.23 %   (skyline every 0.5 deg instead of 0.1: any Sun   1.37, Earth centre  18.03)
+    app 375f816    any Sun   1.66 % (+0.30)   disc average   0.87 % (+0.14)   Earth centre  19.53 % (+1.50)   longest darkness 6359 h
+    app 32ef35a    any Sun   1.37 % (+0.01)   disc average   0.74 % (+0.01)   Earth centre  18.12 % (+0.08)   longest darkness 6363 h
+    app 9bc4878    any Sun   1.36 % (-0.00)   disc average   0.73 % (-0.00)   Earth centre  18.02 % (-0.01)   longest darkness 6363 h   any Earth  25.23 % (-0.00; PGDA  -4.08)
+  2 m above ground
+    own            any Sun  13.06 %   disc average   9.89 %   Earth centre  30.77 %   any Earth  35.99 %   (skyline every 0.5 deg instead of 0.1: any Sun  13.06, Earth centre  30.77)
+    app 375f816    any Sun  13.85 % (+0.79)   disc average  10.77 % (+0.87)   Earth centre  32.83 % (+2.07)   longest darkness 4221 h
+    app 32ef35a    any Sun  13.07 % (+0.01)   disc average   9.92 % (+0.02)   Earth centre  30.80 % (+0.04)   longest darkness 4896 h
+    app 9bc4878    any Sun  13.05 % (-0.01)   disc average   9.89 % (-0.01)   Earth centre  30.76 % (-0.01)   longest darkness 4897 h   any Earth  35.99 % (+0.00; PGDA  +6.68)
+connecting-ridge  (-89.4500, -137.2000)  ground 1955.9 m
+  PGDA  Sun  86.42 %  (the 9 pixels around it:  0.00 .. 86.42, median 65.24)     Earth  57.94 %  ( 0.00 .. 57.94, median 54.42)
+  0 m above ground
+    own            any Sun  44.21 %   disc average  39.46 %   Earth centre  34.55 %   any Earth  39.49 %   (skyline every 0.5 deg instead of 0.1: any Sun  44.21, Earth centre  34.55)
+    app 375f816    any Sun  58.70 % (+14.50)   disc average  53.53 % (+14.06)   Earth centre  41.71 % (+7.16)   longest darkness 347 h
+    app 32ef35a    any Sun  48.93 % (+4.72)   disc average  44.24 % (+4.78)   Earth centre  34.63 % (+0.08)   longest darkness 404 h
+    app 9bc4878    any Sun  44.21 % (+0.00)   disc average  39.46 % (-0.00)   Earth centre  34.55 % (-0.01)   longest darkness 629 h   any Earth  39.48 % (-0.01; PGDA -18.46)
+  2 m above ground
+    own            any Sun  87.63 %   disc average  82.76 %   Earth centre  53.60 %   any Earth  58.25 %   (skyline every 0.5 deg instead of 0.1: any Sun  87.62, Earth centre  53.59)
+    app 375f816    any Sun  88.00 % (+0.38)   disc average  83.11 % (+0.35)   Earth centre  53.58 % (-0.01)   longest darkness 145 h
+    app 32ef35a    any Sun  87.62 % (-0.01)   disc average  82.73 % (-0.03)   Earth centre  53.58 % (-0.02)   longest darkness 145 h
+    app 9bc4878    any Sun  87.61 % (-0.02)   disc average  82.72 % (-0.04)   Earth centre  53.58 % (-0.02)   longest darkness 145 h   any Earth  58.24 % (-0.01; PGDA  +0.30)
+ridge-top  (-89.4749, -137.4431)  ground 1946.6 m
+  PGDA  Sun  88.44 %  (the 9 pixels around it: 39.77 .. 88.44, median 74.16)     Earth  58.08 %  (50.38 .. 58.09, median 58.07)
+  0 m above ground
+    own            any Sun  48.98 %   disc average  43.10 %   Earth centre  53.03 %   any Earth  57.67 %   (skyline every 0.5 deg instead of 0.1: any Sun  48.97, Earth centre  53.03)
+    app 375f816    any Sun  64.75 % (+15.77)   disc average  57.49 % (+14.39)   Earth centre  53.10 % (+0.07)   longest darkness 404 h
+    app 32ef35a    any Sun  50.63 % (+1.66)   disc average  44.51 % (+1.41)   Earth centre  53.05 % (+0.02)   longest darkness 455 h
+    app 9bc4878    any Sun  48.94 % (-0.03)   disc average  43.05 % (-0.05)   Earth centre  53.02 % (-0.01)   longest darkness 461 h   any Earth  57.65 % (-0.02; PGDA  -0.43)
+  2 m above ground
+    own            any Sun  89.01 %   disc average  84.15 %   Earth centre  53.50 %   any Earth  58.17 %   (skyline every 0.5 deg instead of 0.1: any Sun  89.02, Earth centre  53.50)
+    app 375f816    any Sun  89.08 % (+0.07)   disc average  84.21 % (+0.06)   Earth centre  53.50 % (+0.00)   longest darkness 133 h
+    app 32ef35a    any Sun  89.00 % (-0.01)   disc average  84.11 % (-0.04)   Earth centre  53.49 % (-0.01)   longest darkness 133 h
+    app 9bc4878    any Sun  89.00 % (-0.02)   disc average  84.10 % (-0.04)   Earth centre  53.49 % (-0.01)   longest darkness 133 h   any Earth  58.16 % (-0.01; PGDA  +0.07)
+rim-top  (-89.7843, -155.9041)  ground 1735.8 m
+  PGDA  Sun  85.46 %  (the 9 pixels around it: 43.18 .. 85.46, median 65.74)     Earth  56.68 %  (42.32 .. 56.68, median 56.53)
+  0 m above ground
+    own            any Sun  39.52 %   disc average  34.78 %   Earth centre  49.28 %   any Earth  53.83 %   (skyline every 0.5 deg instead of 0.1: any Sun  39.52, Earth centre  49.28)
+    app 375f816    any Sun  70.27 % (+30.75)   disc average  63.51 % (+28.73)   Earth centre  49.47 % (+0.18)   longest darkness 348 h
+    app 32ef35a    any Sun  40.28 % (+0.76)   disc average  35.42 % (+0.64)   Earth centre  49.36 % (+0.07)   longest darkness 663 h
+    app 9bc4878    any Sun  39.49 % (-0.04)   disc average  34.73 % (-0.05)   Earth centre  49.28 % (-0.00)   longest darkness 664 h   any Earth  53.83 % (+0.00; PGDA  -2.85)
+  2 m above ground
+    own            any Sun  86.83 %   disc average  82.00 %   Earth centre  52.15 %   any Earth  56.80 %   (skyline every 0.5 deg instead of 0.1: any Sun  86.83, Earth centre  52.15)
+    app 375f816    any Sun  87.01 % (+0.18)   disc average  82.19 % (+0.19)   Earth centre  52.15 % (+0.01)   longest darkness 190 h
+    app 32ef35a    any Sun  86.81 % (-0.02)   disc average  81.97 % (-0.03)   Earth centre  52.15 % (-0.00)   longest darkness 191 h
+    app 9bc4878    any Sun  86.81 % (-0.02)   disc average  81.96 % (-0.04)   Earth centre  52.15 % (-0.00)   longest darkness 191 h   any Earth  56.80 % (-0.00; PGDA  +0.12)
+
+How much one 60 m step matters (own computation at the surface, skyline every 0.5 deg): the 9 PGDA pixel centres around each crest pin
+  shackleton-rim    own  [ 31.4   22.7   35.6    0.0    9.0   48.8   12.8   28.9   52.8]   min   0.0  median  28.9  max  52.8
+                    PGDA [ 68.3   43.2   68.4    0.0    6.3   85.2   47.4   55.6   80.0]   min   0.0  median  55.6  max  85.2
+  connecting-ridge  own  [ 47.9   47.5   54.2   44.6   54.1   45.9   40.8   35.7   47.4]   min  35.7  median  47.4  max  54.2
+                    PGDA [ 58.0   68.5   73.9   45.4   86.4   73.5   55.5    0.0   65.2]   min   0.0  median  65.2  max  86.4
+  ridge-top         own  [ 34.8   49.4   46.4   48.4   48.9   49.3   41.9   49.9   45.3]   min  34.8  median  48.4  max  49.9
+                    PGDA [ 39.8   74.2   63.7   86.3   88.4   74.2   71.0   76.7   60.7]   min  39.8  median  74.2  max  88.4
+  rim-top           own  [ 39.0   47.3   46.5   35.0   39.7   47.3   22.6   35.6   43.3]   min  22.6  median  39.7  max  47.3
+                    PGDA [ 48.8   80.2   65.7   66.8   85.5   53.7   43.2   68.4   43.6]   min  43.2  median  65.7  max  85.5

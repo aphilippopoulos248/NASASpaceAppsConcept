@@ -1,0 +1,6 @@
+[
+ {"id": "blue-ghost-1.sunset-1min", "site": {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81}, "mastHeightM": 2, "start": "2025-03-16T16:00:00Z", "durationH": 8, "stepMin": 1, "siteKey": "blue-ghost-1"},
+ {"id": "blue-ghost-1.sunset-1min.mast0.5", "site": {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81}, "mastHeightM": 0.5, "start": "2025-03-16T16:00:00Z", "durationH": 8, "stepMin": 1, "siteKey": "blue-ghost-1"},
+ {"id": "blue-ghost-1.sunset-1min.mast5", "site": {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81}, "mastHeightM": 5, "start": "2025-03-16T16:00:00Z", "durationH": 8, "stepMin": 1, "siteKey": "blue-ghost-1"},
+ {"id": "im-2.surface", "site": {"id": "im-2", "name": "IM-2", "kind": "landing", "lat": -84.79, "lon": 29.2}, "mastHeightM": 2, "start": "2025-03-06T17:28:00Z", "durationH": 336, "stepMin": 10, "siteKey": "im-2"}
+]
