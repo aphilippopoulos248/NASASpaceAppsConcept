@@ -393,7 +393,9 @@ export function blockageAt(a: SiteAnalysis, body: 'sun' | 'earth', timeMs: numbe
     explanation = `${Name} is at ${f2(el)} deg elevation, azimuth ${f1(az)} deg at ${utcMinute(timeMs)}; no skyline is available here because no elevation data covers the site.`;
   } else {
     const data = layer ? `${layer.name}, ${Math.round(layer.resolutionM)} m grid` : 'unknown data';
-    const what = `the skyline at azimuth ${f1(az)} deg is ${f2(sky)} deg, formed by terrain ${f1(dist / 1000)} km away at ${Math.round(hgt)} m (${data})`;
+    // Terrain within a metre is the ground under the observer (a mast of 0 m on convex ground).
+    const where = dist < 1 ? `the ground at the observer's own feet, at ${Math.round(hgt)} m` : `terrain ${dist < 1000 ? `${Math.round(dist)} m` : `${f1(dist / 1000)} km`} away at ${Math.round(hgt)} m`;
+    const what = `the skyline at azimuth ${f1(az)} deg is ${f2(sky)} deg, formed by ${where} (${data})`;
     explanation = Math.abs(clearance) < 0.005
       ? `At ${utcMinute(timeMs)} ${name}'s centre is ${f2(el)} deg high and ${what}: its centre is right on the skyline (within 0.01 deg).`
       : clearance > 0
