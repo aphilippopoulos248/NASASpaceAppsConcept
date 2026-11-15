@@ -22,7 +22,7 @@ export function createPanelActions(ctx: PanelActionContext): ActionDef<any, any>
       description:
         `Moves and/or folds one of the surface view's panels, as dragging its grip or pressing its Fold button does. \`panel\`: ${PANEL_LIST}. ` +
         '`folded`: true folds it to its title row, false opens it again. `xPx`, `yPx`: where its top left corner goes, in CSS pixels from the top left of the window; either may be left out, and the panel is kept inside the window. ' +
-        'Works in the surface view, on a panel that is on screen (open the comparison or the assistant first). Returns the panel\'s state: shown, folded, moved, and its box in pixels.',
+        'Works on a panel that is on screen (open the comparison or the assistant first). The assistant can move and fold in either view; the other panels require surface view. Returns the panel\'s state: shown, folded, moved, and its box in pixels.',
       effect: 'command',
       params: {
         type: 'object',
@@ -36,7 +36,7 @@ export function createPanelActions(ctx: PanelActionContext): ActionDef<any, any>
       },
       run: async ({ panel, folded, xPx, yPx }) => {
         if (folded === undefined && xPx === undefined && yPx === undefined) throw new ActionError('Give `folded`, or `xPx` and/or `yPx`.');
-        if (!ctx.isSurface()) throw new ActionError('The panels move and fold in the surface view only: enter it first (enterSurface).');
+        if (!ctx.isSurface() && panel !== 'assistant') throw new ActionError('The panels move and fold in the surface view only: enter it first (enterSurface).');
         if (!layout.has(panel)) throw new ActionError(`The ${titleOf(panel)} panel is not on this page.`);
         if (!layout.state(panel).shown) {
           const how =

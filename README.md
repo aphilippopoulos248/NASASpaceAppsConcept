@@ -154,6 +154,27 @@ recorded (see SOURCES.md, S9).
 
 ## The assistant
 
+### Codex with your ChatGPT subscription (local use)
+
+Claude remains the default provider. To use Codex on your own computer, run
+`npx codex login` and sign in with ChatGPT (an existing Codex ChatGPT login is reused).
+Add this setting to the git-ignored `.env.local`, then start `npm run dev`:
+
+```dotenv
+LUNYX_LLM_PROVIDER=codex
+```
+
+Leave `LUNYX_LLM_MODEL` unset to use your configured Codex model, or set a model
+available to your account. `LUNYX_LLM_EFFORT` also applies (`max` maps to `xhigh`).
+The assistant labels replies as Codex and uses the same app actions and results as
+Claude. Codex manages credentials and token refresh; credentials never reach the
+browser or get copied into this repository. Requests use your ChatGPT subscription
+and its usage limits. This local integration is not intended for hosted services.
+See [OpenAI's app-server documentation](https://learn.chatgpt.com/docs/app-server).
+
+To select Claude again, set `LUNYX_LLM_PROVIDER=anthropic` and remove any Codex model
+override. Existing `ant auth login` and `ANTHROPIC_API_KEY` setups work as before.
+
 Its tools are generated from the app's action registry (`src/core/actions.ts`), the same
 registry every control uses, so it can do what a user can do and leaves the same state on
 screen. It may quote numbers only from the results of those actions.

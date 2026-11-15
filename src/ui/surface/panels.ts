@@ -1,6 +1,7 @@
 // Surface panels share a drag handle and a fold control (the teammate's design from GitHub main
 // 48ffb71). Existing panel contents keep their own visibility and state; leaving surface view
-// restores the normal globe layout. The rules for moving and folding are in panelLayout.ts, and
+// restores the normal globe layout, except the assistant can move and fold in either view.
+// The rules for moving and folding are in panelLayout.ts, and
 // every change a user makes goes through the registered actions in panelActions.ts (D-3), so the
 // assistant can do the same: the grip's keys, the Fold buttons and "Reset panels" run them, and
 // a drag shows the panel moving and is recorded as one action when the pointer is let go.
@@ -27,6 +28,7 @@ export function mountSurfacePanels(): void {
     const panel = document.querySelector<HTMLElement>(selector);
     if (!panel) continue;
     const region = panel.closest<HTMLElement>('.region')!;
+    const canMove = () => id === 'assistant' || isSurface();
     panel.classList.add('sp-panel');
     const toolbar = el('div', 'sp-toolbar');
     const grip = button(`⠿ ${title}`, 'sp-grip');
@@ -46,7 +48,7 @@ export function mountSurfacePanels(): void {
 
     // In front of the other panels; once is enough while it is the front one (a drag raises on every move).
     const raise = () => {
-      if (isSurface() && region.style.zIndex !== String(front)) region.style.zIndex = String(++front);
+      if (canMove() && region.style.zIndex !== String(front)) region.style.zIndex = String(++front);
     };
     const showFolded = (folded: boolean) => {
       panel.classList.toggle('sp-folded', folded);
@@ -56,7 +58,7 @@ export function mountSurfacePanels(): void {
     };
     const host: PanelHost = {
       shown: () => {
-        if (!isSurface() || panel.getAttribute('aria-hidden') === 'true' || panel.closest('[inert]')) return false;
+        if (!canMove() || panel.getAttribute('aria-hidden') === 'true' || panel.closest('[inert]')) return false;
         const r = panel.getBoundingClientRect();
         return r.width > 0 && r.height > 0;
       },
@@ -96,7 +98,7 @@ export function mountSurfacePanels(): void {
 
     let drag: { id: number; x: number; y: number; start: { x: number; y: number }; moved: boolean } | null = null;
     grip.addEventListener('pointerdown', (e) => {
-      if (!isSurface() || e.button !== 0) return;
+      if (!canMove() || e.button !== 0) return;
       e.preventDefault();
       grip.focus({ preventScroll: true });
       raise();
@@ -123,7 +125,7 @@ export function mountSurfacePanels(): void {
     grip.addEventListener('pointercancel', finish);
     grip.addEventListener('lostpointercapture', finish);
     grip.addEventListener('keydown', (e) => {
-      if (!isSurface()) return;
+      if (!canMove()) return;
       const delta: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
       if (!delta[e.key]) return;
       e.preventDefault();
@@ -135,7 +137,10 @@ export function mountSurfacePanels(): void {
     if (id === 'assistant' || id === 'compare') {
       const key = id === 'assistant' ? 'assistantOpen' : 'comparing';
       store.subscribe([key], () => {
-        if (store.get()[key]) raise();
+        if (store.get()[key]) {
+          raise();
+          requestAnimationFrame(reflow);
+        }
       });
     }
     new ResizeObserver(reflow).observe(panel);

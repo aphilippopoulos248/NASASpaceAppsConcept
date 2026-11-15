@@ -25,7 +25,7 @@ export function modelLabel(model: string): string {
 
 export interface LlmConfig {
   /** 'none' means: no model, the browser runs its deterministic mode. */
-  provider: 'anthropic' | 'scripted' | 'none';
+  provider: 'anthropic' | 'codex' | 'scripted' | 'none';
   /** Why `provider` is 'none', as a sentence for the status endpoint. */
   reason?: string;
   model: string;
@@ -125,7 +125,7 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
   const jevTimeout = Number(s.get('LUNYX_JEV_TIMEOUT_MS'));
 
   const base = {
-    model: s.get('LUNYX_LLM_MODEL') ?? DEFAULT_MODEL,
+    model: s.get('LUNYX_LLM_MODEL') ?? (wanted === 'codex' ? 'default' : DEFAULT_MODEL),
     effort: effortRaw && EFFORTS.includes(effortRaw) ? effortRaw : DEFAULT_EFFORT,
     maxTokens: Number.isInteger(maxTokensRaw) && maxTokensRaw >= 1024 && maxTokensRaw <= 128_000 ? maxTokensRaw : DEFAULT_MAX_TOKENS,
     betas: (s.get('LUNYX_LLM_BETAS') ?? 'on').toLowerCase() !== 'off',
@@ -150,8 +150,9 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
     return { ...base, provider: 'none', reason: 'The language model is switched off on this server (LUNYX_LLM_PROVIDER=off).' };
   }
   if (wanted === 'scripted') return { ...base, provider: 'scripted' };
+  if (wanted === 'codex') return { ...base, provider: 'codex' };
   if (wanted !== undefined && wanted !== 'anthropic') {
-    return { ...base, provider: 'none', reason: `Unknown LUNYX_LLM_PROVIDER "${wanted}". Use anthropic, scripted or off.` };
+    return { ...base, provider: 'none', reason: `Unknown LUNYX_LLM_PROVIDER "${wanted}". Use anthropic, codex, scripted or off.` };
   }
   // The Anthropic SDK resolves credentials itself: an `ant auth login` profile, workload
   // identity, or the ANTHROPIC_API_KEY env var. If none are found the provider creation

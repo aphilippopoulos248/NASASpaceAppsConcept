@@ -58,6 +58,14 @@ describe('surface panel actions', () => {
     expect(await fail({ panel: 'key-metrics', folded: true })).toMatch(/surface view only/);
   });
 
+  it('lets the assistant move and fold on the globe while other panels still require surface view', async () => {
+    surface = false;
+    layout.register('assistant', fakePanel({ x: 900, y: 10, width: 380, height: 600 }).host);
+    expect(await run('setSurfacePanel', { panel: 'assistant', xPx: 300, yPx: 60 })).toMatchObject({ moved: true, xPx: 300, yPx: 60 });
+    expect(await run('setSurfacePanel', { panel: 'assistant', folded: true })).toMatchObject({ folded: true });
+    expect((await runAction('setSurfacePanel', { panel: 'key-metrics', xPx: 100 }, 'test')).ok).toBe(false);
+  });
+
   it('resetSurfacePanels puts everything back; getSurfacePanels reports it', async () => {
     await run('setSurfacePanel', { panel: 'key-metrics', xPx: 500, folded: true });
     const reset = await run('resetSurfacePanels');

@@ -11,6 +11,7 @@
 // here echoes configuration, and every error message is redacted before it is sent.
 import { NDJSON_CONTENT_TYPE, type AssistantStatus, type StepEvent, type WireError } from '../../src/assistant/protocol';
 import { AnthropicProvider } from './anthropic';
+import { CodexProvider } from './codex';
 import { loadConfig, redact, type LlmConfig } from './env';
 import { createJevRouter } from './jev';
 import { SYSTEM_PROMPT } from './prompt';
@@ -55,6 +56,7 @@ function defaultProvider(cfg: LlmConfig): LlmProvider | null {
     const script = getScript(cfg.script);
     return script ? new ScriptedProvider(script, cfg.script) : null;
   }
+  if (cfg.provider === 'codex') return new CodexProvider(cfg);
   // One SDK client per distinct configuration. The cache key stays in this process.
   // The SDK resolves credentials itself (ant auth login, workload identity, env var).
   const key = JSON.stringify([cfg.model, cfg.effort, cfg.maxTokens, cfg.betas, cfg.customBaseUrl]);
