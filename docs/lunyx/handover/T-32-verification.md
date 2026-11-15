@@ -12,6 +12,10 @@ model's outer 129 m away from LOLA at most sites. At Blue Ghost it lowers the sk
 sets behind by about 0.07 deg more than LOLA allows, which makes the sunset some 9 to 13 minutes
 late. Whether to change the reference is a decision for @coordinator (section 4).
 
+The Blue Ghost figures in this report are for the catalogue pin as it stood before original T-38
+(18.562 N, 61.81 E). Section 5 also gives the two products' spread at the current pin
+(18.5622 N, 61.8102 E; lunyx-science decision D-12).
+
 ## 1. The code against an independent implementation
 
 `scripts/terrain-seams-check.py` reads `public/terrain/*.bin` with its own numpy code (no code
@@ -212,7 +216,8 @@ cosine of the latitude), the stored and the eased stacks differ by up to 0.162 d
 (sunsets up to 20 min apart) and 0.097 deg at Luna 23 (sunrises up to 12 min), and nowhere at the
 other 17 sites. That is the effect of the rejected easing, not an uncertainty: the eased stack
 lies outside both measured products. Their own spread, each product used throughout, has been
-computed independently for Blue Ghost on 16 March 2025, observer 2 m up (@validation,
+computed independently for Blue Ghost on 16 March 2025, observer 2 m up, at the catalogue pin
+before original T-38, 18.562 N, 61.81 E (@validation,
 `tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` on
 am/lunyx-science/agent/validation @ af49a12; first cut / half hidden / last limb, UTC):
 
@@ -222,8 +227,12 @@ am/lunyx-science/agent/validation @ af49a12; first cut / half hidden / last limb
 | 60 m window alone (observer on its own ground, 1.11 m below the model's) | 18:27:22 | 19:00:29 | 19:33:31 |
 | T-32's eased stack | 18:36:44 | 19:09:53 | 19:42:53 |
 
-So the products are 3.5 to 3.7 minutes apart at 2 m (9.3 at 0.5 m, 1.0 to 1.2 at 5 m), and the
-eased time falls outside that range at every height. The validator's reading is that the eased
+So the products are 3.5 to 3.7 minutes apart at 2 m at that pin (9.3 at 0.5 m, 1.0 to 1.2 at
+5 m), and the eased time falls outside that range at every height. At the current pin
+(18.5622 N, 61.8102 E, 8.4 m away) the 3 m model gives 18:24:16 / 19:30:50 and the 60 m window
+alone 18:30:27 / 19:38:22 UTC, 6.2 to 7.5 minutes apart (@validation, `blue-ghost-products/new-pin.txt`
+@ 97d0b66; decision D-12): the two products put this sunset 3.5 to 7.5 minutes apart, depending on
+where within 8 m the lander stood. The validator's reading is that the eased
 stack is a 60 m skyline seen from the 3 m model's ground; it agrees with the LOLA finding.
 
 ## 6. With @analysis's ground-observer fix (1289083)

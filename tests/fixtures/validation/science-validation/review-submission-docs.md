@@ -31,9 +31,15 @@ Suggested:
 If there is room: "; no azimuth differs by more than 0.02°".
 
 **Line 184, elevation grids.** Accurate, and consistent with decision D-10 of lunyx-science
-(the stored 3 m models stay). Optional precision, from `blue-ghost-products/results.txt`:
+(the stored 3 m models stay; D-12 has since replaced D-10). Optional precision, at the catalogue pin
+as it stood before original T-38 (18.562 N, 61.81 E), from `blue-ghost-products/results.txt`:
 > ... put the 16 March 2025 sunset 3.5 to 3.7 min apart at a 2 m mast (first cut 18:23:40 on the
 > 3 m model and 18:27:22 on the 60 m window; last limb 19:30:03 and 19:33:31 UTC).
+
+At the current catalogue pin (18.5622 N, 61.8102 E; decision D-12, `blue-ghost-products/new-pin.txt`)
+the same figures are 18:24:16 and 18:30:27 (first cut), 19:30:50 and 19:38:22 UTC (last limb):
+6.2-7.5 min apart. D-12's short form covers both pins: "the two elevation products put this sunset
+3.5 to 7.5 min apart, depending on where within 8 m the lander stood".
 
 On "the stored terrain stays" (your open point): yes, final. D-10 of lunyx-science, integrated as
 T-1 (`af1b499`): the stored grids are the default, easing is an opt-in for comparison only. At
@@ -74,11 +80,13 @@ a build that contains `3899cb9`'s skyline):
 - "which matches Firefly's reported start of night": Firefly does not say what it means by night,
   so the record (D-10, round 1) calls this weak support. Suggested: "which falls inside Firefly's
   reported start of night (about 18:15 to 18:35 UTC; Firefly does not define the term)".
-- The 3.5 m figures are confirmed independently: first cut 18:37:36, last limb 19:44:00 UTC
-  (this validator's computation, stored terrain; 18:38 / 19:44 to the nearest minute). If the
-  README writes times truncated to the minute as the app does, that is 18:37 and 19:44.
-- The 18:23 first cut at 2 m is 18:23:40 (validator) and 18:23:41 in the science build's spans
-  (`9bc4878`); "18:23" is right either way.
+- The 3.5 m figures are confirmed independently at the catalogue pin before original T-38
+  (18.562 N, 61.81 E): first cut 18:37:36, last limb 19:44:00 UTC (this validator's computation,
+  stored terrain; 18:38 / 19:44 to the nearest minute). If the README writes times truncated to the
+  minute as the app does, that is 18:37 and 19:44. They were not recomputed at the current pin.
+- At that earlier pin the 18:23 first cut at 2 m is 18:23:40 (validator) and 18:23:41 in the science
+  build's spans (`9bc4878`). At the current pin (18.5622 N, 61.8102 E; D-12) the 2 m first cut is
+  18:24:16 and the last limb 19:30:50, which is 18:24 and 19:30 to the minute.
 
 **Line 275, "Earth visibility is geometry, to Earth's centre".** Accurate now. *(once delivered)*
 both definitions are reported: "to Earth's centre, and separately to any part of its disc".
