@@ -1,9 +1,9 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { analyseStack, compareAnalyses } from '../../analysis/api';
 import { fnSource, stackOf } from '../../analysis/testing';
-import type { SiteAnalysis } from '../../analysis/types';
+import type { SiteAnalysis, SkyTransition } from '../../analysis/types';
 import type { Scenario } from '../../core/types';
-import { exportFilename, isoSeconds, spellRows, toCsv, toJson } from './windowTable';
+import { exportFilename, isoSeconds, passageRows, spellRows, toCsv, toJson } from './windowTable';
 
 // 0 N 0 E on a smooth Moon. "eclipse": 13-15 March 2025, sunlit, then Earth in front of the Sun
 // (totality 05:44-08:10 UTC on the 14th), sunlit again. "dusk": 20-23 March, the Sun sets on the 21st.
@@ -56,17 +56,69 @@ describe('the mission-window table', () => {
   });
 });
 
+describe('passages: both ends of every rise and set (D-8)', () => {
+  it('names each end of the sunset in the window', () => {
+    const [set] = passageRows(dusk);
+    expect(passageRows(dusk)).toHaveLength(1);
+    expect(set).toMatchObject({ body: 'sun', kind: 'set', state: 'Sun setting', start: { instant: 'Sun starts setting', inWindow: true }, end: { instant: 'Sun fully set', inWindow: true }, runsPastStart: false, runsPastEnd: false, centre: [], note: '' });
+    expect(isoSeconds(set.start.timeMs!)).toBe('2025-03-21T21:44:36Z');
+    // The sunset event is the passage's last limb.
+    expect(set.end.timeMs).toBe(dusk.events.find((e) => e.type === 'sunset')!.timeMs);
+    expect(set.summary).toBe('starts setting 2025-03-21 21:44, fully set 22:47 UTC');
+    expect(set.hours).toBeCloseTo(1.05, 2);
+    // No passage at all in the eclipse window: the Sun stays up (Earth in front of it is no sunset).
+    expect(passageRows(eclipse)).toEqual([]);
+  });
+
+  it('words grazes, peeks, Earth with its centre, and ends that were not found', () => {
+    const t0 = dusk.scenario.startMs, H = 3_600_000;
+    const at = (h: number, inWindow = true) => ({ timeMs: t0 + h * H, azDeg: 270, inWindow });
+    const tr = (over: Partial<SkyTransition>): SkyTransition => ({ body: 'sun', kind: 'set', start: { ...at(1), edge: 'first-cut' }, end: { ...at(2), edge: 'last-limb' }, hours: 1, centre: [], minVisibleFraction: NaN, maxVisibleFraction: NaN, limitDays: 60, ...over });
+    const a: SiteAnalysis = {
+      ...dusk,
+      transitions: [
+        tr({ kind: 'graze', end: { ...at(2), edge: 'whole-clear' }, minVisibleFraction: 0.62 }),
+        tr({ kind: 'peek', start: { ...at(3), edge: 'first-limb' }, end: { ...at(4), edge: 'last-limb' }, maxVisibleFraction: 0.25 }),
+        tr({ body: 'earth', start: { ...at(10), edge: 'first-cut' }, end: { ...at(80, false), edge: 'last-limb' }, hours: 70, centre: [{ ...at(40), up: false }] }),
+        tr({ kind: 'unresolved', start: { ...at(60), edge: 'first-limb' }, end: { ...at(72 + 1440, false), edge: 'unresolved' }, hours: 1452 }),
+      ],
+    };
+    const [graze, peek, earth, open] = passageRows(a);
+    // The app's one set of words for each end (edgeLabel, as getAnalysis and the scrubber use).
+    expect(graze).toMatchObject({ state: 'Sun partly hidden, never fully set', start: { edge: 'first-cut', instant: 'Sun partly hidden' }, end: { instant: "Sun's whole disc clear again" }, note: 'At most 38 % of the disc is hidden at the analysis\' samples.' });
+    expect(graze.summary).toMatch(/never fully set$/);
+    expect(peek).toMatchObject({ state: 'Sun partly visible, never fully risen', start: { instant: 'Sun partly visible' }, end: { instant: 'Sun gone again' }, note: 'At most 25 % of the disc shows at the analysis\' samples.' });
+    expect(earth).toMatchObject({ state: 'Earth setting', start: { instant: 'Earth starts setting' }, end: { instant: 'Earth fully set', inWindow: false }, runsPastEnd: true, centre: [{ instant: "Earth's centre sets", inWindow: true }] });
+    expect(earth.windowEndMs).toBe(t0 + 72 * H);
+    expect(earth.summary).toMatch(/^starts setting .*, centre sets .*, fully set .* \(after the analysed window\) UTC$/);
+    // An end not found gets no time anywhere (D-8), and the note says how far the search went.
+    expect(open).toMatchObject({ state: 'Sun rising (an end not found)', start: { instant: 'Sun starts rising' }, end: { edge: 'unresolved', instant: 'end not found', timeMs: null }, runsPastEnd: true, note: '' });
+    expect(open.summary).toBe('starts rising 2025-03-22 12:00 UTC, not over within 60 days after the analysed window');
+    const csv = toCsv([{ slot: 'current', analysis: a }]).trimEnd().split('\r\n');
+    const openLine = csv.at(-1)!;
+    // Its end_utc is empty and end_found false; the note is the summary.
+    expect(openLine).toContain(`,sun,Sun rising (an end not found),${isoSeconds(t0 + 60 * H)},,1452,true,false,`);
+    expect(openLine).toMatch(/,"starts rising 2025-03-22 12:00 UTC, not over within 60 days after the analysed window",Sun starts rising,end not found,$/);
+    const grazeLine = csv.find((l) => l.includes('partly hidden'))!;
+    expect(grazeLine).toContain(',"Sun partly hidden, never fully set",');
+    expect(grazeLine).toContain("never fully set. At most 38 % of the disc is hidden at the analysis' samples.");
+    expect(csv.find((l) => l.includes(',Earth setting,'))).toMatch(/,Earth starts setting,Earth fully set,Earth's centre sets \d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ$/);
+  });
+});
+
 describe('exports', () => {
-  it('CSV: a header, one row per spell, quoting where needed, the scenario on every row', () => {
+  it('CSV: a header, one row per spell and per passage, quoting where needed, the scenario on every row', () => {
     const csv = toCsv([{ slot: 'A', analysis: eclipse }, { slot: 'B', analysis: dusk }]);
     const lines = csv.trimEnd().split('\r\n');
-    expect(lines[0]).toBe('slot,scenario,site_id,site_name,lat_deg,lon_deg_east,mast_height_m,window_start_utc,window_end_utc,group,state,start_utc,end_utc,duration_h,start_found,end_found,in_window_start_utc,in_window_end_utc,in_window_h,runs_past_window_start,runs_past_window_end,note');
-    expect(lines).toHaveLength(1 + spellRows(eclipse).length + spellRows(dusk).length);
+    expect(lines[0]).toBe('slot,scenario,site_id,site_name,lat_deg,lon_deg_east,mast_height_m,window_start_utc,window_end_utc,group,state,start_utc,end_utc,duration_h,start_found,end_found,in_window_start_utc,in_window_end_utc,in_window_h,runs_past_window_start,runs_past_window_end,note,start_instant,end_instant,earth_centre_crossings');
+    expect(lines).toHaveLength(1 + spellRows(eclipse).length + spellRows(dusk).length + passageRows(dusk).length);
     expect(csv.endsWith('\r\n')).toBe(true);
     // The pin id and the site name hold a comma, so they are quoted; the note too.
-    expect(lines[1]).toBe('A,Eclipse,"pin:0.00000,0.00000","Pin 0.0° N, 0.0° E",0,0,2,2025-03-13T00:00:00Z,2025-03-15T00:00:00Z,sun,Sunlit,2025-03-07T02:09:55Z,2025-03-14T05:44:08Z,171.5703,true,true,2025-03-13T00:00:00Z,2025-03-14T05:44:08Z,29.7357,true,false,"The spell began before the window, at 2025-03-07 02:09 UTC: 171.6 h (7.1 d) in full, 29.7 h of it inside the window."');
-    expect(lines[2]).toBe('A,Eclipse,"pin:0.00000,0.00000","Pin 0.0° N, 0.0° E",0,0,2,2025-03-13T00:00:00Z,2025-03-15T00:00:00Z,sun,Dark,2025-03-14T05:44:08Z,2025-03-14T08:10:04Z,2.4323,true,true,2025-03-14T05:44:08Z,2025-03-14T08:10:04Z,2.4323,false,false,');
-    expect(lines.filter((l) => l.startsWith('B,Dusk,')).length).toBe(spellRows(dusk).length);
+    expect(lines[1]).toBe('A,Eclipse,"pin:0.00000,0.00000","Pin 0.0° N, 0.0° E",0,0,2,2025-03-13T00:00:00Z,2025-03-15T00:00:00Z,sun,Sunlit,2025-03-07T02:09:55Z,2025-03-14T05:44:08Z,171.5703,true,true,2025-03-13T00:00:00Z,2025-03-14T05:44:08Z,29.7357,true,false,"The spell began before the window, at 2025-03-07 02:09 UTC: 171.6 h (7.1 d) in full, 29.7 h of it inside the window.",,,');
+    expect(lines[2]).toBe('A,Eclipse,"pin:0.00000,0.00000","Pin 0.0° N, 0.0° E",0,0,2,2025-03-13T00:00:00Z,2025-03-15T00:00:00Z,sun,Dark,2025-03-14T05:44:08Z,2025-03-14T08:10:04Z,2.4323,true,true,2025-03-14T05:44:08Z,2025-03-14T08:10:04Z,2.4323,false,false,,,,');
+    expect(lines.filter((l) => l.startsWith('B,Dusk,')).length).toBe(spellRows(dusk).length + 1);
+    // The sunset as a passage: both ends, each named (D-8).
+    expect(lines.at(-1)).toBe('B,Dusk,"pin:0.00000,0.00000","Pin 0.0° N, 0.0° E",0,0,2,2025-03-20T00:00:00Z,2025-03-23T00:00:00Z,sun,Sun setting,2025-03-21T21:44:36Z,2025-03-21T22:47:44Z,1.0521,true,true,2025-03-21T21:44:36Z,2025-03-21T22:47:44Z,1.0521,false,false,"starts setting 2025-03-21 21:44, fully set 22:47 UTC",Sun starts setting,Sun fully set,');
     // A field with a quote in it is doubled.
     const quoted = toCsv([{ slot: 'current', analysis: { ...dusk, scenario: { ...dusk.scenario, label: 'The "late" arrival' } } }]);
     expect(quoted.split('\r\n')[1].startsWith('current,"The ""late"" arrival",')).toBe(true);
@@ -90,6 +142,16 @@ describe('exports', () => {
     expect(a.requirements).not.toHaveProperty('sunElevationBandSet');
     expect(a.provenance.assumptions.length).toBeGreaterThan(3);
     expect(doc.scenarios[1].events.map((e: { label: string }) => e.label)).toContain('Sun fully set');
+    // Each event with its passage, every passage with both ends named, and Earth by any part of its disc beside its centre.
+    expect(doc.scenarios[1].events.find((e: { type: string }) => e.type === 'sunset').summary).toBe('Sunset: starts setting 2025-03-21 21:44, fully set 22:47 UTC');
+    // The shape and words of getAnalysis' SpanReport, with times to the second.
+    expect(doc.scenarios[1].passages).toEqual([
+      expect.objectContaining({ body: 'sun', kind: 'set', state: 'Sun setting', start: { edge: 'first-cut', label: 'Sun starts setting', timeUtc: '2025-03-21T21:44:36Z', azDeg: 270.11, inWindow: true }, end: expect.objectContaining({ edge: 'last-limb', label: 'Sun fully set', timeUtc: '2025-03-21T22:47:44Z' }), hoursIsLowerBound: false, summary: 'starts setting 2025-03-21 21:44, fully set 22:47 UTC' }),
+    ]);
+    expect(a.passages).toEqual([]);
+    expect(a.metrics).toMatchObject({ earthCentreVisiblePct: 100, earthAnyPct: 100, longestEarthAnyGapH: 0, earthAnyGapRunsIntoWindowEdge: false });
+    expect(doc.passageInstantDefinitions['Sun starts setting']).toBe("the terrain skyline starts to cut into the Sun's disc.");
+    expect(doc.conventions).toMatch(/start_instant and end_instant/);
     expect(doc.comparison).toMatchObject({ meaning: 'B minus A' });
     expect(doc.comparison.highlights.length).toBeGreaterThan(0);
     // One side, no comparison.
