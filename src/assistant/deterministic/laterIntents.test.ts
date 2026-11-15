@@ -394,6 +394,37 @@ describe('deterministic mode: the surface HUD', () => {
   });
 });
 
+describe('deterministic mode: the outlook, the window table and the export', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('shows the seasonal outlook and reports planned, best and worst arrival from the result', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    const from = lastSeq();
+    const r = await e.reply('show the seasonal outlook for 3 months');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['showOutlook', { months: 3 }]]);
+    expect(state).toMatchObject({ comparing: true, panelTab: 'outlook' });
+    expect(r.text).toContain('over 3 lunar months');
+    expect(r.text).toContain("- best arrival 2026-03-10 12:00 UTC: score 75.5, sunlight 70.5 %, Earth's centre in view 80.5 %");
+    expect(r.text).toContain('Slips: 1 d: score 1 (sunlight 0.5 points');
+    expect(r.text).toContain('Scoring: score = mean of illuminationPct and earthVisiblePct');
+  });
+
+  it('opens the window table and the outlook tab, and downloads the results', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    await e.reply('show the window table');
+    expect(state.panelTab).toBe('windows');
+    await e.reply('open the outlook tab');
+    expect(state.panelTab).toBe('outlook');
+    const r = await e.reply('export the results as json');
+    expect(r.text).toBe('Downloaded the mission-window results as JSON: lunyx-im-2-window.json (2048 bytes, 6 spells).');
+  });
+});
+
 describe('deterministic mode: rise and set times name their instant (D-8)', () => {
   beforeEach(() => {
     installFakeApp(ALL_ACTIONS);

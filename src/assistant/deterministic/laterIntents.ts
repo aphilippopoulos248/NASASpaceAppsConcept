@@ -529,16 +529,48 @@ export const comparePanel: Intent = (step, raw) => {
       return `Deleted the saved comparison "${str(r, 'deleted') ?? del}"; ${plural(num(r, 'count') ?? 0, 'saved comparison')} left. Slots A and B are not touched.`;
     });
   }
-  const tab = /^(?:open|show|switch to)\s+(?:the\s+)?(nearby(?: sites)?|a and b|compare|comparison)\s+tab$/.exec(step);
+  const tab = /^(?:open|show|switch to)\s+(?:the\s+)?(nearby(?: sites)?|a and b|compare|comparison|window table|windows|outlook)\s+tab$/.exec(step) ?? /^(?:open|show)\s+(?:the\s+)?(window table)$/.exec(step);
   if (tab || /^(?:open|show)\s+(?:the\s+)?(?:compare|comparison)\s+panel$/.test(step)) {
-    const which = tab ? (tab[1].startsWith('nearby') ? 'nearby' : 'compare') : undefined;
-    return plan(`open the compare panel${which ? ` on its ${which === 'nearby' ? '"Nearby sites"' : '"A and B"'} tab` : ''}`, async (ctx) => {
+    const word = tab?.[1] ?? '';
+    const which = !tab ? undefined : word.startsWith('nearby') ? 'nearby' : word.startsWith('window') ? 'windows' : word === 'outlook' ? 'outlook' : 'compare';
+    const title: Record<string, string> = { compare: 'A and B', nearby: 'Nearby sites', windows: 'Window table', outlook: 'Outlook' };
+    return plan(`open the compare panel${which ? ` on its "${title[which]}" tab` : ''}`, async (ctx) => {
       const r = await ctx.run('openCompare', which ? { tab: which } : {});
       const empty = Array.isArray(r.emptySlots) && r.emptySlots.length ? ` Empty: slot ${r.emptySlots.join(' and ')}.` : '';
-      return `The compare panel is open on its "${str(r, 'tab') === 'nearby' ? 'Nearby sites' : 'A and B'}" tab. ${labelsText(r)}${empty}`;
+      return `The compare panel is open on its "${title[str(r, 'tab') ?? 'compare'] ?? str(r, 'tab')}" tab. ${labelsText(r)}${empty}`;
     });
   }
   return null;
+};
+
+// ---------------------------------------------------------------- the seasonal outlook
+
+function arrivalText(a: unknown): string {
+  if (!isObject(a)) return UNAVAILABLE;
+  return `${utc(str(a, 'arrivalUtc'))}: score ${num(a, 'score') ?? UNAVAILABLE}, sunlight ${percent(num(a, 'illuminationPct'))}, Earth's centre in view ${percent(num(a, 'earthVisiblePct'))}, longest darkness ${num(a, 'longestDarknessH') === undefined ? UNAVAILABLE : span(num(a, 'longestDarknessH'))}`;
+}
+
+export const outlook: Intent = (step) => {
+  const asks = /\b(seasonal )?outlook\b/.test(step) || /^(?:what is |what's |when is |show (?:me )?)?the (best|worst) (?:arrival|time to arrive|landing date)\b/.test(step) || /\bwhat (?:does|would) a slip\b/.test(step);
+  if (!asks || /\btab$/.test(step) || /^(compare|hide|close)\b/.test(step)) return null;
+  const months = /\b(\d+)\s*(?:lunar\s+)?months?\b/.exec(step);
+  const params: Json = months ? { months: Number(months[1]) } : {};
+  return plan(`show the seasonal outlook${months ? ` over ${months[1]} lunar months` : ''}`, async (ctx) => {
+    const r = await ctx.run('showOutlook', params);
+    const sp = isObject(r.span) ? r.span : {};
+    const lines = [`Seasonal outlook for ${str(r, 'scenario.label') ?? 'the scenario on screen'} over ${num(r, 'months') ?? '?'} lunar months (${utc(str(sp, 'startUtc'))} to ${utc(str(sp, 'endUtc'))}), for a ${num(r, 'missionH') === undefined ? '' : `${span(num(r, 'missionH'))} `}mission:`];
+    lines.push(`- planned arrival ${arrivalText(r.planned)}`);
+    lines.push(`- best arrival ${arrivalText(r.best)}`);
+    lines.push(`- worst arrival ${arrivalText(r.worst)}`);
+    const slips = (Array.isArray(r.slips) ? r.slips : []).filter(isObject);
+    if (slips.length) lines.push(`Slips: ${slips.map((x) => `${num(x, 'slipDays') ?? '?'} d: score ${num(x, 'scoreChange') ?? '?'} (sunlight ${num(x, 'illuminationChangePct') ?? '?'} points, Earth's centre in view ${num(x, 'earthVisibleChangePct') ?? '?'} points)`).join('; ')}.`);
+    if (isObject(r.longestDarkness)) lines.push(`Longest darkness in the span: ${span(num(r, 'longestDarkness.hours'))} from ${utc(str(r, 'longestDarkness.startUtc'))}${r.longestDarkness.endFound === false ? ', its end not found in the span' : ''}.`);
+    if (str(r, 'scoring')) lines.push(`Scoring: ${str(r, 'scoring')}.`);
+    const notes = [...(Array.isArray(r.highlights) ? r.highlights : []), ...(Array.isArray(r.assumptions) ? r.assumptions.slice(0, 2) : [])].filter((x): x is string => typeof x === 'string');
+    if (notes.length) lines.push(notes.join(' '));
+    lines.push('The outlook is on the "Outlook" tab of the compare panel.');
+    return lines.join('\n');
+  });
 };
 
 /** For the help text: one example per group, shown only when the build has the action. */
@@ -551,4 +583,5 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['setChart'], 'Surface HUD: "show the skyline chart", "expand the chart", "chart against time", "show the chart as a table", "fold the key metrics", "close the explanation"'],
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],
+  [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
 ];

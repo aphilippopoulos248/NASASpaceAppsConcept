@@ -67,7 +67,7 @@ export interface FakeState {
   position: { eastM: number; northM: number; liftM: number };
   annotations: { tracks: boolean; labels: boolean };
   /** Compare panel (comparePanel). */
-  panelTab: 'compare' | 'nearby';
+  panelTab: 'compare' | 'nearby' | 'windows' | 'outlook';
   /** Surface HUD (hudActions). */
   hud: { chart: 'hidden' | 'compact' | 'expanded'; mode: 'skyline' | 'time'; table: boolean; azimuthRange: 'full' | 'tracks'; metricsOpen: boolean; explanation: boolean };
   saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
@@ -656,8 +656,8 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     const BASIS = { type: 'string', description: 'basis', enum: ['A', 'current'] } as const;
     const named = { type: 'object', properties: { name: { type: 'string', description: 'name' } }, required: ['name'] } as const;
     actions.push(
-      defineAction<{ tab?: 'compare' | 'nearby' }, unknown>({
-        name: 'openCompare', title: 'Open the compare panel', description: 'Opens the panel.', effect: 'command', params: { type: 'object', properties: { tab: { type: 'string', description: 'tab', enum: ['compare', 'nearby'] } } },
+      defineAction<{ tab?: 'compare' | 'nearby' | 'windows' | 'outlook' }, unknown>({
+        name: 'openCompare', title: 'Open the compare panel', description: 'Opens the panel.', effect: 'command', params: { type: 'object', properties: { tab: { type: 'string', description: 'tab', enum: ['compare', 'nearby', 'windows', 'outlook'] } } },
         run: ({ tab }) => { if (tab) state.panelTab = tab; state.comparing = true; return { open: true, tab: state.panelTab, ...labels(), comparison: state.compareA && state.compareB ? 'ready' : 'idle', ...(!(state.compareA && state.compareB) && { emptySlots: [!state.compareA && 'A', !state.compareB && 'B'].filter(Boolean) }) }; },
       }),
       defineAction<{ delayH?: number; basis?: 'A' | 'current' }, unknown>({
@@ -712,6 +712,32 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       defineAction<{ name: string }, unknown>({
         name: 'deleteComparison', title: 'Delete a saved comparison', description: 'Deletes.', effect: 'command', params: named,
         run: ({ name }) => { const before = state.saved.length; state.saved = state.saved.filter((c) => c.name !== name.trim()); if (state.saved.length === before) throw new ActionError(`No saved comparison is called "${name.trim()}".`); return { deleted: name.trim(), count: state.saved.length }; },
+      }),
+      defineAction<{ format: 'csv' | 'json'; slot?: string }, unknown>({
+        name: 'exportResults', title: 'Download the mission-window results', description: 'Downloads a file.', effect: 'command',
+        params: { type: 'object', properties: { format: { type: 'string', description: 'format', enum: ['csv', 'json'] }, slot: { type: 'string', description: 'slot', enum: ['current', 'A', 'B', 'AB'] } }, required: ['format'] },
+        run: ({ format }) => {
+          requireSite();
+          return { format, filename: `lunyx-${state.site!.id}-window.${format}`, mimeType: format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json', bytes: 2048, scenarios: [{ slot: 'current', label: label() }], spells: 6, downloaded: true };
+        },
+      }),
+      defineAction<{ months?: number; slot?: string }, unknown>({
+        name: 'showOutlook', title: 'Show the seasonal outlook', description: 'The long view.', effect: 'command',
+        params: { type: 'object', properties: { months: { type: 'integer', description: 'months', minimum: 1, maximum: 24 }, slot: { type: 'string', description: 'slot', enum: ['current', 'A', 'B'] } } },
+        run: ({ months = 12 }) => {
+          requireSite();
+          state.panelTab = 'outlook';
+          state.comparing = true;
+          const opt = (day: number, score: number) => ({ arrivalUtc: isoUtc(state.windowStartMs + day * 86_400_000), endUtc: isoUtc(state.windowStartMs + day * 86_400_000 + state.windowDurationH * 3_600_000), slipDays: day, score, illuminationPct: score - 5, earthVisiblePct: score + 5, longestDarknessH: 10 - day / 10 });
+          return {
+            scenario: { label: label() }, months, span: { startUtc: isoUtc(state.windowStartMs), endUtc: isoUtc(state.windowStartMs + months * 29.530589 * 86_400_000) }, rowLengthDays: 29.531,
+            lunarDays: [], missionH: state.windowDurationH, planned: opt(0, 60), best: opt(9, 75.5), worst: opt(20, 31.25),
+            slips: [{ ...opt(1, 61), scoreChange: 1, illuminationChangePct: 0.5, earthVisibleChangePct: 1.5, longestDarknessChangeH: -0.2 }],
+            longestDarkness: { startUtc: isoUtc(state.windowStartMs), endUtc: isoUtc(state.windowStartMs + 40 * 3_600_000), hours: 40, startFound: true, endFound: true },
+            longestEarthGap: null, scoring: 'score = mean of illuminationPct and earthVisiblePct over a mission of missionH hours from each arrival (arrivals every 2 h); higher is better',
+            highlights: ['Arriving 9 days later gives the best score.'], assumptions: ['In-app Sun/Earth model, one skyline throughout.'], warnings: [],
+          };
+        },
       }),
       defineAction({
         name: 'listComparisons', title: 'List saved comparisons', description: 'Lists.', effect: 'query', params: none,

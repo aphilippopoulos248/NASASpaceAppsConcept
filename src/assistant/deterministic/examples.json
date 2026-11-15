@@ -57,6 +57,8 @@
     {"action":"deleteComparison","say":"delete comparison Baseline","given":["go to IM-2","save as A","mast 10 m","save as B","save this comparison as Baseline"]},
     {"action":"rankNearby","say":"rank nearby sites","given":["go to IM-2"]},
     {"action":"selectCandidate","say":"select candidate 2","given":["go to IM-2","rank nearby sites"]},
+    {"action":"exportResults","say":"export the results as csv","given":["go to IM-2"]},
+    {"action":"showOutlook","say":"show the seasonal outlook for 2 months","given":["go to IM-2"]},
     {"action":"showPanel","say":"fold the site details"},
     {"action":"setAssistantOpen","say":"close the assistant"},
     {"action":"clearConversation","say":"clear the chat"}

@@ -925,7 +925,8 @@ const exportResults: Intent = (step) => {
   const format = /\bjson\b/.test(step) ? 'json' : 'csv';
   return plan(`export the results as ${format.toUpperCase()}`, async (ctx) => {
     const r = await ctx.run('exportResults', { format });
-    return `Exported the mission-window results as ${format.toUpperCase()}${str(r, 'filename') ? `: ${str(r, 'filename')}` : ''}.`;
+    const size = num(r, 'bytes'), spells = num(r, 'spells');
+    return `Downloaded the mission-window results as ${format.toUpperCase()}${str(r, 'filename') ? `: ${str(r, 'filename')}` : ''}${size !== undefined ? ` (${size} bytes${spells !== undefined ? `, ${plural(spells, 'spell')}` : ''})` : ''}.`;
   });
 };
 
@@ -1028,7 +1029,7 @@ const INTENTS: Intent[] = [
   views,
   later.fieldOfView,
   look, globe, pin, exportResults,
-  later.surfaceStatus, later.listSites,
+  later.surfaceStatus, later.listSites, later.outlook,
   questions, site,
 ];
 
