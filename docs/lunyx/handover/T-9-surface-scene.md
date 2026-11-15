@@ -116,6 +116,16 @@ action. The HUD buttons call these through `runAction`.
 - Full settings (`?quality=high`): Apollo 11 rendered correctly with no shader errors.
   IM-2 at full settings could not be screenshotted here: one software-rendered frame took
   longer than the three-minute limit. It needs a look on a real GPU.
+- **Later, on a real GPU** (Chromium with ANGLE on the build machine's GeForce GTX 1050 Ti,
+  1920x1080; the app chose its full settings by itself): IM-2 at touchdown (Sun 2.46 degrees)
+  ran at 53 to 63 fps, Apollo 11 at 48 fps (the resolution tuner at 60 %). The low-Sun picture
+  at the pole is right (long shadows, readable relief, no blotches), with one fault, now
+  fixed: a faint regular lattice on ground about 300 m to 800 m away. It came from the
+  generated grain (a 1.5 m noise tile, bump-mapped on the 3 m mesh) under anisotropic
+  filtering; it was gone with the grain off, with generated detail off and at the light
+  settings, and with only the grain's filtering made plain. The grain is now filtered plainly
+  (`src/scene/surface.ts`, buildLevel), so it fades into its mean with distance; the near mesh
+  keeps its own relief. `t9-gpu-grain-lattice-before-after.jpg`, `t9-gpu-im2-full-ground-1920.jpg`.
 
 ## The "yellow line"
 
@@ -139,7 +149,8 @@ at most a quarter of the time.
 
 ## Not done, and limits
 
-- The full-settings picture at a polar site has not been seen on a GPU (see "Verified").
+- The full-settings picture at a polar site was seen on a GPU later (see "Verified"); the pin
+  at 89.45 S has not been, as it needs the map-tile service.
 - Custom pins get map imagery only from NASA Moon Trek tiles (network); offline the ground
   is plain grey. A pin inside another site's surveyed window uses that survey's heights but
   not its photo.

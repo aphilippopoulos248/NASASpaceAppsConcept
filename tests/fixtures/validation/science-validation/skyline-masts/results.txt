@@ -1,0 +1,202 @@
+Reproducibility: round 1 stored reference-rim-top@0m.json recomputed here on the export: max |difference| 0.00000 deg over 720 azimuths, ground +0.000 m (5 s)
+
+im-2@0m  (-84.79000, 29.20000), observer 0 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-im-2@0m.json (computed on 32ef35a; same elevation files)
+  ground: reference 5320.77 m, app 5320.77 m (+0.00); reference skyline -1.355 .. 4.074 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 13 azimuths, by at most 0.0002 deg (az 158.0); against the march alone the app was +0.0026 at worst
+  app 1289083 - reference: max |d| 0.0026 deg at az 5.5 (+0.0026); mean -0.0000, rms 0.0002; lowest -0.0009, highest +0.0026; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az   5.5: +0.0026 | reference -0.411 deg from 14702.1 m away, 5277.5 m high | app -0.408 deg from 14704.9 m, 5278.15 m
+      az 208.0: -0.0009 | reference 2.336 deg from 611.6 m away, 5345.9 m high | app 2.335 deg from 610.9 m, 5345.86 m
+
+apollo-15@0m  (26.13239, 3.63330), observer 0 m above the ground; reference: computed here earlier (skyline-masts/reference-apollo-15@0m.json, 89 s, two marches), converged to 0.00163 deg
+  ground: reference -1927.10 m, app -1927.10 m (+0.00); reference skyline 0.234 .. 13.480 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 66 azimuths, by at most 0.0016 deg (az 286.5); against the march alone the app was -0.0039 at worst
+  app 1289083 - reference: max |d| 0.0039 deg at az 187.0 (-0.0039); mean -0.0001, rms 0.0005; lowest -0.0039, highest +0.0021; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 187.0: -0.0039 | reference 12.077 deg from 9670.6 m away, 169.2 m high | app 12.073 deg from 9664.9 m, 167.25 m
+      az 188.0: -0.0035 | reference 11.735 deg from 9694.8 m away, 114.0 m high | app 11.732 deg from 9685 m, 111.31 m
+
+chandrayaan-3@0m  (-69.37410, 32.32000), observer 0 m above the ground; reference: computed here earlier (skyline-masts/reference-chandrayaan-3@0m.json, 144 s, two marches), converged to 0.00350 deg
+  ground: reference 529.11 m, app 529.11 m (+0.00); reference skyline 0.932 .. 2.448 deg, formed at the observer's feet (< 1 m) in 124 of 720 azimuths, app says distM 0 in 124
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 140 azimuths, by at most 0.0003 deg (az 223.5); against the march alone the app was +0.0041 at worst
+  app 1289083 - reference: max |d| 0.0041 deg at az 284.5 (+0.0041); mean -0.0001, rms 0.0004; lowest -0.0034, highest +0.0041; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 284.5: +0.0041 | reference 2.257 deg from 31715.2 m away, 2070.2 m high | app 2.261 deg from 31729.5 m, 2073.36 m
+      az 155.5: -0.0034 | reference 1.294 deg from 36681.0 m away, 1746.2 m high | app 1.291 deg from 36650.2 m, 1742.69 m
+
+shackleton-rim@0m  (-89.78000, -155.73000), observer 0 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-shackleton-rim@0m.json (computed on 32ef35a; same elevation files)
+  ground: reference 1730.39 m, app 1730.39 m (+0.00); reference skyline 1.190 .. 8.188 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 314 azimuths, by at most 0.0030 deg (az 268.0); against the march alone the app was -0.0030 at worst
+  app 1289083 - reference: max |d| 0.0032 deg at az 80.0 (-0.0032); mean -0.0005, rms 0.0009; lowest -0.0032, highest +0.0000; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  80.0: -0.0032 | reference 2.845 deg from 80.4 m away, 1734.4 m high | app 2.842 deg from 80.5 m, 1734.39 m
+      az 129.0: -0.0031 | reference 4.989 deg from 68.9 m away, 1736.4 m high | app 4.986 deg from 68.8 m, 1736.4 m
+
+connecting-ridge@0m  (-89.45000, -137.20000), observer 0 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-connecting-ridge@0m.json (computed on 32ef35a; same elevation files)
+  ground: reference 1955.87 m, app 1955.87 m (+0.00); reference skyline -2.036 .. 2.544 deg, formed at the observer's feet (< 1 m) in 298 of 720 azimuths, app says distM 0 in 298
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 535 azimuths, by at most 0.0016 deg (az 92.5); against the march alone the app was +0.0018 at worst
+  app 1289083 - reference: max |d| 0.0018 deg at az 334.0 (-0.0018); mean -0.0001, rms 0.0004; lowest -0.0018, highest +0.0002; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 334.0: -0.0018 | reference 0.122 deg from 316.4 m away, 1956.6 m high | app 0.121 deg from 316.1 m, 1956.57 m
+      az 331.5: -0.0017 | reference 0.059 deg from 312.6 m away, 1956.2 m high | app 0.057 deg from 312.3 m, 1956.21 m
+
+ridge-top@0m  (-89.47490, -137.44310), observer 0 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-ridge-top@0m.json (computed on 32ef35a; same elevation files)
+  ground: reference 1946.57 m, app 1946.57 m (-0.00); reference skyline -2.530 .. 3.416 deg, formed at the observer's feet (< 1 m) in 313 of 720 azimuths, app says distM 0 in 313
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 424 azimuths, by at most 0.0008 deg (az 357.5); against the march alone the app was +0.0013 at worst
+  app 1289083 - reference: max |d| 0.0013 deg at az 197.5 (+0.0013); mean +0.0000, rms 0.0002; lowest -0.0007, highest +0.0013; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 197.5: +0.0013 | reference -1.667 deg from 9171.5 m away, 1703.6 m high | app -1.666 deg from 9173.3 m, 1703.74 m
+      az 199.5: +0.0013 | reference -1.782 deg from 8954.1 m away, 1690.8 m high | app -1.781 deg from 8951.8 m, 1691.06 m
+
+rim-top@0m  (-89.78430, -155.90410), observer 0 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-rim-top@0m.json (computed on 32ef35a; same elevation files)
+  ground: reference 1735.80 m, app 1735.80 m (+0.00); reference skyline -1.733 .. 3.323 deg, formed at the observer's feet (< 1 m) in 180 of 720 azimuths, app says distM 0 in 180
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 521 azimuths, by at most 0.0016 deg (az 201.5); against the march alone the app was +0.0018 at worst
+  app 1289083 - reference: max |d| 0.0017 deg at az 17.0 (-0.0017); mean -0.0002, rms 0.0004; lowest -0.0017, highest +0.0002; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  17.0: -0.0017 | reference -0.212 deg from 227.6 m away, 1735.0 m high | app -0.213 deg from 227.4 m, 1734.96 m
+      az  70.5: -0.0017 | reference -0.289 deg from 69.9 m away, 1735.4 m high | app -0.291 deg from 69.8 m, 1735.44 m
+
+fresh-a@0m  (-88.46586, 94.25475), observer 0 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-a@0m.json, 70 s, two marches), converged to 0.00617 deg
+  ground: reference -747.30 m, app -747.30 m (+0.00); reference skyline 0.634 .. 23.466 deg, formed at the observer's feet (< 1 m) in 160 of 720 azimuths, app says distM 0 in 160
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 329 azimuths, by at most 0.0111 deg (az 216.0); against the march alone the app was +0.0123 at worst
+  app 1289083 - reference: max |d| 0.0027 deg at az 140.5 (-0.0027); mean -0.0000, rms 0.0007; lowest -0.0027, highest +0.0023; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 140.5: -0.0027 | reference 23.423 deg from 14.6 m away, -741.0 m high | app 23.420 deg from 14.5 m, -741 m
+      az 139.5: -0.0025 | reference 23.443 deg from 14.2 m away, -741.1 m high | app 23.441 deg from 14.2 m, -741.15 m
+
+fresh-b@0m  (-89.50713, -177.52577), observer 0 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-b@0m.json, 22 s, two marches), converged to 0.00306 deg
+  ground: reference 1059.76 m, app 1059.76 m (+0.00); reference skyline -1.879 .. 13.230 deg, formed at the observer's feet (< 1 m) in 117 of 720 azimuths, app says distM 0 in 117
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 307 azimuths, by at most 0.0041 deg (az 48.5); against the march alone the app was +0.0046 at worst
+  app 1289083 - reference: max |d| 0.0046 deg at az 302.5 (+0.0046); mean -0.0001, rms 0.0005; lowest -0.0031, highest +0.0046; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 302.5: +0.0046 | reference -1.639 deg from 49288.2 m away, 348.5 m high | app -1.634 deg from 49276.1 m, 352.51 m
+      az 248.0: -0.0031 | reference 8.550 deg from 1427.0 m away, 1275.0 m high | app 8.547 deg from 1427.5 m, 1275.04 m
+
+im-2@0.5m  (-84.79000, 29.20000), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-im-2@0.5m.json, 27 s, two marches), converged to 0.00176 deg
+  ground: reference 5320.77 m, app 5320.77 m (+0.00); reference skyline -1.427 .. 4.072 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 9 azimuths, by at most 0.0002 deg (az 241.5); against the march alone the app was +0.0020 at worst
+  app 1289083 - reference: max |d| 0.0020 deg at az 5.5 (+0.0020); mean -0.0000, rms 0.0002; lowest -0.0009, highest +0.0020; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az   5.5: +0.0020 | reference -0.413 deg from 14702.1 m away, 5277.5 m high | app -0.411 deg from 14706 m, 5277.99 m
+      az 200.5: -0.0009 | reference 2.613 deg from 576.5 m away, 5347.8 m high | app 2.612 deg from 577.3 m, 5347.78 m
+
+apollo-15@0.5m  (26.13239, 3.63330), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-apollo-15@0.5m.json, 46 s, two marches), converged to 0.00163 deg
+  ground: reference -1927.10 m, app -1927.10 m (+0.00); reference skyline 0.233 .. 13.478 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 69 azimuths, by at most 0.0015 deg (az 286.5); against the march alone the app was -0.0041 at worst
+  app 1289083 - reference: max |d| 0.0041 deg at az 186.5 (-0.0041); mean -0.0001, rms 0.0005; lowest -0.0041, highest +0.0015; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 186.5: -0.0041 | reference 12.244 deg from 9661.0 m away, 197.0 m high | app 12.240 deg from 9667.8 m, 197.8 m
+      az 185.0: -0.0034 | reference 12.637 deg from 9636.8 m away, 261.0 m high | app 12.633 deg from 9633.6 m, 259.68 m
+
+chandrayaan-3@0.5m  (-69.37410, 32.32000), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-chandrayaan-3@0.5m.json, 83 s, two marches), converged to 0.00350 deg
+  ground: reference 529.11 m, app 529.11 m (+0.00); reference skyline 0.910 .. 2.446 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 52 azimuths, by at most 0.0002 deg (az 174.5); against the march alone the app was -0.0029 at worst
+  app 1289083 - reference: max |d| 0.0029 deg at az 156.0 (-0.0029); mean -0.0001, rms 0.0004; lowest -0.0029, highest +0.0017; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 156.0: -0.0029 | reference 1.284 deg from 36534.6 m away, 1733.5 m high | app 1.281 deg from 36558.5 m, 1732.66 m
+      az 287.5: -0.0024 | reference 2.290 deg from 32210.5 m away, 2118.0 m high | app 2.287 deg from 32199.1 m, 2115.97 m
+
+shackleton-rim@0.5m  (-89.78000, -155.73000), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-shackleton-rim@0.5m.json, 28 s, two marches), converged to 0.00278 deg
+  ground: reference 1730.39 m, app 1730.39 m (+0.00); reference skyline 0.865 .. 7.566 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 340 azimuths, by at most 0.0036 deg (az 266.0); against the march alone the app was -0.0034 at worst
+  app 1289083 - reference: max |d| 0.0035 deg at az 269.0 (-0.0035); mean -0.0005, rms 0.0009; lowest -0.0035, highest +0.0000; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 269.0: -0.0035 | reference 7.564 deg from 45.8 m away, 1737.0 m high | app 7.561 deg from 45.8 m, 1736.97 m
+      az 125.5: -0.0035 | reference 4.476 deg from 71.2 m away, 1736.5 m high | app 4.473 deg from 71.3 m, 1736.47 m
+
+connecting-ridge@0.5m  (-89.45000, -137.20000), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-connecting-ridge@0.5m.json, 83 s, two marches), converged to 0.00478 deg
+  ground: reference 1955.87 m, app 1955.87 m (+0.00); reference skyline -2.695 .. 1.052 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 410 azimuths, by at most 0.0051 deg (az 140.5); against the march alone the app was +0.0047 at worst
+  app 1289083 - reference: max |d| 0.0019 deg at az 23.5 (-0.0019); mean -0.0004, rms 0.0006; lowest -0.0019, highest +0.0013; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  23.5: -0.0019 | reference -0.617 deg from 358.5 m away, 1952.5 m high | app -0.619 deg from 358.1 m, 1952.54 m
+      az 147.5: -0.0018 | reference 0.887 deg from 17.4 m away, 1956.6 m high | app 0.885 deg from 17.4 m, 1956.64 m
+
+ridge-top@0.5m  (-89.47490, -137.44310), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-ridge-top@0.5m.json, 36 s, two marches), converged to 0.00258 deg
+  ground: reference 1946.57 m, app 1946.57 m (-0.00); reference skyline -2.563 .. 1.632 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 246 azimuths, by at most 0.0026 deg (az 8.5); against the march alone the app was +0.0022 at worst
+  app 1289083 - reference: max |d| 0.0015 deg at az 199.5 (+0.0015); mean -0.0000, rms 0.0002; lowest -0.0013, highest +0.0015; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 199.5: +0.0015 | reference -1.785 deg from 8954.1 m away, 1690.8 m high | app -1.784 deg from 8952 m, 1691.08 m
+      az 253.0: -0.0013 | reference -2.480 deg from 209.5 m away, 1938.0 m high | app -2.482 deg from 209.4 m, 1938 m
+
+rim-top@0.5m  (-89.78430, -155.90410), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-rim-top@0.5m.json, 24 s, two marches), converged to 0.01346 deg
+  ground: reference 1735.80 m, app 1735.80 m (+0.00); reference skyline -2.387 .. 1.050 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 475 azimuths, by at most 0.0173 deg (az 244.5); against the march alone the app was +0.0152 at worst
+  app 1289083 - reference: max |d| 0.0037 deg at az 261.0 (-0.0037); mean -0.0007, rms 0.0011; lowest -0.0037, highest +0.0004; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 261.0: -0.0037 | reference 0.656 deg from 10.7 m away, 1736.4 m high | app 0.653 deg from 10.7 m, 1736.42 m
+      az 250.0: -0.0036 | reference 0.537 deg from 10.4 m away, 1736.4 m high | app 0.533 deg from 10.4 m, 1736.39 m
+
+fresh-a@0.5m  (-88.46586, 94.25475), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-a@0.5m.json, 14 s, two marches), converged to 0.02063 deg
+  ground: reference -747.30 m, app -747.30 m (+0.00); reference skyline 0.631 .. 21.771 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 291 azimuths, by at most 0.0359 deg (az 94.0); against the march alone the app was +0.0344 at worst
+  app 1289083 - reference: max |d| 0.0065 deg at az 109.0 (-0.0065); mean -0.0009, rms 0.0019; lowest -0.0065, highest +0.0016; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 109.0: -0.0065 | reference 18.224 deg from 9.1 m away, -743.8 m high | app 18.217 deg from 9.1 m, -743.79 m
+      az 117.5: -0.0062 | reference 19.750 deg from 9.9 m away, -743.2 m high | app 19.744 deg from 9.9 m, -743.26 m
+
+fresh-b@0.5m  (-89.50713, -177.52577), observer 0.5 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-b@0.5m.json, 16 s, two marches), converged to 0.02083 deg
+  ground: reference 1059.76 m, app 1059.76 m (+0.00); reference skyline -2.675 .. 13.185 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 237 azimuths, by at most 0.0312 deg (az 17.0); against the march alone the app was +0.0284 at worst
+  app 1289083 - reference: max |d| 0.0058 deg at az 6.0 (-0.0058); mean -0.0007, rms 0.0014; lowest -0.0058, highest +0.0054; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az   6.0: -0.0058 | reference -2.010 deg from 8.5 m away, 1060.0 m high | app -2.016 deg from 8.4 m, 1059.97 m
+      az  19.0: -0.0057 | reference 0.061 deg from 9.0 m away, 1060.3 m high | app 0.056 deg from 9 m, 1060.27 m
+
+im-2@2m  (-84.79000, 29.20000), observer 2 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-im-2.json (computed on 32ef35a; same elevation files)
+  ground: reference 5320.77 m, app 5320.77 m (+0.00); reference skyline -1.471 .. 4.067 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 5 azimuths, by at most 0.0002 deg (az 236.5); against the march alone the app was +0.0027 at worst
+  app 1289083 - reference: max |d| 0.0027 deg at az 5.5 (+0.0027); mean -0.0000, rms 0.0002; lowest -0.0008, highest +0.0027; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az   5.5: +0.0027 | reference -0.418 deg from 14702.1 m away, 5277.5 m high | app -0.416 deg from 14704.6 m, 5278.18 m
+      az 208.0: -0.0008 | reference 2.150 deg from 611.6 m away, 5345.9 m high | app 2.149 deg from 611.1 m, 5345.87 m
+
+apollo-15@2m  (26.13239, 3.63330), observer 2 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-apollo-15.json (computed on 32ef35a; same elevation files)
+  ground: reference -1927.10 m, app -1927.10 m (+0.00); reference skyline 0.230 .. 13.470 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 59 azimuths, by at most 0.0015 deg (az 286.5); against the march alone the app was -0.0038 at worst
+  app 1289083 - reference: max |d| 0.0038 deg at az 188.0 (-0.0038); mean -0.0001, rms 0.0004; lowest -0.0038, highest +0.0017; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 188.0: -0.0038 | reference 11.724 deg from 9694.8 m away, 114.0 m high | app 11.720 deg from 9684.3 m, 111.1 m
+      az 193.5: -0.0024 | reference 9.678 deg from 9380.2 m away, -300.4 m high | app 9.676 deg from 9371.7 m, -302.25 m
+
+chandrayaan-3@2m  (-69.37410, 32.32000), observer 2 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-chandrayaan-3.json (computed on 32ef35a; same elevation files)
+  ground: reference 529.11 m, app 529.11 m (+0.00); reference skyline 0.510 .. 2.441 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 25 azimuths, by at most 0.0002 deg (az 201.0); against the march alone the app was +0.0024 at worst
+  app 1289083 - reference: max |d| 0.0024 deg at az 147.5 (+0.0024); mean -0.0001, rms 0.0004; lowest -0.0023, highest +0.0024; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 147.5: +0.0024 | reference 1.469 deg from 36407.0 m away, 1847.6 m high | app 1.472 deg from 36423.7 m, 1849.93 m
+      az 183.0: -0.0023 | reference 0.590 deg from 5767.4 m away, 600.1 m high | app 0.588 deg from 5760 m, 599.75 m
+
+shackleton-rim@2m  (-89.78000, -155.73000), observer 2 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-shackleton-rim.json (computed on 32ef35a; same elevation files)
+  ground: reference 1730.39 m, app 1730.39 m (+0.00); reference skyline 0.054 .. 5.716 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 418 azimuths, by at most 0.0048 deg (az 264.5); against the march alone the app was -0.0038 at worst
+  app 1289083 - reference: max |d| 0.0042 deg at az 264.0 (-0.0042); mean -0.0007, rms 0.0012; lowest -0.0042, highest +0.0000; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 264.0: -0.0042 | reference 5.638 deg from 44.3 m away, 1736.8 m high | app 5.634 deg from 44.3 m, 1736.76 m
+      az 129.0: -0.0040 | reference 3.336 deg from 68.9 m away, 1736.4 m high | app 3.332 deg from 68.8 m, 1736.4 m
+
+connecting-ridge@2m  (-89.45000, -137.20000), observer 2 m above the ground; reference: round 1 stored ephemeris-check/skyline/reference-connecting-ridge.json (computed on 32ef35a; same elevation files)
+  ground: reference 1955.87 m, app 1955.87 m (+0.00); reference skyline -2.800 .. 0.097 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 145 azimuths, by at most 0.0009 deg (az 177.0); against the march alone the app was +0.0017 at worst
+  app 1289083 - reference: max |d| 0.0018 deg at az 332.0 (-0.0018); mean -0.0001, rms 0.0004; lowest -0.0018, highest +0.0017; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 332.0: -0.0018 | reference -0.294 deg from 313.3 m away, 1956.3 m high | app -0.296 deg from 313 m, 1956.28 m
+      az  22.0: -0.0017 | reference -0.785 deg from 362.8 m away, 1952.9 m high | app -0.786 deg from 363.1 m, 1952.92 m
+
+ridge-top@2m  (-89.47490, -137.44310), observer 2 m above the ground; reference: computed here earlier (skyline-masts/reference-ridge-top@2m.json, 21 s, two marches), converged to 0.00120 deg
+  ground: reference 1946.57 m, app 1946.57 m (-0.00); reference skyline -2.831 .. 0.679 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 87 azimuths, by at most 0.0009 deg (az 30.0); against the march alone the app was +0.0015 at worst
+  app 1289083 - reference: max |d| 0.0015 deg at az 66.0 (-0.0015); mean -0.0000, rms 0.0003; lowest -0.0015, highest +0.0015; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  66.0: -0.0015 | reference -1.614 deg from 222.6 m away, 1942.3 m high | app -1.616 deg from 222.5 m, 1942.3 m
+      az 199.5: +0.0015 | reference -1.795 deg from 8954.1 m away, 1690.8 m high | app -1.793 deg from 8952.1 m, 1691.09 m
+
+rim-top@2m  (-89.78430, -155.90410), observer 2 m above the ground; reference: computed here earlier (skyline-masts/reference-rim-top@2m.json, 23 s, two marches), converged to 0.00111 deg
+  ground: reference 1735.80 m, app 1735.80 m (+0.00); reference skyline -2.657 .. 1.042 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 75 azimuths, by at most 0.0008 deg (az 40.5); against the march alone the app was -0.0015 at worst
+  app 1289083 - reference: max |d| 0.0017 deg at az 49.0 (-0.0017); mean -0.0000, rms 0.0003; lowest -0.0017, highest +0.0012; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  49.0: -0.0017 | reference -0.848 deg from 114.6 m away, 1736.1 m high | app -0.850 deg from 114.5 m, 1736.1 m
+      az  39.0: -0.0016 | reference -0.768 deg from 108.7 m away, 1736.3 m high | app -0.770 deg from 108.8 m, 1736.34 m
+
+fresh-a@2m  (-88.46586, 94.25475), observer 2 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-a@2m.json, 26 s, two marches), converged to 0.07955 deg
+  ground: reference -747.30 m, app -747.30 m (+0.00); reference skyline 0.620 .. 17.242 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 193 azimuths, by at most 0.1015 deg (az 97.0); against the march alone the app was +0.0881 at worst
+  app 1289083 - reference: max |d| 0.0171 deg at az 95.0 (-0.0171); mean -0.0017, rms 0.0041; lowest -0.0171, highest +0.0013; |d| > 0.01: 49, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az  95.0: -0.0171 | reference 5.054 deg from 8.5 m away, -744.5 m high | app 5.037 deg from 8.5 m, -744.54 m
+      az  97.5: -0.0168 | reference 5.861 deg from 8.6 m away, -744.4 m high | app 5.844 deg from 8.6 m, -744.42 m
+
+fresh-b@2m  (-89.50713, -177.52577), observer 2 m above the ground; reference: computed here earlier (skyline-masts/reference-fresh-b@2m.json, 17 s, two marches), converged to 0.00306 deg
+  ground: reference 1059.76 m, app 1059.76 m (+0.00); reference skyline -3.252 .. 13.048 deg, formed at the observer's feet (< 1 m) in 0 of 720 azimuths, app says distM 0 in 0
+  exact near field (first 500 m, every grid-line crossing): raised the march reference at 6 azimuths, by at most 0.0003 deg (az 153.5); against the march alone the app was +0.0056 at worst
+  app 1289083 - reference: max |d| 0.0056 deg at az 302.5 (+0.0056); mean -0.0000, rms 0.0004; lowest -0.0033, highest +0.0056; |d| > 0.01: 0, > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+      az 302.5: +0.0056 | reference -1.641 deg from 49288.2 m away, 348.5 m high | app -1.636 deg from 49278.1 m, 353.35 m
+      az 248.0: -0.0033 | reference 8.472 deg from 1427.0 m away, 1275.0 m high | app 8.468 deg from 1426.6 m, 1274.91 m
+
+Summary, app 1289083 minus reference (deg): worst |d| and azimuths over 0.02 / 0.1 of 720
+  site              0 m                     0.5 m                   2 m                     
+  im-2              +0.0026    0 /   0      +0.0020    0 /   0      +0.0027    0 /   0      
+  apollo-15         -0.0039    0 /   0      -0.0041    0 /   0      -0.0038    0 /   0      
+  chandrayaan-3     +0.0041    0 /   0      -0.0029    0 /   0      +0.0024    0 /   0      
+  shackleton-rim    -0.0032    0 /   0      -0.0035    0 /   0      -0.0042    0 /   0      
+  connecting-ridge  -0.0018    0 /   0      -0.0019    0 /   0      -0.0018    0 /   0      
+  ridge-top         +0.0013    0 /   0      +0.0015    0 /   0      -0.0015    0 /   0      
+  rim-top           -0.0017    0 /   0      -0.0037    0 /   0      -0.0017    0 /   0      
+  fresh-a           -0.0027    0 /   0      -0.0065    0 /   0      -0.0171    0 /   0      
+  fresh-b           +0.0046    0 /   0      -0.0058    0 /   0      +0.0056    0 /   0      

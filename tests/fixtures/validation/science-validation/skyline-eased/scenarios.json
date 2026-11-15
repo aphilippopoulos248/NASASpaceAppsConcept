@@ -1,0 +1,5 @@
+[
+ {"id": "blue-ghost-1@2m", "siteKey": "blue-ghost-1", "site": {"id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81}, "mastHeightM": 2, "start": "2025-03-16T18:00:00Z", "durationH": 1, "stepMin": 10},
+ {"id": "apollo-12@2m", "siteKey": "apollo-12", "site": {"id": "apollo-12", "name": "Apollo 12", "kind": "landing", "lat": -3.0128, "lon": -23.4219}, "mastHeightM": 2, "start": "1969-11-19T07:00:00Z", "durationH": 1, "stepMin": 10},
+ {"id": "luna-23@2m", "siteKey": "luna-23", "site": {"id": "luna-23", "name": "Luna 23", "kind": "landing", "lat": 12.6669, "lon": 62.1511}, "mastHeightM": 2, "start": "1974-11-06T06:00:00Z", "durationH": 1, "stepMin": 10}
+]

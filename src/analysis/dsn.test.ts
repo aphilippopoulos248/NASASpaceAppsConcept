@@ -6,8 +6,9 @@ import type { Scenario, SiteRef } from '../core/types';
 import { linkEpoch, linkGeometry, siteFrame, stationFrame } from '../astro/groundStation';
 import { loadTerrainFor } from '../terrain/api';
 import { analyseStack, dsnAt } from './api';
-import { DSN_STATIONS, dsnGeometryAt, dsnOpportunities } from './dsn';
-import { computeHorizon } from './horizon';
+import { DSN_EDGE_PRECISION_MS, DSN_STATIONS, dsnGeometryAt, dsnOpportunities, refineEdges } from './dsn';
+import { computeHorizon, skylineAt } from './horizon';
+import { EVENT_PRECISION_MS, intervalsOf } from './intervals';
 import { setBundleReader, skyAt } from './sky';
 import { fnSource, radialSource, stackOf } from './testing';
 import type { Interval } from './types';
@@ -258,5 +259,71 @@ describe('DSN opportunities with real terrain (part of analyse())', () => {
     const site = pin(0, 0);
     const a = await analyseStack(scen(site, '2025-03-01T00:00:00Z', 24), stackOf(fnSource('none', 60, () => 0, () => false)));
     expect(a.dsn).toBeUndefined();
+  });
+});
+
+describe('opportunity edges placed to 0.25 s (lunyx-science T-9)', () => {
+  it('a synthetic elevation curve: each crossing of the limit within 0.25 s of the analytic instant', () => {
+    // Elevation 12 sin(2 pi t / 24 h) deg through a 6.3 deg limit: up at 2.11 h, down at 9.89 h (between samples).
+    const T = Date.UTC(2025, 2, 1), P = 24 * H, A = 12, limit = 6.3;
+    const g = (t: number) => A * Math.sin((2 * Math.PI * (t - T)) / P) - limit;
+    const step = 10 * 60_000, n = 24 * 6 + 1;
+    const timeAt = (i: number) => T + i * step;
+    const coarse = intervalsOf((i) => g(timeAt(i)) > 0, g, timeAt, n, T, T + P);
+    const fine = refineEdges(coarse, g);
+    const up = T + (P / (2 * Math.PI)) * Math.asin(limit / A), down = T + P / 2 - (up - T);
+    expect(fine.crossings.map((c) => c.up)).toEqual([true, false]);
+    expect(Math.abs(fine.crossings[0].t - up)).toBeLessThanOrEqual(DSN_EDGE_PRECISION_MS);
+    expect(Math.abs(fine.crossings[1].t - down)).toBeLessThanOrEqual(DSN_EDGE_PRECISION_MS);
+    // The window's own search stops at 10 s: its crossings are only known to within 5 s.
+    expect(Math.max(Math.abs(coarse.crossings[0].t - up), Math.abs(coarse.crossings[1].t - down))).toBeLessThanOrEqual(EVENT_PRECISION_MS / 2);
+    // The spans are rebuilt on the refined instants, with the same structure and open window edges.
+    expect(fine.on).toEqual([{ startMs: fine.crossings[0].t, endMs: fine.crossings[1].t }]);
+    expect(fine.off).toEqual([{ startMs: T, endMs: fine.crossings[0].t, openStart: true }, { startMs: fine.crossings[1].t, endMs: T + P, openEnd: true }]);
+    // Asking for no more than the window's precision leaves the spans as they were.
+    expect(refineEdges(coarse, g, EVENT_PRECISION_MS)).toBe(coarse);
+  });
+
+  it('real geometry, IM-2, 14 days: every edge within 0.25 s of the indicator\'s change of sign; what it costs', async () => {
+    const site: SiteRef = { id: 'im-2', name: 'IM-2 Athena', kind: 'landing', lat: -84.79, lon: 29.2 };
+    const a = await analyseStack(scen(site, '2025-03-06T17:28:00Z', 14 * 24), await loadTerrainFor(site));
+    const d = a.dsn!, p = a.horizon;
+    const h = p.siteElevationM + p.mastHeightM;
+    // The opportunity indicator, as dsnOpportunities() builds it: positive while the line is open at both ends.
+    const ind = (k: number, mask: number) => (t: number) => {
+      const x = dsnGeometryAt(p.site, h, t)[k];
+      return Math.min(x.stationElDeg - mask, x.siteElDeg - skylineAt(p, x.siteAzDeg));
+    };
+    const probe = DSN_EDGE_PRECISION_MS + 10;
+    let edges = 0;
+    d.stations.forEach((s, k) => {
+      for (const [list, mask] of [[s.receive.intervals, s.station.receiveMaskDeg], [s.transmit.intervals, s.station.transmitMaskDeg]] as const) {
+        const g = ind(k, mask);
+        for (const iv of list) {
+          if (!iv.openStart) {
+            expect(g(iv.startMs - probe), `${s.station.id} opens ${iso(iv.startMs)}`).toBeLessThanOrEqual(0);
+            expect(g(iv.startMs + probe)).toBeGreaterThan(0);
+            edges++;
+          }
+          if (!iv.openEnd) {
+            expect(g(iv.endMs - probe), `${s.station.id} closes ${iso(iv.endMs)}`).toBeGreaterThan(0);
+            expect(g(iv.endMs + probe)).toBeLessThanOrEqual(0);
+            edges++;
+          }
+        }
+      }
+    });
+    const best = (options: { edgePrecisionMs?: number }) => {
+      let ms = Infinity;
+      for (let r = 0; r < 3; r++) {
+        const t0 = performance.now();
+        dsnOpportunities(a.scenario, p, DSN_STATIONS, options);
+        ms = Math.min(ms, performance.now() - t0);
+      }
+      return ms;
+    };
+    const coarseMs = best({ edgePrecisionMs: EVENT_PRECISION_MS }), fineMs = best({});
+    console.log(`IM-2 14 d: ${edges} station edges, each within ${DSN_EDGE_PRECISION_MS / 1000} s of the indicator's change of sign; dsnOpportunities() ${coarseMs.toFixed(1)} ms with edges at the window's 10 s, ${fineMs.toFixed(1)} ms placed to 0.25 s (best of 3; load average ${readFileSync('/proc/loadavg', 'utf8').split(' ')[0]})`);
+    expect(edges).toBeGreaterThan(20);
   });
 });

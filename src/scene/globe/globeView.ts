@@ -20,7 +20,7 @@ import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
-import { loadSiteAreas, SiteAreaLayer } from '../siteAreas';
+import { areaScale, loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
@@ -31,6 +31,8 @@ import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { effectiveRelief } from './reliefTiles';
+import { flyDirection } from './flyTarget';
+import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
@@ -41,13 +43,9 @@ const MIN_DISTANCE = 1 + MIN_CLEARANCE;
 const Z = new Vector3(0, 0, 1);
 const MOON = new Sphere(new Vector3(), 1);
 
-/** Scene direction to selenographic lat/lon (inverse of latLonToVec3). */
 const round5 = (x: number) => Math.round(x * 1e5) / 1e5;
 
-export function vec3ToLatLon(v: Vector3): { lat: number; lon: number } {
-  const n = v.clone().normalize();
-  return { lat: (Math.asin(Math.max(-1, Math.min(1, n.y))) * 180) / Math.PI, lon: wrapLon((Math.atan2(-n.z, n.x) * 180) / Math.PI) };
-}
+export { vec3ToLatLon };
 
 export class GlobeView {
   readonly scene = new Scene();
@@ -85,6 +83,8 @@ export class GlobeView {
   private sunMoonFixed: [number, number, number] = [1, 0, 0];
   /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
   private placed = { relief: NaN, version: -1, site: '', polar: false };
+  /** Enlargement the explored areas were last placed at (it follows the camera altitude). */
+  private placedAreaScale = NaN;
   private patchVersion = -1;
   active = true;
 
@@ -101,6 +101,8 @@ export class GlobeView {
     c.addEventListener('start', () => {
       c.autoRotate = false;
       this.cancelFly();
+      // Turned by hand: the fields and "Drop pin at centre" follow the camera again.
+      globeDisplay.setLive({ viewTarget: null });
     });
     this.scene.add(this.sky.root, createStars());
 
@@ -120,7 +122,7 @@ export class GlobeView {
     document.body.append(this.tooltip);
 
     onCommand('flyTo', ({ lat, lon, altitudeKm }) => {
-      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM);
+      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM, { lat, lon: wrapLon(lon) });
     });
     this.averages = new AverageMaps(this.uniforms, Math.min(4096, renderer.capabilities.maxTextureSize));
     this.averages.onChange = () => globeDisplay.setLive({ averages: this.averages.state });
@@ -313,8 +315,24 @@ export class GlobeView {
   /** Places the camera above a point at once (deep links straight to the surface). */
   jumpTo(lat: number, lon: number, altitudeKm: number): void {
     this.cancelFly();
-    this.controls.autoRotate = false;
-    this.camera.position.copy(latLonToVec3(lat, lon)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    this.stopMomentum();
+    this.camera.position.copy(flyDirection(latLonToVec3(lat, lon), this.camera.position)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    globeDisplay.setLive({ viewTarget: { lat, lon: wrapLon(lon) } });
+  }
+
+  /**
+   * Stops the auto-rotation and the turn the orbit controls still owe it: with damping on, a
+   * turn is paid out over the following frames, so after the first flight the camera kept
+   * turning and ended east of the point asked for (lunyx-experience Q-3: 0.013 deg on a 1 deg hop).
+   */
+  private stopMomentum(): void {
+    const c = this.controls;
+    c.autoRotate = false;
+    // One undamped update pays out the rest of the turn at once (a small fraction of a degree,
+    // before the flight starts) and leaves nothing for later frames.
+    c.enableDamping = false;
+    c.update();
+    c.enableDamping = true;
   }
 
   /** Resolves when the current flight (if any) has arrived or was interrupted. */
@@ -326,16 +344,17 @@ export class GlobeView {
   private cancelFly(): void {
     const f = this.fly;
     this.fly = null;
+    if (f) globeDisplay.setLive({ flying: false });
     f?.done.forEach((d) => d());
   }
 
-  private flyTo(dir: Vector3, dist?: number): void {
-    const d = dir.clone().normalize();
-    // Keep the poles from ending up dead-centre, where orbiting gets twitchy.
-    d.y = Math.max(-0.985, Math.min(0.985, d.y));
+  private flyTo(dir: Vector3, dist?: number, asked?: { lat: number; lon: number }): void {
+    this.stopMomentum();
+    // Exactly over the point asked for; only right over a pole it stops 0.1 degree short (flyTarget.ts).
+    const d = flyDirection(dir, this.camera.position);
     const waiting = this.fly?.done ?? [];
-    this.fly = { dir: d.normalize(), dist: dist ?? this.camera.position.length(), done: waiting };
-    this.controls.autoRotate = false;
+    this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting };
+    globeDisplay.setLive({ viewTarget: asked ?? vec3ToLatLon(dir), flying: true });
   }
 
   private stepFly(dt: number): void {
@@ -429,10 +448,16 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
-      this.areas?.place((lat, lon) => this.surfaceRadius(lat, lon));
+      this.placedAreaScale = NaN; // placed again below
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
+    }
+    // The explored areas are enlarged from orbit and true to size near the ground.
+    const areaK = areaScale(altitudeKm);
+    if (this.areas && !(Math.abs(areaK - this.placedAreaScale) < 0.01 * areaK)) {
+      this.placedAreaScale = areaK;
+      this.areas.place((lat, lon) => this.surfaceRadius(lat, lon), areaK);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {
       this.patchVersion = relief.dataVersion;

@@ -361,7 +361,7 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—');
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (on the globe drawn up to ${AREA_DISPLAY_SCALE}× larger from orbit, true to size close to the ground)` : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
@@ -380,7 +380,8 @@ export function mountSiteCard(region: HTMLElement): void {
       swatch.style.background = landingColor(l);
       programName.textContent = l.program;
     }
-    title.textContent = l ? l.name : 'Pinned location';
+    // A scan candidate carries its own name ("Candidate 300 m W, 600 m S of ..."), as the nearby list and the assistant say it.
+    title.textContent = l ? l.name : site.kind === 'candidate' ? site.name : 'Pinned location';
     const approx = l && (l as Landing & { approx?: boolean }).approx;
     where.textContent = `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}`;
     facts.set('date', l ? `${formatDate(l.date)}, ${l.time} UTC` : null);

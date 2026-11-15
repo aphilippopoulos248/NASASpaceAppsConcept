@@ -11,13 +11,15 @@ import type { NearbyProgress } from './nearby';
 import { findBundledTable } from './sky';
 import { dsnInstant } from './dsn';
 import { outlookWith } from './outlook';
-import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, Outlook, OutlookOptions, SiteAnalysis, SkyEvent, StationInstant } from './types';
+import type { Blockage, ComparisonDiff, NearbyCandidate, NearbyOptions, Outlook, OutlookOptions, SiteAnalysis, SkyEvent, SkyTransition, StationInstant } from './types';
 import * as win from './window';
+import * as passages from './transitions';
 import type { WorkerReply, WorkerRequestBody, WorkerResult } from './worker';
 
 export { DEFAULT_NEARBY_OPTIONS, type NearbyProgress } from './nearby';
 export { DEFAULT_OUTLOOK_OPTIONS, SYNODIC_DAYS } from './outlook';
 export { skyAt } from './sky';
+export { TRANSITION_WORDS, eventText, transitionSummary, transitionText } from './transitions';
 
 /** Kept for callers that test for it: every entry point is implemented. */
 export class NotImplemented extends Error {
@@ -169,6 +171,17 @@ export function blockageAt(analysis: SiteAnalysis, body: 'sun' | 'earth', timeMs
 /** The next rise and set of each body after an instant, within the analysed window (null when none occurs in it). */
 export function nextEvents(analysis: SiteAnalysis, timeMs: number): Record<SkyEvent['type'], SkyEvent | null> {
   return win.nextEvents(analysis, timeMs);
+}
+
+/**
+ * Both ends of a rise or set (decision D-8): the passage of each body's disc through the terrain
+ * skyline that is in progress at an instant (start <= timeMs < end), or else the next one to start
+ * after it; null when there is none. Unlike nextEvents() it includes passages whose end lies beyond the
+ * analysed window (followed with the in-app model; see each instant's `inWindow`). Each event of
+ * `analysis.events` carries its own passage as `span`; every passage is in `analysis.transitions`.
+ */
+export function nextTransitions(analysis: SiteAnalysis, timeMs: number): Record<'sun' | 'earth', SkyTransition | null> {
+  return passages.nextTransitions(analysis, timeMs);
 }
 
 /**
