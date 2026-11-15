@@ -31,15 +31,22 @@ without downloading again.
 
 - **File:** `public/data/landings.json` — 28 successful soft landings, 1966 to March 2025.
 - **Fields:** name, program, country, landing date and time (UTC), latitude and longitude, crewed, region, summary,
-  and an `approx` flag on four sites whose position is uncertain (Luna 9, Luna 13, IM-1, IM-2).
-- **Provenance:** entered by hand during development from general knowledge, **not** copied from a single
-  published source.
-- **Verification so far:**
+  an `approx` flag on the two sites whose landers have not been found in LRO images (Luna 9, Luna 13), and per row
+  `sources` (where its position and its time come from, with citations and links) and, where a value could not be
+  confirmed, `unsourced`.
+- **Provenance:** entered by hand during development; every row checked against published sources on 2026-11-15
+  (task T-38), and corrected where they differed.
+- **Verification:**
   - *Country:* all 28 agree with the GCAT ownership record (dataset 2). The app shows a warning on any site
     where they disagree.
-  - *Coordinates:* Apollo 11 matches NASA's NSSDCA record (0.67416° N, 23.47314° E). The other 27 have not been
-    checked against an authoritative list.
-  - *Landing times:* used to compute the lighting at touchdown; not checked against a published source.
+  - *Coordinates:* 26 sites are the lander's measured position in the LROC catalogue of anthropogenic objects
+    (Wagner, R. V., et al. 2017, *Coordinates of anthropogenic features on the Moon*, Icarus 283, 92–103,
+    doi:10.1016/j.icarus.2016.05.011; the version in `public/data/sources/lroc-anthropogenic-objects.csv`, dataset 11),
+    each with the catalogue's method and stated uncertainty; for Apollo, the Lunar Module descent stage. Luna 9 and
+    Luna 13 keep NSSDCA's positions, uncertain by kilometres.
+  - *Landing times:* checked against NSSDCA, A. Siddiqi's *Beyond Earth* (NASA SP-2018-4041), CNSA/Xinhua, ISRO, JAXA,
+    NASA, Firefly and LROC; the citation of each is in the row. Three are not confirmed to the minute and are marked
+    `unsourced`: Luna 23 (only the date is published), Chandrayaan-3 and IM-2.
 - **Not included:** failed landings, impacts, and landings after March 2025.
 
 ## 2. Ownership record (GCAT)
@@ -116,7 +123,7 @@ without downloading again.
 ## 6. Terrain around each site
 
 - **Source:** NASA Planetary Data System, Geosciences Node, LRO LOLA archive
-  (<https://pds-geosciences.wustl.edu/lro/lro-l-lroc-5-rdr-v1/lrolol_1xxx/data/>):
+  (<https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/>):
   - `sldem2015/` — SLDEM2015 (LOLA combined with Kaguya stereo), 512 px per degree, about 59 m, 60° S to 60° N.
   - `lola_gdr/polar/` — LOLA polar stereographic DEMs: `ldem_60s_60m` (Chandrayaan-3, IM-1) and `ldem_80s_20m`
     (IM-2).
