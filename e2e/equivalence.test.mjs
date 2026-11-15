@@ -24,6 +24,13 @@ let srv, app, page;
  * (Not `framenavigated`: that also fires for the deep link's history.replaceState, which is no navigation.)
  */
 const navigations = [];
+/**
+ * performance.timeOrigin of the document openApp loaded. Its own `load` event can come after
+ * openApp has returned (the event waits for every image and data file), so a `load` of that same
+ * document is noted but is no new load; another timeOrigin is a new document (F-9).
+ */
+let firstDocument = null;
+const firstDocumentLoads = [];
 /** The test running when an event is recorded. */
 let running = '';
 beforeEach((t) => {
@@ -33,10 +40,15 @@ before(async () => {
   srv = await servers();
   app = await openApp(srv.deterministic);
   page = app.page;
+  firstDocument = await page.evaluate(() => performance.timeOrigin);
   page.on('load', async () => {
     const at = new Date().toISOString(), during = running;
     // "reload" (the document reloaded itself) or "navigate" (something loaded a URL), and from where.
-    const how = await page.evaluate(() => ({ type: performance.getEntriesByType('navigation')[0]?.type ?? null, referrer: document.referrer })).catch(() => null);
+    const how = await page.evaluate(() => ({ origin: performance.timeOrigin, type: performance.getEntriesByType('navigation')[0]?.type ?? null, referrer: document.referrer })).catch(() => null);
+    if (how && how.origin === firstDocument) {
+      firstDocumentLoads.push(`${at} the first document's own load event (it arrived after the app was ready), during "${during}"`);
+      return;
+    }
     navigations.push(`${at} the page loaded again (${how?.type ?? 'type unknown'}${how?.referrer ? `, from ${how.referrer}` : ''}): ${page.url()}, during "${during}"`);
   });
   page.on('crash', () => navigations.push(`${new Date().toISOString()} the page crashed, during "${running}"`));
@@ -771,15 +783,17 @@ describe('equivalence: assistant drawer and deep links', () => {
     }
   });
 
-  test('the page raised no errors during all of the above', SLOW, async (t) => {
-    for (const n of navigations) t.diagnostic(n);
+  test('the page raised no errors during all of the above', SLOW, async () => {
     assert.deepEqual(app.problems, []);
   });
 
-  // F-9 in docs/lunyx/actions.md: on the GPU the page has loaded itself again, at "/" and once per
-  // run at most, during a different test each time; nothing in the app navigates. The diagnostics
-  // above name the test and the kind of load. The mark comes off when the cause is found.
-  test('the page never reloaded or crashed', { ...SLOW, todo: 'F-9: an unexplained page load during the GPU runs; see the diagnostics' }, async () => {
+  // F-9 in docs/lunyx/actions.md: on the GPU a second "load" was seen at "/", at most once per run,
+  // in the first equivalence test when the test was named (09:33Z on 0de7e06, type "navigate", no
+  // referrer): the first document's own load event arriving after openApp had returned. Such an
+  // event is now told apart by performance.timeOrigin; any other document still fails here.
+  test('the page never reloaded or crashed', { ...SLOW, todo: 'F-9: under watch; the late load event of the first document is no longer counted' }, async (t) => {
+    for (const n of firstDocumentLoads) t.diagnostic(n);
+    for (const n of navigations) t.diagnostic(n);
     assert.deepEqual(navigations, [], 'the page navigated or crashed during the run');
   });
 });
