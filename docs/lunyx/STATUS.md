@@ -52,7 +52,7 @@ rest of the second round. Read section 4 before quoting any number from the app.
 
 | What | Note | Task |
 | --- | --- | --- |
-| Both ends of each sunrise and sunset on screen (decision D-8) | The science core gives both ends since `7cf48f5` (lunyx-science, T-31): `SiteAnalysis.transitions`, `SkyEvent.span`, Earth by any part of its disc. The screens still show one instant per event, labelled with which one it is ("Sun fully set") | T-47, T-48, T-49 |
+| Both ends of each sunrise and sunset in the compare panel (decision D-8) | The science core gives both ends since `7cf48f5` (lunyx-science, T-31): `SiteAnalysis.transitions`, `SkyEvent.span`, Earth by any part of its disc. Since `8988bd0` the globe (time scrubber, jump buttons, site card, `jumpToEvent`, `getAnalysis`; T-47) and the surface view (countdowns, time chart; T-48) show both ends, e.g. "Sun starts setting" and "Sun fully set", and Earth by its centre and by any part of its disc. The compare panel's A/B view, mission-window table and export still show one instant per event | T-49 |
 | Full assistant audit: capability inventory, UI/assistant equivalence tests, the multi-step browser scenario | With project `lunyx-experience`; every action it needs is on integration since `a958d6b` | T-16 |
 | End-to-end browser tests, screenshot review against the mockups, accessibility pass, final README | With project `lunyx-experience`. `docs/lunyx/SOURCES.md` and `docs/lunyx/AI-USE.md` are published (`0cc5553`); AI-USE.md section 8 waits for operator decisions and its section 2.1 is a draft | T-17 |
 | Historical mission trajectories; landing error ellipse | Not started. The error ellipse is struck out in the design and is lowest priority | T-24 |
