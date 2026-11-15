@@ -326,7 +326,11 @@ async function partSearch(app, step) {
 
   await step('Pin: site card values against the analysis', 'control', async ({ check, note }) => {
     await analysisSettled(page);
+    // The card loads the terrain under the pin itself, a moment after the analysis.
+    await page.waitForFunction(() => [...document.querySelectorAll('.site-card .sc-facts dt')].some((dt) => dt.textContent.trim() === 'Elevation' && /\d m/.test(dt.nextElementSibling?.textContent ?? '')), null, { timeout: 30_000 }).catch(() => note('The card still said "Loading…" for the elevation after 30 s.'));
     const [card, a, st] = [await readCard(page), await getAnalysis(page), await appState(page)];
+    const finest = a.provenance?.elevationData?.[0];
+    if (finest) check('Card: elevation data = the finest grid the analysis used (T-40 family when not)', card.facts['Elevation data'], finest.name, Boolean(card.facts['Elevation data']?.includes(`${finest.resolutionM} m grid`)));
     app.report.values.push({ profile: app.profile, where: 'pin card', card, analysis: { metrics: a.metrics, slope: a.slope, now: a.now, siteElevationM: a.siteElevationM, provenance: a.provenance?.elevationData } });
     note(`Card: ${card.title} ${card.where}; window "${card.winWhen}"; status "${card.winStatus}".`);
     check('Analysis state', a.state, 'ready', a.state === 'ready');

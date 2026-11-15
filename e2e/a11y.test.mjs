@@ -62,8 +62,11 @@ async function tabStops(page, max = 120) {
       const cs = getComputedStyle(el);
       const label = el.getAttribute('aria-label') || el.labels?.[0]?.textContent || el.textContent?.trim().slice(0, 40) || el.id || el.className;
       const hiddenBy = el.closest('[inert], [hidden], [aria-hidden="true"]');
+      // Which element this is, not only what it is called: two controls can share a name.
+      if (el.dataset.a11yStop === undefined) el.dataset.a11yStop = String((window.__a11yCount = (window.__a11yCount ?? 0) + 1));
       return {
-        key: `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className : ''}|${label}`,
+        key: `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className : ''}|${label}|${el.dataset.a11yStop}`,
+        name: `${el.tagName.toLowerCase()}|${label}`,
         label: `${el.tagName.toLowerCase()} "${label}"`,
         visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth,
         inHiddenRegion: Boolean(hiddenBy),
@@ -315,6 +318,16 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     }
     // The closed drawer is out of the tab order.
     assert.ok(!labels.some((l) => l.includes('Close the assistant') || l.includes('Message to the assistant')), 'the closed drawer is in the tab order');
+  });
+
+  // Finding A-5 (docs/lunyx/accessibility.md): the site-science section has two disclosures both
+  // named "Source and limits" (long-term averages and Diviner temperatures).
+  test('controls in one round of Tab have distinct names', { ...SLOW, todo: 'A-5 (site science, T-30): two disclosures are both named "Source and limits"' }, async () => {
+    const stops = await tabStops(page);
+    const byName = new Map();
+    for (const st of stops) byName.set(st.name, (byName.get(st.name) ?? 0) + 1);
+    const same = [...byName].filter(([, n]) => n > 1).map(([name, n]) => `${name} x${n}`);
+    assert.deepEqual(same, []);
   });
 
   test('text contrast in the panels meets WCAG AA over black space and over sunlit ground', SLOW, async () => {
