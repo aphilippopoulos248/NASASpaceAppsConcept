@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import type { SiteAnalysis } from '../../analysis/types';
-import { chartData, niceTicks, sampleAtTime, skylineAtAz, skylineRange, stateText, tableRows, thin, timeTicks, trackAzRange, type ChartData } from './chartModel';
+import { chartData, niceTicks, passageAt, sampleAtTime, skylineAtAz, skylineRange, stateText, tableRows, thin, timeTicks, trackAzRange, type ChartData } from './chartModel';
 import { testAnalysis } from './testFixture';
 
 let analysis: SiteAnalysis;
@@ -135,5 +135,35 @@ describe('lookups', () => {
     expect(stateText({ ...data.sun[0], visible: 0 })).toBe('hidden');
     expect(stateText({ ...data.earth[0], up: true })).toBe('in line of sight');
     expect(stateText({ ...data.earth[0], up: false })).toBe('hidden');
+  });
+});
+
+describe('passages in the time chart (D-8)', () => {
+  it('carries each passage of the analysis, clipped to the window, with the sunset among them', () => {
+    expect(data.passages.length).toBe((analysis.transitions ?? []).filter((t) => t.end.timeMs > data.startMs && t.start.timeMs < data.endMs).length);
+    const set = data.passages.find((p) => p.body === 'sun' && p.kind === 'set')!;
+    const span = (analysis.transitions ?? []).find((t) => t.body === 'sun' && t.kind === 'set')!;
+    expect(set.startMs).toBe(Math.max(data.startMs, span.start.timeMs));
+    expect(set.endMs).toBe(Math.min(data.endMs, span.end.timeMs));
+    expect(set.startKnown && set.endKnown).toBe(true);
+    for (const p of data.passages) {
+      expect(p.startMs).toBeGreaterThanOrEqual(data.startMs);
+      expect(p.endMs).toBeLessThanOrEqual(data.endMs);
+      expect(p.endMs).toBeGreaterThan(p.startMs);
+    }
+  });
+
+  it('finds the passage under way at an instant, and none outside it', () => {
+    const set = data.passages.find((p) => p.body === 'sun' && p.kind === 'set')!;
+    expect(passageAt(data, 'sun', (set.startMs + set.endMs) / 2)).toBe(set);
+    expect(passageAt(data, 'sun', set.startMs - 3_600_000)).toBeNull();
+    expect(passageAt(data, 'earth', (set.startMs + set.endMs) / 2)).toBeNull();
+    // Between its two ends some, but not all, of the disc shows in the samples.
+    const inside = data.sun.filter((s) => s.timeMs > set.startMs && s.timeMs < set.endMs);
+    expect(inside.length).toBeGreaterThan(0);
+    for (const s of inside) {
+      expect(s.visible).toBeGreaterThan(0);
+      expect(s.visible).toBeLessThan(1);
+    }
   });
 });
