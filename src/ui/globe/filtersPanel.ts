@@ -13,6 +13,7 @@ import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { mountMissionFilters } from '../filters';
 import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
+import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
@@ -152,7 +153,22 @@ export function mountFiltersPanel(region: HTMLElement): void {
   coverLegend.append(
     el('p', 'ly-note', 'Squares show where each elevation grid exists: three around the south pole (LRO LOLA polar grids) and one set around each of the 28 catalogued landing sites (SLDEM2015, LOLA and LROC NAC models). Everywhere else rests on the LOLA whole-Moon grid (1.9 km per sample); for a pin, a 60 m window is built on request when the elevation server can be reached. No north-polar grid is bundled.'),
   );
-  panel.append(reliefField, reliefNote, cover, coverLegend);
+  // Mapped ice targets (a science layer, not elevation data).
+  const ice = el('label', 'ly-check');
+  const iceBox = el('input');
+  iceBox.type = 'checkbox';
+  iceBox.addEventListener('change', () => void runAction('showIceTargets', { show: iceBox.checked }));
+  ice.append(iceBox, el('span', undefined, 'Show mapped ice targets'));
+  const iceLegend = el('div', 'ly-legend fp-coverlegend');
+  const iceRow = el('div', 'ly-legend-row');
+  const iceSwatch = el('span', 'ly-swatch fp-outline');
+  iceSwatch.style.borderColor = ICE_COLOUR;
+  iceRow.append(iceSwatch, el('span', undefined, 'Permanently shaded regions with water-ice signatures'));
+  iceLegend.append(
+    iceRow,
+    el('p', 'ly-note', 'South polar region only: 169 regions of interest, outlined about 0.3 km wider than the listed shadowed areas. Targets for study, not confirmed deposits. Lemelin et al. 2021 (Zenodo 4646092), CC BY 4.0. Distances from a site are in its card.'),
+  );
+  panel.append(reliefField, reliefNote, cover, coverLegend, ice, iceLegend);
 
   // ---- Lighting ----
   panel.append(el('h3', 'ly-section-title', 'Sunlight on the globe'));
@@ -282,6 +298,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
     reliefNote.textContent = `${data}${rule}`;
     coverBox.checked = d.coverage;
     coverLegend.hidden = !d.coverage;
+    iceBox.checked = d.iceTargets;
+    iceLegend.hidden = !d.iceTargets;
   };
   let shownAverages = globeDisplay.getLive().averages;
   globeDisplay.subscribe(() => {

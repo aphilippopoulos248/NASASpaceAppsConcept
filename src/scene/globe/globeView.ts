@@ -6,6 +6,7 @@ import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
+import { iceTargetLayer } from '../../core/siteScience';
 import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
@@ -21,6 +22,7 @@ import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
 import { CoverageOutlines, windowClasses } from './coverageOutlines';
 import { globeDisplay, registerDisplayActions } from './displayState';
+import { IceOutlines } from './iceOutlines';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
@@ -65,6 +67,9 @@ export class GlobeView {
   private relief: ReliefGlobe | null = null;
   /** Outlines of the elevation windows around the landing sites (shown with the coverage display). */
   private coverage: CoverageOutlines | null = null;
+  /** Outlines of the mapped ice-bearing shadowed regions, loaded the first time they are asked for. */
+  private ice: IceOutlines | null = null;
+  private iceRequested = false;
   /** Poleward of about 80S the surface is drawn from the polar elevation layers, with real Sun shadows. */
   private readonly polar = new PolarCloseUp(this.uniforms);
   /** The multi-year average maps, as textures for the avg-* overlays. */
@@ -195,7 +200,28 @@ export class GlobeView {
     const s = store.get();
     setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage);
     if (this.coverage) this.coverage.root.visible = globeDisplay.get().coverage;
+    this.applyIce();
     this.uniforms.uBand.value.set(s.sunElMinDeg, s.sunElMaxDeg);
+  }
+
+  /** Shows or hides the ice-target outlines; the database is read the first time they are shown. */
+  private applyIce(): void {
+    const show = globeDisplay.get().iceTargets;
+    if (this.ice) this.ice.root.visible = show;
+    if (!show || this.iceRequested) return;
+    this.iceRequested = true;
+    iceTargetLayer().then(
+      (layer) => {
+        this.ice = new IceOutlines(layer);
+        this.ice.root.visible = globeDisplay.get().iceTargets;
+        this.scene.add(this.ice.root);
+        this.placed.version = -1; // place them with the markers
+      },
+      (err) => {
+        this.iceRequested = false;
+        console.warn('The ice-target database could not be read', err);
+      },
+    );
   }
 
   /** Where each class of elevation data exists, for the coverage outlines (from the terrain module's own list). */
@@ -338,6 +364,7 @@ export class GlobeView {
     this.updateRelief(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
     if (this.coverage?.root.visible) this.coverage.update(cam);
+    if (this.ice?.root.visible) this.ice.update(cam);
     const pinned = store.get().site;
     this.pin.visible = pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
     if (this.pin.visible) this.pin.scale.setScalar(cam.position.distanceTo(this.pin.position) * 0.006);
@@ -376,6 +403,7 @@ export class GlobeView {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
+      this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {

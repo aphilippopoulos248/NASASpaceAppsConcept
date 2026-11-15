@@ -12,7 +12,7 @@ describe('globe display actions', () => {
   it('sets the relief exaggeration and the coverage outlines, and reports what is drawn', async () => {
     resetActions();
     registerDisplayActions();
-    expect(globeDisplay.get()).toEqual({ reliefFactor: DEFAULT_RELIEF, coverage: false });
+    expect(globeDisplay.get()).toEqual({ reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false });
     let heard = 0;
     const off = globeDisplay.subscribe(() => heard++);
 
@@ -32,9 +32,11 @@ describe('globe display actions', () => {
     expect(await runAction('setReliefExaggeration', { factor: 31 })).toMatchObject({ ok: false, error: 'params.factor must be at most 30' });
     expect(await runAction('showCoverage', { show: true })).toMatchObject({ ok: true, result: { coverageShown: true } });
     expect(globeDisplay.get().coverage).toBe(true);
+    expect(await runAction('showIceTargets', { show: true })).toMatchObject({ ok: true, result: { iceTargetsShown: true, coverageShown: true } });
+    expect(globeDisplay.get().iceTargets).toBe(true);
     expect(JSON.parse(JSON.stringify(displaySummary()))).toEqual(displaySummary());
     off();
-    globeDisplay.set({ reliefFactor: DEFAULT_RELIEF, coverage: false });
+    globeDisplay.set({ reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false });
     resetActions();
   });
 

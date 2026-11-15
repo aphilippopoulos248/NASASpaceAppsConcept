@@ -11,6 +11,7 @@ import { analysis } from '../../core/analysisStore';
 import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { spanText } from '../../core/scenario';
+import { averagesReadout, dsnReadout, iceReadout, type AveragesReadout, type IceReadout } from '../../core/siteScience';
 import { store } from '../../core/store';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
@@ -105,6 +106,14 @@ export function mountSiteCard(region: HTMLElement): void {
   winStatus.setAttribute('role', 'status');
   const winNote = el('p', 'ly-note sc-winnote');
 
+  // Site science: readouts from the merged data layers, each with its source and caveat beside it.
+  const sciTitle = el('h3', 'ly-section-title', 'Site science');
+  const sci = el('div', 'sc-science');
+  const dsnBox = el('div', 'sc-sci-block');
+  const avgBox = el('div', 'sc-sci-block');
+  const iceBox = el('div', 'sc-sci-block');
+  sci.append(dsnBox, avgBox, iceBox, el('p', 'ly-note', 'Diviner seasonal temperatures and ShadowCam imagery are not packaged in this build.'));
+
   const summary = el('p', 'sc-summary');
   const links = el('div', 'sc-links');
   const quickmap = el('a', undefined, 'Open in QuickMap ↗');
@@ -120,7 +129,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const index = el('span', 'ly-label ly-value');
   const next = button('Later →', 'ly-btn ly-btn--small', () => step(1));
   nav.append(prev, index, next);
-  body.append(facts.dl, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, summary, links, credit, nav);
+  body.append(facts.dl, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, sciTitle, sci, summary, links, credit, nav);
 
   // ---------- footer: the actions ----------
   const foot = el('footer', 'sc-foot');
@@ -205,6 +214,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const renderAnalysis = () => {
     const st = analysis.get('current');
     const want = analysis.wanted('current');
+    renderDsn(); // station geometry comes with the same analysis
     for (const key of Object.keys(win.rows)) win.set(key, null);
     winNote.textContent = '';
     if (!want) {
@@ -232,6 +242,83 @@ export function mountSiteCard(region: HTMLElement): void {
     win.set('slope', Number.isFinite(a.slope.slopeDeg) ? `${deg(a.slope.slopeDeg)} over ${Math.round(a.slope.baselineM)} m` : 'not available: no elevation data here');
     winNote.textContent = 'Sunlight is the time-averaged visible part of the Sun\'s disc. Earth in view is geometric line of sight to Earth\'s centre, not a radio link. Both are measured against the terrain skyline.';
     if (store.get().site) renderSky(store.get().site!);
+  };
+
+  // ---------- site science ----------
+  const block = (box: HTMLElement, heading: string, rows: [string, string][], notes: string[], more?: { summary: string; lines: string[] }) => {
+    const dl = el('dl', 'ly-kv');
+    for (const [k, v] of rows) dl.append(el('dt', undefined, k), el('dd', undefined, v));
+    box.replaceChildren(el('h4', 'sc-sci-head', heading), ...(rows.length ? [dl] : []), ...notes.map((n) => el('p', 'ly-note', n)));
+    if (more?.lines.length) {
+      const d = el('details', 'sc-more');
+      d.append(el('summary', undefined, more.summary), ...more.lines.map((n) => el('p', 'ly-note', n)));
+      box.append(d);
+    }
+  };
+  const gap = (c: { longestGapH: number | null; gapRunsIntoWindowEdge: boolean }) =>
+    c.longestGapH === null ? 'gap not available' : c.longestGapH < 0.05 ? 'no gap' : `longest gap ${formatDuration(c.longestGapH)}${c.gapRunsIntoWindowEdge ? ' or more' : ''}`;
+  const renderDsn = () => {
+    const want = analysis.wanted('current');
+    const st = analysis.get('current');
+    const r = dsnReadout(st.state !== 'idle' && want && st.scenario.id !== want.id ? { state: 'loading', scenario: want } : st);
+    if (!r.available) {
+      block(dsnBox, 'Deep Space Network stations', [], [r.reason]);
+      return;
+    }
+    const line = (c: { pctOfWindow: number | null; longestGapH: number | null; gapRunsIntoWindowEdge: boolean }) => `${c.pctOfWindow === null ? 'not available' : `${c.pctOfWindow.toFixed(1)} % of the window`}, ${gap(c)}`;
+    block(
+      dsnBox,
+      `Deep Space Network stations, ${spanText(r.windowDurationH, true)} window`,
+      [...r.stations.map((s): [string, string] => [s.complex.split(',')[0], line(s.receive)]), ['Any station', line(r.anyStation.receive)]],
+      [`In view for receiving (station above its ${r.stations[0]?.receiveLimitDeg ?? ''}° limit and above this site's terrain skyline). ${r.meaning}`],
+      { summary: 'Stations, limits and assumptions', lines: [...r.stations.map((s) => `${s.name}: transmit ${line(s.transmit)} (limit ${s.transmitLimitDeg}°).`), ...r.assumptions] },
+    );
+  };
+  const renderAverages = (r: AveragesReadout) => {
+    if (!('sunlight' in r) || !r.sunlight || !r.earthVisibility) {
+      block(avgBox, 'Long-term averages', [], ['reason' in r && r.reason ? r.reason : 'Not available.']);
+      return;
+    }
+    const value = (x: { available: boolean; pctOfTime: number | null; neverInModel: boolean; cellM: number | null }) =>
+      !x.available || x.pctOfTime === null ? null : x.neverInModel ? `never (0 %), ${x.cellM} m cell` : `${x.pctOfTime} % of the time, ${x.cellM} m cell`;
+    const sun = value(r.sunlight), earth = value(r.earthVisibility);
+    if (!sun && !earth) {
+      block(avgBox, 'Long-term averages (18.6 years)', [], [r.sunlight.text]);
+      return;
+    }
+    block(
+      avgBox,
+      'Long-term averages (18.6 years, not this date)',
+      [['Any sunlight', sun ?? 'not mapped here'], ['Any of Earth in view', earth ?? 'not mapped here']],
+      ['Share of time with any part of the disc above the terrain horizon, averaged over 18.6 years of a model (NASA PGDA product 69). Not the mission-window figures above, and not a radio link.'],
+      { summary: 'Source and limits', lines: [r.averagingPeriod, ...r.caveats, r.citation] },
+    );
+  };
+  const renderIce = (r: IceReadout) => {
+    if (!r.available) {
+      block(iceBox, 'Mapped ice targets', [], [r.reason]);
+      return;
+    }
+    if (!r.nearest.length) {
+      block(iceBox, 'Mapped ice targets', [], [r.note ?? 'None nearby.']);
+      return;
+    }
+    block(
+      iceBox,
+      'Nearest mapped ice targets',
+      r.nearest.map((t): [string, string] => [t.label, t.insideOutline ? 'inside its outline' : `${t.distanceText}, bearing ${t.bearingDeg}°`]),
+      [`${r.distanceMeaning} ${r.whatTheseAre}`],
+      { summary: 'Credit and data notes', lines: [r.credit, ...r.dataNotes] },
+    );
+  };
+  let scienceToken = 0;
+  const renderScience = (site: SiteRef) => {
+    const token = ++scienceToken;
+    renderDsn();
+    block(avgBox, 'Long-term averages', [], ['Reading the maps…']);
+    block(iceBox, 'Mapped ice targets', [], ['Reading the database…']);
+    void averagesReadout(site).then((r) => token === scienceToken && renderAverages(r));
+    void iceReadout(site, 3).then((r) => token === scienceToken && renderIce(r));
   };
 
   // ---------- elevation and the data behind it ----------
@@ -318,6 +405,7 @@ export function mountSiteCard(region: HTMLElement): void {
     }
     renderSky(site);
     renderAnalysis();
+    renderScience(site);
     void renderTerrain(site);
   };
 

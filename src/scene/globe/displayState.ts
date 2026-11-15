@@ -15,6 +15,8 @@ export interface GlobeDisplay {
   reliefFactor: number;
   /** Outline where each class of elevation data exists. */
   coverage: boolean;
+  /** Outline the mapped ice-bearing permanently shaded regions (south polar region). */
+  iceTargets: boolean;
 }
 
 export interface GlobeLive {
@@ -33,7 +35,7 @@ export interface GlobeLive {
 type Listener = () => void;
 
 class DisplayStore {
-  private display: GlobeDisplay = { reliefFactor: DEFAULT_RELIEF, coverage: false };
+  private display: GlobeDisplay = { reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false };
   private live: GlobeLive = { reliefNow: 0, reliefPpd: 0, reliefProblem: null, polar: null, averages: { state: 'off' } };
   private readonly listeners = new Set<Listener>();
 
@@ -47,7 +49,7 @@ class DisplayStore {
 
   set(patch: Partial<GlobeDisplay>): void {
     const next = { ...this.display, ...patch };
-    if (next.reliefFactor === this.display.reliefFactor && next.coverage === this.display.coverage) return;
+    if (next.reliefFactor === this.display.reliefFactor && next.coverage === this.display.coverage && next.iceTargets === this.display.iceTargets) return;
     this.display = next;
     this.emit();
   }
@@ -93,6 +95,7 @@ export function displaySummary() {
     reliefDataSamplesPerDegree: l.reliefPpd || null,
     ...(l.reliefProblem && { reliefProblem: l.reliefProblem }),
     coverageShown: d.coverage,
+    iceTargetsShown: d.iceTargets,
     polarCloseUp: l.polar ? { elevationGridM: l.polar.resolutionM, sunShadows: l.polar.shadows, note: l.polar.note } : null,
     averageMaps:
       l.averages.state === 'ready'
@@ -120,6 +123,18 @@ export function registerDisplayActions(): void {
       run: ({ factor }) => {
         if (!Number.isFinite(factor)) throw new ActionError('The factor must be a number.');
         globeDisplay.set({ reliefFactor: factor });
+        return displaySummary();
+      },
+    }),
+    defineAction<{ show: boolean }, unknown>({
+      name: 'showIceTargets',
+      title: 'Show mapped ice targets',
+      description:
+        'Outlines on the globe the 169 permanently shaded regions with water-ice signatures mapped in the south polar region (Lemelin et al. 2021, CC BY 4.0). They are regions of interest, drawn about 0.3 km wider than the listed shadowed areas, not confirmed deposits. Use nearestIceTargets or getSiteScience for distances from a site.',
+      effect: 'command',
+      params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the outlines.' } }, required: ['show'] },
+      run: ({ show }) => {
+        globeDisplay.set({ iceTargets: show });
         return displaySummary();
       },
     }),
