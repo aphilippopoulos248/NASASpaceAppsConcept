@@ -162,6 +162,8 @@ export interface FakeAppOptions {
   eventSpans?: boolean;
   /** getState.globeDisplay.viewTarget: where the view was last asked to centre; the drawn centre stops 0.1° short of a pole, as the globe does. */
   viewTarget?: boolean;
+  /** T-46: the solar band at its default (0 to 90 deg) is no requirement: `required: false`, the "met" fields null, a `note`. Without it, the earlier core's `metForWholeWindow: false`. */
+  bandRule?: boolean;
 }
 
 /** As public/data/presets.json (ids, titles, sites, views). */
@@ -180,7 +182,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -569,7 +571,13 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
             ...(options.eventSpans && { nextPassages: { sun: passage('sun'), earth: passage('earth') } }),
             ...(options.eventLabels && { eventDefinitions: Object.fromEntries(Object.entries(EVENT_INFO).map(([k, v]) => [k, `${v.label}: ${v.instant}.`])) }),
             requirements: {
-              sunElevationBand: { minDeg: state.sunBand.min, maxDeg: state.sunBand.max, windowMinSunElDeg: -1.2, windowMaxSunElDeg: 4.6, metForWholeWindow: state.sunBand.min <= -1.2 && state.sunBand.max >= 4.6 },
+              sunElevationBand: (() => {
+                const required = state.sunBand.min !== 0 || state.sunBand.max !== 90;
+                const band = { minDeg: state.sunBand.min, maxDeg: state.sunBand.max, windowMinSunElDeg: -1.2, windowMaxSunElDeg: 4.6, metForWholeWindow: state.sunBand.min <= -1.2 && state.sunBand.max >= 4.6 };
+                // As src/core/requirements.ts NO_SUN_BAND_TEXT.
+                if (!options.bandRule) return band;
+                return required ? { required, ...band } : { required, ...band, metForWholeWindow: null, note: 'No solar elevation band is required (the Filters panel is at its default, 0° to 90°), so there is nothing to check.' };
+              })(),
               maxEarthGap: state.maxEarthGapH === null ? null : { limitH: state.maxEarthGapH, ...(options.eventSpans && { basis: "Earth's centre" }), longestEarthGapH: m.longestEarthGapH, met: m.longestEarthGapH <= state.maxEarthGapH },
             },
             provenance: { ephemeris: 'model', elevationData: [{ name: 'LOLA 60 m polar grid', resolutionM: 60, fromKm: 0, toKm: 30 }, { name: 'LOLA whole-Moon grid', resolutionM: 1895, fromKm: 30, toKm: 400 }], assumptions: [] },

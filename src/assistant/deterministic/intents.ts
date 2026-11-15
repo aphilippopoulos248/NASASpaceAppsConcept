@@ -41,7 +41,7 @@ function metricsText(a: Json): string {
   ].join(', ');
 }
 
-/** The Filters panel's solar band when nobody has changed it (src/ui/compare/model.ts DEFAULT_SUN_BAND): no requirement. */
+/** The Filters panel's solar band when nobody has changed it (src/core/requirements.ts DEFAULT_SUN_BAND): no requirement. For builds before T-46's `required`. */
 const defaultSunBand = (band: Json): boolean => num(band, 'minDeg') === 0 && num(band, 'maxDeg') === 90;
 
 function warningsText(a: Json): string {
@@ -1087,10 +1087,13 @@ const questions: Intent = (step) => {
       const band = at(a, 'requirements.sunElevationBand');
       if (isObject(band)) {
         const lo = num(band, 'windowMinSunElDeg'), hi = num(band, 'windowMaxSunElDeg');
-        if (defaultSunBand(band)) {
-          // Finding Q-5: the core reports the default 0 to 90 deg as a band the Sun leaves whenever it
-          // goes below the horizontal. Nobody asked for that band: say so, as the compare panel does.
-          lines.push(`No solar elevation band is set (the Filters default, 0° to 90°, means no requirement).${lo !== undefined && hi !== undefined ? ` The Sun's elevation ranges from ${degrees(lo)} to ${degrees(hi)} during the window${lo < 0 ? ', so it goes below the horizontal' : ''}.` : ''}`);
+        // The default 0 to 90 deg is no requirement (finding Q-5). From T-46 the core says so itself
+        // (`required: false`, with a `note`); before it, it reported that default band as left
+        // whenever the Sun went below the horizontal, so the band's values decide there.
+        const unset = band.required === false || (band.required === undefined && defaultSunBand(band));
+        if (unset) {
+          const range = lo !== undefined && hi !== undefined ? ` The Sun's elevation ranges from ${degrees(lo)} to ${degrees(hi)} during the window${lo < 0 ? ', so it goes below the horizontal' : ''}.` : '';
+          lines.push(`${str(band, 'note') ?? 'No solar elevation band is set (the Filters default, 0° to 90°, means no requirement).'}${range}`);
         } else if (band.metForWholeWindow === false) {
           lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(lo)} to ${degrees(hi)}.`);
         }

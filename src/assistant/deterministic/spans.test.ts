@@ -150,12 +150,24 @@ describe('deterministic mode: the default solar band is no requirement (finding 
     installFakeApp(ALL_ACTIONS);
   });
 
-  it('does not report a band failure while the band is the default 0° to 90°', async () => {
+  it('says what the core says while the band is the default 0° to 90° (T-46: `required: false`)', async () => {
     const e = engine();
     await e.reply('go to IM-2');
     const r = await e.reply('metrics');
-    // The core reports the default band as not met whenever the Sun goes below the horizontal.
-    expect(lastResult('getAnalysis').requirements.sunElevationBand).toMatchObject({ minDeg: 0, maxDeg: 90, metForWholeWindow: false });
+    const band = lastResult('getAnalysis').requirements.sunElevationBand;
+    expect(band).toMatchObject({ required: false, minDeg: 0, maxDeg: 90, metForWholeWindow: null });
+    expect(r.text).not.toContain('leaves the required elevation band');
+    expect(r.text).toContain(`${band.note} The Sun's elevation ranges from -1.2° to 4.6° during the window, so it goes below the horizontal.`);
+  });
+
+  it('does not report a band failure on a core before T-46 either, which calls the default band "not met"', async () => {
+    installFakeApp({ ...ALL_ACTIONS, bandRule: false });
+    const e = engine();
+    await e.reply('go to IM-2');
+    const r = await e.reply('metrics');
+    const band = lastResult('getAnalysis').requirements.sunElevationBand;
+    expect(band.required).toBeUndefined();
+    expect(band).toMatchObject({ minDeg: 0, maxDeg: 90, metForWholeWindow: false });
     expect(r.text).not.toContain('leaves the required elevation band');
     expect(r.text).toContain("No solar elevation band is set (the Filters default, 0° to 90°, means no requirement). The Sun's elevation ranges from -1.2° to 4.6° during the window, so it goes below the horizontal.");
   });
@@ -164,8 +176,9 @@ describe('deterministic mode: the default solar band is no requirement (finding 
     const e = engine();
     await e.reply('go to IM-2; sun elevation between 0 and 60');
     const r = await e.reply('metrics');
+    expect(lastResult('getAnalysis').requirements.sunElevationBand).toMatchObject({ required: true, metForWholeWindow: false });
     expect(r.text).toContain('The Sun leaves the required elevation band (0.0° to 60.0°) during the window: it ranges from -1.2° to 4.6°.');
-    expect(r.text).not.toContain('No solar elevation band is set');
+    expect(r.text).not.toMatch(/No solar elevation band is (set|required)/);
   });
 });
 

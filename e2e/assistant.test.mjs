@@ -90,11 +90,11 @@ describe('assistant: deterministic mode (server without a model)', () => {
     // Earth by any part of its disc (T-47), named apart from Earth's centre.
     assert.ok(reply.text.includes(`any part of Earth's disc in view ${f1(a.metrics.earthAnyPct)} %, longest spell with Earth's whole disc hidden ${f1(a.metrics.longestEarthAnyGapH)} h`), reply.text);
     assert.ok(reply.text.includes(`slope ${f1(a.slope.slopeDeg)}°`), reply.text);
-    // Finding Q-5: the default 0° to 90° band is no requirement, whatever the core's metForWholeWindow says.
+    // Finding Q-5: the default 0° to 90° band is no requirement (T-46: `required: false` and a note); the reply says the core's note.
     const band = a.requirements.sunElevationBand;
-    assert.deepEqual([band.minDeg, band.maxDeg], [0, 90]);
+    assert.deepEqual([band.required, band.minDeg, band.maxDeg, band.metForWholeWindow], [false, 0, 90, null]);
     assert.ok(!reply.text.includes('leaves the required elevation band'), reply.text);
-    assert.ok(reply.text.includes(`No solar elevation band is set (the Filters default, 0° to 90°, means no requirement). The Sun's elevation ranges from ${f1(band.windowMinSunElDeg)}° to ${f1(band.windowMaxSunElDeg)}° during the window`), reply.text);
+    assert.ok(reply.text.includes(`${band.note} The Sun's elevation ranges from ${f1(band.windowMinSunElDeg)}° to ${f1(band.windowMaxSunElDeg)}° during the window`), reply.text);
     assert.match(reply.text, /not a guarantee of a working radio link/);
     assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
     // The question changed nothing: only queries ran.
