@@ -3,10 +3,11 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the tree at `5dce26c`: `am/lunyx-experience/integration` at `b7595e9`
-  merged with `am/lunyx/integration` at `9f949df` (the published feature set with the mission
-  presets of T-22, the T-37 notices and the T-38 landing sources), plus this task's documents;
-  checked on 2026-11-15 (UTC).
+- **State described:** the tree at `58843c6`: `am/lunyx-experience/integration` at `4a36c4c`
+  merged with `am/lunyx/integration` at `bbd2294` (the published feature set with the mission
+  presets, the T-37 notices, the T-38 landing sources, the T-39 flags, the T-40 downloads, the
+  T-43 coordinate entry and all four of the science project's deliveries), plus this task's
+  documents; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
   for the operator to approve (section 5). Items that could not be established are in section 8.
 - **Who wrote this:** an AI agent (Claude, hub handle @submission) from the repository, its git
@@ -106,13 +107,13 @@ in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `5dce26c` the history has 261 commits:
+At `58843c6` the history has 392 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 134 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 133 (70 "Claude Fable 5.2", 63 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 200 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 199 (71 "Claude Fable 5.2", 128 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
 | 10 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 8: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix); AI status not recorded (open item L4) |
-| 117 merge commits | 42 | 75 (43 by the hub's integration bot, 1 GitHub pull-request merge, 29 by the local account, 2 by the teammate) |
+| 182 merge commits | 56 | 126 (77 by the hub's integration bot, 1 GitHub pull-request merge, 46 by the local account, 2 by the teammate) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -125,9 +126,9 @@ committed screenshots were taken by agents with headless Chromium.
 | Idea, screens, feature list | The team: design document and mockups | `docs/reference/Lunyx-design.pdf`, `globe.jpg`, `surface.jpg`, `team-doc.txt`. The PDF and mockups went into git in the bootstrap commit `b923462` (local `main`, 2026-11-14 14:36 UTC-5) and onto the published history in `2116471` (14:43); the teammate's first app commit `4ab3892` (14:39) came separately from GitHub. Whether an AI tool helped draft any part of the documents is not recorded (open item L11) |
 | App code (`src/`, `index.html`, styles), server (`server/`) | AI agents, under human direction | Commit trailers (2.2); the hub's task records |
 | Data-processing scripts (`scripts/`) | AI agents; `make-surface-detail.mjs`, `fetch-gcat-landers.mjs` and `fetch-site-areas.mjs` arrived in teammate commits without a trailer | Commit trailers |
-| Tests, browser tests, validation scripts and fixtures | AI agents. The "independent" validation (T-18, T-26) was done by a separate AI agent that did not use the app's code; it is not a human or NASA review | `tests/fixtures/**`, `docs/lunyx/validation.md` |
+| Tests, browser tests, validation scripts and fixtures | AI agents. The "independent" validation (T-18, T-26 and T-34 in the original project, T-3 in the science project) was done by separate AI agent sessions that did not read the app's implementation: they called its public entry points and, where a stated rule had to be reproduced (the T-32 edge easing), worked from its written description. They ran on the same kind of AI model that wrote the app, so the checks are independent of the app's code, not of the model. It is not a human or NASA review | `tests/fixtures/**` (the third round in `tests/fixtures/validation/science-validation/`), `docs/lunyx/validation.md` |
 | Documentation (`docs/lunyx/**`, the data READMEs, this file) | AI agents | Commit trailers |
-| Screenshots (`docs/lunyx/handover/screens/`) | Captured by AI agents from the running app | Commits with trailers; section 4, group A23 |
+| Screenshots (`docs/lunyx/handover/screens/`, `docs/lunyx/screenshots/`) | Captured by AI agents from the running app | Commits with trailers; section 4, groups A23 and A32 |
 | Decisions and direction | The operator (team member); the AI coordinator agents recorded the technical decisions | Operator decisions D-1, D-2, D-6 and D-7 of the original project and the operator's messages; D-3, D-4, D-5 and D-8 there and D-1 to D-3 here were recorded by coordinator agents |
 
 ### 2.4 What AI was not used for (as far as checked)
@@ -135,8 +136,11 @@ committed screenshots were taken by agents with headless Chromium.
 - No code in the repository calls an image, video, speech-synthesis or other generative-media
   service (searched all code and configuration files for the usual APIs and service names;
   none found).
-- None of the 114 images in the repository carries EXIF, XMP, C2PA or PNG text metadata, so none
-  carries a generator's signature (absence of metadata is not proof by itself).
+- None of the 149 images in the repository carries EXIF, XMP or C2PA metadata, so none carries a
+  generator's signature (absence of metadata is not proof by itself). The only embedded data are
+  colour profiles (ICC) in 23 JPEG screenshots under `docs/lunyx/handover/screens/` and, in two
+  PNG screenshots there (`t33-scrubber-1440.png`, `t42-stars-note.png`), PNG text chunks that
+  hold only their creation and modification times.
 - Every image's origin is traced in section 4 to a NASA or partner source, to a script in this
   repository, to a capture of the app, or to the team's mockups, except the two close-up
   textures (open item L2).
@@ -178,9 +182,9 @@ the operator; relayed through @coordinator, not patched here:
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `5dce26c` that is an image, texture, document image or data
-file: everything except source code, configuration and Markdown. **411 files, 165.3 MB**: 122
-images (JPEG, PNG, WebP), 1 PDF, 288 data and text files. Each was checked as stated in the
+**Scope:** every tracked file at `58843c6` that is an image, texture, document image or data
+file: everything except source code, configuration and Markdown. **491 files, 170.8 MB**: 149
+images (JPEG, PNG, WebP), 1 PDF, 341 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
 
 **Classes used:**
@@ -196,7 +200,8 @@ images (JPEG, PNG, WebP), 1 PDF, 288 data and text files. Each was checked as st
   third-party notices (A29), which a script assembles from the packages' licence texts. At
   run time the app generates rocks, small craters and sub-metre texture (labelled "generated
   detail" on screen, `src/scene/surface/assets.ts`) and the stars behind the globe (2 500 random
-  points, `createStars` in `src/scene/globe.ts`: decoration, not a star map, and not labelled).
+  points, `createStars` in `src/scene/globe.ts`: decoration, not a star map; since the original
+  team's T-42 the globe's relief chip says "Background stars are decorative").
 - **AI, AI-generated media**: an image, video or audio file produced by a generative AI model.
   **No file is confirmed in this class**; the close-up textures (A11) are not established.
 - **A, written by an AI agent**: a data or configuration file that a coding agent wrote
@@ -236,22 +241,23 @@ the file (section 2), which the guide asks to acknowledge for code and data.
 | A19 | `scripts/nac-dtm-candidates.json` | 1 | 12.1 kB | D | Built from the PDS archive's file listing (S17) | Commit `4ab3892` | As A4 |
 | A20 | `src/analysis/__fixtures__/horizons-{topo,dsn}-check.json` | 2 | 0.11 MB | C | JPL Horizons → `scripts/fetch-horizons-{topo,dsn}-check.mjs` | Commits `5763608`, `30dd8c9` | As A12 |
 | A21 | `tests/fixtures/horizons/**` | 59 | 1.26 MB | V | Horizons raw outputs, parsed tables, checker results, SPICE cross-check results (SOURCES section 5) | Retrieval log and README in the folder | Checking code written by an AI agent (@ephemeris-check) |
-| A22 | `tests/fixtures/validation/**` | 142 | 6.13 MB | V | Horizons outputs, the app's outputs before and after fixes, the validator's results, quotations of published mission facts, a copy of the ALSJ Sun and Earth table | `sources.json` lists every quotation with URL | As A21 |
-| A23 | `docs/lunyx/handover/screens/*` | 74 | 13.11 MB | S | Captures of the app (globe, overlays, site card, compare panel, nearby list, window table and outlook, mission presets including the eclipse, surface view with key metrics and skyline chart, assistant in deterministic mode) | All 74 viewed: app interface and rendered data only, no logos; no metadata | Captured by AI agents; nothing generated by an image model |
+| A22 | `tests/fixtures/validation/**` | 195 | 8.66 MB | V | Horizons outputs, the app's outputs before and after fixes, the validator's results, quotations of published mission facts, a copy of the ALSJ Sun and Earth table, and the science project's third round (`science-validation/`) | `sources.json` lists every quotation with URL | As A21 |
+| A23 | `docs/lunyx/handover/screens/*` | 79 | 13.68 MB | S | Captures of the app (globe, overlays, site card, compare panel, nearby list, window table and outlook, mission presets including the eclipse, surface view with key metrics and skyline chart, assistant in deterministic mode) | All 79 viewed: app interface and rendered data only, no logos; no EXIF, XMP or C2PA (23 carry an ICC colour profile, two PNGs their creation time) | Captured by AI agents; nothing generated by an image model |
 | A24 | `docs/reference/Lunyx-design.pdf`, `globe.jpg`, `surface.jpg` | 3 | 2.65 MB | H | The team's design document (Google Docs export) and mockups: hand-drawn annotations over pasted third-party screenshots | Viewed page by page; no metadata in the JPEGs | Not AI-generated as far as checked; the PDF's "Transcription" section reads like an automatic speech-to-text transcript (my reading; L11). Contains third-party images and NASA posters with the insignia (section 6, L9) |
 | A26 | `public/data/sources/gcat-landers.json` | 1 | 13.1 kB | K | GCAT catalogue extract, values unchanged (SOURCES S18) → `scripts/fetch-gcat-landers.mjs` | Licence and citation read at planet4589.org; version recorded in the file | Script from a teammate commit without trailer (L4) |
 | A27 | `public/data/sources/lroc-anthropogenic-objects.csv` | 1 | 21.0 kB | K | LROC measured hardware positions (SOURCES S19) → `scripts/fetch-site-areas.mjs` | Byte-identical to the archive's current file | As A26 |
 | A28 | `public/data/sources/site-areas.json` | 1 | 34.3 kB | D | Convex hulls of A27 and traverse maps (SOURCES S20) → `scripts/fetch-site-areas.mjs` | Script and sources read | As A26 |
-| A29 | `public/licences/THIRD-PARTY-NOTICES.txt` | 1 | 16.2 kB | P | Licence texts of the shipped packages, assembled by `scripts/build-licences.mjs` (T-37) | Read; `src/licences.test.ts` checks it is current | Script written by an AI agent (commit `b4a2648`, "Claude Opus 5.5" trailer); the licence texts are the packages' own |
-| A30 | `public/data/presets.json` | 1 | 3.9 kB | A | The three "Missions to replay" (site, window, clock, rate, view, sources), written with T-22 | `src/data/presets.test.ts` checks every time and sentence against the catalogue, the bundled Horizons tables and the analysis | Written by an AI agent (commit `f9668e3`, "Claude Opus 5.5" trailer) |
-| A31 | `src/assistant/deterministic/examples.json` | 1 | 5.2 kB | A | One example request per action for deterministic mode, read by its help text and tests | Read | Written by an AI agent (commits `bb3c602`, `db2f6ca`, "Claude Opus 5.5" trailers) |
+| A29 | `public/licences/THIRD-PARTY-NOTICES.txt` | 1 | 16.4 kB | P | Licence texts of the shipped packages, assembled by `scripts/build-licences.mjs` (T-37; since T-40 its header names `docs/lunyx/SOURCES.md`) | Read; `src/licences.test.ts` checks it is current | Script written by an AI agent (commits `b4a2648`, `fd46b48`, "Claude Opus 5.5" trailers); the licence texts are the packages' own |
+| A30 | `public/data/presets.json` | 1 | 4.1 kB | A | The three "Missions to replay" (site, window, clock, rate, view, sources), written with T-22; the IM-2 and Blue Ghost sources follow the LROC positions since T-38 | `src/data/presets.test.ts` checks every time and sentence against the catalogue, the bundled Horizons tables and the analysis | Written by an AI agent (commits `f9668e3`, `b68ecc4`, "Claude Opus 5.5" trailers) |
+| A31 | `src/assistant/deterministic/examples.json` | 1 | 5.2 kB | A | One example request per action for deterministic mode, read by its help text and tests | Read | Written by an AI agent (commits `5405cb1`, `bb3c602`, `db2f6ca`, "Claude Opus 5.5" trailers) |
+| A32 | `docs/lunyx/screenshots/**` | 22 | 2.37 MB | S | The desktop walkthrough's captures of the app (T-2) on build `27b0f30`, before the mission presets and T-38, at 1280x720 and 1920x1080, described in `docs/lunyx/screenshots/REVIEW.md` | All 22 viewed: app interface and rendered data only, no logos; no metadata; the assistant shots are in deterministic mode | Captured by an AI agent (@desktop-workflow) |
 | A25 | `docs/reference/{team-doc,challenge-page}.txt` | 2 | 20.4 kB | H | Text export of the team document (both tabs); copy of the challenge page text | Read | Authorship of tab 2 ("Our ideas") not recorded (L11) |
 
 Not counted above: the data folders' `README.md` files (documentation written by AI agents,
 like the rest of `docs/`).
 
 <details>
-<summary>Every file, with its group and the commit that added it (411 rows)</summary>
+<summary>Every file, with its group and the commit that added it (491 rows)</summary>
 
 | File | Size | Group | Added in | AI co-author trailer on that commit |
 | --- | ---: | --- | --- | --- |
@@ -259,6 +265,7 @@ like the rest of `docs/`).
 | `docs/lunyx/handover/screens/t10-apollo11-chart-tracks-1280.jpg` | 109.4 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t10-apollo11-table-1280.jpg` | 152.6 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t10-im2-1280.jpg` | 126.8 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/handover/screens/t10-im2-1920.jpg` | 239.1 kB | A23 | `67db1fb` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t10-im2-390.jpg` | 38.8 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t10-im2-chart-390.jpg` | 37.9 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t10-im2-chart-expanded-1280.jpg` | 99.5 kB | A23 | `47908f2` (local git account) | Claude Opus 5.5 |
@@ -319,8 +326,12 @@ like the rest of `docs/`).
 | `docs/lunyx/handover/screens/t30-shackleton-rim-390.png` | 213.4 kB | A23 | `dfe5bd3` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t33-phone-390.jpg` | 41.4 kB | A23 | `96b6337` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t33-scrubber-1440.png` | 21.4 kB | A23 | `96b6337` (local git account) | Claude Fable 5.2 |
+| `docs/lunyx/handover/screens/t39-flags.png` | 31.0 kB | A23 | `75cecfd` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/handover/screens/t42-stars-note.png` | 7.9 kB | A23 | `7f019a3` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t9-apollo11-downsun.jpg` | 83.7 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-apollo11-landing.jpg` | 92.8 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
+| `docs/lunyx/handover/screens/t9-gpu-grain-lattice-before-after.jpg` | 36.1 kB | A23 | `67db1fb` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/handover/screens/t9-gpu-im2-full-ground-1920.jpg` | 257.1 kB | A23 | `67db1fb` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t9-im2-downsun-shadows.jpg` | 115.2 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-im2-earth-phase.jpg` | 60.2 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-im2-eclipse-2025-03-14.jpg` | 65.1 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
@@ -329,6 +340,28 @@ like the rest of `docs/`).
 | `docs/lunyx/handover/screens/t9-pin-shackleton-rim-downsun.jpg` | 99.9 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-pin-shackleton-rim-sun-1deg.jpg` | 100.4 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-site-marker.jpg` | 81.9 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/01-open.jpg` | 72.2 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/04-pin-card.jpg` | 128.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/07-nearby-ranked.jpg` | 95.0 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/08-compare-candidate-as-b.jpg` | 117.6 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/12-im2-card-landing.jpg` | 81.6 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/14-im2-surface-key-metrics.jpg` | 86.4 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/15-im2-surface-why-sun.jpg` | 92.0 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/16-im2-surface-chart-table.jpg` | 94.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/17-im2-surface-earth.jpg` | 82.7 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/18-im2-surface-sun-paths.jpg` | 86.2 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/22-im2-surface-at-sun-fully-set.jpg` | 74.6 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/24-apollo11-surface-landing-sun.jpg` | 75.5 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/25-assistant-open.jpg` | 81.0 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/28-assistant-compare.jpg` | 115.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1280x720/30-assistant-surface.jpg` | 109.9 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/01-open.jpg` | 130.7 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/06-im2-surface-key-metrics.jpg` | 174.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/08-im2-surface-chart-table.jpg` | 166.1 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/09-im2-surface-earth.jpg` | 130.9 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/10-im2-surface-sun-paths.jpg` | 140.8 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/14-im2-surface-at-sun-fully-set.jpg` | 104.7 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/27b0f30/1920x1080/16-apollo11-surface-landing-sun.jpg` | 130.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
 | `docs/reference/Lunyx-design.pdf` | 2.00 MB | A24 | `2116471` (local git account) | Claude Opus 5.5 |
 | `docs/reference/challenge-page.txt` | 8.2 kB | A25 | `14edf18` (local git account) | Claude Fable 5.2 |
 | `docs/reference/globe.jpg` | 306.1 kB | A24 | `2116471` (local git account) | Claude Opus 5.5 |
@@ -355,7 +388,7 @@ like the rest of `docs/`).
 | `public/data/horizons/index.json` | 804 B | A12 | `5763608` (local git account) | none |
 | `public/data/ice-targets/lemelin2021-psr.geojson` | 244.0 kB | A15 | `fade8ce` (local git account) | Claude Opus 5.5 |
 | `public/data/landings.json` | 17.0 kB | A18 | `4ab3892` (teammate, via GitHub) | Claude Fable 5.2 |
-| `public/data/presets.json` | 3.9 kB | A30 | `f9668e3` (local git account) | Claude Opus 5.5 |
+| `public/data/presets.json` | 4.1 kB | A30 | `f9668e3` (local git account) | Claude Opus 5.5 |
 | `public/data/science/diviner/diviner_north_annual_max_240m.lxg` | 2.55 MB | A16 | `ef281e1` (local git account) | Claude Fable 5.2 |
 | `public/data/science/diviner/diviner_north_annual_mean_240m.lxg` | 1.40 MB | A16 | `ef281e1` (local git account) | Claude Fable 5.2 |
 | `public/data/science/diviner/diviner_south_annual_max_240m.lxg` | 3.24 MB | A16 | `ef281e1` (local git account) | Claude Fable 5.2 |
@@ -366,7 +399,7 @@ like the rest of `docs/`).
 | `public/data/sources/gcat-landers.json` | 13.1 kB | A26 | `008be62` (teammate, via GitHub) | none |
 | `public/data/sources/lroc-anthropogenic-objects.csv` | 21.0 kB | A27 | `f812385` (teammate, via GitHub) | none |
 | `public/data/sources/site-areas.json` | 34.3 kB | A28 | `f812385` (teammate, via GitHub) | none |
-| `public/licences/THIRD-PARTY-NOTICES.txt` | 16.2 kB | A29 | `b4a2648` (local git account) | Claude Opus 5.5 |
+| `public/licences/THIRD-PARTY-NOTICES.txt` | 16.4 kB | A29 | `b4a2648` (local git account) | Claude Opus 5.5 |
 | `public/terrain/apollo-11.bin` | 133.1 kB | A4 | `4ab3892` (teammate, via GitHub) | Claude Fable 5.2 |
 | `public/terrain/apollo-11_detail.webp` | 955.1 kB | A7 | `4ab3892` (teammate, via GitHub) | Claude Fable 5.2 |
 | `public/terrain/apollo-11_fine.bin` | 1.05 MB | A5 | `4ab3892` (teammate, via GitHub) | Claude Fable 5.2 |
@@ -524,6 +557,7 @@ like the rest of `docs/`).
 | `tests/fixtures/horizons/ephemeris-check/results/skyAt-integration-32ef35a.txt` | 6.8 kB | A21 | `bbe80bf` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/horizons/ephemeris-check/sets.json` | 11.1 kB | A21 | `ce048a1` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/horizons/ephemeris-check/spice-crosscheck.json` | 5.6 kB | A21 | `710e0f1` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/dsn/app-af1b499.json` | 338.4 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/app-now.json` | 329.9 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/horizons/apollo-11.2031-04.dss14.site-sees-station.json` | 6.9 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/horizons/apollo-11.2031-04.dss14.station-sees-site.json` | 34.1 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
@@ -563,6 +597,8 @@ like the rest of `docs/`).
 | `tests/fixtures/validation/ephemeris-check/dsn/raw/im-2.2025-03.dss63.site-sees-station.txt.gz` | 30.9 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/raw/im-2.2025-03.dss63.station-sees-site.txt.gz` | 33.7 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/raw/retrieval-log.json` | 13.1 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/dsn/results-af1b499.json` | 27.2 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/dsn/results-af1b499.txt` | 6.0 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/results.json` | 27.2 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/results.txt` | 6.0 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/dsn/scenarios.json` | 2.6 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
@@ -610,13 +646,19 @@ like the rest of `docs/`).
 | `tests/fixtures/validation/ephemeris-check/horizons/raw/shackleton-rim.2025-03-04.earth.txt.gz` | 76.5 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/horizons/raw/shackleton-rim.2025-03-04.sun.txt.gz` | 53.8 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/horizons/shackleton-rim.2025-03-04.json` | 115.3 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/illumination/app-9bc4878.json` | 28.7 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/illumination/app-before.json` | 25.0 kB | A22 | `982a067` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/illumination/app-now.json` | 21.9 kB | A22 | `982a067` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/illumination/results-9bc4878.json` | 25.4 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/illumination/results-9bc4878.txt` | 10.2 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/illumination/results.json` | 19.2 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/illumination/results.txt` | 8.1 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/illumination/scenarios.json` | 3.6 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/outlook/app-9bc4878.json` | 308.6 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/outlook/app-now.json` | 299.4 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/outlook/model-series-input.json` | 315 B | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/outlook/results-9bc4878.json` | 18.2 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/outlook/results-9bc4878.txt` | 8.0 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/outlook/results.json` | 16.4 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/outlook/results.txt` | 7.2 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/outlook/scenarios.json` | 586 B | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
@@ -662,10 +704,54 @@ like the rest of `docs/`).
 | `tests/fixtures/validation/ephemeris-check/spans/results.json` | 4.0 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/spans/results.txt` | 2.2 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/spans/scenarios.json` | 1.1 kB | A22 | `a9bc640` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/terrain/app-heights-af1b499.json` | 10.6 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/terrain/app-heights-af1b499.txt` | 3.9 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/terrain/results.json` | 1.9 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/terrain/results.txt` | 1.5 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/terrain/seams-eased.json` | 11.8 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/terrain/seams-eased.txt` | 4.8 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
 | `tests/fixtures/validation/ephemeris-check/terrain/seams.json` | 4.8 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
 | `tests/fixtures/validation/ephemeris-check/terrain/seams.txt` | 2.6 kB | A22 | `c96dd00` (local git account) | Claude Fable 5.2 |
+| `tests/fixtures/validation/ephemeris-check/transitions/app-9bc4878-bundled.json` | 116.5 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/app-9bc4878.json` | 275.5 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/results-9bc4878-sky0.5.json` | 47.3 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/results-9bc4878-sky0.5.txt` | 13.8 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/results-9bc4878.json` | 51.0 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/results-9bc4878.txt` | 15.7 kB | A22 | `602cefd` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/scenarios-bundled.json` | 1.0 kB | A22 | `b41cadc` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/ephemeris-check/transitions/scenarios.json` | 1.7 kB | A22 | `b41cadc` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/blue-ghost-products/new-pin.txt` | 1.1 kB | A22 | `97d0b66` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/blue-ghost-products/results.json` | 11.1 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` | 4.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/app-af1b499.json` | 84.8 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/reference-apollo-12@2m.json` | 22.1 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/reference-blue-ghost-1@2m.json` | 21.6 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/reference-luna-23@2m.json` | 22.2 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/results.json` | 10.2 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/results.txt` | 3.1 kB | A22 | `7155330` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-eased/scenarios.json` | 709 B | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/app-1289083.json` | 557.0 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/fresh-pins.json` | 815 B | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-apollo-15@0.5m.json` | 21.7 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-apollo-15@0m.json` | 21.7 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-chandrayaan-3@0.5m.json` | 21.1 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-chandrayaan-3@0m.json` | 20.7 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-connecting-ridge@0.5m.json` | 20.7 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-a@0.5m.json` | 20.9 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-a@0m.json` | 20.7 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-a@2m.json` | 21.0 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-b@0.5m.json` | 20.9 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-b@0m.json` | 20.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-fresh-b@2m.json` | 21.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-im-2@0.5m.json` | 21.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-ridge-top@0.5m.json` | 21.3 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-ridge-top@2m.json` | 22.0 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-rim-top@0.5m.json` | 20.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-rim-top@2m.json` | 22.3 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/reference-shackleton-rim@0.5m.json` | 19.8 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/results.json` | 72.1 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/results.txt` | 27.6 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
+| `tests/fixtures/validation/science-validation/skyline-masts/scenarios.json` | 7.0 kB | A22 | `af49a12` (local git account) | Claude Opus 5.5 |
 
 </details>
 
@@ -673,9 +759,9 @@ like the rest of `docs/`).
 
 | # | What | Rule that applies | Proposal | Who would do it |
 | --- | --- | --- | --- | --- |
-| W1 | Screenshots of the app (A23, and any new ones under `docs/lunyx/screenshots/`) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
+| W1 | Screenshots of the app (A23, the walkthrough's A32 under `docs/lunyx/screenshots/`, and any new ones) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 135 of 144 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 201 of 210 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
@@ -691,7 +777,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `5dce26c`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `58843c6`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a
@@ -711,9 +797,10 @@ permission" and not on products, publications or web pages that are not NASA-spo
   flags by code ("drawn rather than loaded so there are no image assets to license") on the
   landing markers when "flags" is switched on in the Filters panel (off by default), and in the
   site card: the United States, the USSR, Russia (shown for hardware launched by the USSR),
-  China, India and Japan. The United States flag is drawn with 13 stripes and 30 stars in a
-  5 × 6 grid instead of 50 stars; the original team's task T-39 is to correct it. These are
-  national flags, not NASA's flag, insignia or any mission identifier (L10).
+  China, India and Japan (viewed in `t39-flags.png`). Since the original team's T-39
+  (`50aaace`) the United States flag has its 50 stars and China's small stars point at the
+  large one. These are national flags, not NASA's flag, insignia or any mission identifier
+  (L10).
 - Result: **no NASA logo, insignia, seal, NASA flag or mission identifier is used, generated or
   modified by the app.**
 
@@ -750,7 +837,7 @@ at the source.
 | L7 | Copy of the Apollo Lunar Surface Journal Sun and Earth table (J. Scotti) in the test fixtures: no terms found | Third-party material in the repository | Keep with credit (it is hosted by NASA), or remove the copy and keep the URL |
 | L8 | Resolved: the built app used to ship three.js and the two fonts without their licence texts | MIT and OFL notice conditions | Done in T-37 (`27b0f30`): `/licences/THIRD-PARTY-NOTICES.txt` |
 | L9 | `docs/reference/` holds third-party screenshots and NASA posters with the insignia | Insignia rules; "no copyrighted materials … that we don't have permission to use" | Approve W8 before the repository or any copy of it is made public |
-| L10 | National flags drawn by code (in the build since `0cc5553`, off by default), including a United States flag with 30 stars (fix: original T-39); mission names shown as plain text | The SI rule lists "flags" and "mission identifiers" among NASA branding elements. NASA's brand pages use "identifier" for its graphic marks (the Insignia and its lockups), so plain-text mission names look outside it (my reading) | The operator's reading of the rule; keep, change or drop the flags; confirm that plain-text mission names are fine |
+| L10 | National flags drawn by code (in the build since `0cc5553`, off by default), with a 50-star United States flag since the original T-39; mission names shown as plain text | The SI rule lists "flags" and "mission identifiers" among NASA branding elements. NASA's brand pages use "identifier" for its graphic marks (the Insignia and its lockups), so plain-text mission names look outside it (my reading) | The operator's reading of the rule; keep, change or drop the flags; confirm that plain-text mission names are fine |
 | L11 | Ideation: who drafted tab 2 ("Our ideas") of the team document and the text of the design PDF, and whether any AI tool helped; which tool made the PDF's "Transcription" section | The guide says SI "should not be used to (come up with your idea of how to solve the challenge)" | Ask the team |
 | L12 | The operator's channel to the agents: the hub describes the operator as possibly speaking through ChatGPT | If an assistant such as ChatGPT relayed or shaped instructions, it belongs in the SI description | Operator confirms which tools were used |
 | L13 | Assistant findings F1 to F3 (section 3) | NASA's guidance for AI applications | Operator approves; @assistant implements |

@@ -5,9 +5,10 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `5dce26c`: `am/lunyx-experience/integration` at `b7595e9`
-  merged with `am/lunyx/integration` at `9f949df` (T-22 mission presets, T-37 licence notices
-  and the DOI fix, T-38 a source for every landing), plus this task's documents. Since the
+- **State described:** the tree at `58843c6`: `am/lunyx-experience/integration` at `4a36c4c`
+  merged with `am/lunyx/integration` at `bbd2294` (T-22 mission presets, T-37 licence notices
+  and the DOI fix, T-38 a source for every landing, T-39 the flags, T-40 the notices header,
+  all four of the science project's deliveries), plus this task's documents. Since the
   published `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20),
   `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json` gained
   the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
@@ -59,8 +60,8 @@ Insignia, Logotype and identifiers are not in the public domain; Lunyx uses none
 | Product page, licence or usage statement and requested citation, read at the source | Done for every dataset in section 3, for R1 to R3 in section 4, and for the Horizons, ALSJ and DSN rows of section 5; the quotes and dates are in each row. Where a page states no licence, the row says "not stated". Not reviewed: the terms of service of the Claude API, TypeSafe and the browsers' speech services (R4 to R6, which apply to whoever configures them), the NAIF kernels and the press pages quoted in the test fixtures (test references, not shipped) |
 | Bundled files against the SHA-256 that their build scripts recorded in `index.json` (`public/data/dem`, `heatmap`, `science/diviner`, `science/shadowcam`) | 18 of 18 files match |
 | Source checksums recorded by the build scripts against the publishers' current ones | Zenodo record 4646092: 2 of 2 MD5 match. Harvard Dataverse DVN/EGOOCL v3.0: 4 of 4 MD5 match |
-| Bundled values against the original archives | Not repeated here. The independent validation (T-26) compared 30 080 samples of the bundled grids with the PDS originals: equal within rounding (`tests/fixtures/validation/ephemeris-check/`, STATUS.md section 4) |
-| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 114 images in the repository | None of the 114 images carries any such metadata (see AI-USE.md section 4) |
+| Bundled values against the original archives | Not repeated here. The independent validation (T-26) compared 30 080 samples of the bundled `.lxg` grids with the PDS originals: equal within rounding (`tests/fixtures/validation/ephemeris-check/`, STATUS.md section 4). The site windows (S3, S4: `public/terrain/*.bin`) were not compared with their PDS sources; the 3 m and 60 m windows were compared with each other (they step by several metres at the 3 m model's edge) and with LRO LOLA laser shots at 17 of the 19 sites (the science project's T-32 verification) |
+| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 149 images in the repository | None carries EXIF, XMP or C2PA metadata. The only embedded data: ICC colour profiles in 23 JPEG screenshots, and creation and modification times in the text chunks of two PNG screenshots (AI-USE.md section 2.4) |
 | Licences of npm packages | Read from each installed `node_modules/<package>/package.json` after `npm ci` at `cc736f8` (same lockfile as `bc5fb8e`); 93 packages installed |
 
 ## 3. Datasets bundled in `public/`
@@ -326,8 +327,9 @@ any AI tool made them are not established (open list L2).**
   LPSC 50, abstract 3089 (not checked here); and the map layers of the Apollo Analyst's Notebook,
   NASA PDS Geosciences Node (https://an.rsl.wustl.edu/apollo/; its page states no licence or
   terms), whose rover traverses the teammate attributes to NASA TN D-7469 (not checked here). On
-  the globe each area is drawn ten times larger than true size (`AREA_DISPLAY_SCALE` in
-  `src/scene/siteAreas.ts`); the site card gives the true size and says so.
+  the globe each area is drawn up to ten times larger than true size from orbit and true to size
+  close to the ground (`AREA_DISPLAY_SCALE` in `src/scene/siteAreas.ts`); the site card gives the
+  true size and says so.
 
 ### S16. Landing catalogue
 
@@ -408,12 +410,13 @@ comment, so three.js's MIT notice is not shipped with it; ten WOFF2 font files a
 no copy of the OFL text is. MIT asks that the copyright and permission notice be included in
 copies; OFL 1.1 asks that each copy of the font software contain its copyright notice and
 licence. Since T-37 (`27b0f30`) the site ships `/licences/THIRD-PARTY-NOTICES.txt`
-(`public/licences/`, 16.2 kB), written by `scripts/build-licences.mjs` (`npm run
+(`public/licences/`, 16.4 kB), written by `scripts/build-licences.mjs` (`npm run
 build-licences`) from the installed packages: three, astronomy-engine, Inter, Space Grotesk,
 Vite and Rolldown (whose module-preload helper is part of the scripts), each with its licence
 text as the package ships it; `src/licences.test.ts` fails when the file is stale. That covers
-both conditions (open list L8, now resolved). The file points readers to `docs/DATA_SOURCES.md`
-for data credits; this register is `docs/lunyx/SOURCES.md`.
+both conditions (open list L8, now resolved). Since T-40 (`bbd2294`) the file's header names
+this register, `docs/lunyx/SOURCES.md`, as the full list of sources with their licences and
+checks, and `docs/DATA_SOURCES.md` as the description of the bundled data files.
 
 **On the server only** (the Vite dev or preview server that runs `/api/*`): `@anthropic-ai/sdk`
 1.8.0 (Apache-2.0; it also ships `LICENSE-MIT`, which says the project moved from MIT to Apache
@@ -556,7 +559,7 @@ entry by entry. The note is the teammate's and was not edited.
 | 8. Photo-derived relief | S5 | Yes | — |
 | 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |
 | 10. Close-up surface maps | S9 | Yes: third-party pack, "origin and licence unknown" | Adds that its AI status is not established (L2) |
-| 11. Explored area at each site | S19, S20 | Yes on sources and the 10× display width | Adds that the bundled LROC table is byte-identical to the archive's current file |
+| 11. Explored area at each site | S19, S20 | Yes on sources; the display now shrinks from 10× to true size near the ground | Adds that the bundled LROC table is byte-identical to the archive's current file |
 | Not in that note | S1, S2, S12 to S15, S17, sections 4 to 6 | — | The LOLA grids in `public/data/dem`, PGDA product 69, the ice targets, Diviner, the ShadowCam index, the run-time services, the test references and the software licences |
 
 ## 9. What is not established
