@@ -216,7 +216,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.equal((await state(page)).comparing, false);
   });
 
-  test('clicking a landing marker opens that site on the surface; the close button returns to the globe', SLOW, async () => {
+  test('a marker click shows details, a double-click opens the surface, and close returns to the globe', SLOW, async () => {
     // A panel left open by a failed earlier test would cover the globe: close it first.
     if (!(await sheet().isHidden())) await closeComparePanel();
     // Put IM-2 under the screen centre, close enough that its marker is alone there, then click it.
@@ -226,6 +226,10 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     // The marker sits at the site; the centre of view is slightly off it near the pole (F-3), so find it on screen.
     const at = await markerOnScreen('im-2');
     await page.mouse.click(at.x, at.y);
+    await until(page, () => window.lunyx.store.get().site?.id === 'im-2');
+    assert.equal(await page.locator('body').getAttribute('data-view'), 'globe');
+    assert.equal(await card().locator('.sc-body').isVisible(), true);
+    await page.mouse.dblclick(at.x, at.y);
     await until(page, () => window.lunyx.store.get().site?.id === 'im-2' && document.body.dataset.view === 'surface');
     assert.ok((await log(page, from)).some((e) => e.name === 'selectSite' && e.origin === 'ui' && e.ok));
     assert.match(await page.locator('.surface-hud').textContent(), /Surface view/);

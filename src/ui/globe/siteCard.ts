@@ -20,7 +20,8 @@ import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapU
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
 import { globeDisplay } from '../../scene/globe/displayState';
-import { describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
+import { areaDisplayScale, describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
+
 import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
@@ -189,7 +190,7 @@ export function mountSiteCard(region: HTMLElement): void {
     const list = visible();
     const i = list.findIndex((l) => l.id === store.get().site?.id);
     const target = list[i + offset];
-    if (i >= 0 && target) void runAction('selectSite', { site: target.id, surface: true });
+    if (i >= 0 && target) void runAction('selectSite', { site: target.id });
   }
 
   const syncFold = () => {
@@ -380,8 +381,8 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    const k = globeDisplay.get().areaScale;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (on the globe drawn ${k === 1 ? 'true to size' : `up to ${k}× larger from orbit, true to size close to the ground`})` : '—');
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (display footprint enlarged up to ${Math.round(areaDisplayScale(area, globeDisplay.get().areaScale))}× from orbit for visibility; true size close to the ground)` : '—');
+
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };

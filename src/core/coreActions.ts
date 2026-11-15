@@ -5,7 +5,8 @@ import { findLanding, landingSite } from '../data/catalog';
 import { formatCoords, Landing, landingDate, quickmapUrl, trekUrl } from '../data/landings';
 import { labelDisagrees, loadOwnership, stateLabel, type OwnershipIndex } from '../data/ownership';
 import { globeDisplay } from '../scene/globe/displayState';
-import { describeExtent, loadSiteAreas, type SiteArea } from '../scene/siteAreas';
+import { areaDisplayScale, describeExtent, loadSiteAreas, type SiteArea } from '../scene/siteAreas';
+
 import { ActionError, ActionDef, defineAction } from './actions';
 import { reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
 import { rounded, type AnalysisSlot, type AnalysisStore } from './analysisStore';
@@ -133,8 +134,9 @@ export function exploredAreaFacts(l: Landing, areas: ReadonlyMap<string, SiteAre
     areaM2: Math.round(a.areaM2),
     /** False when the lander has not been found in LRO images: the area is then the lander alone at the catalogue's approximate position. */
     located: a.located,
-    /** From orbit the globe draws the area this many times wider than it is (the chosen territory size), so it can be seen; the figures here are true size. */
-    displayScale: globeDisplay.get().areaScale,
+    /** The globe draws the area this many times wider than it is, so it can be seen; the figures here are true size. */
+    displayScale: areaDisplayScale(a, globeDisplay.get().areaScale),
+
     ...(a.note && { note: a.note }),
     source: a.sources.length ? a.sources.join('; ') : 'No measured position: the lander at the landing catalogue\'s approximate coordinates.',
   };

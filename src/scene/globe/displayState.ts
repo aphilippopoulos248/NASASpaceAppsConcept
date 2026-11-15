@@ -12,9 +12,9 @@ export const DEFAULT_RELIEF = 1;
 export const MAX_RELIEF = 30;
 
 /** How many times larger (in width) than life each landing's explored area is drawn, so it reads on the globe. */
-export const AREA_SCALE_CHOICES = [1, 5, 10, 25, 50] as const;
-export const DEFAULT_AREA_SCALE = 10;
-export const MAX_AREA_SCALE = 50;
+export const AREA_SCALE_CHOICES = [1, 5, 10, 25, 50, 100] as const;
+export const DEFAULT_AREA_SCALE = 100;
+export const MAX_AREA_SCALE = 100;
 
 export interface GlobeDisplay {
   /** Chosen relief exaggeration: 0 = smooth sphere, 1 = true scale. */

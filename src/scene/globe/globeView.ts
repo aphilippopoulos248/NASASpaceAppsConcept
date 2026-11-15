@@ -66,6 +66,7 @@ export class GlobeView {
   private lastCenter = { lat: NaN, lon: NaN, altitudeKm: NaN };
   private readonly tooltip: HTMLElement;
   private downAt: { x: number; y: number } | null = null;
+  private markerClick: { id: string; x: number; y: number; time: number } | null = null;
   /** Shared by every surface material: exaggeration, Sun direction, overlay, coverage. */
   private readonly uniforms = createSurfaceUniforms(OVERLAY_RAMP, SUN_BAND_COLOUR, COVERAGE_STYLE.map((c) => c.colour));
   private relief: ReliefGlobe | null = null;
@@ -512,6 +513,10 @@ export class GlobeView {
           return row;
         }),
       );
+      const hint = document.createElement('div');
+      hint.className = 'ly-note';
+      hint.textContent = 'Click for mission details · Double-click for surface view';
+      this.tooltip.append(hint);
       this.tooltip.style.left = `${e.clientX}px`;
       this.tooltip.style.top = `${e.clientY}px`;
       this.tooltip.hidden = false;
@@ -519,22 +524,37 @@ export class GlobeView {
     canvas.addEventListener('pointerleave', () => (this.tooltip.hidden = true));
     canvas.addEventListener('pointerdown', (e) => (this.downAt = { x: e.clientX, y: e.clientY }));
     canvas.addEventListener('pointerup', (e) => {
-      if (!this.active) return;
+      if (!this.active || e.button !== 0) return;
       const moved = this.downAt ? Math.hypot(e.clientX - this.downAt.x, e.clientY - this.downAt.y) : Infinity;
       this.downAt = null;
-      if (moved > 5) return; // a drag, not a click
+      if (moved > 5) {
+        this.markerClick = null;
+        return; // a drag, not a click
+      }
       this.tooltip.hidden = true;
       const hits = this.pickAt(e, this.camera);
       if (!hits.length) {
+        this.markerClick = null;
         // Empty ground: drop a pin there.
         const at = this.latLonAt(e.clientX, e.clientY);
         if (at) void runAction('dropPin', { lat: round5(at.lat), lon: round5(at.lon) });
         return;
       }
-      // Clicking again on overlapping sites (e.g. Apollo 12 / Surveyor 3) cycles through them.
+      // Keep the first click's camera and mission stable so a second click hits the same
+      // marker, including overlapping sites (Apollo 12 / Surveyor 3). Slower clicks cycle.
+      const previous = this.markerClick;
+      if (previous && e.timeStamp - previous.time < 500 &&
+          Math.hypot(e.clientX - previous.x, e.clientY - previous.y) <= 5 &&
+          hits.some((m) => m.landing.id === previous.id)) {
+        this.markerClick = null;
+        void runAction('selectSite', { site: previous.id, surface: true });
+        return;
+      }
       const current = hits.findIndex((m) => m.landing.id === store.get().site?.id);
       const next = hits[(current + 1) % hits.length];
-      void runAction('selectSite', { site: next.landing.id, surface: true });
+      this.markerClick = { id: next.landing.id, x: e.clientX, y: e.clientY, time: e.timeStamp };
+      void runAction('selectSite', { site: next.landing.id, fly: false });
+      void runAction('showPanel', { panel: 'site-details', open: true });
     });
   }
 
