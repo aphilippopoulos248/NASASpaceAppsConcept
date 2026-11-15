@@ -17,7 +17,8 @@ import { flagCode, Ownership } from '../data/ownership';
 import type { Marker } from './markers';
 
 // Simplified national flags, drawn rather than loaded so there are no image assets to license.
-// Keyed by GCAT state code, plus RU (Russia, shown for hardware launched by the USSR). Proportions are 3:2 for all, for a tidy row on the globe.
+// Keyed by GCAT state code, plus RU (Russia, shown for hardware launched by the USSR: see SUCCESSORS in
+// src/data/ownership.ts; no USSR flag is drawn). Proportions are 3:2 for all, for a tidy row on the globe.
 
 type Painter = (ctx: CanvasRenderingContext2D, w: number, h: number) => void;
 
@@ -78,32 +79,6 @@ const PAINTERS: Record<string, Painter> = {
     ctx.fillStyle = '#ffffff';
     const field = usStarField(cw, ch);
     for (const [x, y] of field.centres) star(ctx, x, y, field.radius);
-  },
-  SU(ctx, w, h) {
-    ctx.fillStyle = '#cc0000';
-    ctx.fillRect(0, 0, w, h);
-    ctx.strokeStyle = ctx.fillStyle = '#ffd700';
-    // Star outline
-    ctx.lineWidth = h * 0.025;
-    ctx.beginPath();
-    for (let i = 0; i <= 10; i++) {
-      const a = -Math.PI / 2 + (i * Math.PI) / 5;
-      const rr = i % 2 === 0 ? h * 0.07 : h * 0.03;
-      ctx.lineTo(w * 0.17 + Math.cos(a) * rr, h * 0.13 + Math.sin(a) * rr);
-    }
-    ctx.stroke();
-    // Sickle: a thick arc
-    ctx.lineWidth = h * 0.05;
-    ctx.beginPath();
-    ctx.arc(w * 0.17, h * 0.36, h * 0.12, Math.PI * 0.2, Math.PI * 1.35);
-    ctx.stroke();
-    // Hammer: handle and head
-    ctx.save();
-    ctx.translate(w * 0.17, h * 0.36);
-    ctx.rotate(-Math.PI / 4);
-    ctx.fillRect(-h * 0.02, -h * 0.13, h * 0.04, h * 0.26);
-    ctx.fillRect(-h * 0.07, -h * 0.15, h * 0.14, h * 0.05);
-    ctx.restore();
   },
   RU(ctx, w, h) {
     const colours = ['#ffffff', '#0039a6', '#d52b1e'];
