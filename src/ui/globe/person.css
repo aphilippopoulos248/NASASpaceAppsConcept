@@ -12,6 +12,6 @@
 }
 .person-ghost.on-moon { color: var(--sun); }
 @media (max-width: 700px) {
-  .region-person { right: calc(var(--edge) + 52px); bottom: 160px; }
+  .region-person { right: calc(var(--edge) + 52px); bottom: var(--above-scrubber, 160px); }
   .person-hint { display: none; }
 }

@@ -13,6 +13,10 @@ import type { NearbyCandidate, NearbyOptions, SlopeInfo } from './types';
 const RAD = Math.PI / 180;
 /** Far-field marching step of the scan's skylines, as a fraction of distance (the main analysis uses 0.004). */
 const SCAN_GROWTH = 0.01;
+/** Near-field marching step of the scan's skylines, as a fraction of distance (the main analysis uses 0.05). */
+const SCAN_NEAR = 0.1;
+/** Points of the fine search inside a marching step in the scan (the main analysis uses 6). */
+const SCAN_SEARCH = 3;
 
 /** "300 m E, 600 m S": an offset in words, exact and without signs. */
 export function offsetText(eastM: number, northM: number): string {
@@ -162,7 +166,7 @@ export function createNearbyScan(scenario: Scenario, stack: TerrainStack, base: 
     let metrics = null as NearbyCandidate['metrics'];
     let basis = slopeBasis;
     if ((!rejected || isRef) && Number.isFinite(ground)) {
-      const hp = computeHorizon(stack, p, scenario.mastHeightM, { azStepDeg: o.azStepDeg, growth: SCAN_GROWTH });
+      const hp = computeHorizon(stack, p, scenario.mastHeightM, { azStepDeg: o.azStepDeg, growth: SCAN_GROWTH, nearFraction: SCAN_NEAR, searchPoints: SCAN_SEARCH });
       metrics = evaluateWindow({ ...scan, site }, hp, shift(p)).metrics;
       const near = hp.layers.filter((l) => l.fromM < 5000).map((l) => `${l.name} (${Math.round(l.resolutionM)} m)`).join(', ');
       basis += ` Skyline every ${hp.azStepDeg} deg from ${near || 'no data'}; window sampled every ${scan.stepMin} min (scan settings, coarser than the main analysis).`;

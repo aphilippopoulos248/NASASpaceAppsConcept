@@ -126,23 +126,114 @@ the 480 m grid, which flattens peaks. No published elevation angle from the LM w
 
 **The skyline does not depend on the marching step.** Plain marching takes the highest of
 its samples (0.7 of a grid cell apart near the site, 0.4 % of the distance far out) and so
-reads low wherever the terrain peaks between two samples: by up to 0.27 deg at a pin on
-Shackleton's rim and 0.47 deg on the Malapert massif (steep ground a few hundred metres away,
-80 m data), 0.03-0.09 deg at the catalogued sites. The march therefore searches finely (to
-1/48 of the two steps around it) around every sampled local maximum that a hidden peak could
-lift above the best sample. Measured against a march twenty times finer
-(`src/analysis/horizon.test.ts`, 180 azimuths per site):
+reads low wherever the terrain peaks between two samples: by up to 0.25 deg at a pin on
+Shackleton's rim and 0.48 deg on the Malapert massif (steep ground a few hundred metres away,
+80 m data), 0.04-0.05 deg at the catalogued sites. Two things remove that:
 
-| Site | Without the fine search: max / rms | With it (default settings): max / rms | Scan settings (1 % far steps) |
+- Close to the observer the step is also at most 5 % of the distance (from 0.1 m out, or a
+  third of the mast height), because what a rise of 30 cm does to the skyline grows as the
+  distance shrinks.
+- Every step that a hidden peak could lift above the best sample is searched inside, at 1/6
+  and then 1/24 of its length. "Could" is judged from how much the elevation changes from
+  sample to sample around the step (and, where the steps are longer than the data's own
+  sampling, from a 35 deg slope over half a step). Until T-31 only steps next to a sampled
+  local maximum were searched; a peak that rises and falls between two samples of a falling
+  slope was missed (up to 0.05 deg at a 2 m mast, see 3a).
+
+Measured against a march twenty times finer that is searched the same way
+(`src/analysis/horizon.test.ts`, 180 azimuths per site, 2 m mast):
+
+| Site | Plain march: max / rms | Default settings: max / rms | Scan settings (1 % far steps, 10 % near, 3-point search) |
 | --- | --- | --- | --- |
-| IM-2 | 0.035 / 0.0061 deg | 0.001 / 0.0003 deg | 0.001 / 0.0002 deg |
-| Apollo 15 | 0.052 / 0.0153 | 0.003 / 0.0005 | 0.004 / 0.0007 |
-| Pin on Shackleton's rim (89.45 S, 137.2 W) | 0.272 / 0.0390 | 0.004 / 0.0010 | 0.004 / 0.0010 |
-| Pin on the Malapert massif (86.0 S, 2.9 E) | 0.472 / 0.1277 | 0.016 / 0.0037 | 0.016 / 0.0037 |
+| IM-2 | 0.036 / 0.0064 deg | 0.001 / 0.0001 deg | 0.003 / 0.0006 deg |
+| Apollo 15 | 0.054 / 0.0159 | 0.004 / 0.0006 | 0.014 / 0.0022 |
+| Pin on Shackleton's rim (89.45 S, 137.2 W) | 0.251 / 0.0380 | 0.002 / 0.0003 | 0.011 / 0.0021 |
+| Pin on the Malapert massif (86.0 S, 2.9 E) | 0.478 / 0.1312 | 0.004 / 0.0008 | 0.022 / 0.0051 |
 
 So what remains is the data, not the sampling: the skyline is that of the bilinearly
 interpolated grids, and relief finer than a grid is not in it (within a few hundred metres of
 a pin that only has 80 m data, that is the larger uncertainty by far).
+
+### 3a. Independent check, and an observer on the ground (T-26 by @ephemeris-check, T-31)
+
+@ephemeris-check computed skylines with a ray march of their own over the bundled grids
+(nothing from `src/`; `tests/fixtures/validation/ephemeris-check/skyline/`, 720 azimuths per
+case) and compared three builds with them. App minus reference, worst azimuth:
+
+| Case | Before the fine search (375f816) | With it (32ef35a, cc736f8) | Now (T-31) |
+| --- | --- | --- | --- |
+| IM-2, 2 m | -0.036 deg | 0.002 | 0.003 |
+| Apollo 15, 2 m | -0.068 | -0.003 | -0.004 |
+| Chandrayaan-3, 2 m | -0.073 | -0.014 | 0.002 |
+| Connecting ridge pin (89.45 S, 137.2 W), 2 m | -0.272 | -0.012 | 0.002 |
+| Shackleton rim pin (89.78 S, 155.73 W), 2 m | -1.040 | -0.051 (72 azimuths over 0.02) | -0.004 |
+| Connecting ridge pin, **0 m** | -2.536 | **-1.093** (278 azimuths over 0.1) | 0.002 |
+| Rim top (89.7843 S, 155.9041 W), **0 m** | -5.015 | **-1.225** (261 over 0.1) | 0.002 |
+| Ridge top (89.4749 S, 137.4431 W), **0 m** | -1.616 | **-0.259** (265 over 0.1) | 0.001 |
+| Shackleton rim pin, 0 m | -0.868 | -0.027 | -0.003 |
+| IM-2, 0 m | -0.038 | -0.002 | 0.003 |
+
+The first two columns are @ephemeris-check's own figures (`skyline/results.txt`); the last is
+this repository's test against their stored reference skylines
+(`horizon.test.ts`, "the two polar pins of the independent validation"), which they are asked
+to repeat with their own run. Apollo 15 was measured once and is not in the standing test:
+task T-32 eases the 3 m site models onto their 60 m windows at load, after which the app's
+terrain at the sites with a 3 m model no longer equals the stored files the reference used.
+
+**The defect they found: an observer on the ground.** Seen from height H above the ground,
+terrain at a small distance d stands at about (h(d) - h(0) - H) / d. With H = 0 the limit at
+d = 0 is the slope of the ground at the observer's feet, and on convex ground (a crest, a rim
+top) that slope *is* the skyline: their reference found its maximum "0 m away" over hundreds
+of azimuths. The app's first sample was 0.7 of a grid cell out (28 m on the 40 m polar grid;
+the fine search reached in to about 12 m), so it read up to 1.09 and 1.23 deg low at the two
+polar pins. Their measured consequence over 18.6 years of hourly samples at 0 m: 48.93
+against 44.21 % any-Sun share at the connecting ridge pin (+4.7 points), +1.7 and +0.8 at the
+other two; with a 2 m mast nothing (within 0.03 points at all six polar points).
+
+**Builds affected:** every build up to integration cc736f8, for observers lower than about a
+metre on convex ground. How the old error fell off with height, against a brute-force march
+of the first 3 km (every 2 cm near the observer, `HeightSource.sample()` only; 120 azimuths):
+
+| Mast | Connecting ridge pin: before / now | Rim top: before / now | Shackleton rim pin | Blue Ghost 1 (3 m data) |
+| --- | --- | --- | --- | --- |
+| 0 m | -1.093 / 0.002 deg | -1.225 / 0.001 | -0.023 / -0.003 | -0.077 / 0.001 |
+| 0.25 m | -0.511 / 0.002 | -1.007 / -0.002 | -0.025 / -0.003 | -0.010 / 0.002 |
+| 0.5 m | -0.040 / 0.001 | -0.794 / -0.003 | -0.029 / -0.003 | -0.011 / 0.002 |
+| 1 m | -0.020 / 0.001 | -0.076 / -0.001 | -0.038 / -0.003 | 0.002 / 0.002 |
+| 2 m | -0.007 / 0.001 | -0.005 / 0.001 | -0.049 / -0.004 | 0.002 / 0.002 |
+
+**What changed (T-31).** The march starts 0.1 m from the observer (or a third of the mast
+height) with the proportional steps described above, and for H = 0 it includes the limit at
+distance zero: the slope of the interpolated terrain along the ray, extrapolated from the two
+closest samples (within one grid cell the interpolated height is a polynomial of the distance,
+so the extrapolation is exact there). Such a skyline point is reported with distance 0, and
+`blockageAt()` says "formed by the ground at the observer's own feet". The ground height under
+the observer is now looked up the same way as the terrain along the rays (the fast lookups
+reproduce `sample()` to a part in a million, which is millimetres: 10 cm from the observer
+that would tilt the ground by degrees).
+
+Analytic checks (`horizon.test.ts`): on a dome h = 500 - 0.004 r^2 with the observer 30 m from
+its top, the skyline is atan(0.24 sin az) for H = 0 and atan(0.24 sin az - 2 sqrt(H k)) for
+H = 0.05, 0.5 and 2 m, formed sqrt(H / k) from the observer, and the horizon of the plain
+below wherever that is higher: within 0.01 deg at all 720 azimuths. In a bowl (concave ground)
+the rim is the skyline at 0, 0.5 and 2 m (within 0.02 deg; the rim is a crease, found to half
+a metre along the ray), never the ground at the feet. A smooth sphere gives 0 deg at H = 0 and
+the horizon dip otherwise, as before.
+
+**What a 0 m result means.** It is correct for the elevation grid, and the grid is all it
+knows: with the observer on the ground the skyline over a quarter to nearly half of the horizon
+at the three convex pins (180 to 313 of 720 azimuths) is the slope of a 40 m grid cell.
+Rocks, regolith mounds and metre-scale relief are not in the data. The profile therefore
+carries a warning whenever part of the skyline is formed closer than one grid step: "With
+the observer on the ground, the skyline in N of 720 directions is the ground within 28 m of
+the observer: the slope of the 40 m elevation grid there. ...". No minimum mast height needs
+to be enforced; 0 m is answered and labelled.
+
+**Cost.** CPU time on one thread, measured on a busy machine with the old code run back to
+back (`scripts/bench-analysis.mjs`): a full profile 170-267 ms (was 129-213), a 14-day
+analysis 285-398 ms (was 245-335), the default nearby scan 3.6-8.6 s (was 3.0-7.1; the scan
+uses 10 % near steps and a 3-point search), the 12-month outlook 528-645 ms (was 465-580).
+All inside the budgets (500 ms, 1.5 s, 10 s, 3 s).
 
 **Speed, without changing the result.** The march skips elevation layers that cannot reach
 the current distance (their reach is predicted from each grid's description and checked
@@ -154,12 +245,15 @@ checked); and the skyline at 10 sites (IM-2, Apollo 15, Chandrayaan-3, Chang'e 4
 rim pin, both exact poles, pins at the edges of the 85S and 80S squares, the antimeridian) is
 identical with pruning alone and equal to rounding (< 0.000005 deg) with the direct lookups.
 
-| Full profile (720 azimuths), min of 12 runs, one thread | First version | Now, fine search included |
+| Full profile (720 azimuths), min of 12 runs, one thread, idle machine | First version | With the fine search, before T-31 |
 | --- | --- | --- |
 | IM-2 (60 m window, 80 m and 160 m polar layers, 1.9 km grid; to 189 km) | 202 ms | 89 ms |
 | Apollo 15 (3 m, 60 m, 480 m windows, 1.9 km grid; to 204 km) | 175 ms | 72 ms |
 | Blue Ghost 1 (same layers; to 229 km) | 194 ms | 75 ms |
 | Chandrayaan-3 (60 m, 480 m windows, 1.9 km grid; to 174 km) | 93 ms | 38 ms |
+
+The near-field steps and the wider search of T-31 (3a) add about a quarter to these profile
+times; they were not re-measured on an idle machine.
 
 ## 4. Mission-window analysis (`src/analysis/window.ts`)
 
