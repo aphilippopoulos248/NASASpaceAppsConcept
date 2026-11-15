@@ -19,7 +19,7 @@
 //              against the actions' results and the analysis.
 //   extras     (T-8) a mission preset played to its end, a zoomed Earth, the window table with
 //              its CSV and JSON downloads against the analysis, the outlook, the Country filter,
-//              country flags, ownership rows and the explored area on the card.
+//              country flags and territories, ownership rows and the explored area on the card.
 //
 // Every step is done through the real controls (mouse and keyboard) unless the build has no
 // control for it; such steps say so and run through the action registry. Values on screen
@@ -283,6 +283,30 @@ async function markerPoint(page, id) {
       .map((o) => o.id);
     return { found: true, visible: inView, x: Math.round(x), y: Math.round(y), covered: Boolean(top && top !== g.canvas), coveredBy: top && top !== g.canvas ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null, near };
   }, id);
+}
+
+/**
+ * The surface strip since GitHub PR #4 is one compact row: Track Sun, Track Earth and two
+ * disclosures, "Surface options" (Sky paths, Generated detail, Skyline chart, Return to site) and
+ * "About" (the status, ground and owner lines). They open from their summary and close on Escape,
+ * an outside click or the focus leaving. Opens one as a person would; false on builds without it,
+ * where everything is on the strip.
+ */
+async function openHudMenu(page, label) {
+  const menu = page.locator('.surface-hud details.sh-menu').filter({ has: page.locator('summary', { hasText: label }) });
+  if (!(await menu.count())) return false;
+  if (!(await menu.evaluate((d) => d.open))) await menu.locator('summary').click();
+  await page.waitForFunction((l) => [...document.querySelectorAll('.surface-hud details.sh-menu')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, { timeout: 5000 });
+  return true;
+}
+
+/** Closes a strip disclosure with Escape from its summary. Never pressed when it is closed: Escape would then leave the view. */
+async function closeHudMenu(page, label) {
+  const menu = page.locator('.surface-hud details.sh-menu').filter({ has: page.locator('summary', { hasText: label }) });
+  if (!(await menu.count()) || !(await menu.evaluate((d) => d.open))) return;
+  await menu.locator('summary').focus();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction((l) => ![...document.querySelectorAll('.surface-hud details.sh-menu')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, { timeout: 5000 });
 }
 
 /**
@@ -602,9 +626,12 @@ async function partSurface(app, step) {
     await sleep(200);
     const up = (await appState(page)).look;
     check('ArrowUp tilts up (elevation, degrees)', `${afterKeys.elDeg} -> ${up.elDeg}`, 'larger', up.elDeg > afterKeys.elDeg);
+    // The status line is in the strip's "About" disclosure since PR #4: open it to read it.
+    const about = await openHudMenu(page, 'About');
     const hud = await page.locator('.surface-hud .sh-status').textContent();
     const look = (await appState(page)).look;
     check('HUD "Facing" azimuth = store.look.azDeg', hud, look.azDeg, close(numbers(hud)[0], Math.round(look.azDeg) % 360, 1.01));
+    if (about) await closeHudMenu(page, 'About');
   });
 
   await step('Close the surface view (× button), then "At landing time" (card): IM-2 card values', 'control', async ({ check, note }) => {
@@ -640,8 +667,10 @@ async function partSurface(app, step) {
     if (was) check('Back at the same site, the view keeps its last direction (azimuth)', v.look.azDeg, was.azDeg, close(v.look.azDeg, was.azDeg, 1));
     const settings = await page.evaluate(() => ({ lowPower: window.lunyx.scene.surface.view.lowPower ?? null, pixelRatio: window.lunyx.scene.surface.view.renderer?.getPixelRatio?.() ?? null }));
     note(`Surface settings: ${JSON.stringify(settings)} (the app uses low-power settings only for a software renderer).`);
+    const about = await openHudMenu(page, 'About');
     note(`HUD: ${await page.locator('.surface-hud .sh-status').textContent()}`);
     note(`Ground: ${(await page.locator('.surface-hud .sh-ground').textContent().catch(() => '')).slice(0, 400)}`);
+    if (about) await closeHudMenu(page, 'About');
     note(`Frame rate ${await fps(page)} fps.`);
   }, { shot: 'im2-surface-landing-sun', timeout: 180_000 });
 
@@ -723,8 +752,11 @@ async function partSurface(app, step) {
       const earth = await page.locator('.surface-hud').getByRole('button', { name: 'Track Earth', exact: true }).getAttribute('aria-pressed');
       check('Tracking the Sun replaces tracking Earth', `Track Earth pressed: ${earth}`, 'false', earth === 'false');
     }
+    // "Sky paths" is in the strip's "Surface options" disclosure since PR #4.
+    const options = await openHudMenu(page, 'Surface options');
     const paths = page.locator('.surface-hud').getByRole('button', { name: 'Sky paths' });
     if ((await paths.getAttribute('aria-pressed')) !== 'true') await paths.click();
+    if (options) await closeHudMenu(page, 'Surface options');
     await sleep(800);
     const v = await surfaceView(page);
     check('Sky paths on', v.annotations.tracks, true, v.annotations.tracks === true);
@@ -972,6 +1004,24 @@ async function partExtras(app, step) {
     await page.waitForFunction(() => window.lunyx.store.get().playing, null, { timeout: 60_000 }).catch(() => {});
     const s0b = await appState(page);
     check('Preset plays at its rate', `${s0b.playing || s0b.timeMs > start} ${s0b.rate}`, `true ${preset.rateSecondsPerSecond}`, (s0b.playing || s0b.timeMs > start) && s0b.rate === preset.rateSecondsPerSecond);
+    // What the list says after the load. Since main 5972aaf (list at the bottom of Filters, no
+    // per-preset disclosures) the status line stayed empty after a successful load (batch 16);
+    // @globe's T-67 commit makes it confirm the load, with the preset's caveat (IM-2's touchdown
+    // minute is not confirmed) on screen or in the button's tooltip.
+    // The line says "Loading …" until the action returns; wait for its final text.
+    await page.waitForFunction(() => !/^Loading/.test(document.querySelector('.pl-status')?.textContent.trim() ?? ''), null, { timeout: 30_000 }).catch(() => {});
+    const said = await page.evaluate(() => {
+      const panel = document.querySelector('.filters-panel');
+      const list = document.querySelector('.pl');
+      return {
+        last: Boolean(panel && list && [...panel.children].filter((c) => !c.matches('hr')).at(-1)?.contains(list)),
+        status: document.querySelector('.pl-status')?.textContent.trim() ?? '',
+        title: [...document.querySelectorAll('.pl-button')].find((b) => b.textContent.includes('IM-2 Athena'))?.title ?? '',
+      };
+    });
+    note(`"Missions to replay" ${said.last ? 'is the last section of Filters' : 'is not the last section of Filters'}. Status line after the load: "${said.status}". The button's tooltip: "${said.title}".`);
+    check('The "Missions to replay" status line confirms the load', said.status || '(empty)', 'a sentence about the loaded preset', !/^Loading/.test(said.status) && /IM-2/.test(said.status) && /playing|loaded/i.test(said.status), { finding: 'batch 16 (T-67)' });
+    check("The preset's caveat (IM-2's touchdown minute) is on screen or in the tooltip", `${said.status} | ${said.title}`.slice(0, 220), 'says the touchdown minute is not confirmed', /minute|unconfirmed|not confirmed|approximate|uncertain/i.test(`${said.status} ${said.title}`), { finding: 'batch 16 (T-67)' });
     const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
     const a = await getAnalysis(page);
     note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
@@ -1053,7 +1103,7 @@ async function partExtras(app, step) {
     }
   }, { shot: 'outlook', timeout: 300_000 });
 
-  await step('Globe: Country filter (India), country flags, ownership rows and the explored area on the card', 'control', async ({ check, note }) => {
+  await step('Globe: Country filter (India), country flags, country territories, ownership rows and the explored area on the card', 'control', async ({ check, note }) => {
     await closeCompare(page);
     await backToGlobe(page);
     const missions = page.locator('.fp-missions');
@@ -1073,7 +1123,42 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says its size and how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?×/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
+    // Since T-67 the explored area is no longer drawn on the globe: the row gives its size only.
+    check('Explored area says its size', card?.facts.Explored, 'about … across', /about .*across/.test(card?.facts.Explored ?? ''));
+    // Country territories (main 5972aaf, T-67): the whole Moon coloured by the country of the
+    // nearest landing shown; off by default, and disabled while previous missions are hidden.
+    const terrBox = page.getByLabel('Show country territories');
+    if (await terrBox.count()) {
+      check('"Show country territories" is off by default', String(await terrBox.isChecked()), 'false', !(await terrBox.isChecked()));
+      const caption = page.locator('.fp-territory-note');
+      check('No territory caption while the colouring is off', String(await caption.isVisible()), 'false', !(await caption.isVisible()));
+      await terrBox.check();
+      await page.waitForFunction(() => window.lunyx.store.get().showTerritories === true, null, { timeout: 10_000 });
+      // What the colours mean, on screen under the checkbox while they are drawn (@globe's ed249f4).
+      const meaning = (await caption.isVisible()) ? ((await caption.textContent()) ?? '').trim() : '';
+      check('The caption under the checkbox says what the colours mean (the nearest landing, not ownership)', meaning.slice(0, 220) || '(no caption)', 'nearest landing; no ownership', /nearest/i.test(meaning) && /(legal boundary|owns|ownership)/i.test(meaning));
+      const terr = () =>
+        page.evaluate(() => {
+          const g = window.lunyx.scene.globe;
+          const u = g.uniforms;
+          const n = u.uTerrCount.value;
+          return { sites: n, countries: new Set([...Array(n).keys()].map((i) => u.uTerrSite.value[i].w)).size, shown: g.visibleMarkers.length };
+        });
+      const t1 = await terr();
+      check('The territories are drawn for every landing shown', `${t1.sites} sites, ${t1.countries} countries`, `${t1.shown} sites`, t1.sites === t1.shown && t1.sites > 0);
+      const india = page.getByRole('button', { name: /^India, \d+ landings?$/ });
+      await india.click();
+      await page.waitForFunction((n) => window.lunyx.scene.globe.uniforms.uTerrCount.value !== n, t1.sites, { timeout: 10_000 }).catch(() => {});
+      const t2 = await terr();
+      check('The territories follow the mission filters (India hidden)', `${t2.sites} sites, ${t2.countries} countries`, `${t2.shown} sites, ${t1.countries - 1} countries`, t2.sites === t2.shown && t2.sites < t1.sites && t2.countries === t1.countries - 1);
+      await india.click();
+      await page.waitForFunction((n) => window.lunyx.scene.globe.uniforms.uTerrCount.value === n, t1.sites, { timeout: 10_000 }).catch(() => {});
+      const shownBox = page.getByLabel('Show previous missions');
+      await shownBox.uncheck();
+      check('"Show country territories" is disabled while previous missions are hidden', String(await terrBox.isDisabled()), 'true', await terrBox.isDisabled());
+      await shownBox.check();
+      note(`Territories: ${t1.sites} landings in ${t1.countries} countries; ${t2.sites} in ${t2.countries} with India hidden.`);
+    } else note('No "Show country territories" in this build (before main 5972aaf).');
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
@@ -1267,4 +1352,7 @@ try {
 }
 const all = Object.values(report.profiles).flatMap((p) => p.steps);
 const checks = all.flatMap((s) => s.checks);
-log(`done: ${all.filter((s) => s.ok).length}/${all.length} steps ran, ${checks.filter((c) => c.pass).length}/${checks.length} checks passed. ${out}/report.json`);
+// A check marked `pending` waits for a fix the owners have announced (named in qa-findings.md): when it
+// fails it is counted apart, not as a failure.
+const pending = checks.filter((c) => !c.pass && c.pending);
+log(`done: ${all.filter((s) => s.ok).length}/${all.length} steps ran, ${checks.filter((c) => c.pass).length}/${checks.length} checks passed${pending.length ? `, ${pending.length} pending (${[...new Set(pending.map((c) => c.what))].join('; ')})` : ''}. ${out}/report.json`);
