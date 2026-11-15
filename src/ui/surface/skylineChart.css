@@ -53,6 +53,9 @@
 .skc-line--sun { stroke: var(--skc-sun); }
 .skc-line--earth { stroke: var(--skc-earth); }
 .skc-hidden-zone { fill: rgba(255, 255, 255, 0.05); }
+/* A disc passing through the skyline: the body's colour, faint, under the lines. */
+.skc-pass--sun { fill: var(--skc-sun); opacity: 0.22; }
+.skc-pass--earth { fill: var(--skc-earth); opacity: 0.18; }
 .skc-cross { stroke: rgba(255, 255, 255, 0.5); stroke-width: 1; shape-rendering: crispEdges; }
 .skc-dot { stroke: var(--skc-surface); stroke-width: 2; }
 .skc-dot--sun { fill: var(--skc-sun); }
@@ -73,6 +76,7 @@
 .skc-key--look { width: 2px; height: 11px; margin: 0 3px; background: var(--accent); }
 .skc-key--sun-line, .skc-key--earth-line { width: 14px; height: 2px; border-radius: 1px; }
 .skc-key--sun-line { background: var(--skc-sun); }
+.skc-key--pass { width: 12px; height: 9px; background: linear-gradient(90deg, rgba(201, 133, 0, 0.35) 50%, rgba(57, 135, 229, 0.3) 50%); }
 .skc-key--earth-line { background: var(--skc-earth); }
 
 .skc-tip { display: grid; gap: 2px; white-space: nowrap; }

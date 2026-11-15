@@ -32,7 +32,8 @@ comparison slot) and never returns `"loading"`.
   "intervals": { "darkness": [ { "startUtc", "endUtc", "hours", "touchesWindowStart"?, "touchesWindowEnd"? } ],
                  "earthGaps": [...], "sunBehindEarth": [...] },
   "skyline": { "highestElDeg", "highestAzDeg", "lowestElDeg", "lowestAzDeg", "smoothMoonHorizonDeg", "searchedToKm", "azimuthStepDeg" },
-  "requirements": { "sunElevationBand": { "minDeg", "maxDeg", "sunElNowDeg", "metNow", "windowMinSunElDeg", "windowMaxSunElDeg", "metForWholeWindow" },
+  "requirements": { "sunElevationBand": { "required", "minDeg", "maxDeg", "sunElNowDeg", "metNow", "windowMinSunElDeg", "windowMaxSunElDeg", "metForWholeWindow", "note"? },
+                    // "required" is false while the band is at its default, 0 to 90 deg (T-46): "metNow" and "metForWholeWindow" are then null and "note" says so
                     "maxEarthGap": null | { "limitH", "longestEarthGapH", "met", "gapRunsIntoWindowEdge" } },
   "provenance": { "ephemeris", "ephemerisNote", "elevationData": [ { "name", "resolutionM", "fromKm", "toKm" } ], "assumptions": [] },
   "warnings": []

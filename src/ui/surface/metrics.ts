@@ -70,9 +70,11 @@ export function mountKeyMetrics(region: HTMLElement): void {
   // Countdowns: each is a button that jumps the clock to the event.
   const countTitle = el('h3', 'ly-section-title', 'Next events · over the terrain skyline');
   const countList = el('ul', 'km-count');
+  const jumpOf: Record<string, 'event' | 'start' | 'end'> = {};
   const counts = (['sunset', 'sunrise', 'earthset', 'earthrise'] as const).map((type) => {
     const li = el('li');
-    const go = button('', 'km-count-btn', () => void runAction('jumpToEvent', { type }));
+    // Goes to the instant the countdown names (the start of a setting, the end, or Earth's centre crossing).
+    const go = button('', 'km-count-btn', () => void runAction('jumpToEvent', { type, instant: jumpOf[type] }));
     const label = el('span', 'km-count-label'), when = el('span', 'ly-value km-count-in'), at = el('span', 'ly-note km-count-at');
     go.append(label, when, at);
     li.append(go);
@@ -91,8 +93,8 @@ export function mountKeyMetrics(region: HTMLElement): void {
   };
   const sunlight = field('Sunlight', 'Time-averaged visible part of the Sun\'s disc over the mission window');
   const darkness = field('Longest darkness', 'Longest spell with the Sun entirely hidden');
-  const earthSight = field('Earth\'s centre in sight', 'Share of the window with geometric line of sight to Earth\'s centre: not a radio link');
-  const earthGap = field('Longest Earth gap', 'Longest spell without line of sight to Earth\'s centre');
+  const earthSight = field('Earth in sight', 'Share of the window with geometric line of sight to Earth: to its centre (the app\'s definition) and to any part of its disc (the definition of the long-term PGDA maps). Not a radio link.');
+  const earthGap = field('Longest Earth gap', 'Longest spell without line of sight to Earth\'s centre, and longest with the whole of Earth\'s disc behind the skyline');
   const slope = field('Slope');
   const sunRange = field('Sun elevation', 'Lowest and highest elevation of the Sun\'s centre during the window');
 
@@ -164,11 +166,12 @@ export function mountKeyMetrics(region: HTMLElement): void {
       const row = counts[k];
       row.label.textContent = c.label;
       row.when.textContent = c.text;
-      // Second line: which instant of the setting or rising this is, and when (UTC).
-      row.at.textContent = c.timeMs === null ? '' : `${c.instant} · ${formatUtc(c.timeMs)}`;
+      // Second line: both ends of the passage, each named (D-8).
+      row.at.textContent = c.span;
+      jumpOf[c.type] = c.jump;
       row.go.disabled = c.timeMs === null;
-      row.go.classList.toggle('km-count-btn--none', c.timeMs === null);
-      row.go.title = c.timeMs === null ? c.detail : `${c.detail}. Click to move the clock there.`;
+      row.go.classList.toggle('km-count-btn--none', !c.span);
+      row.go.title = c.detail;
     });
 
     const w = v.window;
@@ -177,8 +180,8 @@ export function mountKeyMetrics(region: HTMLElement): void {
       winTitle.textContent = `Mission window · ${formatUtc(w.startMs)} for ${w.durationH} h`;
       sunlight.textContent = `${pct(w.illuminationPct)} (any Sun ${pct(w.sunAnyPct)})`;
       darkness.textContent = w.longestDarknessText;
-      earthSight.textContent = pct(w.earthVisiblePct);
-      earthGap.textContent = w.longestEarthGapText;
+      earthSight.textContent = `centre ${pct(w.earthVisiblePct)} · any part of the disc ${w.earthAnyPct === null ? 'not available' : pct(w.earthAnyPct)}`;
+      earthGap.textContent = `centre ${w.longestEarthGapText} · whole disc ${w.longestEarthAnyGapText}`;
       slope.textContent = w.slopeText;
       slope.title = w.slopeDetail;
       sunRange.textContent = w.sunElRangeText;
