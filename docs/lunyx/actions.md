@@ -13,8 +13,12 @@ country flags and ownership), and the T-64 release candidate c39c516 of
 `am/lunyx/agent/upstream-sync` (a D-5 exception for T-17: the teammates' GitHub main 081784a with
 territory size, movable surface panels, one click selects a landing, the drawer's "Close ×";
 pull request #2 with the Track Sun / Track Earth toggles; d744169 "Fixed LLM", credentials from
-the Anthropic SDK; @surface's panel actions, T-65; the F-10 fix in the compare panel; @globe's
-territory-size result). **69 actions.** Read from every event handler and
+the Anthropic SDK; @surface's panel actions, T-65; the F-10 fix in the compare panel), and the
+T-67 head ba95be0 (= dd42bdb, the clean T-67 head, in app and test code; a D-5 exception for T-20 and T-24, with @globe's f420c44; the teammates' GitHub main 5775c64, with 8c5ba86
+"Added territory mappings": the territory size select and `setTerritoryScale` are gone, and the
+whole Moon can be coloured by the country of the nearest landing shown; 5972aaf: its toggle,
+`showTerritories`; and pull request #4: the surface strip is one row of Track Sun, Track Earth,
+a "Surface options" disclosure and an "About" disclosure). **69 actions.** Read from every event handler and
 every `runAction` call in `src/ui/` and `src/scene/`, and from the registry at run time.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tools are
@@ -55,9 +59,10 @@ Check columns:
 | `setMaxEarthGap` | core | `hours?` | compare panel: "Earth gap at most" | C D |
 | `setSunBand` | core | `minDeg`, `maxDeg` | Filters: solar elevation; compare panel: "Sun elevation from / to" | C D E |
 | `setOverlay` | core | `mode` | Filters: "Show optimal landing area" and its selector | C D E |
-| `showMissions` | core | `show` | Filters: "Show previous missions" | C D E |
-| `showFlags` | core | `show` | Filters: "Show country flags" (remembered in the browser) | C D E |
-| `listPresets` (query), `loadPreset` | presets (@globe, T-22) | ; `id`, `play?` | Filters: the mission presets list (each a button) | C D E |
+| `showMissions` | core | `show` | Filters: "Show previous missions": the landing markers, which the flags and the territories need. The result says whether those are drawn now (`territoriesShown`, `flagsShown`) | C D E |
+| `showFlags` | core | `show` | Filters: "Show country flags" (remembered in the browser). The result's `flagsShown`: false while the flags are off, the markers hidden or the filters hide every landing | C D E |
+| `showTerritories` | core (5972aaf, T-67) | `show` | Filters: "Show country territories" (off by default; disabled while previous missions are hidden; a caption under it while both are on): the whole Moon coloured by the country of the nearest landing shown, a display of who landed nearest, not ownership. The result gives `territoriesShown` (false while it is off, the markers are hidden or the filters hide every landing) and `territoryRule`; `getState.showTerritories` | C D E |
+| `listPresets` (query), `loadPreset` | presets (@globe, T-22) | ; `id`, `play?` | Filters: the mission presets list (each a button). Rows and results carry an optional `caveat` (IM-2's unconfirmed touchdown minute; the eclipse times computed by the app) and, for the eclipse, `sunBehindEarth.reported`; the list's status line and the deterministic replies quote them | C D E |
 | `setFilters` | core | `programs?`, `countries?`, `type?`, `fromYear?`, `toYear?`, `reset?` | "Mission filters" | C D E |
 | `saveScenario` | core | `slot`, `label?` | compare panel "Save as A / B" | C D |
 | `compare` | core | | no control of its own: the launcher opens the same A/B view (`openCompare`), and the panel analyses a pair as soon as both slots are saved. `compare` is the assistant's one step that opens it and waits for both analyses | C D |
@@ -65,21 +70,20 @@ Check columns:
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
 | `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30; default 1 since T-64) | none since T-64: the Filters selector is gone and only the assistant sets it; the "Terrain relief" note says what is drawn | C D U |
-| `setTerritoryScale` | globe display (@globe, T-64) | `factor` (1 to 100, default 100): a display setting, not a width multiplier (1 = true size, 100 = every area drawn a set width from orbit; blended in between). The result gives `territoryRule` and, for the selected landing, `selectedSiteArea` (`widthFactorFromOrbit`, `drawnWidthFromOrbitKm`, the card's `text`) | Filters: "Territory size exaggeration" | C D E |
 | `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |
 | `getSiteScience`, `nearestIceTargets` (queries) | site science (T-30, mounted by @globe) | ; `lat?`, `lon?`, `count?`, `limit?`, `maxKm?` | the card's "Site science" section | C D U |
-| `setGeneratedDetail` | surface (@surface) | `on` | HUD "Generated detail" | C D E |
+| `setGeneratedDetail` | surface (@surface) | `on` | HUD "Surface options" › "Generated detail" | C D E |
 | `setFieldOfView` | surface | `fovDeg` (4 to 100) | scroll, pinch, + / - in the surface view (pose) | C D |
 | `lookAtBody` | surface | `body`, `fovDeg?` | key metrics Sun / Earth; chart Enter / E (the HUD's Face buttons became Track toggles in pull request #2) | C D |
 | `setBodyTracking` | surface (pull request #2) | `body: sun \| earth`, `on` | HUD "Track Sun" / "Track Earth" (toggles, `aria-pressed`); a drag or the arrow keys stop it; `getSurfaceView.trackingBody` says which | C D E |
-| `walkTo` | surface | `eastM`, `northM`, `liftM?` | W A S D, E / Q (pose); HUD "Return to site" | C D E |
-| `setSkyAnnotations` | surface | `tracks?`, `labels?` | HUD "Sky paths" | C D E |
-| `getSurfaceView` (query) | surface | | HUD status line, ground line, "About this view" | C D |
+| `walkTo` | surface | `eastM`, `northM`, `liftM?` | W A S D, E / Q (pose); HUD "Surface options" › "Return to site" | C D E |
+| `setSkyAnnotations` | surface | `tracks?`, `labels?` | HUD "Surface options" › "Sky paths" | C D E |
+| `getSurfaceView` (query) | surface | | the HUD's "About" disclosure: the status, ground and owner lines (pull request #4) | C D |
 | `explainBlockage` | surface HUD (@surface) | `body`, `utc?` | key metrics "why", chart click on a hidden mark, X, explanation "Now" | C D U |
 | `dismissBlockageExplanation` | surface HUD | | explanation "Close", Escape on the chart | C D |
-| `setChart` | surface HUD | `show?`, `expanded?`, `mode?`, `table?`, `azimuthRange?` | HUD "Skyline chart"; chart Skyline / Time / Table / fit / size / × | C D E |
+| `setChart` | surface HUD | `show?`, `expanded?`, `mode?`, `table?`, `azimuthRange?` | HUD "Surface options" › "Skyline chart"; chart Skyline / Time / Table / fit / size / × | C D E |
 | `showKeyMetrics` | surface HUD | `open` | key metrics fold | C D E |
 | `setSurfacePanel` | surface panels (@surface, T-65) | `panel: key-metrics \| skyline-chart \| surface-controls \| time \| locator-map \| compare \| assistant`, `folded?`, `xPx?`, `yPx?` | each panel's Fold / Expand button; its grip (a drag is one call; arrow keys, Shift for larger steps) | C D E |
 | `resetSurfacePanels` | surface panels | | "Reset panels" | C D E |
@@ -147,7 +151,7 @@ of 14 March 2025 in one step (`listPresets`, `loadPreset`).
 | face the Sun or Earth once | key metrics, chart keys | `lookAtBody` | C D |
 | keep facing the Sun or Earth as the clock runs | HUD "Track Sun" / "Track Earth" | `setBodyTracking` | C D E |
 | move, fold and reset the surface panels | grips, Fold buttons, "Reset panels" | `setSurfacePanel`, `resetSurfacePanels`, `getSurfacePanels` (T-65; closes G-13) | C D E |
-| go back to the site | HUD "Return to site" | `walkTo { 0, 0 }` | C D |
+| go back to the site | HUD "Surface options" › "Return to site" | `walkTo { 0, 0 }` | C D |
 
 Where the globe view is: `getState.globeDisplay.viewTarget { latDeg, lonDegEast, flying }` is
 the point the view was last asked to centre on, exactly as asked, also while the camera is still
@@ -159,13 +163,22 @@ the drawn centre before, so a zoom after "show the south pole" re-centred 0.1° 
 ### 2.4 Layers and how the globe is drawn
 
 `setOverlay`, `showMissions`, `setFilters` (as before); `setReliefExaggeration`, `showCoverage`,
-`showIceTargets` (T-13, T-20); `setTerritoryScale` (T-64: how much the explored areas are
-enlarged on the globe from orbit, a display setting whose factor is not a width multiple; the
-card's sizes stay true; the original team is adding the real enlargement for the selected site
-to its result, and the phrase then quotes it). `getState.globeDisplay`
-reports the relief factor drawn now, `territoryScale`, the coverage and ice outlines and the
-average-map legend. Deterministic phrases: "relief x5", "territory size x25", "territories at
-true size".
+`showIceTargets` (T-13, T-20). `getState.globeDisplay` reports the relief factor drawn now, the
+coverage and ice outlines and the average-map legend.
+
+Territories (T-67, the teammates' 8c5ba86 and 5972aaf): "Show country territories"
+(`showTerritories`, off by default) colours the whole Moon by the country of the nearest landing
+shown, so the mission filters (`setFilters`) change it too. It is a display of who landed
+nearest, not of ownership: no country owns lunar ground. Like the flags, it is drawn only with the
+landing markers (`showMissions`), and only when the mission filters let a landing through; the
+checkbox is disabled while the markers are hidden. The deterministic replies say what is
+actually drawn, from the results' `territoriesShown`, `territoryRule` and `flagsShown` (@globe's
+f420c44; on a build without them, from `getState`), and why not: "Country territories are
+switched on, but nothing is drawn while previous missions are hidden" or "while the mission
+filters hide every landing". Each reply adds that no country owns lunar ground. `setTerritoryScale` (T-64) is gone, and with it the "Territory size
+exaggeration" select; a request about "territory size" is not understood, and never read as the
+relief. Deterministic phrases: "show territories", "hide territory colours", "show country
+flags", "show missions".
 
 ### 2.5 Mission parameters and requirements
 
@@ -250,16 +263,16 @@ A gap is something a user can do or read that no action covers, or data neither 
 ## 5. How each path has been verified
 
 Browser runs on the GPU under the GPU lock (D-7; ANGLE, NVIDIA GTX 1050 Ti), 1280x720, on a
-git-archive copy of 9231190 (this branch on the T-64 candidate c39c516), 2026-11-15 10:04 to
-10:08 UTC, log `/tmp/lunyx-t17-final-9231190/run.log`: 208 tests, 207 pass, 0 fail, and the F-9
-check (marked todo) passed.
+git-archive copy of c7a34c8 (this branch on the T-67 head ba95be0, the same app and test code as
+dd42bdb), 2026-11-15 11:13 to 11:17 UTC, log `/tmp/lunyx-t24-c7a34c8/run.log`: 209 tests, 208
+pass, 0 fail, and the F-9 check (marked todo) passed.
 
 | Path | What ran | Result |
 | --- | --- | --- |
 | **Real language model** | nothing: there is no API key or Claude login on the build machine. The command is `e2e/scenario/real-model.mjs` (see `e2e/scenario/README.md`) | **not verified** |
-| Scripted test model (not a language model) | every one of the 69 actions through the real `/api/assistant` route, its result and the control that shows it checked, and the tool list a model receives (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | control 74/74 (the 69 actions, "after a scan, compare shows the A/B tab", no page errors; and what a model is given: the renderer, the tool list through the route, every action with a case, a phrase and a row here), scenario 4/4, assistant 5/5 |
-| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`); both ends of a sunset, Earth by its centre and by any part of its disc, the default solar band, the card's owner and explored area and the real clock (`assistant.test.mjs`); a server in the default configuration with no Claude credentials answers in deterministic mode (F-11) | control 70/70 (the 69 phrases, no page errors), scenario 7/7, assistant 15/15; vitest `src/assistant`, `src/ui/assistant`, `server/llm`, `src/core`, `src/ui/surface`, `src/scene/globe`, `src/scene/surface`: 546/546 (52 files) |
-| UI and actions (no assistant) | `e2e/equivalence.test.mjs`: the real control used, its action logged with origin "ui", the same end state from the action alone; new on the T-64 candidate: territory size, "Track Sun", the panels' Fold button, grip arrow keys and "Reset panels" | 33/33: 32 cases, and the F-9 check (still marked todo) passed |
+| Scripted test model (not a language model) | every one of the 69 actions (T-67: `setTerritoryScale` gone, `showTerritories` new) through the real `/api/assistant` route, its result and the control that shows it checked, and the tool list a model receives (`control.test.mjs`); the T-6 scenario as three follow-ups (`scenario.test.mjs`, `LUNYX_LLM_SCRIPT=scenario`); `e2e/assistant.test.mjs`; in-process loop tests (`server/llm/loop.test.ts`, `scenarioScript.test.ts`) | control 74/74 (the 69 actions, "after a scan, compare shows the A/B tab", no page errors; and what a model is given: the renderer, the tool list through the route, every action with a case, a phrase and a row here), scenario 4/4, assistant 5/5 |
+| Deterministic mode | every action by its phrase, in the browser (`control.test.mjs`) and against the stand-in app (unit); the T-6 scenario as three follow-ups and as one sentence (`scenario.test.mjs`); both ends of a sunset, Earth by its centre and by any part of its disc, the default solar band, the card's owner and explored area and the real clock (`assistant.test.mjs`); a server in the default configuration with no Claude credentials answers in deterministic mode (F-11) | control 70/70 (the 69 phrases, no page errors), scenario 7/7, assistant 15/15; vitest `src/assistant`, `src/ui/assistant`, `server/llm`, `src/core`, `src/ui`, `src/scene`: 722/722 (72 files) |
+| UI and actions (no assistant) | `e2e/equivalence.test.mjs`: the real control used, its action logged with origin "ui", the same end state from the action alone; on the T-64 candidate: "Track Sun" and the "Surface options" buttons, the panels' Fold button, grip arrow keys and "Reset panels"; on T-67: "Show country territories" and its disabled state | 34/34: 33 cases, and the F-9 check (still marked todo) passed |
 
 How well a real model chooses and chains these actions is unknown until the real-model run
 has been done; only the plumbing it would use is tested.
