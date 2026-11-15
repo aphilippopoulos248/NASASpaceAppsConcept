@@ -33,6 +33,14 @@ export class Markers {
   readonly items: Marker[] = [];
   private selected: Marker | null = null;
   private readonly selectionRing: Mesh;
+  private revealProgress = Infinity;
+
+  /** Number of landing symbols revealed during the intro handoff. */
+  setRevealProgress(progress: number): void {
+    this.revealProgress = progress;
+  }
+
+  get count(): number { return this.items.length; }
 
   constructor(landings: Landing[]) {
     const dotGeo = new SphereGeometry(1, 16, 12);
@@ -106,11 +114,13 @@ export class Markers {
 
   /** Call every frame: keeps markers a constant on-screen size and pulses the selection ring. */
   update(camera: Camera, timeSec: number): void {
-    for (const m of this.items) {
+    for (const [i, m] of this.items.entries()) {
       // In front of the limb: the line of sight to the site does not pass through the Moon.
-      m.group.visible = m.shown && m.dir.dot(camera.position) > 1;
+      m.group.visible = m.shown && i < this.revealProgress && m.dir.dot(camera.position) > 1;
       const s = camera.position.distanceTo(m.group.position) * SCREEN_SCALE;
-      m.group.scale.setScalar(m === this.selected ? s * 1.25 : s);
+      const entering = Math.min(1, Math.max(0, (this.revealProgress - i) / 0.9));
+      const pop = entering >= 1 ? 1 : entering * (1 + 0.18 * Math.sin(Math.PI * entering));
+      m.group.scale.setScalar((m === this.selected ? s * 1.25 : s) * pop);
     }
     this.selectionRing.visible = this.selected !== null && this.selected.group.visible;
     if (this.selected) {

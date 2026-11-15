@@ -21,6 +21,21 @@
 body[data-view='globe'] .region[data-views='surface'],
 body[data-view='surface'] .region[data-views='globe'] { display: none; }
 
+/* Presentation phase (intro overlay). Separate from body[data-view] / ViewMode. */
+.region-intro { position: fixed; inset: 0; z-index: var(--z-intro); pointer-events: none; }
+.region-intro:empty { display: none; }
+
+body[data-phase='intro'] #scene { pointer-events: none; }
+body[data-phase='intro'] .shell {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-slow) var(--ease);
+}
+body[data-phase='app'] .shell {
+  opacity: 1;
+  transition: opacity var(--dur-slow) var(--ease);
+}
+
 .region-wordmark { top: var(--sp-4); left: 50%; transform: translateX(-50%); }
 .wordmark {
   font-family: var(--font-display);

@@ -1,5 +1,6 @@
 /// <reference types="node" />
 import { readFileSync } from 'node:fs';
+import { loadavg } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Scenario, SiteRef } from '../core/types';
@@ -323,7 +324,7 @@ describe('opportunity edges placed to 0.25 s (lunyx-science T-9)', () => {
       return ms;
     };
     const coarseMs = best({ edgePrecisionMs: EVENT_PRECISION_MS }), fineMs = best({});
-    console.log(`IM-2 14 d: ${edges} station edges, each within ${DSN_EDGE_PRECISION_MS / 1000} s of the indicator's change of sign; dsnOpportunities() ${coarseMs.toFixed(1)} ms with edges at the window's 10 s, ${fineMs.toFixed(1)} ms placed to 0.25 s (best of 3; load average ${readFileSync('/proc/loadavg', 'utf8').split(' ')[0]})`);
+    console.log(`IM-2 14 d: ${edges} station edges, each within ${DSN_EDGE_PRECISION_MS / 1000} s of the indicator's change of sign; dsnOpportunities() ${coarseMs.toFixed(1)} ms with edges at the window's 10 s, ${fineMs.toFixed(1)} ms placed to 0.25 s (best of 3; load average ${loadavg()[0].toFixed(2)})`);
     expect(edges).toBeGreaterThan(20);
   });
 });
