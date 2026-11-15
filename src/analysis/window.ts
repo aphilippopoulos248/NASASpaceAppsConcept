@@ -5,6 +5,7 @@ import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
 import { computeHorizon, destination, profileIndex, skylineAt, slopeAt, type HorizonOptions } from './horizon';
 import { dsnOpportunities } from './dsn';
+import { fineRayCount, fineSkyline, FINE_PER_DEG, nearSkylineRanges } from './fineSkyline';
 import { EXTEND_LIMIT_DAYS, fullSpans, longestFull } from './extend';
 import { EVENT_PRECISION_MS, hours, intervalsOf, longest } from './intervals';
 import { modelEphemeris, skyAt, tabulatedEphemeris, type Ephemeris } from './sky';
@@ -293,9 +294,21 @@ const utcMinute = (t: number) => `${new Date(t).toISOString().slice(0, 16).repla
 /** Terrain notes that only describe what is loaded (shown as provenance) rather than a limitation (shown as a warning). */
 const isDescriptiveNote = (note: string) => /^Elevation data at this point, finest first/.test(note);
 
-export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Ephemeris, horizonOptions: HorizonOptions = {}): SiteAnalysis {
+export interface AnalyseOptions {
+  /**
+   * Read the skyline again every 1 / FINE_PER_DEG deg where the Sun's or Earth's disc comes near it
+   * (fineSkyline.ts; default true). False: the main profile only, as before T-50.
+   */
+  fineSkyline?: boolean;
+}
+
+export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Ephemeris, horizonOptions: HorizonOptions = {}, options: AnalyseOptions = {}): SiteAnalysis {
   const site = { lat: scenario.site.lat, lon: scenario.site.lon };
   const horizon = computeHorizon(stack, site, scenario.mastHeightM, horizonOptions);
+  // Where a disc meets the skyline, a finer skyline: every event, passage and visible fraction below reads it there.
+  if (options.fineSkyline !== false && Number.isFinite(horizon.siteElevationM)) {
+    horizon.fine = fineSkyline(stack, site, scenario.mastHeightM, nearSkylineRanges(scenario, horizon, eph), horizonOptions);
+  }
   const warnings = [...horizon.warnings, ...stack.notes.filter((n) => !isDescriptiveNote(n))];
   const slope = slopeAt(stack, site, slopeBaselineM(stack, site.lat, site.lon));
   if (!Number.isFinite(slope.slopeDeg)) warnings.push('Slope unavailable: no elevation data around the site.');
@@ -338,7 +351,8 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
       assumptions: [
         `Observer ${horizon.mastHeightM} m above the terrain at ${site.lat.toFixed(4)}, ${site.lon.toFixed(4)} (degrees, east-positive, ME frame); heights above the 1737.4 km sphere.`,
         'Positions are topocentric and airless (no refraction), as JPL Horizons APPARENT=AIRLESS for a coord@301 observer.',
-        `Skyline from elevation data, including the Moon's curvature, ${horizon.azStepDeg} deg in azimuth, searched to ${(horizon.maxRangeM / 1000).toFixed(0)} km: ${layersText || 'no data'}.`,
+        `Skyline from elevation data, including the Moon's curvature, ${horizon.azStepDeg} deg in azimuth, searched to ${(horizon.maxRangeM / 1000).toFixed(0)} km: ${layersText || 'no data'}.` +
+          (horizon.fine?.length ? ` Where the Sun's or Earth's disc comes near the skyline in the window, it is read every ${1 / FINE_PER_DEG} deg (${fineRayCount(horizon.fine)} more directions), so features narrower than ${horizon.azStepDeg} deg under a rising or setting disc are seen.` : ''),
         `Sampled every ${scenario.stepMin} min; rise and set times refined to ${EVENT_PRECISION_MS / 1000} s; the Sun and Earth are discs (visible fraction integrated across each disc).`,
         'A rise or set takes time, so each event is one named instant (decision D-8): sunrise = the first part of the Sun\'s disc appears above the skyline ("Sun starts rising"), sunset = the last part goes behind it ("Sun fully set"); Earthrise / Earthset = Earth\'s centre crossing the skyline. Each event\'s span (and `transitions`) gives the whole passage: from the first cut of the disc to the last limb when setting, from the first limb to the whole disc clear when rising.',
         'Sunlight also counts Earth passing in front of the Sun (geometric discs; the faint light refracted by Earth\'s atmosphere is ignored).',
