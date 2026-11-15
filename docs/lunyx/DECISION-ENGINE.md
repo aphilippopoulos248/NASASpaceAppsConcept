@@ -94,22 +94,20 @@ How each source is measured:
 
 Schemas are strict (D-3): unknown keys and out-of-range numbers are refused with a reason.
 
-Rulings of 2026-11-15 (Lunyx m1132), binding for T-73 and T-74:
+Rulings of 2026-11-15 (Lunyx m1132), binding for T-73 and T-74 (the reference for shapes is `docs/lunyx/handover/T-73-decision-tools.md`):
 - **Thresholds in action parameters are numbers only.** The schema language has no null, and tool
   schemas must stay valid JSON Schema. `removeThresholds: CriterionId[]` removes requirements; the
   action maps it to `null` in `ProfileOverrides`. Removing or loosening a safety threshold still
   needs `allowSafetyRelaxation`.
-- **`setDecisionSettings` semantics:**
-  - `overrides` replaces the stored overrides;
-  - `profileId` alone switches the profile and clears the overrides;
-  - `reset: true` clears the overrides and keeps the profile.
+- **`setDecisionSettings` semantics**, as built in T-73 (Lunyx m1137; this replaces m1132 item 4):
+  - `overrides` are merged per criterion into the current ones, and the other fields are replaced;
+  - a new `profileId` starts without overrides;
+  - `reset: true` goes back to the first profile without overrides.
 - **`findBestSites` returns** the Ranking, plus the `overrides` used, the `cap` and `dropped` (the
   number of candidates over the cap). `evaluations` holds the top `limit` feasible sites and every
   unknown and infeasible one, each as a full `SiteEvaluation`. `limit` defaults to 5, maximum 50.
 - **`compareSites` returns** `{profile, overrides, relaxations, comparison}`.
-- **Progress:** `decisionRun()` gives `{running, done, total, label}`, and `onDecisionRun(fn)`
-  returns an unsubscribe function. Both are exported from `src/core/decisionActions.ts`. There is
-  no `AppState` field for progress.
+- **Progress:** `decisionProgress`, exported from `src/core/decisionActions.ts`, as built in T-73. There is no `AppState` field for progress.
 
 ## 4. Interface
 
