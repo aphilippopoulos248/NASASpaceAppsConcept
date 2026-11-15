@@ -101,6 +101,8 @@ export class GlobeView {
     c.addEventListener('start', () => {
       c.autoRotate = false;
       this.cancelFly();
+      // Turned by hand: the fields and "Drop pin at centre" follow the camera again.
+      globeDisplay.setLive({ viewTarget: null });
     });
     this.scene.add(this.sky.root, createStars());
 
@@ -120,7 +122,7 @@ export class GlobeView {
     document.body.append(this.tooltip);
 
     onCommand('flyTo', ({ lat, lon, altitudeKm }) => {
-      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM);
+      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM, { lat, lon: wrapLon(lon) });
     });
     this.averages = new AverageMaps(this.uniforms, Math.min(4096, renderer.capabilities.maxTextureSize));
     this.averages.onChange = () => globeDisplay.setLive({ averages: this.averages.state });
@@ -313,8 +315,24 @@ export class GlobeView {
   /** Places the camera above a point at once (deep links straight to the surface). */
   jumpTo(lat: number, lon: number, altitudeKm: number): void {
     this.cancelFly();
-    this.controls.autoRotate = false;
-    this.camera.position.copy(latLonToVec3(lat, lon)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    this.stopMomentum();
+    this.camera.position.copy(flyDirection(latLonToVec3(lat, lon), this.camera.position)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    globeDisplay.setLive({ viewTarget: { lat, lon: wrapLon(lon) } });
+  }
+
+  /**
+   * Stops the auto-rotation and the turn the orbit controls still owe it: with damping on, a
+   * turn is paid out over the following frames, so after the first flight the camera kept
+   * turning and ended east of the point asked for (lunyx-experience Q-3: 0.013 deg on a 1 deg hop).
+   */
+  private stopMomentum(): void {
+    const c = this.controls;
+    c.autoRotate = false;
+    // One undamped update pays out the rest of the turn at once (a small fraction of a degree,
+    // before the flight starts) and leaves nothing for later frames.
+    c.enableDamping = false;
+    c.update();
+    c.enableDamping = true;
   }
 
   /** Resolves when the current flight (if any) has arrived or was interrupted. */
@@ -326,15 +344,17 @@ export class GlobeView {
   private cancelFly(): void {
     const f = this.fly;
     this.fly = null;
+    if (f) globeDisplay.setLive({ flying: false });
     f?.done.forEach((d) => d());
   }
 
-  private flyTo(dir: Vector3, dist?: number): void {
+  private flyTo(dir: Vector3, dist?: number, asked?: { lat: number; lon: number }): void {
+    this.stopMomentum();
     // Exactly over the point asked for; only right over a pole it stops 0.1 degree short (flyTarget.ts).
     const d = flyDirection(dir, this.camera.position);
     const waiting = this.fly?.done ?? [];
     this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting };
-    this.controls.autoRotate = false;
+    globeDisplay.setLive({ viewTarget: asked ?? vec3ToLatLon(dir), flying: true });
   }
 
   private stepFly(dt: number): void {

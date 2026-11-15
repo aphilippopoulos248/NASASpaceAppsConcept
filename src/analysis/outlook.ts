@@ -129,6 +129,7 @@ export function outlookWith(scenario: Scenario, stack: TerrainStack, options: Ou
   const meanSun = integrator(sunCell, startMs, stepMs);
   const meanAny = integrator(cellCoverage(metrics.sunIntervals, startMs, stepMs, cells), startMs, stepMs);
   const meanEarth = integrator(cellCoverage(metrics.earthIntervals, startMs, stepMs, cells), startMs, stepMs);
+  const meanEarthAny = integrator(cellCoverage(metrics.earthAnyIntervals ?? [], startMs, stepMs, cells), startMs, stepMs);
 
   // Dark spells and Earth gaps in full: the first and last are followed beyond what was evaluated.
   const limitMs = EXTEND_LIMIT_DAYS * DAY;
@@ -182,6 +183,7 @@ export function outlookWith(scenario: Scenario, stack: TerrainStack, options: Ou
       sunAnyPct: pct(meanAny(a, b)),
       longestDarknessH: dark.fullH, darknessComplete: dark.complete, longestDarknessInWindowH: dark.inside,
       earthVisiblePct: pct(meanEarth(a, b)),
+      earthAnyPct: pct(meanEarthAny(a, b)),
       longestEarthGapH: gap.fullH, earthGapComplete: gap.complete, longestEarthGapInWindowH: gap.inside,
       maxSunElDeg: maxEl, minSunElDeg: minEl,
     });
@@ -270,7 +272,7 @@ export function outlookWith(scenario: Scenario, stack: TerrainStack, options: Ou
     `Span: ${months} lunar months of ${SYNODIC_DAYS} days from ${utcMinute(startMs)}; rows are consecutive ${options.windowDays === undefined ? 'lunar days' : `${f1(windowDays)}-day windows`} from that instant${nRows * windowMs < spanMs - stepMs ? ' (a last partial window is left out)' : ''}.`,
     `Observer ${horizon.mastHeightM} m above the terrain at ${site.lat.toFixed(4)}, ${site.lon.toFixed(4)} (degrees, east-positive). One skyline for the whole span, ${horizon.azStepDeg} deg in azimuth, from: ${layersText || 'no data'}.`,
     `Sun and Earth from the in-app model for the whole span (${eph.note}), sampled every ${stepMin} min; rise and set times refined to 10 s. Topocentric and airless.`,
-    'Sunlight is the time-averaged visible fraction of the Sun\'s disc; Earth passing in front of the Sun is included. Earth line of sight means Earth\'s centre above the skyline: geometry only, not a radio link.',
+    'Sunlight is the time-averaged visible fraction of the Sun\'s disc; Earth passing in front of the Sun is included. Earth line of sight means Earth\'s centre above the skyline: geometry only, not a radio link. Each row\'s earthAnyPct counts any part of Earth\'s disc instead (the definition of PGDA product 69\'s long-term Earth map).',
     `Darkness and Earth gaps are measured in full: they are not cut at a row's edges, and at the ends of the span they are followed up to ${EXTEND_LIMIT_DAYS} days further.`,
     `Arrivals: a mission of ${f1(scenario.durationH)} h starting every ${f1(arrivalStepMs / H)} h across the span; score = weighted mean of sunlight % and Earth line-of-sight % (weights ${weights.weightSun} and ${weights.weightEarth}), the score of the nearby ranking.`,
     'These are geometric conditions only; nothing here is a statement about power or temperature.',

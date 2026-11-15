@@ -137,12 +137,108 @@ export interface WindowMetrics {
   longestDarknessFull?: FullSpan;
   /** The same for the longest spell without line of sight to Earth's centre. */
   longestEarthGapFull?: FullSpan;
+
+  // ---- Earth by disc (T-31 item 3). The fields above count Earth's CENTRE; these count ANY PART of
+  // Earth's disc above the skyline, the definition of the long-term Earth map of NASA PGDA product 69.
+  // Shown next to the centre figures, never instead of them. Filled by every analysis, nearby
+  // candidate and outlook evaluation from this build on; optional only so that hand-built objects
+  // still type-check.
+
+  /** Percent of the window with any part of Earth's disc above the skyline (geometry only, not a link budget). At least earthVisiblePct. */
+  earthAnyPct?: number;
+  /** Longest continuous spell with Earth's disc wholly behind the skyline, hours (a lower bound if `earthAnyGapOpenEnded`). At most longestEarthGapH. */
+  longestEarthAnyGapH?: number;
+  earthAnyGapOpenEnded?: boolean;
+  /** Spans with any part of Earth's disc above the skyline, and the spans with none of it. */
+  earthAnyIntervals?: Interval[];
+  earthAnyGapIntervals?: Interval[];
+  /** The longest spell with Earth's disc wholly hidden that overlaps the window, measured in full (as `longestEarthGapFull`). Absent when there is none, and in the nearby scan. */
+  longestEarthAnyGapFull?: FullSpan;
 }
 
 export interface SkyEvent {
+  /**
+   * Which instant each type is (unchanged; decision D-8 of the Lunyx hub):
+   * sunrise = the first part of the Sun's disc appears above the terrain skyline ("Sun starts rising");
+   * sunset = the last part of the Sun's disc goes behind it ("Sun fully set");
+   * earthrise / earthset = the centre of Earth's disc crosses the skyline ("Earth's centre rises / sets").
+   * A rise or set is not one moment: `span` gives the whole passage the event belongs to.
+   */
   type: 'sunrise' | 'sunset' | 'earthrise' | 'earthset';
   timeMs: number;
   azDeg: number;
+  /**
+   * The passage of the disc through the skyline that this event is one instant of (T-31 item 2):
+   * a sunset is its `end` (edge 'last-limb'), a sunrise its `start` (edge 'first-limb'), an Earthset or
+   * Earthrise one of its `centre` crossings. The same object as the matching entry of
+   * `SiteAnalysis.transitions`. Present on every event of analyse() from this build on; optional only so
+   * that events built by hand still type-check.
+   */
+  span?: SkyTransition;
+}
+
+// ---------- passages through the skyline: both ends of every rise and set (T-31 item 2, D-8) ----------
+
+/**
+ * One end of a passage of a disc through the terrain skyline (terrain only: Earth in front of the Sun
+ * is an eclipse, in `eclipseIntervals`, not a set).
+ * - 'first-cut': the skyline starts to cut into a disc that was wholly clear of it ("starts setting");
+ * - 'last-limb': the last part of the disc goes behind the skyline ("fully set");
+ * - 'first-limb': the first part of a hidden disc comes above the skyline ("starts rising");
+ * - 'whole-clear': the whole disc is clear of the skyline ("fully risen");
+ * - 'unresolved': this end lies beyond the analysed window and was not found within the search limit
+ *   (`limitDays`): the time is then where the search stopped, not an event.
+ */
+export type TransitionEdge = 'first-cut' | 'last-limb' | 'first-limb' | 'whole-clear' | 'unresolved';
+
+/**
+ * What the disc did between the two ends.
+ * - 'set': from wholly clear to wholly hidden (first cut ... last limb);
+ * - 'rise': from wholly hidden to wholly clear (first limb ... whole disc clear);
+ * - 'graze': the skyline cut into the disc and let go of it again without hiding it completely
+ *   (first cut ... whole disc clear): "partly hidden, never fully set";
+ * - 'peek': part of the disc came above the skyline and went again without the whole disc clearing it
+ *   (first limb ... last limb): "partly visible, never fully risen";
+ * - 'unresolved': one end is 'unresolved'.
+ */
+export type TransitionKind = 'set' | 'rise' | 'graze' | 'peek' | 'unresolved';
+
+/** One instant of a passage. */
+export interface TransitionInstant {
+  /** UTC, ms. */
+  timeMs: number;
+  /** Azimuth of the disc's centre at that instant, degrees clockwise from north. */
+  azDeg: number;
+  /** False when the instant lies outside the analysed window: it was found by following the passage with the in-app model (or, for edge 'unresolved', is where that search stopped). */
+  inWindow: boolean;
+}
+
+/**
+ * A passage of the Sun's or Earth's disc through the terrain skyline: the span in which the disc is
+ * neither wholly clear of the skyline nor wholly behind it. Every sunrise, sunset, Earthrise and Earthset
+ * of `SiteAnalysis.events` lies in exactly one; grazes and peeks may have no event at all.
+ */
+export interface SkyTransition {
+  body: 'sun' | 'earth';
+  kind: TransitionKind;
+  /** First cut ('set', 'graze') or first limb ('rise', 'peek'). */
+  start: TransitionInstant & { edge: 'first-cut' | 'first-limb' | 'unresolved' };
+  /** Last limb ('set', 'peek') or whole disc clear ('rise', 'graze'). */
+  end: TransitionInstant & { edge: 'last-limb' | 'whole-clear' | 'unresolved' };
+  /** end - start, hours (a lower bound when an end is 'unresolved'). */
+  hours: number;
+  /** The disc's centre crossing the skyline during the passage, in time order (up = coming above it). For Earth these are the earthrise / earthset events (inside the window). */
+  centre: (TransitionInstant & { up: boolean })[];
+  /**
+   * Least and largest fraction of the disc above the skyline at the analysis' samples inside the window
+   * during the passage (0..1; NaN when no sample falls inside it). For a graze, 1 - minVisibleFraction is
+   * how much of the disc the skyline hides at most; for a peek, maxVisibleFraction how much shows at most.
+   * Sampled every `Scenario.stepMin`, so a brief extreme can be missed.
+   */
+  minVisibleFraction: number;
+  maxVisibleFraction: number;
+  /** How far beyond a window edge an end was searched for, days. */
+  limitDays: number;
 }
 
 /** Why a body is (or is not) hidden at an instant: the "blocking ridge". */
@@ -299,6 +395,8 @@ export interface OutlookRow {
   longestDarknessInWindowH: number;
   /** Percent of this window with line of sight to Earth's centre (geometry only). */
   earthVisiblePct: number;
+  /** Percent of this window with any part of Earth's disc above the skyline (PGDA product 69's definition; T-31). Optional only so that hand-built rows type-check. */
+  earthAnyPct?: number;
   /** Longest spell without that line of sight overlapping this window, in full, hours. */
   longestEarthGapH: number;
   earthGapComplete: boolean;
@@ -375,6 +473,13 @@ export interface SiteAnalysis {
   series: SkySeries;
   metrics: WindowMetrics;
   events: SkyEvent[];
+  /**
+   * Every passage of the Sun's and Earth's discs through the terrain skyline that overlaps the window,
+   * in time order of their start (T-31 item 2, D-8). Ends beyond the window are followed with the in-app
+   * model up to `limitDays`. Empty when no skyline could be computed; optional only so that hand-built
+   * analyses type-check.
+   */
+  transitions?: SkyTransition[];
   slope: SlopeInfo;
   provenance: Provenance;
   warnings: string[];
@@ -422,7 +527,10 @@ export interface NearbyCandidate {
 export interface ComparisonDiff {
   illuminationPct: number;
   longestDarknessH: number;
+  /** B - A of the Earth's-centre figure (percentage points). */
   earthVisiblePct: number;
+  /** B - A of the any-part-of-Earth's-disc figure (percentage points; T-31). Optional only so that hand-built objects type-check. */
+  earthAnyPct?: number;
   longestEarthGapH: number;
   slopeDeg: number;
   /** Most important differences first. */
