@@ -130,9 +130,9 @@ and `eased` where an edge was eased on request).
   times there: near the horizon, 1 m of height at that edge moves a sunrise or sunset formed
   there by about 9 minutes (12 to 13 at 41 to 45 degrees of latitude). Where a dated event is
   formed at that edge, the measure is the spread between the two products, each used
-  throughout: Blue Ghost's sunset of 16 March 2025 at 2 m, first cut / last limb, is 18:23:40 / 19:30:03 UTC on the 3 m model (the stored stack) and 18:27:22 / 19:33:31 on the 60 m window alone, so the two products are 3.5 to 3.7 minutes apart (@validation,
-  `tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` on
-  am/lunyx-science/agent/validation @ af49a12). T-32's eased stack lies outside both (19:42:53). `loadTerrainFor(site, { easeEdges: true })` gives T-32's eased stack for
+  throughout: Blue Ghost's sunset of 16 March 2025 at 2 m, first cut / last limb, at the catalogue pin since original T-38 (18.5622 N, 61.8102 E), is 18:24:16 / 19:30:50 UTC on the 3 m model (the stored stack) and 18:30:27 / 19:38:22 on the 60 m window alone, so the two products are 6.2 to 7.5 minutes apart; at the earlier pin, 8.4 m away (18.562 N, 61.81 E), they were 18:23:40 / 19:30:03 and 18:27:22 / 19:33:31, 3.5 to 3.7 minutes apart. In short, the two elevation products put this sunset 3.5 to 7.5 minutes apart, depending on where within 8 m the lander stood (@validation,
+  `tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` @ af49a12 and
+  `new-pin.txt` @ 97d0b66 on am/lunyx-science/agent/validation; lunyx-science decision D-12). T-32's eased stack lies outside both (19:42:53, at the earlier pin). `loadTerrainFor(site, { easeEdges: true })` gives T-32's eased stack for
   comparison: over its outer 129 m the model is eased onto the window with the surface view's
   own rule, `seams[0].eased` keeps the figures from before, and `storedGrid(source)` returns
   the stored grid behind an eased one (`docs/lunyx/handover/T-32-edge-easing.md`).
