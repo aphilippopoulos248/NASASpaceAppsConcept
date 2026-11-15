@@ -83,19 +83,47 @@ has a sunset on 19 March and the Sun never above 6 degrees; the four eclipse tim
 - Filters panel, at the top: "Missions to replay", three buttons (title and one line), each
   with "Timing and data sources". Under them, for the window on screen, where the Sun and Earth
   positions come from, in the analysis' own terms.
-- Surface view "About this view" (@surface's text): asked in a direct message for one sentence
-  on the thin ring drawn around Earth while it hides the Sun (schematic; brightness and colour
-  not computed). The preset's own source list says it already.
+- Surface view "About this view" (@surface's text, aba8e54, integrated): "While Earth hides the
+  Sun (an eclipse seen from the Moon), the thin orange ring drawn around Earth stands for
+  sunlight passing through Earth's air: it is schematic, and its brightness and colour are not
+  computed." The preset's own source list says the same.
 
 ## Verified
 
-VERIFIED_SECTION
+- `npm run build` passes. Vitest on the changed modules (src/core clock, coreActions, deepLink,
+  moonPhase, presetActions, skyEvents, analysisReport, throttle; src/data; displayState;
+  src/ui/globe): 12 files, 95 tests pass, at c8e2dd2 (merge of integration 9a5fa1c). The full
+  suite is for the integration candidate (D-10). New tests: `src/data/presets.test.ts`,
+  `src/core/presetActions.test.ts` (real science core and bundled data: all three presets),
+  `src/core/clock.test.ts`, `src/core/moonPhase.test.ts`, deep links, eclipse spans, imagery state,
+  enterSurface waiting for the scene.
+- GPU browser check @ c8e2dd2 (Chromium with ANGLE on the GTX 1050 Ti, 1280x720, `vite preview`,
+  every request outside the app's own server refused): 2 min 21 s, load 10.4.
+  - "Eclipse of 14 March 2025" clicked in the Filters panel: the log shows `loadPreset (ui)`;
+    surface view on screen, facing W 259 deg, 27 deg up, 12 deg field of view; playing at
+    10 min/s; the line under the list reads "Sun and Earth positions for this window come from a
+    JPL Horizons table bundled with the app: no network is needed."; address `?preset=eclipse-2025-03-14`.
+  - It stopped by itself at 2025-03-14 10:30 UTC, the end of the window, with "End of the mission
+    window: paused. Press play to go on past it."; the scrubber line: "Earth passes in front of the
+    Sun 2025-03-14 05:00 to 09:51 UTC; the Sun is entirely hidden 06:17 to 08:34 UTC."
+  - Stills (`screens/t22-eclipse-before.png` 04:52, `t22-eclipse-totality.png` 07:25,
+    `t22-eclipse-after.png` 10:00): the Sun beside Earth, then behind it ("Sun (behind Earth)",
+    the key metrics say "behind Earth (eclipse)"), then clear of it; phase line "Full Moon ·
+    total lunar eclipse" at 07:25.
+  - Back on the globe the card says "Close-up imagery is not shown: NASA Moon Trek could not be
+    reached, ..." and `closeUpImagery.state` is "unavailable".
+  - `blue-ghost-landing` and `im-2-landing` each loaded, played and stopped at their window end
+    (2025-03-16 08:34 and 2025-03-20 17:28 UTC), surface view, ephemeris "horizons", Sun ahead
+    at the normal field of view (`screens/t22-im2-playing.jpg`).
+  - Refused requests: only `trek.nasa.gov` (664 tile requests over the whole run); no request
+    to the app's own server failed.
+- `screens/t22-filters.png`: the "Missions to replay" list.
 
 ## Limits
 
 - The presets are the two windows for which a JPL Horizons table is bundled. Another site or
   date needs a table (or runs on the in-app model, and the line under the list says so).
-- In software-rendered headless Chromium the clock advances at most 0.1 s of real time per
-  frame, so a replay takes longer there than the 28 to 34 s it takes at normal frame rates.
+- The clock advances at most 0.1 s of real time per frame, so on a machine drawing fewer than
+  10 frames a second a replay takes longer than its 28 to 34 s.
 - The eclipse view is the sky only (12 degrees across): the ground is out of the picture until
   the user zooms out.
