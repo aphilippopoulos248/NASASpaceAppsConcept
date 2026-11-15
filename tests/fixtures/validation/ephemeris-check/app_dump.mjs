@@ -52,7 +52,7 @@ try {
         siteElevationM: h.siteElevationM, mastHeightM: h.mastHeightM, azStepDeg: h.azStepDeg, smoothDipDeg: h.smoothDipDeg, maxRangeM: h.maxRangeM,
         layers: h.layers, elevDeg: round(h.elevDeg, 5), distM: round(h.distM, 1), heightM: round(h.heightM, 2),
       },
-      metrics: a.metrics, events: a.events, slope: a.slope, provenance: a.provenance, warnings: a.warnings,
+      metrics: a.metrics, events: a.events, transitions: a.transitions, slope: a.slope, provenance: a.provenance, warnings: a.warnings,
       series: { startMs: a.series.startMs, stepMs: a.series.stepMs, n: a.series.n, source: a.series.source },
     };
     if (WITH_SERIES || s.series) {
@@ -101,9 +101,14 @@ try {
       r.metrics = {
         illuminationPct: m.illuminationPct, sunAnyPct: m.sunAnyPct, longestDarknessH: m.longestDarknessH, darknessOpenEnded: m.darknessOpenEnded,
         earthVisiblePct: m.earthVisiblePct, longestEarthGapH: m.longestEarthGapH, earthGapOpenEnded: m.earthGapOpenEnded, maxSunElDeg: m.maxSunElDeg, minSunElDeg: m.minSunElDeg,
-        counts: { sunIntervals: m.sunIntervals.length, darkIntervals: m.darkIntervals.length, earthIntervals: m.earthIntervals.length, events: a.events.length },
+        // T-31 items 2-3 (optional fields; absent in builds before them)
+        earthAnyPct: m.earthAnyPct, longestEarthAnyGapH: m.longestEarthAnyGapH, earthAnyGapOpenEnded: m.earthAnyGapOpenEnded,
+        counts: { sunIntervals: m.sunIntervals.length, darkIntervals: m.darkIntervals.length, earthIntervals: m.earthIntervals.length, events: a.events.length,
+          earthAnyIntervals: m.earthAnyIntervals ? m.earthAnyIntervals.length : undefined, transitions: a.transitions ? a.transitions.length : undefined },
       };
       delete r.events;
+      delete r.transitions;
+      if (r.dsn) r.dsn = { anyReceivePct: r.dsn.anyReceive.pct, anyTransmitPct: r.dsn.anyTransmit.pct, note: 'contact intervals dropped by --slim' };
       delete r.provenance;
       r.warnings = a.warnings.map((w) => (w.length > 300 ? `${w.slice(0, 300)}...` : w));
     }
