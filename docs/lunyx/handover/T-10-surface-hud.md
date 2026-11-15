@@ -1,7 +1,8 @@
 # T-10 Surface HUD: handover (@surface)
 
-Branch am/lunyx/agent/surface, on top of integration cc736f8. Screenshots are in
-`screens/t10-*.jpg` (headless Chromium, software WebGL; 1280x720 and 390x844).
+Branch am/lunyx/agent/surface, merged with integration 6c7b94c. Screenshots are in
+`screens/t10-*.jpg` (headless Chromium, software WebGL; 1280x720 and 390x844), taken
+just before that merge; the numbers below were read again after it and are unchanged.
 
 ## What was built
 
@@ -140,8 +141,9 @@ second line.
 
 ## Verified
 
-- `npm run build` passes. `npm test` on the final code: vitest 58 files, 570 passed,
-  5 skipped (the opt-in live suite); node science tests 10 of 10.
+- `npm run build` passes. `npm test` before the merge of integration 6c7b94c: vitest
+  58 files, 570 passed, 5 skipped (the opt-in live suite); node science tests 10 of 10.
+  After the merge (9b4c59f): vitest 63 files, 646 passed, 5 skipped; science 10 of 10.
   `src/ui/surface/*.test.ts` has 36 tests on the models, the actions and the layout
   limits; they use a real `analyseStack()` run on a small synthetic Moon (a ridge that
   hides the setting Sun early), so the HUD is checked against the science core's output.
