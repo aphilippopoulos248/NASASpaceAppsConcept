@@ -145,6 +145,111 @@ function lowContrast(page, rootSelector) {
   }, rootSelector);
 }
 
+/**
+ * Presses Tab (or Shift+Tab) until the focused element matches `want` (a description built in
+ * the page: role, name, id and classes), at most `max` times. Returns how many presses it took;
+ * throws if the element was never reached, which means it is not in the keyboard path.
+ */
+async function tabTo(page, want, { max = 150, back = false } = {}) {
+  for (let i = 1; i <= max; i++) {
+    await page.keyboard.press(back ? 'Shift+Tab' : 'Tab');
+    const here = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return '';
+      const name = el.getAttribute('aria-label') || el.labels?.[0]?.textContent || el.textContent || '';
+      return `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className.replace(/\s+/g, '.') : ''}|${el.getAttribute('role') ?? ''}|${name.trim().replace(/\s+/g, ' ').slice(0, 80)}`;
+    });
+    if (want.test(here)) return i;
+  }
+  throw new Error(`Tab never reached ${want} in ${max} presses`);
+}
+
+describe('accessibility: a keyboard-only walk of the main journey (desktop)', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  test('typed coordinates and "Drop pin at centre", by keyboard only', SLOW, async () => {
+    await page.evaluate(() => document.activeElement?.blur?.());
+    await tabTo(page, /\|Latitude/);
+    await page.keyboard.type('-88');
+    await page.keyboard.press('Enter');
+    await tabTo(page, /\|Longitude/);
+    await page.keyboard.type('136.7');
+    await page.keyboard.press('Enter');
+    await tabTo(page, /\|Drop pin at centre$/);
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().site?.kind === 'custom');
+    await until(page, () => /% of the window/.test(document.querySelector('.site-card .sc-window')?.textContent ?? ''));
+  });
+
+  test('A-2: enter the surface view, look around with the arrow keys from wherever the focus is, leave with Escape', SLOW, async () => {
+    await tabTo(page, /\|Enter surface view$/);
+    await page.keyboard.press('Enter');
+    await until(page, () => document.body.dataset.view === 'surface');
+    // Focus arrives on the scene (T-37), which is announced as an application.
+    await until(page, () => document.activeElement?.id === 'scene');
+    assert.equal(await page.evaluate(() => document.getElementById('scene').getAttribute('role')), 'application');
+    const az0 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 1, az0);
+    // From a HUD button too (not a field): the arrows still turn the view.
+    await tabTo(page, /\|(Face Sun|Fold|Open)$/);
+    const az1 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
+    await page.keyboard.press('ArrowLeft');
+    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1);
+    const el0 = await page.evaluate(() => window.lunyx.store.get().look.elDeg);
+    await page.keyboard.press('ArrowUp');
+    await until(page, (e) => window.lunyx.store.get().look.elDeg > e, el0);
+    const site = await page.evaluate(() => window.lunyx.store.get().site.id);
+    await page.keyboard.press('Escape');
+    await until(page, () => document.body.dataset.view === 'globe');
+    assert.equal(await page.evaluate(() => window.lunyx.store.get().site?.id), site, 'Escape must leave the surface and keep the site (F-1)');
+  });
+
+  test('the compare panel by keyboard: open, save A, scan nearby sites, take rank 1 as B, close', SLOW, async () => {
+    await tabTo(page, /cmp-launcher/);
+    await page.keyboard.press('Enter');
+    await until(page, () => !document.querySelector('.cmp-sheet').hidden && document.querySelector('.cmp-sheet').contains(document.activeElement));
+    await tabTo(page, /\|Save the scenario on screen as A$/, { max: 40 });
+    await page.keyboard.press('Enter');
+    await until(page, () => Boolean(window.lunyx.store.get().compareA));
+    await tabTo(page, /\|tab\|A and B$/, { max: 60, back: true });
+    await page.keyboard.press('ArrowRight');
+    await until(page, () => document.activeElement?.getAttribute('role') === 'tab' && /Nearby sites/.test(document.activeElement.textContent));
+    await tabTo(page, /\|Radius/, { max: 20 });
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('600');
+    await tabTo(page, /\|Spacing/, { max: 5 });
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('200');
+    await tabTo(page, /\|Scan nearby sites$/, { max: 10 });
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.analysis.nearby().state === 'ready', undefined, 600_000);
+    await tabTo(page, /\|Pin candidate 1, .* and load it as scenario B$/, { max: 60 });
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.analysis.comparison().state === 'ready', undefined, 300_000);
+    await page.keyboard.press('Escape');
+    await until(page, () => document.querySelector('.cmp-sheet').hidden);
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
+  });
+
+  test('the assistant by keyboard: open, ask, close with Escape', SLOW, async () => {
+    await tabTo(page, /#assistant-button/);
+    await page.keyboard.press('Enter');
+    await until(page, () => document.activeElement?.id === 'assistant-input');
+    await page.keyboard.type('what is the illumination?');
+    const before = await page.evaluate(() => window.lunyxAssistant.session.messages.length);
+    await page.keyboard.press('Enter');
+    await until(page, (n) => window.lunyxAssistant.session.messages.length >= n + 2 && !window.lunyxAssistant.session.busy, before);
+    await page.keyboard.press('Escape');
+    await until(page, () => !window.lunyx.store.get().assistantOpen && document.activeElement?.id === 'assistant-button');
+  });
+});
+
 describe('accessibility: globe view, site card, scrubber and the assistant drawer', () => {
   let app, page;
   before(async () => {
