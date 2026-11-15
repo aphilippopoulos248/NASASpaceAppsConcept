@@ -294,6 +294,16 @@ centre.
   drawings made by the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
+- **Open defects** (being fixed by the original team at the time of writing):
+  - typing coordinates into Filters > Centre of view can leave the view, or a pin dropped
+    straight after, short of the typed point (T-43);
+  - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
+    met" for any window with a night, while the compare panel treats that band as no
+    requirement (T-46);
+  - opening a site sometimes fails to load the 1.9 km whole-Moon elevation file, seen in
+    headless Chrome on the build machine, and the globe then keeps its coarser relief (T-40);
+  - keyboard and screen-reader gaps are listed in
+    [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 
 ## The demo for the submission
 
