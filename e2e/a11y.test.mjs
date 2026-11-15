@@ -189,6 +189,31 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     await until(page, () => /% of the window/.test(document.querySelector('.site-card .sc-window')?.textContent ?? ''));
   });
 
+  test('A-1: open a catalogued landing from the globe with the keyboard ("Go to a landing site")', SLOW, async () => {
+    await tabTo(page, /^select#.*\|Go to a landing site/);
+    // End picks the last landing in the list (the newest); a closed select changes on the arrow keys.
+    await page.keyboard.press('End');
+    await until(page, () => window.lunyx.store.get().site?.kind === 'landing');
+    const site = await page.evaluate(() => window.lunyx.store.get().site);
+    await until(page, (name) => document.querySelector('.site-card .sc-title')?.textContent.trim() === name, site.name);
+    // The rest of the walk continues from this landing (its card is open).
+  });
+
+  test('F-4 (A-4): the "Arrival delay" field keeps its explanation after an edit', SLOW, async () => {
+    await tabTo(page, /\|Arrival delay/);
+    const before = await page.evaluate(() => document.activeElement.title);
+    assert.match(before, /late arrival/i);
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('24');
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().delayH === 24);
+    assert.equal(await page.evaluate(() => document.activeElement.title), before);
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('0');
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().delayH === 0);
+  });
+
   test('A-2: enter the surface view, look around with the arrow keys from wherever the focus is, leave with Escape', SLOW, async () => {
     await tabTo(page, /\|Enter surface view$/);
     await page.keyboard.press('Enter');

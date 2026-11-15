@@ -7,8 +7,8 @@
 // what the analysis returned (e2e/lib/read.mjs reads the panels).
 //
 // The functional tests use reduced motion (camera flights end at once). The last block runs
-// with motion, as a person sees the app, for the coordinate-entry findings Q-1 and Q-2
-// (docs/lunyx/qa-findings.md); those tests are marked todo while the defects exist.
+// with motion, as a person sees the app, for coordinate entry while the globe flies (findings
+// Q-1 and Q-2 in docs/lunyx/qa-findings.md, fixed upstream in T-43).
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { ask, closeBrowser, lastSeq, log, openApp, openAssistant, result, setField, SLOW, state, until } from './lib/app.mjs';
@@ -137,10 +137,9 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.match(await card().locator('.sc-winnote').textContent(), /not a radio link/);
   });
 
-  // Finding F-3 (docs/lunyx/actions.md, docs/lunyx/qa-findings.md), owner @globe: poleward of
-  // 80.06 degrees the fly-to clamps the camera direction, so the view stops short of the latitude
-  // asked for, and a pin dropped "at the centre" is not at the typed latitude.
-  test('typing coordinates centres the view exactly on them', { ...SLOW, todo: 'F-3 (@globe): poleward of 80.06° the globe camera stops up to 0.06° (1.7 km) short of the typed latitude' }, async () => {
+  // Finding F-3 (docs/lunyx/qa-findings.md): poleward of 80.06 degrees the view used to stop short
+  // of the latitude asked for. Fixed upstream (original T-43, a59162f); kept as a regression test.
+  test('typing coordinates centres the view exactly on them', SLOW, async () => {
     assert.ok(typedCentre, 'the previous test did not run');
     assert.ok(Math.abs(typedCentre.lat - -88) < 0.001, `typed latitude -88, the view is centred on ${typedCentre.lat.toFixed(4)}`);
   });
@@ -354,7 +353,8 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   });
 });
 
-// Typing coordinates with motion on, as a person sees the app (findings Q-1 and Q-2, owner @globe).
+// Typing coordinates with motion on, as a person sees the app. Findings Q-1 and Q-2 were fixed
+// upstream (original T-43, dbc6c59); these stay as regression tests.
 describe('flow: typing the centre of view while the globe flies (motion on)', () => {
   let moving, mp;
   before(async () => {
@@ -372,7 +372,7 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await cameraSettled(mp);
   };
 
-  test('latitude, Tab, longitude, Enter centres the view on the typed point', { ...SLOW, todo: 'Q-1 (@globe): on Tab the latitude field is refilled with the in-flight centre and the longitude commit sends that latitude' }, async () => {
+  test('latitude, Tab, longitude, Enter centres the view on the typed point', SLOW, async () => {
     await startAt();
     await field('Latitude').click();
     await field('Latitude').fill('-84.79');
@@ -380,10 +380,10 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await field('Longitude').fill('29.2');
     await field('Longitude').press('Enter');
     const c = await cameraSettled(mp);
-    assert.ok(Math.abs(c.lat - -84.79) < 0.1 && Math.abs(c.lon - 29.2) < 0.1, `typed -84.79, 29.2; the view went to ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`);
+    assert.ok(Math.abs(c.lat - -84.79) < 0.001 && Math.abs(c.lon - 29.2) < 0.001, `typed -84.79, 29.2; the view went to ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`);
   });
 
-  test('"Drop pin at centre" right after typing pins the typed point', { ...SLOW, todo: 'Q-2 (@globe): the button pins the in-flight centre of the camera, not the typed coordinates' }, async () => {
+  test('"Drop pin at centre" right after typing pins the typed point', SLOW, async () => {
     await startAt();
     await field('Latitude').click();
     await field('Latitude').fill('-84.79');
@@ -392,6 +392,6 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await mp.locator('.filters-panel').getByRole('button', { name: 'Drop pin at centre' }).click();
     await until(mp, () => window.lunyx.store.get().site?.kind === 'custom');
     const site = (await state(mp)).site;
-    assert.ok(Math.abs(site.lat - -84.79) < 0.1 && Math.abs(site.lon - 29.2) < 0.1, `typed -84.79, 29.2; the pin is at ${site.lat}, ${site.lon}`);
+    assert.ok(Math.abs(site.lat - -84.79) < 1e-5 && Math.abs(site.lon - 29.2) < 1e-5, `typed -84.79, 29.2; the pin is at ${site.lat}, ${site.lon}`);
   });
 });
