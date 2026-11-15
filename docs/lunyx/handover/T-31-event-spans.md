@@ -160,7 +160,9 @@ the opt-in test named there.
 Run on am/lunyx/integration 2ade856 plus this work, `npx vitest run src/analysis/transitions.test.ts`
 (the instants are printed with `--silent=false`). The validator's skyline is its own ray march at
 0.1 deg with 61 strips; its "half hidden" is half of the disc's area, which equals the centre
-crossing only where the skyline runs straight across the disc.
+crossing only where the skyline runs straight across the disc. Both sides of the table are for the
+catalogue pins as they stood before original T-38 (Blue Ghost 18.562 N, 61.81 E; Chandrayaan-3
+69.3741 S, 32.32 E), and the values hold for those pins.
 
 | Site, eye height | Instant | Validator (UTC) | App | App minus validator |
 | --- | --- | --- | --- | --- |
@@ -180,7 +182,8 @@ crossing only where the skyline runs straight across the disc.
 
 So the Sun takes 66 min to set at Blue Ghost (2 m), 3 h 8 min at Chandrayaan-3 and 6 h 35 min at
 IM-2. Firefly's start of night at Blue Ghost (about 18:15-18:35 UTC, D-8) falls at the first cut,
-18:23. The Blue Ghost times rest on the stored 3 m model and 60 m window; under lunyx-science D-7 the
+18:23 (at the earlier pin; at the current catalogue pin, 18.5622 N, 61.8102 E, the validator's 2 m
+first cut / last limb are 18:24:16 / 19:30:50 UTC, lunyx-science D-12). The Blue Ghost times rest on the stored 3 m model and 60 m window; under lunyx-science D-7 the
 T-32 easing stays off by default, so they do not move with T-1 (turned on, the easing would move
 this sunset; see T-1 and docs/lunyx/handover/T-32-verification.md). The test holds all these instants to 2 min, the validator's own tolerance for
 times when the skylines agree.
@@ -241,6 +244,8 @@ the disc, span and height not stated). Opt-in test, about 12-48 s per run here:
 | Comparison of the two Earth cases | Sentences say "Earth's centre"; `ComparisonDiff.earthAnyPct` = B - A | As stated |
 
 ## 7. Example sentences (real results, `eventText` / `transitionText` / `transitionSummary`)
+
+At the catalogue pins as they stood before original T-38.
 
 - Blue Ghost 1, 2 m: `Sunset: starts setting 2025-03-16 18:23, fully set 19:30 UTC`
 - IM-2, 2 m: `Sunset: starts setting 2025-03-19 16:42, fully set 23:17 UTC`
