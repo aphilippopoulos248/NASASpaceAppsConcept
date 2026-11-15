@@ -157,8 +157,12 @@ for sc in scenarios:
         m['apps'][name] = {'commit': app['commit'], 'sunAnyPct': mm['sunAnyPct'], 'illuminationPct': mm['illuminationPct'], 'earthVisiblePct': mm['earthVisiblePct'],
                            'sunAnyMinusOwn': mm['sunAnyPct'] - own['sunAnyPct'], 'illuminationMinusOwn': mm['illuminationPct'] - own['sunDiscPct'], 'earthMinusOwn': mm['earthVisiblePct'] - own['earthCentrePct'],
                            'longestDarknessH': mm['longestDarknessH'], 'ephemeris': r['series']['source']}
-        out('    app %-9s  any Sun %6.2f %% (%+5.2f)   disc average %6.2f %% (%+5.2f)   Earth centre %6.2f %% (%+5.2f)   longest darkness %.0f h'
-            % (app['commit'], mm['sunAnyPct'], mm['sunAnyPct'] - own['sunAnyPct'], mm['illuminationPct'], mm['illuminationPct'] - own['sunDiscPct'], mm['earthVisiblePct'], mm['earthVisiblePct'] - own['earthCentrePct'], mm['longestDarknessH']))
+        anyE = ''
+        if mm.get('earthAnyPct') is not None:  # T-31 item 3: any part of Earth's disc (PGDA's definition)
+            m['apps'][name].update({'earthAnyPct': mm['earthAnyPct'], 'earthAnyMinusOwn': mm['earthAnyPct'] - own['earthAnyPct'], 'earthAnyMinusPgda': mm['earthAnyPct'] - entry['pgda']['earth']['pixel']})
+            anyE = '   any Earth %6.2f %% (%+5.2f; PGDA %+6.2f)' % (mm['earthAnyPct'], mm['earthAnyPct'] - own['earthAnyPct'], mm['earthAnyPct'] - entry['pgda']['earth']['pixel'])
+        out('    app %-9s  any Sun %6.2f %% (%+5.2f)   disc average %6.2f %% (%+5.2f)   Earth centre %6.2f %% (%+5.2f)   longest darkness %.0f h%s'
+            % (app['commit'], mm['sunAnyPct'], mm['sunAnyPct'] - own['sunAnyPct'], mm['illuminationPct'], mm['illuminationPct'] - own['sunDiscPct'], mm['earthVisiblePct'], mm['earthVisiblePct'] - own['earthCentrePct'], mm['longestDarknessH'], anyE))
     entry['masts']['%g' % mast] = m
 
 if args.neighbours:
