@@ -1,6 +1,6 @@
 # T-9 Surface scene: handover (@surface)
 
-Branch am/lunyx/agent/surface. Screenshots (`screens/t9-*.jpg`) were taken in headless
+Branch am/lunyx/agent/surface. Screenshots (`screens/t9-*.jpg`, 0.89 MB) were taken in headless
 Chromium at 1280x720, which renders in software; the app picks its lighter settings there
 by itself (see "Frame cost"), so they show a slightly plainer picture than a GPU does.
 
@@ -88,8 +88,12 @@ action. The HUD buttons call these through `runAction`.
 
 ## Verified
 
-- `npm run build` passes. `npm test` passes (see the task result for the counts of the last
-  run). 47 tests are in `src/scene/surface/*.test.ts`: shadow length and penumbra width
+- `npm run build` passes. Last full `npm test` (before the final merge of integration, at
+  050c4be): vitest 217 passed, 1 skipped, 2 failed; node science tests 10 of 10. The two
+  failures are wall-clock limits in `src/analysis/nearby.test.ts` (21 s and 24 s, with the
+  machine's load average at 12); that file passes when run alone (8 of 8). After the final
+  merge (f8d5d12) the build passes and `vitest run src/scene src/core src/ui` gives 110 of
+  110. 47 tests are in `src/scene/surface/*.test.ts`: shadow length and penumbra width
   against the analytic values in nine Sun directions, nested grids, the smooth-Moon limit,
   skyline of a sphere and of a ridge, terrain sampling and band description, and the actions.
 - In the app, through actions and real key / pointer events:
