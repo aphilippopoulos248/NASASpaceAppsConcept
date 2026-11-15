@@ -5,10 +5,9 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree of `am/lunyx-experience/integration` at `c12fc06`, which
-  contains `am/lunyx/integration` at `6c7b94c` (published on `origin/feature/lunyx-navigator`)
-  and the legacy assistant checkpoint (T-5). Nothing under `public/` and neither `package.json`
-  nor the lockfile changed since the published `cc736f8`. Work that is on GitHub `main` but not
+- **State described:** the tree at `bc5fb8e`: `am/lunyx-experience/integration` (`c2df103`)
+  merged with `am/lunyx/integration` at `bbaa93d`. Nothing under `public/` and neither
+  `package.json` nor the lockfile changed since the published `cc736f8`. Work that is on GitHub `main` but not
   integrated yet is in section 7.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
@@ -59,8 +58,8 @@ Insignia, Logotype and identifiers are not in the public domain; Lunyx uses none
 | Bundled files against the SHA-256 that their build scripts recorded in `index.json` (`public/data/dem`, `heatmap`, `science/diviner`, `science/shadowcam`) | 18 of 18 files match |
 | Source checksums recorded by the build scripts against the publishers' current ones | Zenodo record 4646092: 2 of 2 MD5 match. Harvard Dataverse DVN/EGOOCL v3.0: 4 of 4 MD5 match |
 | Bundled values against the original archives | Not repeated here. The independent validation (T-26) compared 30 080 samples of the bundled grids with the PDS originals: equal within rounding (`tests/fixtures/validation/ephemeris-check/`, STATUS.md section 4) |
-| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 97 images in the repository | None of the 97 images carries any such metadata (see AI-USE.md section 4) |
-| Licences of npm packages | Read from each installed `node_modules/<package>/package.json` after `npm ci` at `cc736f8` (same lockfile as `c12fc06`); 93 packages installed |
+| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 114 images in the repository | None of the 114 images carries any such metadata (see AI-USE.md section 4) |
+| Licences of npm packages | Read from each installed `node_modules/<package>/package.json` after `npm ci` at `cc736f8` (same lockfile as `bc5fb8e`); 93 packages installed |
 
 ## 3. Datasets bundled in `public/`
 
@@ -353,7 +352,7 @@ tools).
 | `@fontsource-variable/inter` (Inter) | 5.3.0 | SIL Open Font License 1.1 | "Copyright 2016 The Inter Project Authors (https://github.com/rsms/inter)" |
 | `@fontsource-variable/space-grotesk` (Space Grotesk) | 5.3.0 | SIL Open Font License 1.1 | "Copyright 2020 The Space Grotesk Project Authors (https://github.com/floriankarsten/space-grotesk)" |
 
-Notices in the built app, checked on `npm run build` of `57adcef` and again of `c12fc06`: the worker bundle keeps
+Notices in the built app, checked on `npm run build` of `57adcef`, `c12fc06` and the tree of `bc5fb8e`: the worker bundle keeps
 astronomy-engine's MIT header; the main bundle (`dist/assets/index-*.js`) contains no licence
 comment, so three.js's MIT notice is not shipped with it; ten WOFF2 font files are shipped and
 no copy of the OFL text is. MIT asks that the copyright and permission notice be included in
