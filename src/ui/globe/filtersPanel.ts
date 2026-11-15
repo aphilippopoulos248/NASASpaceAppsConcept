@@ -13,11 +13,12 @@ import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
-import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
+import { AREA_SCALE_CHOICES, DEFAULT_AREA_SCALE, globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
+import { AREA_DISPLAY_SCALE, MAX_ORBIT_AREA_WIDTH_M, MIN_ORBIT_AREA_WIDTH_M } from '../../scene/siteAreas';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import { committedPoint, fieldText, pinPoint, viewPoint, type Written } from './centreFields';
@@ -147,16 +148,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
 
   // ---- Terrain relief ----
   panel.append(el('h3', 'ly-section-title', 'Terrain relief'));
-  const reliefId = `fp-${++uid}`;
-  const reliefLab = el('label', 'ly-label', 'Exaggeration');
-  reliefLab.htmlFor = reliefId;
-  const relief = el('select', 'ly-select');
-  relief.id = reliefId;
-  const reliefLabel = (f: number) => (f === 0 ? 'Off (smooth sphere)' : f === 1 ? 'True scale (×1)' : `×${f}${f === DEFAULT_RELIEF ? ' (default)' : ''}`);
-  for (const f of RELIEF_CHOICES) relief.append(new Option(reliefLabel(f), String(f)));
-  relief.addEventListener('change', () => void runAction('setReliefExaggeration', { factor: Number(relief.value) }));
-  const reliefField = el('div', 'fp-num');
-  reliefField.append(reliefLab, relief);
   const reliefNote = el('p', 'ly-note');
   const cover = el('label', 'ly-check');
   const coverBox = el('input');
@@ -189,7 +180,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
     iceRow,
     el('p', 'ly-note', 'South polar region only: 169 regions of interest, outlined about 0.3 km wider than the listed shadowed areas. Targets for study, not confirmed deposits. Lemelin et al. 2021 (Zenodo 4646092), CC BY 4.0. Distances from a site are in its card.'),
   );
-  panel.append(reliefField, reliefNote, cover, coverLegend, ice, iceLegend);
+  panel.append(reliefNote, cover, coverLegend, ice, iceLegend);
 
   // ---- Lighting ----
   panel.append(el('h3', 'ly-section-title', 'Sunlight on the globe'));
@@ -222,11 +213,27 @@ export function mountFiltersPanel(region: HTMLElement): void {
   flagsBox.addEventListener('change', () => void runAction('showFlags', { show: flagsBox.checked }));
   flags.append(flagsBox, el('span', undefined, 'Show country flags'));
   flags.title = 'A flag on each landing for the state its hardware belongs to (GCAT catalogue)';
+  // Territory size: how much larger than life each landing's explored area is drawn.
+  const areaId = `fp-${++uid}`;
+  const areaLab = el('label', 'ly-label', 'Territory size exaggeration');
+  areaLab.htmlFor = areaId;
+  const areaSel = el('select', 'ly-select');
+  areaSel.id = areaId;
+  // A setting, not a width multiplier (setTerritoryScale): the options are not labelled "×N".
+  const areaLabel = (f: number) => (f === 1 ? 'True size (1)' : `${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
+  for (const f of AREA_SCALE_CHOICES) areaSel.append(new Option(areaLabel(f), String(f)));
+  areaSel.addEventListener('change', () => void runAction('setTerritoryScale', { factor: Number(areaSel.value) }));
+  const areaField = el('div', 'fp-num fp-territory');
+  areaField.title =
+    `Display setting: how much each landing's explored area is enlarged so it can be seen from orbit. 1 = true size; ${AREA_DISPLAY_SCALE} = ` +
+    `every area about ${MIN_ORBIT_AREA_WIDTH_M / 1000} to ${MAX_ORBIT_AREA_WIDTH_M / 1000} km across from orbit, whatever its true size; settings in between blend the two (default ${DEFAULT_AREA_SCALE}). ` +
+    "Not a width multiplier: the site card says how much larger each area is drawn. True size close to the ground; the Moon itself is not changed.";
+  areaField.append(areaLab, areaSel);
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, flags, missions);
+  panel.append(show, flags, areaField, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
@@ -322,6 +329,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);
     missions.classList.toggle('off', !s.showMissions);
+    areaSel.disabled = !s.showMissions;
+    areaField.classList.toggle('off', !s.showMissions);
     optBox.checked = s.overlay !== 'off';
     overlay.value = s.overlay !== 'off' ? s.overlay : lastOverlay;
     overlayBox.hidden = s.overlay === 'off';
@@ -334,8 +343,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
   const syncDisplay = () => {
     const d = globeDisplay.get(), live = globeDisplay.getLive();
-    if (![...relief.options].some((o) => Number(o.value) === d.reliefFactor)) relief.append(new Option(reliefLabel(d.reliefFactor), String(d.reliefFactor)));
-    relief.value = String(d.reliefFactor);
+    if (![...areaSel.options].some((o) => Number(o.value) === d.areaScale)) areaSel.append(new Option(areaLabel(d.areaScale), String(d.areaScale)));
+    areaSel.value = String(d.areaScale);
     const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
     const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
     reliefNote.textContent = `${data}${rule}`;

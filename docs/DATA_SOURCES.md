@@ -190,9 +190,16 @@ without downloading again.
 ## 11. Explored area at each site
 
 - **What it is:** the ground each mission is known to have worked on, drawn on the globe in the country's
-  colour (orbit view only). **Drawn 10× larger in width (100× in area) than true size**, enlarged about each
-  area's centre so it reads at globe scale (`AREA_DISPLAY_SCALE` in `src/scene/siteAreas.ts`). The data in
-  `site-areas.json` and the size in the info card are true size. **No country owns any lunar ground** — the Outer Space Treaty (1967)
+  colour (orbit view only). **Drawn larger than true size so it can be seen from orbit: by default every area is
+  about 150 to 500 km across from orbit, whatever its true size** (a 60 m lander site 2500× wider, Apollo 17's 11.4 km
+  about 44×), enlarged about the area's centre (`areaDisplayScale`, `MIN_ORBIT_AREA_WIDTH_M` and
+  `MAX_ORBIT_AREA_WIDTH_M` in `src/scene/siteAreas.ts`). The "Territory size exaggeration" control (the
+  `setTerritoryScale` action, 1 to 100, default 100: `DEFAULT_AREA_SCALE` in `src/scene/globe/displayState.ts`) is a
+  display setting, not a width multiplier: 1 is true size, 100 the enlargement above, and the settings in between blend
+  linearly between the two. The enlargement applies above 1,500 km camera altitude and eases to true size below 100 km
+  (the same altitudes as the relief exaggeration), so close-ups show every area at true size. The data in
+  `site-areas.json` and the size in the info card are true size; the card, and the result of `setTerritoryScale` for
+  the selected site, also say how much larger the area is drawn from orbit. **No country owns any lunar ground** — the Outer Space Treaty (1967)
   forbids national claims. What a country does keep is ownership of its hardware, and that hardware (landers,
   rovers, instruments, equipment left along traverses) is spread across this area. So this is the closest real
   equivalent of "what a country owns" at a site; it is not a legal boundary.

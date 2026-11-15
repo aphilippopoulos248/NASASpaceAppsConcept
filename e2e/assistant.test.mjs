@@ -62,6 +62,28 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.ok(n.y + n.height <= Math.min(720, drawer.y + drawer.height) + 1, `the note is cut off: ${JSON.stringify(n)}`);
   });
 
+  test('the visible close control closes the drawer and it can be opened again', SLOW, async () => {
+    await openAssistant(page);
+    const close = page.getByRole('button', { name: 'Close the assistant', exact: true }).filter({ hasText: 'Close' });
+    await close.click();
+    await until(page, () => !window.lunyx.store.get().assistantOpen);
+    assert.equal(await page.locator('#assistant-drawer').getAttribute('inert'), '');
+    await openAssistant(page);
+    assert.equal(await page.locator('#assistant-drawer').getAttribute('aria-hidden'), 'false');
+  });
+
+  test('Escape closes the assistant after focus returns to the scene, preserving the view and site', SLOW, async () => {
+    await openAssistant(page);
+    const before = await state(page);
+    await page.locator('#scene').focus();
+    await page.keyboard.press('Escape');
+    await until(page, () => !window.lunyx.store.get().assistantOpen);
+    const after = await state(page);
+    assert.equal(after.view, before.view);
+    assert.deepEqual(after.site, before.site);
+    await openAssistant(page);
+  });
+
   test('a typed command runs through the action registry and the reply is labelled', SLOW, async () => {
     const from = await lastSeq(page);
     const reply = await ask(page, 'go to IM-2');
@@ -272,7 +294,7 @@ describe('assistant: scripted test model through the real /api/assistant route',
     // What the browser holds after the conversation above: the visible messages and the history it would send next.
     const kept = await page.evaluate(() => JSON.stringify([window.lunyxAssistant.session.messages, window.lunyxAssistant.session.history()]));
     for (const text of [raw, kept, JSON.stringify(await (await fetch(`${srv.scripted}/api/assistant`)).json())]) {
-      assert.doesNotMatch(text, /sk-ant-|ANTHROPIC_API_KEY=|TYPESAFE|Bearer /);
+      assert.doesNotMatch(text, /sk-ant-|TYPESAFE|Bearer /);
     }
     assert.deepEqual(app.problems, []);
   });

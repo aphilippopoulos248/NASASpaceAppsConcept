@@ -33,12 +33,13 @@
 
 .ad-head {
   display: flex;
+  flex: none;
   align-items: center;
   gap: var(--sp-2);
   padding: var(--sp-3) var(--sp-3) var(--sp-2) var(--sp-4);
 }
-.ad-head .ly-panel-title { flex: 1; }
-.ad-close { font-size: var(--fs-xl); color: var(--text-muted); }
+.ad-head .ly-panel-title { flex: 1; min-width: 0; }
+.ad-close { flex: none; min-height: 44px; color: var(--text); white-space: nowrap; }
 .ad-close:hover { color: var(--text); }
 
 .ad-mode {

@@ -30,8 +30,10 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const controls = el('div', 'sh-controls');
   controls.setAttribute('role', 'group');
   controls.setAttribute('aria-label', 'Surface view controls');
-  const faceSun = button('Face Sun', 'ly-btn ly-btn--small', () => void runAction('lookAtBody', { body: 'sun' }));
-  const faceEarth = button('Face Earth', 'ly-btn ly-btn--small', () => void runAction('lookAtBody', { body: 'earth' }));
+  const trackSun = button('Track Sun', 'ly-btn ly-btn--small', () => void runAction('setBodyTracking', { body: 'sun', on: surface.trackingBody !== 'sun' }));
+  trackSun.title = 'Continuously face the Sun as simulated time changes; drag or arrow keys stop tracking';
+  const trackEarth = button('Track Earth', 'ly-btn ly-btn--small', () => void runAction('setBodyTracking', { body: 'earth', on: surface.trackingBody !== 'earth' }));
+  trackEarth.title = 'Continuously face Earth as simulated time changes; drag or arrow keys stop tracking';
   const paths = button('Sky paths', 'ly-btn ly-btn--small', () => {
     const on = !view.annotations.tracks;
     void runAction('setSkyAnnotations', { tracks: on, labels: on });
@@ -42,7 +44,7 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const chart = button('Skyline chart', 'ly-btn ly-btn--small', () => void runAction('setChart', { show: hudState().chart === 'hidden' }));
   chart.title = 'The terrain skyline around the site with the Sun and Earth over the mission window';
   const home = button('Return to site', 'ly-btn ly-btn--small', () => void runAction('walkTo', { eastM: 0, northM: 0 }));
-  controls.append(faceSun, faceEarth, paths, generated, chart, home);
+  controls.append(trackSun, trackEarth, paths, generated, chart, home);
   head.append(el('strong', 'sh-title', 'Surface view'), status, controls);
 
   // Row 2: what the ground is built from, always on screen.
@@ -81,6 +83,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const syncStatic = () => {
     const g = view.ground;
     for (const [b, on] of [[paths, view.annotations.tracks], [generated, view.generated]] as const) b.setAttribute('aria-pressed', String(on));
+    trackSun.setAttribute('aria-pressed', String(surface.trackingBody === 'sun'));
+    trackEarth.setAttribute('aria-pressed', String(surface.trackingBody === 'earth'));
     ground.replaceChildren();
     if (!g) {
       ground.textContent = 'Ground: loading elevation data…';
