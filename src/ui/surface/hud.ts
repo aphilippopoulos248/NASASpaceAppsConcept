@@ -1,9 +1,10 @@
 // Surface view status strip: where the viewer faces and stands, quick view controls, and a
 // plain statement of what the picture is built from (elevation products and resolution, what
-// is generated, how the Sun and Earth are placed).
+// is generated, how the Sun and Earth are placed), and who the hardware at the site belongs to.
 import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { store } from '../../core/store';
+import { loadOwnership, stateShortName } from '../../data/ownership';
 import { formatUtc } from '../../core/time';
 import { surfaceResolution } from '../../scene/autoResolution';
 import type { SurfaceController } from '../../scene/surface/controller';
@@ -52,7 +53,9 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const summary = el('summary', 'sh-summary', 'About this view');
   const body = el('div', 'sh-body ly-note');
   more.append(summary, body);
-  hud.append(head, ground, more);
+  // Row 3: who the hardware at this site belongs to (filled in by syncOwner below).
+  const owner = el('p', 'sh-owner');
+  hud.append(head, ground, owner, more);
   region.append(hud);
 
   // The chart shares the lower part of the screen: the strip says whether it is on, and
@@ -130,6 +133,16 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   // The folded text quotes the simulated time: bring it up to date when it is opened.
   more.addEventListener('toggle', () => more.open && syncStatic());
   syncStatic();
+
+  // Whose hardware is at this site (GCAT): going near another state's hardware matters.
+  const syncOwner = async () => {
+    const site = store.get().site;
+    const o = site?.kind === 'landing' ? (await loadOwnership())?.byLanding.get(site.id) : undefined;
+    owner.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
+    owner.hidden = !o;
+  };
+  store.subscribe(['site', 'view'], () => void syncOwner());
+  void syncOwner();
 
   let text = '';
   let awayShown: boolean | null = null;
