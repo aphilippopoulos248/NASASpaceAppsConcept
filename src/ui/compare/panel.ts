@@ -11,6 +11,7 @@ import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
 import { mountAbTab } from './abTab';
 import { bindWorkingPair, createCompareActions } from './actions';
+import { mountNearbyTab } from './nearbyTab';
 import { COMPARE_TABS, createPanelStore, TAB_TITLE, type CompareTab } from './state';
 import { createCompareStorage } from './storage';
 import { badge, createTabKit, nextId } from './widgets';
@@ -99,6 +100,7 @@ export function mountComparePanel(region: HTMLElement): void {
   }
 
   const ab = mountAbTab(tabPanels.get('compare')!, storage, createTabKit());
+  const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
 
   // ---------- rendering ----------
   const renderLauncher = () => {
@@ -132,7 +134,7 @@ export function mountComparePanel(region: HTMLElement): void {
       ab.renderRequirementInputs();
       ab.renderResult();
       ab.renderSaved();
-    }
+    } else if (tab === 'nearby') nearby.render();
   };
   const showing = (tab: CompareTab) => isOpen() && panel.get().tab === tab;
 
@@ -149,8 +151,12 @@ export function mountComparePanel(region: HTMLElement): void {
       renderTab();
     }
     if (changed.has('savedRevision') && showing('compare')) ab.renderSaved();
+    if ((changed.has('nearbyRadiusM') || changed.has('nearbySpacingM')) && showing('nearby')) nearby.render();
   });
-  store.subscribe(['site', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => showing('compare') && ab.renderSetup());
+  store.subscribe(['site', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => {
+    if (showing('compare')) ab.renderSetup();
+    else if (showing('nearby')) nearby.render();
+  });
   store.subscribe(['compareA', 'compareB'], () => {
     renderLauncher();
     if (!showing('compare')) return;
@@ -159,11 +165,15 @@ export function mountComparePanel(region: HTMLElement): void {
     ab.renderSaved();
   });
   store.subscribe(['sunElMinDeg', 'sunElMaxDeg', 'maxEarthGapH', 'slopeLimitDeg'], () => {
+    if (showing('nearby')) nearby.render();
     if (!showing('compare')) return;
     ab.renderRequirementInputs();
     ab.renderResult();
   });
-  analysis.subscribe((slot) => (slot === 'A' || slot === 'B') && showing('compare') && ab.renderResult());
+  analysis.subscribe((slot) => {
+    if ((slot === 'A' || slot === 'B') && showing('compare')) ab.renderResult();
+    else if (slot === 'nearby' && showing('nearby')) nearby.render();
+  });
   // One clock for both sides: follow it a few times a second while it runs, exactly when it stops.
   let lastNowMs = -Infinity;
   let trailing: ReturnType<typeof setTimeout> | null = null;
@@ -191,6 +201,8 @@ export function mountComparePanel(region: HTMLElement): void {
       const inside = target !== null && sheet.contains(target);
       // Another layer with its own Escape (the assistant drawer), or a field outside the sheet, keeps the key.
       if (!inside && target && (target.closest('#region-drawer') || isTypingTarget(target))) return;
+      // Taken: the surface view and the site card leave an Escape that was handled alone.
+      e.preventDefault();
       e.stopPropagation();
       void closePanel();
     },
