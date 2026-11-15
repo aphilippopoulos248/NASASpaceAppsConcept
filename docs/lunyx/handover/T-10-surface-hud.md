@@ -167,6 +167,7 @@ second line.
 | `t10-apollo11-chart-tracks-1280.jpg` | Apollo 11, zoomed to the tracks |
 | `t10-apollo11-table-1280.jpg` | the table view |
 | `t10-im2-390.jpg`, `-chart-390.jpg`, `-explain-390.jpg`, `-metrics-390.jpg` | phone: default, chart open, explanation, metrics open |
+| `t10-im2-1920.jpg` | IM-2 at 1920x1080 on a GPU (full settings): metrics, small chart, strip with the GCAT ownership line |
 
 ## Not done, and limits
 

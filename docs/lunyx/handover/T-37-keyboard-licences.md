@@ -47,7 +47,10 @@ Both are in @globe's files. A-1 was sent as a request with a reproduction (m450)
   `syncJumps` gives every visible jump button an `aria-label` without the glyph ("Jump to ...
   UTC: Sun fully set (...)"), and the buttons are hidden while there are no events, so the
   glyph never reaches the accessible name. A-3 therefore needs no change; I told @globe so in
-  m450. (Read from the code; a check of the accessibility tree in the browser is queued.)
+  m450. Confirmed in Chromium's accessibility tree at IM-2: the buttons are named "Jump to
+  2025-03-19 23:17 UTC: Sun fully set (the last part of the Sun's disc goes behind the terrain
+  skyline)" and so on, or "Sun starts rising: not after the simulated time inside the mission
+  window (...)" when disabled; only their visible text has the glyph.
 
 ## 3. Licence notices in the shipped site
 
