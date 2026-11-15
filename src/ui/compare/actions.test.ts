@@ -499,7 +499,7 @@ describe('the mission-window table and its export', () => {
     await ok('dropPin', { lat: 0, lon: 0 });
     await ok('setMissionWindow', { startUtc: '2025-03-13T00:00Z', durationH: 48 });
     const r = await ok('exportResults', { format: 'csv' });
-    expect(r).toMatchObject({ format: 'csv', filename: 'lunyx_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m.csv', mimeType: 'text/csv;charset=utf-8', scenarios: [{ slot: 'current' }], spells: 5, downloaded: true });
+    expect(r).toMatchObject({ format: 'csv', filename: 'lunyx_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m.csv', mimeType: 'text/csv;charset=utf-8', scenarios: [{ slot: 'current' }], spells: 5, passages: 0, downloaded: true });
     expect(files).toHaveLength(1);
     expect(r.bytes).toBe(new TextEncoder().encode(files[0].text).length);
     const lines = files[0].text.trimEnd().split('\r\n');
