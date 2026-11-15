@@ -568,6 +568,18 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         return { showMissions: state().showMissions };
       },
     }),
+    defineAction<{ show: boolean }, unknown>({
+      name: 'showFlags',
+      title: 'Show country flags',
+      description:
+        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state).',
+      effect: 'command',
+      params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the flags.' } }, required: ['show'] },
+      run: ({ show }) => {
+        store.set({ showFlags: show });
+        return { showFlags: state().showFlags };
+      },
+    }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: MissionType; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({
       name: 'setFilters',
       title: 'Filter landings',
@@ -746,6 +758,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           sunBandDeg: { min: s.sunElMinDeg, max: s.sunElMaxDeg },
           overlay: s.overlay,
           showMissions: s.showMissions,
+          showFlags: s.showFlags,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },
           globeDisplay: ctx.display?.() ?? null,

@@ -1,5 +1,5 @@
-// The selected site's card (globe view): what the site is, its elevation and the data behind
-// it, where the Sun and Earth are now, the mission-window results, links, stepping through the
+// The selected site's card (globe view): what the site is, who its hardware belongs to (GCAT),
+// the area explored there, its elevation and the data behind it, where the Sun and Earth are now, the mission-window results, links, stepping through the
 // visible landings, and the way down to the surface.
 //
 // Layout: a header that always shows (name, coordinates, fold and close buttons), a body that
@@ -16,8 +16,11 @@ import { throttle } from '../../core/throttle';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
-import { formatCoords, formatDate, Landing, landingDate, programColor, quickmapUrl, trekUrl } from '../../data/landings';
+import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapUrl, trekUrl } from '../../data/landings';
+import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
+import { flagCanvas } from '../../scene/flags';
 import { globeDisplay } from '../../scene/globe/displayState';
+import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
 import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
@@ -90,8 +93,10 @@ export function mountSiteCard(region: HTMLElement): void {
   const body = el('div', 'sc-body');
   body.id = bodyId;
 
-  const facts = factList('sc-facts', [['date', 'Landed'], ['country', 'Country'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['elevation', 'Elevation'], ['coverage', 'Elevation data']]);
+  const facts = factList('sc-facts', [['date', 'Landed'], ['country', 'Belongs to'], ['owner', 'Owner'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['area', 'Explored'], ['elevation', 'Elevation'], ['coverage', 'Elevation data']]);
   facts.rows.coverage.dd.classList.add('sc-oneline');
+  const areaNote = el('p', 'ly-note sc-area-note');
+  const mismatch = el('p', 'sc-mismatch');
   const dataMore = el('details', 'sc-more');
   const dataSummary = el('summary', undefined, 'Elevation data: every source and its limits');
   const dataList = el('ul', 'sc-sources');
@@ -140,7 +145,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const index = el('span', 'ly-label ly-value');
   const next = button('Later →', 'ly-btn ly-btn--small', () => step(1));
   nav.append(prev, index, next);
-  body.append(facts.dl, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, sciTitle, sciHint, sci, summary, links, credit, nav);
+  body.append(facts.dl, mismatch, areaNote, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, sciTitle, sciHint, sci, summary, links, credit, nav);
 
   // ---------- footer: the actions ----------
   const foot = el('footer', 'sc-foot');
@@ -319,6 +324,48 @@ export function mountSiteCard(region: HTMLElement): void {
     dataMore.hidden = !stack.sources.length && !stack.notes.length;
   };
 
+  // Who the hardware belongs to (GCAT) and the area explored; both load once, then the card redraws.
+  let owners: OwnershipIndex | null = null;
+  let areas = new Map<string, SiteArea>();
+  void Promise.all([loadOwnership(), loadSiteAreas()]).then(([o, a]) => {
+    owners = o;
+    areas = a;
+    render();
+  });
+  const renderOwnership = (l: Landing | undefined) => {
+    const o = l ? owners?.byLanding.get(l.id) : undefined;
+    mismatch.hidden = true;
+    if (!l) {
+      facts.set('country', null);
+      facts.set('owner', null);
+      return;
+    }
+    if (!o || !owners) {
+      facts.set('country', `${l.country} (not checked against a catalogue)`);
+      facts.set('owner', null);
+      return;
+    }
+    const link = el('a', undefined, 'GCAT');
+    link.href = owners.sourceUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const src = el('span', 'sc-source');
+    src.append(' · source: ', link, ` ${o.jcat}`);
+    const flag = flagCanvas(flagCode(o), 18);
+    if (flag) flag.className = 'sc-flag';
+    facts.set('country', '');
+    facts.rows.country.dd.replaceChildren(...(flag ? [flag] : []), stateLabel(o), src);
+    facts.set('owner', o.ownerName ?? o.owner);
+    mismatch.hidden = !labelDisagrees(l.country, o);
+    mismatch.textContent = `Check: this site's own data says "${l.country}", but the GCAT catalogue records ${o.stateFullName ?? o.state}.`;
+  };
+  const renderArea = (l: Landing | undefined) => {
+    const area = l ? areas.get(l.id) : undefined;
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—');
+    areaNote.textContent = area?.note ?? '';
+    areaNote.hidden = !area?.note;
+  };
+
   const render = () => {
     const site = store.get().site;
     status.textContent = '';
@@ -330,17 +377,18 @@ export function mountSiteCard(region: HTMLElement): void {
     card.hidden = false;
     program.hidden = !l;
     if (l) {
-      swatch.style.background = programColor(l.program);
+      swatch.style.background = landingColor(l);
       programName.textContent = l.program;
     }
     title.textContent = l ? l.name : 'Pinned location';
     const approx = l && (l as Landing & { approx?: boolean }).approx;
     where.textContent = `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}`;
     facts.set('date', l ? `${formatDate(l.date)}, ${l.time} UTC` : null);
-    facts.set('country', l?.country ?? null);
+    renderOwnership(l);
     facts.set('type', l ? (l.crewed ? 'Crewed' : 'Robotic') : null);
     facts.set('region', l?.region ?? null);
     facts.set('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}; longitude east-positive`);
+    renderArea(l);
     renderCredit(site);
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';

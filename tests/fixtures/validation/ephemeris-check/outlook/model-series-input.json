@@ -1,0 +1,20 @@
+[
+ {
+  "id": "im-2",
+  "lat": -84.79,
+  "lon": 29.2,
+  "elevationM": 5322.769,
+  "start": "2027-01-01T00:00:00Z",
+  "stepMin": 20,
+  "count": 26524
+ },
+ {
+  "id": "shackleton-rim",
+  "lat": -89.78,
+  "lon": -155.73,
+  "elevationM": 1732.391,
+  "start": "2027-01-01T00:00:00Z",
+  "stepMin": 20,
+  "count": 26524
+ }
+]
