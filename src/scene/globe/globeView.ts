@@ -1,5 +1,6 @@
 // The 3D globe: the Moon with real relief (LOLA elevation), stars, Sun/Earth, landing
-// markers, custom pin, close-up imagery, colour overlays, orbit controls and fly-to. It
+// markers (coloured by country) with their explored areas and optional country flags, custom
+// pin, close-up imagery, colour overlays, orbit controls and fly-to. It
 // follows the store (time, light, site, filters, overlay) and writes the camera pose back
 // (globeCenter); clicks and picks go out as actions.
 import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, Vector2, Vector3, WebGLRenderer } from 'three';
@@ -13,10 +14,13 @@ import { store } from '../../core/store';
 import { MOON_RADIUS_KM, MOON_RADIUS_M, SiteRef, wrapLon } from '../../core/types';
 import type { MoonGeometry } from '../../astro/ephemeris';
 import { getLandings } from '../../data/catalog';
-import { latLonToVec3, programColor } from '../../data/landings';
+import { landingColor, latLonToVec3 } from '../../data/landings';
+import { loadOwnership } from '../../data/ownership';
 import { coverageRegions, demLayers } from '../../terrain/api';
+import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
+import { loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
@@ -69,6 +73,9 @@ export class GlobeView {
   private coverage: CoverageOutlines | null = null;
   /** Outlines of the mapped ice-bearing shadowed regions, loaded the first time they are asked for. */
   private ice: IceOutlines | null = null;
+  /** Each landing's explored area in its country's colour, and the optional country flags. */
+  private areas: SiteAreaLayer | null = null;
+  private flags: FlagMarkers | null = null;
   private iceRequested = false;
   /** Poleward of about 80S the surface is drawn from the polar elevation layers, with real Sun shadows. */
   private readonly polar = new PolarCloseUp(this.uniforms);
@@ -176,17 +183,34 @@ export class GlobeView {
     globeDisplay.subscribe(() => this.applyOverlay());
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
+    void this.loadMissionLayers(this.markers);
     const s = store.get();
     this.applyFilter();
     this.applySite(s.site);
-    this.markers.root.visible = s.showMissions;
+    this.applyMissions();
     this.sky.setMode(s.lightMode);
     store.subscribe(['site'], (st) => this.applySite(st.site));
-    store.subscribe(['showMissions'], (st) => {
-      if (this.markers) this.markers.root.visible = st.showMissions;
-    });
+    store.subscribe(['showMissions', 'showFlags'], () => this.applyMissions());
     store.subscribe(['lightMode'], (st) => this.sky.setMode(st.lightMode));
     missionFilter.subscribe(() => this.applyFilter());
+  }
+
+  /** The explored areas and flags: built once their small data files are in, then placed with the markers. */
+  private async loadMissionLayers(markers: Markers): Promise<void> {
+    const [owners, areas] = await Promise.all([loadOwnership(), loadSiteAreas()]);
+    this.areas = new SiteAreaLayer(markers.items, areas);
+    this.flags = new FlagMarkers(markers.items, (id) => owners?.byLanding.get(id));
+    this.scene.add(this.areas.root, this.flags.root);
+    this.applyMissions();
+    this.placed.version = -1; // place them with the markers
+  }
+
+  /** Markers, their explored areas and flags show together; flags only when also asked for. */
+  private applyMissions(): void {
+    const { showMissions, showFlags } = store.get();
+    if (this.markers) this.markers.root.visible = showMissions;
+    if (this.areas) this.areas.root.visible = showMissions;
+    this.flags?.setEnabled(showMissions && showFlags);
   }
 
   setGeometry(g: MoonGeometry): void {
@@ -363,6 +387,8 @@ export class GlobeView {
     this.sky.update(cam, this.right, this.up);
     this.updateRelief(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
+    if (this.areas?.root.visible) this.areas.update(cam);
+    this.flags?.update(cam, nowSec, this.sky.litDirection);
     if (this.coverage?.root.visible) this.coverage.update(cam);
     if (this.ice?.root.visible) this.ice.update(cam);
     const pinned = store.get().site;
@@ -402,6 +428,7 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
+      this.areas?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
@@ -449,7 +476,7 @@ export class GlobeView {
           row.className = 'tip-row';
           const sw = document.createElement('span');
           sw.className = 'ly-swatch';
-          sw.style.background = programColor(m.landing.program);
+          sw.style.background = landingColor(m.landing);
           const date = document.createElement('span');
           date.className = 'ly-value tip-date';
           date.textContent = m.landing.date.slice(0, 4);

@@ -23,7 +23,9 @@
     "build-heatmap": "node --experimental-strip-types --no-warnings scripts/build-heatmap.mjs",
     "e2e": "node e2e/run.mjs",
     "build-diviner": "node --experimental-strip-types --no-warnings scripts/build-diviner.mjs",
-    "build-shadowcam-index": "node --experimental-strip-types --no-warnings scripts/build-shadowcam-index.mjs"
+    "build-shadowcam-index": "node --experimental-strip-types --no-warnings scripts/build-shadowcam-index.mjs",
+    "fetch-gcat": "node scripts/fetch-gcat-landers.mjs",
+    "fetch-site-areas": "node scripts/fetch-site-areas.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

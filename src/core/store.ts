@@ -29,6 +29,7 @@ export function initialState(nowMs: number): AppState {
     sunElMaxDeg: 90,
     overlay: 'off',
     showMissions: true,
+    showFlags: false,
     lightMode: 'real',
     globeCenter: { lat: 0, lon: 0, altitudeKm: 4170 },
     look: { azDeg: 0, elDeg: 0, fovDeg: 70 },
