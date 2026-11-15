@@ -194,13 +194,15 @@ without downloading again.
   (`src/scene/globe/territories.ts`): the whole Moon is coloured by the country of the nearest landing site
   currently shown, so neighbouring sites of one country share one continuous territory and borders run halfway
   between sites of different countries. Hiding sites with the mission filters redivides the Moon among the rest.
+  The colouring is off by default: "Show country territories" in Filters (the `showTerritories` action) switches it
+  on, and it is drawn only while the landing markers are shown.
   **The territories are a display of who landed nearest, derived only from the landing coordinates; they are
   not data and not a boundary of any kind. No country owns any lunar ground** — the Outer Space Treaty (1967,
   Article II) forbids national claims. What a country does keep is ownership of its hardware, and that hardware
   (landers, rovers, instruments, equipment left along traverses) is spread across the explored area quoted in the
   card. So the explored area, not the territory colouring, is the closest real equivalent of "what a country owns"
-  at a site; it is not a legal boundary either. The same meaning is on screen under "Show previous missions" and in
-  the `showMissions` action's `territoryRule`.
+  at a site; it is not a legal boundary either. The same meaning is on screen under "Show country territories"
+  while the colouring is drawn, and in the `showTerritories` action's `territoryRule`.
 - **Sources:**
   - LROC `ANTHROPOGENIC_OBJECTS` (NASA PDS, `LROLRC_2001/EXTRAS/SHAPEFILE/`) — measured positions of landers, rovers
     and instruments. Wagner, R. V., et al. (2017), *Coordinates of anthropogenic features on the Moon*, Icarus 283,
