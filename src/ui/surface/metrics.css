@@ -1,0 +1,48 @@
+/* max-height is set by hudLayout.ts from what sits under the panel; this value only holds until then. */
+.km { --km-sun: #c98500; --km-earth: #3987e5; display: grid; gap: var(--sp-2); align-content: start; max-height: calc(100vh - 2 * var(--edge) - 320px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+.km-head { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.km-body { display: grid; gap: var(--sp-1); }
+.km-body .ly-section-title { margin: var(--sp-2) 0 0; }
+.km-site { margin-top: -4px; }
+/* The compact provenance line: two lines at most here, in full in "Where these numbers come from" and on hover. */
+.km-source { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.km-message--error { color: var(--danger); }
+
+.km-now { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.km-now thead th { font-size: var(--fs-xs); font-weight: var(--fw-regular); color: var(--text-muted); text-align: right; padding: 0 0 2px; }
+.km-now tbody th { text-align: left; font-weight: var(--fw-medium); padding: 2px 0; }
+.km-now td { text-align: right; padding: 2px 0 2px var(--sp-2); }
+.km-now .km-state td { text-align: left; padding: 0 0 var(--sp-1) 14px; font-size: var(--fs-xs); color: var(--text-muted); }
+.km-body-btn { display: inline-flex; align-items: center; gap: var(--sp-1); padding: 0; border: 0; background: none; color: var(--text); font: inherit; font-weight: var(--fw-medium); cursor: pointer; text-decoration: underline dotted; text-underline-offset: 3px; }
+.km-swatch { width: 8px; height: 8px; }
+.km-swatch--sun { background: var(--km-sun); }
+.km-swatch--earth { background: var(--km-earth); border-radius: 0; transform: rotate(45deg); }
+.km-state-text--visible { color: var(--text); }
+.km-state-text--hidden, .km-state-text--behind-earth { color: var(--warn); }
+.km-why { display: inline-flex; align-items: baseline; gap: var(--sp-2); min-height: 20px; padding: 0 var(--sp-1); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; cursor: pointer; }
+.km-why:hover { background: var(--surface-2); }
+.km-why-ask { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.km-state td > .km-state-text { padding: 0 var(--sp-1); }
+
+.km-count { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.km-count-btn { display: grid; grid-template-columns: 60px 1fr; align-items: baseline; column-gap: var(--sp-2); width: calc(100% + 2 * var(--sp-1)); min-height: 22px; padding: 1px var(--sp-1); margin: 0 calc(-1 * var(--sp-1)); border: 0; border-radius: var(--radius-sm); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.km-count-btn:hover:not(:disabled) { background: var(--surface-2); }
+.km-count-btn:disabled { cursor: default; }
+.km-count-btn:disabled .km-count-in { color: var(--text-muted); font-size: var(--fs-xs); }
+.km-count-label { color: var(--text-muted); }
+.km-count-in { text-align: right; }
+.km-count-at { grid-column: 1 / 3; text-align: right; white-space: nowrap; }
+.km-count-btn--none .km-count-in { text-align: left; }
+.km-count-btn--none .km-count-at { display: none; }
+
+.km-win { font-size: var(--fs-sm); }
+.km-win dt { white-space: nowrap; }
+.km-flags { list-style: none; margin: var(--sp-1) 0 0; padding: var(--sp-2); display: grid; gap: var(--sp-1); border: 1px solid var(--warn); border-radius: var(--radius-sm); font-size: var(--fs-xs); }
+.km-flag-mark { color: var(--warn); margin-right: var(--sp-1); }
+.km-warnings { margin: 0; padding-left: var(--sp-4); }
+.km-prov-summary { cursor: pointer; color: var(--accent); font-size: var(--fs-xs); }
+.km-prov-body { display: grid; gap: var(--sp-1); margin-top: var(--sp-1); }
+/* A zero-height row pinned to the bottom edge: it adds nothing to the scroll range. */
+.km-more { position: sticky; bottom: 0; height: 0; pointer-events: none; }
+.km-more > span { position: absolute; left: calc(-1 * var(--sp-3)); right: calc(-1 * var(--sp-3)); bottom: calc(-1 * var(--sp-3)); padding: 26px 0 5px; text-align: center; font-size: var(--fs-xs); color: var(--text-muted); background: linear-gradient(rgba(13, 15, 21, 0), rgba(13, 15, 21, 0.99) 52%); border-radius: 0 0 var(--radius-md) var(--radius-md); }
+
