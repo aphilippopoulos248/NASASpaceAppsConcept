@@ -338,7 +338,7 @@ describe('deterministic mode: comparison and nearby alternatives', () => {
     await e.reply('go to IM-2');
     const r = await e.reply('rank nearby sites within 2 km');
     expect(r.text).toContain('Ranked 3 alternatives near IM-2 Athena');
-    expect(r.text).toContain('1. Candidate 1 (640 m to the south-east (152°)): slope 6.8°, illumination 71.5 %, longest darkness 31.0 h, Earth line of sight 64.0 %');
+    expect(r.text).toContain("1. Candidate 1 (640 m to the south-east (152°)): slope 6.8°, illumination 71.5 %, longest darkness 31.0 h, Earth's centre in view 64.0 %");
     expect(r.text).toContain('Basis: Slope and skyline from the 60 m grid');
     await e.reply('go there');
     expect(state.site?.id).toBe('cand-1');
@@ -434,7 +434,7 @@ describe('deterministic mode: on a build with the awaiting core actions and no d
     await e.reply('go to IM-2; sun elevation between 0 and 60; maximum earth gap 12 h');
     const r = await e.reply('metrics');
     expect(r.text).toContain('The Sun leaves the required elevation band (0.0° to 60.0°) during the window: it ranges from -1.2° to 4.6°.');
-    expect(r.text).toContain('The longest Earth gap (28.5 h) is longer than the tolerated 12.0 h.');
+    expect(r.text).toContain('The longest Earth-centre gap (28.5 h) is longer than the tolerated 12.0 h.');
     expect(r.text).toContain('Elevation data, finest first: LOLA 60 m polar grid (60 m); LOLA whole-Moon grid (1895 m).');
   });
 
@@ -468,12 +468,12 @@ describe('deterministic mode: with the analysis readout action', () => {
     const e = engine();
     await e.reply('go to IM-2');
     const sun = await e.reply('where is the sun?');
-    expect(sun.text).toContain('The Sun at 2026-03-01 12:00 UTC: azimuth 143.2°, elevation 3.4°, 1.10° above the terrain skyline (visible)');
+    expect(sun.text).toContain("The Sun's centre at 2026-03-01 12:00 UTC: azimuth 143.2°, elevation 3.4°, 1.10° above the terrain skyline (visible)");
     const earth = await e.reply('is the earth visible');
     expect(earth.text).toContain('0.80° below the terrain skyline (hidden)');
     expect(earth.text).toContain('not a guarantee of a working radio link');
     const when = await e.reply('when is the next sunset?');
-    expect(when.text).toContain('The next sunset is at 2026-03-02 08:00 UTC, azimuth 268.9°');
+    expect(when.text).toContain('The next sunset: 2026-03-02 08:00 UTC, azimuth 268.9°');
     expect(state.timeMs).toBe(T0);
     await e.reply('look at the earth');
     expect(state).toMatchObject({ view: 'surface', look: { azDeg: 351, elDeg: 5.6 } });
