@@ -300,6 +300,10 @@ const minutesOff = (t: number, ref: string) => (t - Date.parse(ref)) / 60_000;
 const f1 = (v: number) => v.toFixed(1);
 const describeSet = (t: SkyTransition) => `${t.kind} ${iso(t.start.timeMs)} (${t.start.edge}) .. ${iso(t.end.timeMs)} (${t.end.edge}), ${t.hours.toFixed(2)} h, centre ${t.centre.map((c) => `${c.up ? 'up' : 'down'} ${iso(c.timeMs)}`).join(', ') || 'none'}`;
 
+// These expectations rest on the terrain reference of lunyx-science D-7: every grid as stored (3 m model
+// inside its footprint, 60 m window outside), with the T-32 edge easing off. A change of terrain
+// reference, such as T-8's option B or turning the easing on, moves these instants and must update the
+// expectations here (and the tables in docs/lunyx/handover/T-31-event-spans.md, section 6).
 describe('real terrain: the validator\'s instants (tests/fixtures/validation/ephemeris-check/events)', () => {
   it('Blue Ghost Mission 1, sunset of 16 March 2025 (bundled Horizons), eye heights 0.5, 2 and 5 m', async () => {
     const st = await loadTerrainFor(BLUE_GHOST);
@@ -319,8 +323,7 @@ describe('real terrain: the validator\'s instants (tests/fixtures/validation/eph
       console.log(`Blue Ghost ${r.mast} m: ${describeSet(set)}; minus independent: first cut ${f1(minutesOff(set.start.timeMs, r.cut))} min, centre ${half ? f1(minutesOff(half.timeMs, r.half)) : '-'} min (independent: half of the disc hidden), last limb ${f1(minutesOff(set.end.timeMs, r.last))} min. ${eventText(sunset)}`);
       expect(set.kind).toBe('set');
       expect(set.start.inWindow).toBe(true);
-      // Two minutes: the validator's own tolerance for times when the skylines agree (the differences are printed, not tuned).
-      // The stored 3 m model is the reference (lunyx-science D-7); the opt-in T-32 easing would move this sunset.
+      // Two minutes: the validator's own tolerance for times when the skylines agree (measured: within 4 s; printed, not tuned).
       expect(Math.abs(minutesOff(set.start.timeMs, r.cut))).toBeLessThan(2);
       expect(Math.abs(minutesOff(set.end.timeMs, r.last))).toBeLessThan(2);
       expect(set.hours).toBeGreaterThan(0.8);
@@ -354,7 +357,8 @@ describe('real terrain: the validator\'s instants (tests/fixtures/validation/eph
     console.log(`IM-2: Earth's centre ${m.earthVisiblePct.toFixed(2)} %, any part ${m.earthAnyPct!.toFixed(2)} %; longest gap centre ${m.longestEarthGapH.toFixed(1)} h, whole disc hidden ${m.longestEarthAnyGapH!.toFixed(1)} h${m.earthAnyGapOpenEnded ? ' (open)' : ''}; Sun ${describeSet(sunset.span!)}; Earth ${describeSet(earthset.span!)}. ${eventText(sunset)} ${eventText(earthset)}. Passages: ${a.transitions!.map((t) => `${t.body} ${t.kind}`).join(', ')}`);
     expect(sunset.span!.kind).toBe('set');
     expect(sunset.span!.hours).toBeGreaterThan(2);
-    // Independent Earthset (Earth's centre) 2025-03-19 04:07:45; the app's is 04:09:38 (validation record).
+    // Independent Earthset (Earth's centre) 2025-03-19 04:07:45; the app's is 04:09:38, 1.9 min later. Earth sinks 0.05 deg an hour
+    // there, so a minute is under 0.001 deg of skyline: 5 min keeps the bound clear of the two skylines' differences.
     expect(Math.abs(minutesOff(earthset.timeMs, '2025-03-19T04:07:45Z'))).toBeLessThan(5);
     expect(earthset.span!.start.timeMs).toBeLessThan(earthset.timeMs);
     expect(earthset.span!.end.timeMs).toBeGreaterThan(earthset.timeMs);
