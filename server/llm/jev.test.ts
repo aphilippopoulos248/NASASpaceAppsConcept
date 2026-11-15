@@ -113,7 +113,7 @@ describe('Jev router', () => {
   });
 
   it('sets the effort of the model request', () => {
-    const cfg: LlmConfig = { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium', maxTokens: 64000, betas: true, sdkCredentials: false, customBaseUrl: false, router: 'jev', script: 'default', secrets: [] };
+    const cfg: LlmConfig = { provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium', maxTokens: 64000, betas: true, customBaseUrl: false, router: 'jev', script: 'default', secrets: [] };
     const opts = { betas: true, stripThinking: false };
     expect((buildParams(cfg, request(), opts) as any).output_config).toEqual({ effort: 'medium' });
     expect((buildParams(cfg, { ...request(), effort: 'low' }, opts) as any).output_config).toEqual({ effort: 'low' });

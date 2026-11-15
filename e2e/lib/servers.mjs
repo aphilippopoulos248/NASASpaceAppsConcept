@@ -50,7 +50,8 @@ export async function startPreview(env = {}) {
   if (!existsSync(join(ROOT, 'dist', 'index.html'))) throw new Error('dist/ is missing: run `npm run build` first (npm run e2e does it for you).');
   const port = await freePort();
   const clean = { ...process.env };
-  for (const key of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_PROFILE', 'TYPESAFE_API_KEY', 'LUNYX_ENV_FILE', 'LUNYX_LLM_ROUTER', 'LUNYX_LLM_MODEL', 'LUNYX_LLM_AUTH']) delete clean[key];
+  // Remove anything the SDK could use to reach a real model: tests must never call a paid API.
+  for (const key of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_PROFILE', 'TYPESAFE_API_KEY', 'LUNYX_ENV_FILE', 'LUNYX_LLM_ROUTER', 'LUNYX_LLM_MODEL']) delete clean[key];
   let log = '';
   const child = spawn(process.execPath, [join(ROOT, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--port', String(port), '--strictPort', '--host', '127.0.0.1'], {
     cwd: ROOT,
