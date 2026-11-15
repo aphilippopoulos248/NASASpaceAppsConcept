@@ -196,7 +196,7 @@ round, by the science project; its record is `tests/fixtures/validation/science-
 | Sun and Earth azimuth and elevation at a site | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035 | Worst difference 0.0036°. After 2035 it grows (0.006° in 2060, 0.021° in 2099); dates are limited to 1950 to 2100 |
 | Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, GitHub `main`'s version on 14 November 2026 until `595fe28` brought the fix, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
-| Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
+| Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-12 of the science project, which replaced its D-10). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min at Blue Ghost, Chandrayaan-3 and Apollo 15. Near the poles the Sun and Earth cross the skyline slowly, and the same 0.01° of skyline agreement means times that agree to within a few minutes |
 | Both ends of every rise and set (on every screen since T-47 to T-49) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s (at the catalogue's current position the app reads 18:24:14 / 19:30:47 UTC since T-50). Near the poles an instant was up to 14 min off, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lay under the disc. Since the original team's T-50 (`b6f7392`) the app reads the skyline every 0.05° wherever the Sun's or Earth's disc comes near it: the validator's worst cases went from +464 s to -5 s and from +835 s to +47 s; the slowest passages can still differ by a few minutes, about 0.003° of skyline |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
@@ -331,24 +331,21 @@ centre.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Nearby-scan radius and spacing: deferred (operator decision D-14).** A radius or spacing typed
-  into Compare > "Nearby sites" is reset to the last scan's values when a requirement (such as
-  the slope limit) changes before the scan, which then runs on the old grid; its summary names
-  the grid it used. Set the requirements first, then the radius and spacing, then scan.
-- **Defects fixed upstream, not yet re-checked** (fixed by the original team at the time of
-  writing; each entry goes once the desktop walkthrough has confirmed the fix):
-  - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
-    south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
-    coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
-    download at a time, retried);
-  - with the default solar band (0° to 90°) the surface view's key metrics said "Requirement not
-    met" for any window with a night, while the compare panel treated that band as no
-    requirement. Fixed upstream in `11f60b4` (T-46: no band is required at the default, by one
-    rule in every panel and in `getAnalysis`);
-  - two keyboard and screen-reader gaps: after "Compare as B" in the nearby list the focus fell
-    out of the compare panel, and the site-science section had two disclosures with the same
-    name, "Source and limits". Fixed upstream in `11f60b4` (T-46).
-- **Keyboard and screen-reader gaps** still open are listed in
-  [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
+  into Compare > "Nearby sites" before a scan is put back to the last scan's value when any
+  requirement changes (slope limit, solar band, Earth gap), and the scan then uses the restored
+  value. Its summary names the radius it used ("within 2.0 km"), so check that line, or set the
+  requirements first and type the radius and spacing again before scanning. A fix exists but is
+  neither verified nor in this build.
+- **Elevation downloads: fixed upstream, release re-check to come.** Opening a site could fail to
+  load an elevation file (the 1.9 km whole-Moon grid or a south-polar layer), seen in headless
+  Chrome on the build machine; the globe then kept its coarser relief and the site card a coarser
+  grid. Fixed upstream in `bbd2294` (T-40: one download at a time, retried); the walkthrough's dry
+  runs saw no failed download in 2 of 2 page loads, and its run on the release candidate (T-8)
+  is to confirm it.
+- **Accessibility.** Every finding of the keyboard and accessibility pass is fixed upstream
+  ([docs/lunyx/accessibility.md](docs/lunyx/accessibility.md)), but nobody has listened to the app
+  with a screen reader: there is none on the build machine, so wording and announcements are
+  judged from the accessibility tree only.
 
 ## The demo for the submission
 

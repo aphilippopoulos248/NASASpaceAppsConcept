@@ -3,13 +3,12 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the tree at `08b5cfa` (`am/lunyx-experience/integration`, which contains
-  `am/lunyx/integration` up to `b6f7392`: the original project's feature set with the mission
-  presets, the T-37 notices, the T-38 landing sources, the T-39 flags, the T-40 downloads, the
-  T-43 coordinate entry, the T-46 band rule and compare focus, the T-47 and T-48 rise and set
-  spans, the T-50 finer skyline and all four of the science project's deliveries), plus this
-  task's documents; the original team's T-49, published in `44eb72a`, is described from its
-  commits and STATUS.md there; checked on 2026-11-15 (UTC).
+- **State described:** the release candidate `41be074` (published on `feature/lunyx-navigator`;
+  its app code equals team integration `649fc4e`), plus this task's documents: the original
+  project's feature set with the mission presets, the T-37 notices, the T-38 landing sources, the
+  T-39 flags, the T-40 downloads, the T-43 coordinate entry, the T-46 band rule and compare focus,
+  the T-47 to T-49 rise and set spans, the T-50 finer skyline and all four of the science
+  project's deliveries; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
   for the operator to approve (section 5). Items that could not be established are in section 8.
 - **Who wrote this:** an AI agent (Claude, hub handle @submission) from the repository, its git
@@ -109,13 +108,13 @@ in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `08b5cfa` the history has 471 commits:
+At `41be074` the history has 501 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 243 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 242 (71 "Claude Fable 5.2", 171 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 259 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 258 (71 "Claude Fable 5.2", 187 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
 | 10 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 8: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix); AI status not recorded (open item L4) |
-| 218 merge commits | 62 | 156 (90 by the hub's integration bot, 1 GitHub pull-request merge, 63 by the local account, 2 by the teammate) |
+| 232 merge commits | 67 | 165 (97 by the hub's integration bot, 1 GitHub pull-request merge, 65 by the local account, 2 by the teammate) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -172,19 +171,20 @@ there; STATUS.md section 4): everything about the model modes above is read from
 its tests with a scripted stand-in, not observed. The committed screenshots that show the
 assistant (`t15-*.png`, `t11-ab-with-assistant-1280.png`) show deterministic mode.
 
-**Against NASA's guidance for AI applications (1.4)**, findings for the owner (@assistant) and
-the operator; relayed through @coordinator, not patched here:
+**Against NASA's guidance for AI applications (1.4).** T-3 raised F1 to F3; the assistant's owner
+(@assistant) implemented them in T-10 (`ef56790`). What the code does now (read from the code and
+its tests; no real model has been run, see above):
 
-| # | Guidance | What the code does now | Proposal |
-| --- | --- | --- | --- |
-| F1 | "All outputs from the SI model should be attributed to the SI product itself, not NASA. References like “according to NASA” or similar are prohibited in SI products." | The system prompt (`server/llm/prompt.ts`) does not mention this, while action descriptions and results the model reads name NASA products (e.g. "NASA PGDA product 69" in `src/core/scienceActions.ts` and in the basis text of `src/science/polarAverages.ts`) | Add one rule to the system prompt: attribute results to Lunyx's computation, name the dataset (for example "PGDA product 69, Mazarico et al. 2011") as the data source, never write "according to NASA" or imply NASA reviewed a result; add a test that the rule is present |
-| F2 | "NASA strongly encourages SI-generated products maintain a marking indicating the product is SI generated." | Replies carry the model's name ("Claude Opus 5.5"), not the words "AI-generated" | Label model replies "AI-generated · <model name>" |
-| F3 | "It’s important to clarify that NASA is not responsible for the accuracy of the information generated by your SI model." | No such statement in the drawer or the docs | One line in the drawer (empty state or footer) and in the README: "Answers are generated by an AI model from Lunyx's own results. NASA is not responsible for their accuracy and has not reviewed them." |
-| F4 | "do not imply any review or permission was granted by NASA" | The app and docs credit NASA data in text only and claim no review | Keep it so; T-9's README states it |
+| # | Guidance | What the code does now |
+| --- | --- | --- |
+| F1 | "All outputs from the SI model should be attributed to the SI product itself, not NASA. References like “according to NASA” or similar are prohibited in SI products." | The system prompt (`server/llm/prompt.ts`) tells the model to attribute what it reports to Lunyx's own computation and to name the dataset as the data source (for example "PGDA product 69, Mazarico et al. 2011"), never to write "according to NASA" or anything like it, and never to suggest that NASA reviewed, approved or endorsed a result or the app |
+| F2 | "NASA strongly encourages SI-generated products maintain a marking indicating the product is SI generated." | A reply written by a language model is labelled "AI-generated · <model name>" (`src/assistant/labels.ts`); deterministic and scripted replies say what they are instead ("Deterministic mode: no language model"), because marking them AI-generated would be untrue |
+| F3 | "It’s important to clarify that NASA is not responsible for the accuracy of the information generated by your SI model." | A permanent note in the drawer: "Answers are generated by an AI model from Lunyx's own results. NASA is not responsible for their accuracy and has not reviewed them." (without a model: "Answers are worked out from Lunyx's own results, without an AI model. NASA is not responsible for their accuracy and has not reviewed them."); the README says the same |
+| F4 | "do not imply any review or permission was granted by NASA" | The app and the docs credit NASA data in text only and claim no review |
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `08b5cfa` that is an image, texture, document image or data
+**Scope:** every tracked file at `41be074` that is an image, texture, document image or data
 file: everything except source code, configuration and Markdown. **498 files, 171.2 MB**: 155
 images (JPEG, PNG, WebP), 1 PDF, 342 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
@@ -771,11 +771,11 @@ like the rest of `docs/`).
 | --- | --- | --- | --- | --- |
 | W1 | Screenshots of the app (A23, the walkthrough's A32 under `docs/lunyx/screenshots/`, and any new ones) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 244 of 253 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 260 of 269 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
-| W7 | In-app assistant | NASA's AI-application guidance (1.4) | F1 to F3 in section 3 | @assistant |
+| W7 | In-app assistant | NASA's AI-application guidance (1.4) | Done in T-10 (`ef56790`): attribution rule, "AI-generated" label, accuracy note (section 3) | — |
 | W8 | Design references (A24) | NASA insignia rules; Space Apps terms on third-party material | Do not publish `docs/reference/` images and PDF with the final project (keep the repository private, or publish a copy without them) | Operator |
 | W9 | Third-party notices in the built app | MIT and OFL notice conditions | Done by the original team's T-37: `/licences/THIRD-PARTY-NOTICES.txt` ships with the site (SOURCES.md section 6) | — |
 
@@ -787,7 +787,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `08b5cfa`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `41be074`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a
@@ -850,6 +850,6 @@ at the source.
 | L10 | National flags drawn by code (in the build since `0cc5553`, off by default), with a 50-star United States flag since the original T-39; mission names shown as plain text | The SI rule lists "flags" and "mission identifiers" among NASA branding elements. NASA's brand pages use "identifier" for its graphic marks (the Insignia and its lockups), so plain-text mission names look outside it (my reading) | The operator's reading of the rule; keep, change or drop the flags; confirm that plain-text mission names are fine |
 | L11 | Ideation: who drafted tab 2 ("Our ideas") of the team document and the text of the design PDF, and whether any AI tool helped; which tool made the PDF's "Transcription" section | The guide says SI "should not be used to (come up with your idea of how to solve the challenge)" | Ask the team |
 | L12 | The operator's channel to the agents: the hub describes the operator as possibly speaking through ChatGPT | If an assistant such as ChatGPT relayed or shaped instructions, it belongs in the SI description | Operator confirms which tools were used |
-| L13 | Assistant findings F1 to F3 (section 3) | NASA's guidance for AI applications | Operator approves; @assistant implements |
+| L13 | Resolved: assistant findings F1 to F3 (section 3) | NASA's guidance for AI applications | Implemented by @assistant in T-10 (`ef56790`) |
 | L14 | ShadowCam: no licence or usage statement in its archive | Imagery may not be redistributed without permission | Nothing to do while the app only links (current state) |
 | L15 | Metadata acknowledgement for code and data (W3, W4) | "acknowledge SI generation in descriptive text and metadata" | Approve or adjust W3 and W4 |
