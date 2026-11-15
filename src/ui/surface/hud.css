@@ -12,8 +12,6 @@ body[data-view='surface'] .surface-hud:not(.sp-folded) {
   align-items: center;
   gap: var(--sp-1) var(--sp-2);
 }
-/* The expanded skyline chart would sit under the strip: in its own place the strip gives way to it. */
-body[data-view='surface'] .surface-hud.surface-hud--chart-expanded:not(.sp-positioned) { display: none; }
 .surface-hud .sp-toolbar { border-bottom: 0; padding-bottom: 0; }
 .surface-hud:has(details[open]) .sh-controls { flex-basis: 100%; }
 .sh-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
