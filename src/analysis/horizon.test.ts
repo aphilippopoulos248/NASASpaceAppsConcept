@@ -348,9 +348,9 @@ describe('observer on or near the ground: the two polar pins of the independent 
       if (id !== 'im-2@0m' && id !== 'shackleton-rim@0m') expect(r.atFeet).toBeGreaterThan(100); // convex ground under the pin
     });
   }
-  // Not Apollo 15 (measured -0.004 deg): its 3 m site model is being eased onto the 60 m window at load (T-32),
-  // after which the app's terrain there no longer equals the stored files this reference was built from.
-  for (const [id, limit] of [['connecting-ridge', 0.01], ['shackleton-rim', 0.01], ['im-2', 0.01], ['chandrayaan-3', 0.01]] as const) {
+  // Apollo 15 is back (T-49): the T-32 easing of its 3 m site model onto the 60 m window is off by default
+  // (lunyx-science D-10), so the app's terrain there again equals the stored files this reference was built from.
+  for (const [id, limit] of [['connecting-ridge', 0.01], ['shackleton-rim', 0.01], ['im-2', 0.01], ['chandrayaan-3', 0.01], ['apollo-15', 0.01]] as const) {
     it(`${id}, 2 m mast: within ${limit} deg of the independent skyline`, async () => {
       const r = await compare(id);
       console.log(`${id} @2m: worst ${r.worst.toFixed(4)} deg, ${r.over} azimuths over 0.01`);
