@@ -570,6 +570,8 @@ describe('the seasonal outlook', () => {
       expect(d.illuminationPct).toBeGreaterThan(45);
       expect(d.illuminationPct).toBeLessThan(55);
       expect(d.earthVisiblePct).toBe(100);
+      // Any part of Earth's disc, beside its centre (D-8).
+      expect(d.earthAnyPartVisiblePct).toBe(100);
     }
     expect(r.planned).toMatchObject({ arrivalUtc: '2025-03-10T00:00Z', slipDays: 0 });
     expect(r.best.score).toBeGreaterThanOrEqual(r.planned.score);
