@@ -36,3 +36,12 @@ body[data-view='surface'] .locator-zoom { top: 42px; }
    to the large chart (hud.css), which it would otherwise overlap at 1280x720 and at 1920x1080. */
 body[data-view='surface'] .surface-hud.sp-positioned { display: grid; }
 .sp-reset { display: block; margin-top: 6px; margin-left: auto; }
+
+/* The strip docked at the top right by hudLayout.ts on short windows, to keep the horizon band at the
+   centre of the screen clear (it is not "moved": Reset panels and resizing re-decide it). */
+body[data-view='surface'] .sp-docked:not(.sp-positioned) {
+  position: fixed !important; left: var(--sp-dock-x) !important; top: var(--sp-dock-y) !important;
+  right: auto !important; bottom: auto !important; width: var(--sp-dock-width) !important;
+  max-width: calc(100vw - 16px) !important; margin: 0 !important; transform: none !important;
+}
+body[data-view='surface'] .region:has(> .sp-docked) { transform: none; }

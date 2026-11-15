@@ -67,4 +67,22 @@ describe('surface HUD layout limits', () => {
     const tall = hudLimits({ viewportH: 844, metrics: phone, floor: 684, chart: { left: 12, right: 378, height: 240 }, strip: null, below: [{ left: 12, right: 378, top: 660 }] });
     expect(tall.chartLift).toBe(684 - (660 - 12));
   });
+
+  it('docks the strip at the top right where its place would reach into the horizon band (1280x720)', () => {
+    // As measured in the app on the T-64 candidate: the strip 159 px tall on a floor at 564, the Time panel from y 507.
+    const time = { left: 316, right: 964, top: 507 };
+    const l = hudLimits({ viewportH: 720, metrics, floor: 612, chart: null, strip: { left: 324, right: 1020, floor: 564, height: 159 }, below: [time], dock: { viewportW: 1280, top: 94 + 12, naturalWidth: 696 } });
+    // In its place its top would be at 564 - 69 - 159 = 336, above 360 + 44: it docks right of the centre column.
+    expect(l.stripLift).toBe(69);
+    expect(l.stripDock).toEqual({ x: 688, y: 106, width: 568 });
+    expect(l.stripDock!.x).toBeGreaterThanOrEqual(1280 / 2 + 48);
+  });
+
+  it('leaves the strip in its place where it stays below the horizon band (1920x1080), and without a dock to go to', () => {
+    const l = hudLimits({ viewportH: 1080, metrics, floor: 972, chart: null, strip: { left: 580, right: 1340, floor: 924, height: 140 }, below: [{ left: 550, right: 1370, top: 888 }], dock: { viewportW: 1920, top: 106, naturalWidth: 760 } });
+    expect(l.stripDock).toBeNull();
+    const noDock = hudLimits({ viewportH: 720, metrics, floor: 612, chart: null, strip: { left: 324, right: 1020, floor: 564, height: 159 }, below: [{ left: 316, right: 964, top: 507 }] });
+    expect(noDock.stripDock).toBeNull();
+  });
 });
+
