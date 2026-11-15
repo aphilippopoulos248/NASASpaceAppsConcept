@@ -7,7 +7,7 @@ import type { Scenario } from '../../core/types';
 
 export type CompareTab = 'compare' | 'nearby' | 'windows' | 'outlook' | 'rank';
 /** The tabs of the panel, in order. */
-export const COMPARE_TABS: readonly CompareTab[] = ['compare', 'nearby', 'windows', 'outlook', 'rank'];
+export const COMPARE_TABS: readonly CompareTab[] = ['rank', 'windows', 'outlook'];
 export const TAB_TITLE: Record<CompareTab, string> = { compare: 'A and B', nearby: 'Nearby sites', windows: 'Window table', outlook: 'Outlook', rank: 'Rank sites' };
 
 /** The seasonal outlook last asked for, and where it stands. */
@@ -45,11 +45,14 @@ export interface PanelStore {
 }
 
 export function createPanelStore(): PanelStore {
-  let state: PanelState = { tab: 'compare', savedRevision: 0, nearbyRadiusM: 2000, nearbySpacingM: 300, tableSlot: 'current', outlookSlot: 'current', outlookMonths: 12, outlook: { state: 'idle' } };
+  let state: PanelState = { tab: 'rank', savedRevision: 0, nearbyRadiusM: 2000, nearbySpacingM: 300, tableSlot: 'current', outlookSlot: 'current', outlookMonths: 12, outlook: { state: 'idle' } };
   const listeners = new Set<PanelListener>();
   return {
     get: () => state,
     set(patch) {
+      // Older action sequences may still request a retired tab. Never leave the
+      // sheet pointing at a panel that is no longer mounted.
+      if (patch.tab && !COMPARE_TABS.includes(patch.tab)) patch = { ...patch, tab: 'rank' };
       const changed = new Set<keyof PanelState>();
       const next = { ...state };
       for (const key of Object.keys(patch) as (keyof PanelState)[]) {

@@ -31,6 +31,8 @@ export interface LlmConfig {
   model: string;
   effort: Effort;
   maxTokens: number;
+  /** Hosted web search for the Codex provider. */
+  webSearch?: 'live' | 'disabled';
   /** Server-side refusal fallback and thinking-binding controls (beta features of the Claude API). */
   betas: boolean;
   /** A custom API base URL is in use (a proxy or gateway). */
@@ -126,6 +128,7 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
 
   const base = {
     model: s.get('LUNYX_LLM_MODEL') ?? (wanted === 'codex' ? 'default' : DEFAULT_MODEL),
+    webSearch: s.get('LUNYX_WEB_SEARCH')?.toLowerCase() === 'disabled' ? 'disabled' as const : 'live' as const,
     effort: effortRaw && EFFORTS.includes(effortRaw) ? effortRaw : DEFAULT_EFFORT,
     maxTokens: Number.isInteger(maxTokensRaw) && maxTokensRaw >= 1024 && maxTokensRaw <= 128_000 ? maxTokensRaw : DEFAULT_MAX_TOKENS,
     betas: (s.get('LUNYX_LLM_BETAS') ?? 'on').toLowerCase() !== 'off',

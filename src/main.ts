@@ -10,7 +10,7 @@ import { createPresetActions } from './core/presetActions';
 import { createDecisionActions } from './core/decisionActions';
 import { applyDeepLink, parseDeepLink, syncUrl } from './core/deepLink';
 import { missionFilter } from './core/missionFilter';
-import { store } from './core/store';
+import { DEFAULT_SELECTED_POINT, store } from './core/store';
 import { getLandings, setLandings } from './data/catalog';
 import { loadLandings } from './data/landings';
 import { getPresets, loadPresets, setPresets } from './data/presets';
@@ -20,8 +20,6 @@ import { mountAssistantButton, mountAssistantDrawer } from './ui/assistant/drawe
 import { mountComparePanel } from './ui/compare/panel';
 import { mountFiltersPanel } from './ui/globe/filtersPanel';
 import { panelSummary } from './ui/globe/panels';
-import { mountPerson } from './ui/globe/person';
-import { mountReliefChip } from './ui/globe/reliefChip';
 import { mountSiteCard } from './ui/globe/siteCard';
 import { registerSiteScienceActions } from './ui/science/siteScience';
 import { mountCloseButton } from './ui/shared/closeButton';
@@ -68,8 +66,6 @@ async function boot() {
   mountFiltersPanel(region('left'));
   mountSiteCard(region('card'));
   mountCompass(region('compass'), () => host.globe.northAngleDeg(), (fn) => host.onFrame(fn));
-  mountReliefChip(region('compass'));
-  mountPerson(region('person'), (x, y) => host.globe.latLonAt(x, y));
   mountTimeScrubber(region('scrubber'));
   mountLocatorMap(region('locator'), host.surface.view, (fn) => host.onFrame(fn));
   mountKeyMetrics(region('metrics'));
@@ -104,6 +100,12 @@ async function boot() {
   void analysis.start();
   const errors = await applyDeepLink(link, host.jumpTo);
   for (const e of errors) console.warn('Deep link:', e);
+  // Start at the south-pole pin unless the link already selected a site or preset.
+  if (!store.get().site) {
+    const point = DEFAULT_SELECTED_POINT;
+    await actions.runAction('dropPin', point);
+    host.globe.jumpTo(point.lat, point.lon, store.get().globeCenter.altitudeKm);
+  }
   syncUrl(store);
   document.getElementById('loading')!.classList.add('done');
   if (showIntro) {

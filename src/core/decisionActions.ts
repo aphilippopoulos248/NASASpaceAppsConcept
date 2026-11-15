@@ -28,6 +28,7 @@ import {
   type SiteMetrics,
 } from '../analysis/decision/types';
 import type { NearbyProgress } from '../analysis/api';
+import type { NearbyRegionResult } from '../analysis/engine';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from '../analysis/types';
 import { findLanding, landingSite } from '../data/catalog';
 import { formatCoords, type Landing } from '../data/landings';
@@ -58,6 +59,7 @@ export interface DecisionContext {
   rankNearby?: (scenario: Scenario, options: NearbyOptions, onProgress?: NearbyProgress) => Promise<NearbyCandidate[]>;
   /** Landing-region slope and roughness; defaults to src/terrain/region.ts. */
   loadRegionTerrain?: (site: SiteRef, radiusM: number, slopeLimitDeg: number | null) => Promise<RegionTerrain>;
+  measureNearbyRegions?: typeof analysisApi.measureNearbyRegions;
   engine?: Partial<DecisionEngine>;
 }
 
@@ -72,8 +74,8 @@ export const DECISION_CAPS = {
 } as const;
 
 /** Largest scan around a site: rankNearby's grid grows with (radius / spacing) squared. */
-const NEARBY_MAX_RADIUS_M = 10_000;
-const NEARBY_MIN_SPACING_M = 50;
+export const NEARBY_MAX_RADIUS_M = 10_000;
+export const NEARBY_MIN_SPACING_M = 50;
 
 // ---------------------------------------------------------------- progress
 
@@ -454,7 +456,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
    * Measures and judges one candidate. Window metrics come from the scan when given (nearby),
    * otherwise from analyse(). A failed measurement leaves its values unknown with the reason.
    */
-  const evaluateOne = async (profile: MissionProfile, s: SiteRef, scan?: NearbyCandidate): Promise<SiteEvaluation> => {
+  const evaluateOne = async (profile: MissionProfile, s: SiteRef, scan?: NearbyCandidate, measured?: NearbyRegionResult): Promise<SiteEvaluation> => {
     const scenario = scenarioFor(profile, s);
     let analysis: SiteAnalysis | null = null, analysisError: string | null = null;
     if (!scan) {
@@ -466,7 +468,10 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
     }
     let region: RegionTerrain | null = null, regionError: string | null = null;
     try {
-      region = await regionTerrain(s, profile.landingRadiusM, profile.thresholds.slope);
+      if (measured) {
+        region = measured.region;
+        regionError = measured.error ?? null;
+      } else region = await regionTerrain(s, profile.landingRadiusM, profile.thresholds.slope);
     } catch (err) {
       // A RangeError is a bad radius, limit or centre: the request itself, so it is refused. Anything
       // else (no grid covers the region, say) leaves slope and roughness unknown, with the reason.
@@ -491,12 +496,12 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
   };
 
   /** Runs evaluateOne over a list, one at a time (the analysis worker takes one job at a time), reporting progress. */
-  const evaluateAll = async (profile: MissionProfile, items: { site: SiteRef; scan?: NearbyCandidate }[]): Promise<SiteEvaluation[]> => {
+  const evaluateAll = async (profile: MissionProfile, items: { site: SiteRef; scan?: NearbyCandidate }[], regions?: NearbyRegionResult[]): Promise<SiteEvaluation[]> => {
     const out: SiteEvaluation[] = [];
     try {
       for (const [i, it] of items.entries()) {
         setRun({ running: true, done: i, total: items.length, label: `Measuring ${it.site.name} (${i + 1} of ${items.length})` });
-        out.push(await evaluateOne(profile, it.site, it.scan));
+        out.push(await evaluateOne(profile, it.site, it.scan, regions?.find(r => r.siteId === it.site.id)));
       }
     } finally {
       setRun({ running: false, done: out.length, total: items.length, label: '' });
@@ -614,7 +619,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       title: 'Find the best sites',
       description:
         'Measures and ranks candidate sites for a mission profile. Candidates: {from: "catalogue"} (every catalogued landing), {from: "sites", sites: [...]} (up to 12), or {from: "nearby", around?, radiusM, spacingM} (a grid around a site, default the selected one, from the nearby scan with its faster settings and its slope pre-filter; the best ' +
-        `${DECISION_CAPS.nearby} by the scan's own score are measured fully). Only feasible sites are ranked (by utility, ties by site id), with the Pareto front; unknown and infeasible sites are listed with the criteria that decided them. ` +
+        `${DECISION_CAPS.nearby} by the scan's own score get landing-region measurements using the search area's shared terrain; time metrics retain the scan settings). Only feasible sites are ranked (by utility, ties by site id), with the Pareto front; unknown and infeasible sites are listed with the criteria that decided them. ` +
         'With detail "summary" (the default) the result is compact for a reply: the small fields first (profile id and name, relaxations, counts, cap, dropped, candidates, utilityNote, paretoFront, ranked, explanation), one shared `basis`, then `sites`: every criterion\'s verdict, value, unit, bound, threshold and score for the ranked sites, and only the deciding criteria with their reasons for the unknown and infeasible ones. With detail "full" it returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
       effect: 'query',
       params: {
@@ -649,6 +654,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           if (extra.length) throw new ActionError(`candidates.${extra.join(', candidates.')} does not apply to from: "${c.from}".`);
         };
         let items: { site: SiteRef; scan?: NearbyCandidate }[] = [];
+        let regions: NearbyRegionResult[] | undefined;
         let source: Record<string, unknown>;
         let cap: number;
         let dropped = 0;
@@ -704,6 +710,14 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           const reference = scan.find((x) => x.isReference);
           if (reference && !kept.includes(reference)) kept.push(reference);
           items = kept.map((x) => ({ site: x.site, scan: x }));
+          if (ctx.measureNearbyRegions || !ctx.loadRegionTerrain) {
+            setRun({ running: true, done: 0, total: items.length, label: `Checking landing terrain for ${items.length} shortlisted points` });
+            try {
+              regions = await (ctx.measureNearbyRegions ?? analysisApi.measureNearbyRegions)(centre, items.map(x => x.site), r.profile.landingRadiusM, r.profile.thresholds.slope);
+            } catch (err) {
+              regions = items.map(x => ({ siteId: x.site.id, region: null, error: message(err) }));
+            }
+          }
           source = {
             from: 'nearby',
             around: { id: centre.id, name: centre.name, lat: centre.lat, lon: centre.lon },
@@ -716,7 +730,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
             prefilter: `The scan's slope pre-filter at ${options.slopeLimitDeg} deg (the profile's slope limit), on its own coarser settings: ${scan[0]?.basis ?? 'no candidates'}`,
           };
         }
-        const evaluations = await evaluateAll(r.profile, items);
+        const evaluations = await evaluateAll(r.profile, items, regions);
         const ranking = engineCall('rank the sites', () => engine.rankEvaluations(evaluations, r.profile, r.relaxations));
         const top = ranking.ranked.slice(0, limit);
         const byId = new Map(ranking.evaluations.map((e) => [e.site.id, e]));

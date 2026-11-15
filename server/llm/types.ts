@@ -13,6 +13,8 @@ export interface ProviderRequest {
   signal: AbortSignal;
   /** Set by a router: how much effort the model should spend on this step (default: the configured effort). */
   effort?: Effort;
+  /** Jev identified a request that needs external sources. */
+  webResearch?: boolean;
 }
 
 /**

@@ -1,7 +1,9 @@
 // Runs analyses in whatever thread it is called from: the Web Worker in the browser, the
 // calling thread under Node and in tests. Terrain and the bundled ephemeris tables are loaded
 // here (both are cached per thread), so nothing large ever crosses a thread boundary.
-import type { Scenario } from '../core/types';
+import type { Scenario, SiteRef } from '../core/types';
+import { regionTerrainMetrics } from '../terrain/region';
+import type { RegionTerrain } from '../terrain/types';
 import { loadTerrainFor } from '../terrain/api';
 import type { TerrainStack } from '../terrain/types';
 import { sampleStack } from './horizon';
@@ -80,6 +82,24 @@ export async function analyseScenario(scenario: Scenario): Promise<SiteAnalysis>
 export async function nearbyScenario(scenario: Scenario, options: NearbyOptions, onProgress?: NearbyProgress): Promise<NearbyCandidate[]> {
   const [stack, table] = await Promise.all([loadTerrainFor(scenario.site), findBundledTable(scenario.site, scenario.startMs, windowEndMs(scenario))]);
   return runNearbyInSlices(scenario, stack, table, options, onProgress);
+}
+
+export interface NearbyRegionResult { siteId: string; region: RegionTerrain | null; error?: string }
+
+/** The shortlist uses the scan's terrain, already cached in this worker. Do not request
+ * a new remote elevation window for every point within the same small search area. */
+export async function nearbyRegions(centre: SiteRef, sites: SiteRef[], radiusM: number, slopeLimitDeg: number | null): Promise<NearbyRegionResult[]> {
+  const stack = await loadTerrainFor(centre);
+  const failures = stack.notes.filter(n => /could not/i.test(n));
+  return sites.map(site => {
+    try {
+      const region = regionTerrainMetrics(stack, site, radiusM, slopeLimitDeg);
+      region.notes.push('Measured on the search area’s shared elevation stack; the finest grid covering this entire landing region is used.', ...failures);
+      return { siteId: site.id, region };
+    } catch (e) {
+      return { siteId: site.id, region: null, error: e instanceof Error ? e.message : String(e) };
+    }
+  });
 }
 
 /** Loads what a scenario needs and computes the seasonal outlook for its site and mast height. */

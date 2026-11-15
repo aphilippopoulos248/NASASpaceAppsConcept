@@ -1,13 +1,12 @@
 // Time scrubber along the bottom (both views): scrubs the shared clock across the mission
 // window (29.5 days by default), with play/pause, speed, the exact UTC instant, the window length,
-// and - once the site analysis is ready - sunrise/sunset/Earthrise/Earthset marks and
-// jump-to-event buttons. Every control is an action (jumpToEvent is in core/coreActions.ts).
+// and - once the site analysis is ready - clickable sunrise/sunset/Earthrise/Earthset marks.
+// Every control runs through the action registry.
 //
 // A rise or a set is not one moment (decision D-8), so no mark, button or tooltip here names a
-// "sunset" with a time on its own: each says which instant it is ("Sun starts setting", "Sun
-// fully set"), in the words of core/skyEvents.ts and the science core, which the actions use too.
-// The marks show each passage of a disc through the skyline as a span, not a tick, and the jump
-// buttons go to each end of it in turn.
+// "sunset" with a time on its own: tooltips and accessible labels say which instant it is,
+// in the words of core/skyEvents.ts and the science core, which the actions use too.
+// Each passage of a disc through the skyline has a span; its icon jumps to the marked instant.
 import { eventText, transitionText } from '../../analysis/api';
 import type { SiteAnalysis, SkyEvent } from '../../analysis/types';
 import { runAction } from '../../core/actions';
@@ -15,16 +14,16 @@ import { analysis } from '../../core/analysisStore';
 import { RATE_PRESETS } from '../../core/coreActions';
 import { moonPhaseAt, moonPhaseDetail, moonPhaseText } from '../../core/moonPhase';
 import { effectiveStartMs, spanText } from '../../core/scenario';
-import { eclipseSpans, eclipseText, EVENT_INFO, EVENT_TYPES, nextInstantOfType } from '../../core/skyEvents';
+import { eclipseSpans, eclipseText, EVENT_INFO } from '../../core/skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, store } from '../../core/store';
 import { throttle } from '../../core/throttle';
 import { formatUtc, isoUtc } from '../../core/time';
 import { button, el } from '../dom';
 import { showFieldOutcome } from '../fieldStatus';
+import { layoutTimelineMarks, TIMELINE_MARK_ROW_HEIGHT } from './timelineMarks';
 import './timeScrubber.css';
 
 const GLYPH: Record<SkyEvent['type'], string> = { sunrise: '☀↑', sunset: '☀↓', earthrise: '⊕↑', earthset: '⊕↓' };
-const EVENTS = EVENT_TYPES.map((type) => ({ type, glyph: GLYPH[type], ...EVENT_INFO[type] }));
 export const WINDOW_CHOICES = [
   [24, '24 h'],
   [72, '3 days'],
@@ -58,7 +57,27 @@ export function mountTimeScrubber(region: HTMLElement): void {
   slider.min = '0';
   slider.setAttribute('aria-label', 'Time within the mission window');
   const marks = el('div', 'ts-marks');
-  marks.setAttribute('aria-hidden', 'true');
+  marks.setAttribute('role', 'group');
+  marks.setAttribute('aria-label', 'Timeline events');
+  const markButtons: { button: HTMLButtonElement; fraction: number }[] = [];
+  const layoutMarks = () => {
+    const { positions, rows } = layoutTimelineMarks(markButtons.map(m => m.fraction), marks.clientWidth);
+    markButtons.forEach((m, i) => {
+      m.button.style.left = `${positions[i].x}px`;
+      m.button.style.top = `${positions[i].row * TIMELINE_MARK_ROW_HEIGHT}px`;
+    });
+    track.style.setProperty('--ts-marks-height', `${rows * TIMELINE_MARK_ROW_HEIGHT}px`);
+  };
+  let marksWidth = -1;
+  new ResizeObserver(([entry]) => {
+    if (entry.contentRect.width === marksWidth) return;
+    marksWidth = entry.contentRect.width;
+    layoutMarks();
+  }).observe(marks);
+  const jumpToMark = async (timeMs: number) => {
+    await runAction('pause');
+    await runAction('setTime', { offsetHours: (timeMs - store.get().timeMs) / 3_600_000 });
+  };
   // Under the track: when Earth is in front of the Sun (lighter), and when the Sun is entirely hidden (full).
   const bands = el('div', 'ts-bands');
   bands.setAttribute('aria-hidden', 'true');
@@ -104,51 +123,19 @@ export function mountTimeScrubber(region: HTMLElement): void {
   const startHere = button('Start window here', 'ly-btn ly-btn--small', () => void runAction('setMissionWindow', { startUtc: 'now' }));
   startHere.title = 'Make the current simulated time the start of the mission window';
 
-  const jumps = el('div', 'ts-jumps');
-  jumps.setAttribute('role', 'group');
-  jumps.setAttribute('aria-label', 'Jump to the next rise or set');
-  // One button per kind of event; it goes to the next end of that event's passages in turn
-  // ("Sun starts setting", then "Sun fully set"), and its label says which.
-  const jumpButtons = EVENTS.map((e) => {
-    const b = button(`${e.glyph} ${e.label}`, `ly-btn ly-btn--small ts-jump ts-${e.body}`, () => {
-      const next = events && nextInstantOfType(events, e.type, store.get().timeMs);
-      if (next) void runAction('jumpToEvent', { type: e.type, instant: next.choice });
-    });
-    jumps.append(b);
-    return { ...e, button: b };
-  });
   const eventNote = el('span', 'ly-note ts-eventnote');
   const readout = el('span', 'ly-note ts-readout');
 
   const row = el('div', 'ts-row');
-  row.append(when, now, rate, win, startHere, jumps, eventNote, readout);
+  row.append(when, now, rate, win, startHere, eventNote, readout);
   bar.append(play, sliderWrap, row);
   region.append(bar);
   // On narrow screens the regions above the scrubber stand on its real height (shell.css):
-  // it grows by a row or two when the jump buttons show.
+  // controls can wrap as the available width changes.
   new ResizeObserver(() => document.documentElement.style.setProperty('--scrubber-h', `${Math.round(bar.offsetHeight)}px`)).observe(bar);
 
-  /** Events of the finished analysis (null while there is none). */
-  let events: SkyEvent[] | null = null;
-  const syncJumps = () => {
-    if (!events) return;
-    const t = store.get().timeMs;
-    for (const j of jumpButtons) {
-      const next = nextInstantOfType(events, j.type, t);
-      j.button.disabled = !next;
-      const label = next ? next.label : j.label;
-      if (j.button.textContent !== `${j.glyph} ${label}`) j.button.textContent = `${j.glyph} ${label}`;
-      const text = next
-        ? `Jump to ${formatUtc(next.timeMs)}: ${next.label} (${next.instant})${next.inWindow ? '' : ', just outside the analysed window'}. ${eventText(next.event)}`
-        : `${j.label}: no ${j.name.toLowerCase()} after the simulated time inside the mission window (${j.instant})`;
-      j.button.setAttribute('aria-label', text);
-      j.button.title = text;
-    }
-  };
-  // What follows the clock but need not be redrawn on every frame: the jump buttons' targets and
-  // the Moon's phase. The last clock change is always drawn (throttle runs once more at the end).
+  // The Moon's phase follows the clock without redrawing on every frame.
   const slowSync = throttle(() => {
-    syncJumps();
     const phase = moonPhaseAt(store.get().timeMs);
     readout.textContent = moonPhaseText(phase);
     readout.title = moonPhaseDetail(phase);
@@ -171,18 +158,20 @@ export function mountTimeScrubber(region: HTMLElement): void {
     const ev = currentEvents();
     marks.replaceChildren();
     bands.replaceChildren();
-    events = 'events' in ev ? ev.events : null;
+    markButtons.length = 0;
+    const events = 'events' in ev ? ev.events : null;
     const none = events !== null && events.length === 0;
     const eclipses = 'analysis' in ev ? eclipseSpans(ev.analysis) : [];
     const eclipseLine = eclipses.length ? ` ${eclipseText(eclipses)}` : '';
-    jumps.hidden = events === null || none;
     eventNote.hidden = events !== null && !none;
     // Passages of a disc through the skyline in the window: sets and rises, and grazes and peeks, which have no event.
     const passes = 'analysis' in ev ? (ev.analysis.transitions ?? []).filter((tr) => tr.end.timeMs > start && tr.start.timeMs < start + span) : [];
     const touches = none && passes.length ? ` ${passes.map((tr) => transitionText(tr)).join(' ')}` : '';
     eventNote.textContent = 'reason' in ev ? ev.reason : none ? `Neither the Sun nor Earth's centre rises or sets in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).${touches}${eclipseLine}` : '';
-    if (!events) return;
-    syncJumps();
+    if (!events) {
+      layoutMarks();
+      return;
+    }
     const place = (node: HTMLElement, fromMs: number, toMs: number) => {
       const a = Math.max(0, (fromMs - start) / span), b = Math.min(1, (toMs - start) / span);
       if (b <= a) return false;
@@ -198,11 +187,12 @@ export function mountTimeScrubber(region: HTMLElement): void {
         const full = el('span', 'ts-band ts-totality');
         if (place(full, h.startMs, h.endMs)) bands.append(full);
       }
-      // A mark above the middle of the passage carries the times as a tooltip, like the rise and set marks.
+      // The eclipse icon jumps to the middle of its visible span.
       const mid = (Math.max(start, e.startMs) + Math.min(start + span, e.endMs)) / 2;
-      const m = el('span', 'ts-mark ts-sun', '◐');
-      m.style.left = `${((mid - start) / span) * 100}%`;
-      m.title = eclipseText([e]);
+      const m = button('◐', 'ts-mark ts-sun', () => void jumpToMark(mid));
+      markButtons.push({ button: m, fraction: (mid - start) / span });
+      m.title = `Jump to ${formatUtc(mid)}. ${eclipseText([e])}`;
+      m.setAttribute('aria-label', m.title);
       marks.append(m);
     }
     // Each passage as a span under the glyphs: from its first cut (or first limb) to its last limb (or whole disc clear).
@@ -216,11 +206,13 @@ export function mountTimeScrubber(region: HTMLElement): void {
       const f = (e.timeMs - start) / span;
       if (f < 0 || f > 1) continue;
       const info = EVENT_INFO[e.type];
-      const m = el('span', `ts-mark ts-${info.body}`, GLYPH[e.type]);
-      m.style.left = `${f * 100}%`;
-      m.title = `${eventText(e)}. Azimuth ${e.azDeg.toFixed(1)}° when ${info.instant}.`;
+      const m = button(GLYPH[e.type], `ts-mark ts-${info.body}`, () => void jumpToMark(e.timeMs));
+      markButtons.push({ button: m, fraction: f });
+      m.title = `Jump to ${formatUtc(e.timeMs)}: ${eventText(e)}. Azimuth ${e.azDeg.toFixed(1)}° when ${info.instant}.`;
+      m.setAttribute('aria-label', m.title);
       marks.append(m);
     }
+    layoutMarks();
   };
   const sync = () => {
     const s = store.get();

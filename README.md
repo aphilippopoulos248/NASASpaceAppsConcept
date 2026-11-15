@@ -172,6 +172,14 @@ browser or get copied into this repository. Requests use your ChatGPT subscripti
 and its usage limits. This local integration is not intended for hosted services.
 See [OpenAI's app-server documentation](https://learn.chatgpt.com/docs/app-server).
 
+Codex also has live web search in the assistant chat. Ask it to look up a published
+fact, find sources, or check current mission news. With `LUNYX_LLM_ROUTER=jev` and
+`TYPESAFE_API_KEY`, Jev identifies research requests and Codex searches and reads
+public pages. The reply shows completed web lookups and clickable source URLs.
+External published facts are identified separately from Lunyx's own calculated
+rankings, terrain, sunlight and Earth visibility. Set `LUNYX_WEB_SEARCH=disabled`
+to turn search off. This search integration uses the Codex provider.
+
 To select Claude again, set `LUNYX_LLM_PROVIDER=anthropic` and remove any Codex model
 override. Existing `ant auth login` and `ANTHROPIC_API_KEY` setups work as before.
 

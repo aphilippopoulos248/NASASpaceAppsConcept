@@ -267,35 +267,26 @@ describe('equivalence: time and mission parameters', () => {
     });
   });
 
-  test('scrubber jump button = jumpToEvent { type, instant }: the start of the passage, then the event (T-47)', SLOW, async () => {
+  test('scrubber timeline icon = pause and setTime at the marked event', SLOW, async () => {
     // Blue Ghost on 16 March 2025 at noon: the Sun sets that evening, a passage of about an hour.
+    let targetTime;
     const prepare = async () => {
       await result(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
       await result(page, 'setMissionWindow', { startUtc: '2025-03-16T06:00Z', durationH: 24, moveClock: true });
       await result(page, 'setTime', { utc: '2025-03-16T12:00Z' });
       await result(page, 'getAnalysis');
+      targetTime = await page.evaluate(() => window.lunyx.analysis.get('current').value.events.find(e => e.type === 'sunset').timeMs);
     };
-    const button = (label) => scrubber().locator('.ts-jump', { hasText: label });
-    let logged = [];
     const s = await equivalent({
       prepare,
       ui: async () => {
-        const from = await lastSeq(page);
-        // The sunset button names the next end of the passage: first "Sun starts setting", then "Sun fully set".
-        await button('Sun starts setting').click();
-        await until(page, (seq) => window.lunyx.actions.actionLog().some((e) => e.seq > seq && e.name === 'jumpToEvent'), from);
-        await button('Sun fully set').click();
-        await until(page, (seq) => window.lunyx.actions.actionLog().filter((e) => e.seq > seq && e.name === 'jumpToEvent').length === 2, from);
-        logged = await page.evaluate((seq) => window.lunyx.actions.actionLog().filter((e) => e.seq > seq && e.name === 'jumpToEvent').map(({ origin, params, result }) => ({ origin, params, result: JSON.parse(JSON.stringify(result)) })), from);
+        assert.equal(await scrubber().locator('.ts-jumps').count(), 0);
+        await scrubber().getByRole('group', { name: 'Timeline events' }).getByRole('button', { name: /Sunset/ }).click();
       },
-      expect: 'jumpToEvent',
-      action: () => [['jumpToEvent', { type: 'sunset', instant: 'start' }], ['jumpToEvent', { type: 'sunset', instant: 'event' }]],
+      expect: ['pause', 'setTime'],
+      action: () => [['pause', {}], ['setTime', { offsetHours: (targetTime - Date.parse('2025-03-16T12:00Z')) / 3_600_000 }]],
     });
-    assert.deepEqual(logged.map((e) => [e.origin, e.params, e.result.label]), [['ui', { type: 'sunset', instant: 'start' }, 'Sun starts setting'], ['ui', { type: 'sunset', instant: 'event' }, 'Sun fully set']]);
-    const [start, end] = logged.map((e) => e.result);
-    // Result times are to the minute (isoUtc); the clock keeps the second.
-    assert.ok(Math.abs(Date.parse(start.span.end.timeUtc) - Date.parse(end.timeUtc)) <= 60_000, `both clicks went through the same passage: ${JSON.stringify(start.span)} vs ${end.timeUtc}`);
-    assert.equal(`${new Date(s.timeMs).toISOString().slice(0, 16)}Z`, end.timeUtc, 'the clock at the sunset');
+    assert.equal(s.timeMs, targetTime, 'the clock at the marked sunset');
     assert.equal(s.playing, false);
   });
 
@@ -409,8 +400,17 @@ describe('equivalence: layers and filters', () => {
 });
 
 describe('equivalence: site selection and views', () => {
-  test('"Drop pin at centre" and Enter on the focused globe = dropPin at the centre of view', SLOW, async () => {
-    const byButton = await equivalent({ ui: () => filters().getByRole('button', { name: 'Drop pin at centre' }).click(), expect: 'dropPin', action: (ui) => [['dropPin', { lat: ui.siteLat, lon: ui.siteLon }]] });
+  test('"Drop pin" selects the entered point; Enter on the globe selects the camera centre', SLOW, async () => {
+    const byButton = await equivalent({
+      ui: async () => {
+        await filters().getByLabel('Latitude', { exact: true }).fill(String(HOME.lat));
+        await filters().getByLabel('Longitude', { exact: true }).fill(String(HOME.lon));
+        await filters().getByRole('button', { name: 'Drop pin', exact: true }).click();
+      },
+      expect: 'dropPin',
+      action: (ui) => [['dropPin', { lat: ui.siteLat, lon: ui.siteLon, fly: true }]],
+      wait: cameraSettled,
+    });
     assert.equal(byButton.siteKind, 'custom');
     assert.ok(Math.abs(byButton.siteLat - HOME.lat) < 0.05 && Math.abs(byButton.siteLon - HOME.lon) < 0.05, JSON.stringify(byButton));
     const byKey = await equivalent({
@@ -546,19 +546,20 @@ describe('equivalence: site selection and views', () => {
 });
 
 describe('equivalence: cameras (a gesture ends in a pose the action reaches)', () => {
-  test('latitude / longitude fields = setGlobeCamera', SLOW, async () => {
-    const target = { lat: -45, lon: 60, altitudeKm: HOME.altitudeKm };
+  test('latitude / longitude drafts are applied by Drop pin, which also flies to the point', SLOW, async () => {
+    const target = { lat: -45, lon: 60, altitudeKm: 0.024 * 1737.4 };
     const s = await equivalent({
       ui: async () => {
         await setField(page, `#${await filters().getByText('Latitude', { exact: true }).getAttribute('for')}`, -45);
-        await cameraAt({ ...HOME, lat: -45 });
         await setField(page, `#${await filters().getByText('Longitude', { exact: true }).getAttribute('for')}`, 60);
+        await cameraAt(HOME);
+        await filters().getByRole('button', { name: 'Drop pin', exact: true }).click();
       },
-      expect: 'setGlobeCamera',
-      action: ['setGlobeCamera', { lat: -45, lon: 60 }],
+      expect: 'dropPin',
+      action: ['dropPin', { lat: -45, lon: 60, fly: true }],
       wait: () => cameraAt(target),
     });
-    assert.ok(sameCamera(s.camera, { lat: -45, lon: 60, altitudeKm: 4170 }), JSON.stringify(s.camera));
+    assert.ok(sameCamera(s.camera, target), JSON.stringify(s.camera));
   });
 
   test('arrow keys, plus / minus, drag and wheel on the globe = setGlobeCamera with the pose they reach', SLOW, async () => {

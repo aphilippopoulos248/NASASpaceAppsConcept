@@ -22,7 +22,7 @@ export function createPanelActions(ctx: PanelActionContext): ActionDef<any, any>
       description:
         `Moves and/or folds one of the surface view's panels, as dragging its grip or pressing its Fold button does. \`panel\`: ${PANEL_LIST}. ` +
         '`folded`: true folds it to its title row, false opens it again. `xPx`, `yPx`: where its top left corner goes, in CSS pixels from the top left of the window; either may be left out, and the panel is kept inside the window. ' +
-        'Works on a panel that is on screen (open the comparison or the assistant first). The assistant can move and fold in either view; the other panels require surface view. Returns the panel\'s state: shown, folded, moved, and its box in pixels.',
+        'Works on a panel that is on screen (open Analysis or the assistant first). The assistant can move and fold in either view; the other panels require surface view. Returns the panel\'s state: shown, folded, moved, and its box in pixels.',
       effect: 'command',
       params: {
         type: 'object',
@@ -40,7 +40,7 @@ export function createPanelActions(ctx: PanelActionContext): ActionDef<any, any>
         if (!layout.has(panel)) throw new ActionError(`The ${titleOf(panel)} panel is not on this page.`);
         if (!layout.state(panel).shown) {
           const how =
-            panel === 'compare' ? ' Open the comparison first.'
+            panel === 'compare' ? ' Open Analysis first.'
             : panel === 'assistant' ? ' Open the assistant first.'
             : panel === 'surface-controls' ? ' It gives way while the skyline chart is expanded: shrink the chart first (setChart with expanded false).'
             : '';

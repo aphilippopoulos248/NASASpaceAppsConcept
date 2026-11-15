@@ -334,6 +334,31 @@ describe('decision tools (T-73)', () => {
     expect(calls.nearby[1][0].site.id).toBe('apollo-11');
   });
 
+  it('nearby ranking uses the shared region measurements, preserving missing terrain as unknown', async () => {
+    resetActions();
+    const store = new Store(initialState(Date.UTC(2025, 2, 6)));
+    const site: SiteRef = { id: 'centre', name: 'Centre', kind: 'custom', lat: 10, lon: 20 };
+    let batchCalls = 0;
+    registerActions(createDecisionActions({
+      store, landings: () => LANDINGS, engine: fakeEngine(),
+      rankNearby: async () => [{ site, isReference: true, rank: 1, rejected: null, metrics: metricsFor(80), basis: 'scan' } as NearbyCandidate],
+      loadRegionTerrain: async () => { throw new Error('Individual region loading must not run'); },
+      measureNearbyRegions: async (centre, sites, radius, slope) => {
+        batchCalls++;
+        expect(centre).toMatchObject({ lat: 10, lon: 20 });
+        expect(sites).toEqual([site]);
+        expect([radius, slope]).toEqual([100, 10]);
+        return [{ siteId: site.id, region: null, error: 'No grid covers this region' }];
+      },
+    }));
+    const r: any = await runAction('findBestSites', { candidates: { from: 'nearby', around: { lat: 10, lon: 20 }, radiusM: 1000, spacingM: 500 }, detail: 'full' });
+    expect(r.ok).toBe(true);
+    expect(batchCalls).toBe(1);
+    expect(r.result.evaluations[0].metrics.values.slope.value).toBeNull();
+    expect(r.result.evaluations[0].metrics.values.slope.missingReason).toContain('No grid covers');
+    expect(r.result.ranked).toEqual([]);
+  });
+
   it('compareSites: both under one profile, the engine\'s comparison echoed with the note', async () => {
     const { calls } = setup();
     const pair = { siteA: { landing: 'apollo-11' }, siteB: { lat: -85, lon: 30 } };

@@ -53,7 +53,7 @@ describe('Jev router', () => {
     expect(body.model).toBe('jev-latest');
     expect(body.state).toEqual({ message: 'pause the clock', actions: TOOLS.map((t) => t.name) });
     expect(body.questions.kind.type).toBe('choice');
-    expect(Object.keys(body.questions.kind.criteria)).toEqual(['direct', 'multi_step', 'question']);
+    expect(Object.keys(body.questions.kind.criteria)).toEqual(['direct', 'multi_step', 'question', 'research']);
     expect(decision.request.effort).toBe('low');
     expect(logs).toEqual([]);
   });
@@ -117,6 +117,21 @@ describe('Jev router', () => {
     const opts = { betas: true, stripThinking: false };
     expect((buildParams(cfg, request(), opts) as any).output_config).toEqual({ effort: 'medium' });
     expect((buildParams(cfg, { ...request(), effort: 'low' }, opts) as any).output_config).toEqual({ effort: 'low' });
+  });
+
+  it('recognizes research and preserves that decision across the app tool loop', async () => {
+    const jev = fakeJev(() => choice('research', 0.99));
+    const router = createJevRouter(CFG, jev.fetchFn);
+    const first = request([{ role: 'user', text: 'Look up the latest lunar landing news and cite sources.' }]);
+    const decision = await router.route(first, providers);
+    expect(decision.request.webResearch).toBe(true);
+    expect(decision.request.effort).toBeUndefined();
+    expect(decision.request.tools).toBe(first.tools);
+    const later = request([...first.messages, { role: 'assistant', text: '', toolCalls: [{ id: 'a', name: 'getState', input: {} }] }, { role: 'tool', results: [{ id: 'a', name: 'getState', ok: true, content: '{}' }] }]);
+    expect((await router.route(later, providers)).request.webResearch).toBe(true);
+    expect(jev.calls).toHaveLength(1);
+    const uncertain = createJevRouter(CFG, fakeJev(() => choice('research', 0.3)).fetchFn);
+    expect((await uncertain.route(first, providers)).request.webResearch).toBeUndefined();
   });
 });
 

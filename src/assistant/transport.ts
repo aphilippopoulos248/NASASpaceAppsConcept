@@ -50,6 +50,8 @@ function isStepEvent(v: unknown): v is StepEvent {
       return typeof e.provider === 'string' && typeof e.model === 'string' && typeof e.label === 'string';
     case 'text':
       return typeof e.delta === 'string';
+    case 'web_search':
+      return typeof e.query === 'string';
     case 'reset':
       return true;
     case 'done': {

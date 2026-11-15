@@ -11,7 +11,7 @@ import { store } from '../../core/store';
 import { formatUtc } from '../../core/time';
 import { el } from '../dom';
 import { hoursText } from './format';
-import { TABLE_SLOTS, type PanelStore, type TableSlot } from './state';
+import { type PanelStore, type TableSlot } from './state';
 import { KIND_TEXT, passageRows, spellRows, type PassageEnd, type PassageRow, type RowGroup, type SpellRow } from './windowTable';
 import type { TabKit } from './widgets';
 
@@ -28,7 +28,7 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   pick.setAttribute('role', 'group');
   pick.setAttribute('aria-label', 'Whose mission window the table shows');
   const pickButtons = new Map<TableSlot, HTMLButtonElement>();
-  for (const slot of TABLE_SLOTS) {
+  for (const slot of ['current'] as const) {
     const b = button(SLOT_TEXT[slot], 'ly-btn ly-btn--small', () => void kit.run('openCompare', { tab: 'windows', table: slot }));
     b.setAttribute('aria-label', slot === 'current' ? 'The scenario on screen' : `Scenario ${slot}`);
     pick.append(b);
@@ -48,10 +48,9 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   const scope = el('select', 'ly-select cmp-scope');
   scope.id = scopeId;
   const thisTable = new Option('this table', 'table');
-  const both = new Option('A and B together', 'AB');
-  scope.append(thisTable, both);
+  scope.append(thisTable);
   const download = (format: 'csv' | 'json') => {
-    const slot = scope.value === 'AB' ? 'AB' : panel.get().tableSlot;
+    const slot = panel.get().tableSlot;
     void act('exportResults', { format, slot }, (r) => `Downloaded ${r.filename} (${(r.bytes / 1024).toFixed(1)} kB, ${r.spells} spells).`);
   };
   const csv = button('CSV', 'ly-btn ly-btn--small', () => download('csv'));
@@ -154,15 +153,13 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
       b.setAttribute('aria-pressed', String(k === slot));
       b.disabled = k === 'A' ? !s.compareA : k === 'B' ? !s.compareB : false;
     }
-    both.disabled = !s.compareA || !s.compareB;
-    if (both.disabled && scope.value === 'AB') scope.value = 'table';
 
     const want = analysis.wanted(slot);
     const st = analysis.get(slot);
     const whose = slot === 'current' ? 'The scenario on screen' : `Scenario ${slot}`;
     which.replaceChildren(el('span', 'ly-label', `${whose}: `), document.createTextNode(want ? describeScenario(want) : 'none'));
     let value: SiteAnalysis | null = null;
-    if (!want) state.textContent = slot === 'current' ? 'No site is selected. Select a landing site or drop a pin.' : `Slot ${slot} is empty. Save a scenario there on the "A and B" tab.`;
+    if (!want) state.textContent = 'No site is selected. Select a landing site or drop a pin.';
     else if (st.state === 'idle' || st.state === 'loading' || st.scenario.id !== want.id) state.textContent = 'Analysing the skyline, sunlight and Earth visibility…';
     else if (st.state === 'error') state.textContent = `Not available: ${st.error}`;
     else {
@@ -170,7 +167,7 @@ export function mountWindowsTab(root: HTMLElement, panel: PanelStore, kit: TabKi
       value = st.value;
     }
     state.classList.toggle('is-error', st.state === 'error' && Boolean(want) && st.scenario.id === want?.id);
-    csv.disabled = json.disabled = !value && scope.value !== 'AB';
+    csv.disabled = json.disabled = !value;
     if (value === drawn) return;
     drawn = value;
     if (!value) {

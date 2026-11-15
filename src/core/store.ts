@@ -5,6 +5,7 @@ import type { AppState } from './types';
 /** Simulated time is limited to the span the ephemeris model is validated for. */
 export const MIN_TIME_MS = Date.UTC(1950, 0, 1);
 export const MAX_TIME_MS = Date.UTC(2100, 0, 1);
+export const DEFAULT_SELECTED_POINT = { lat: -90, lon: 39.09 } as const;
 
 export type StateKey = keyof AppState;
 export type StateListener = (state: Readonly<AppState>, changed: ReadonlySet<StateKey>) => void;

@@ -4,9 +4,9 @@
 // analyse() and rankNearby() do their heavy work in a Web Worker when the browser provides
 // one and on the calling thread otherwise (Node, tests, or a worker that fails to start).
 // A rejection means "analysis unavailable" with the reason; nothing here returns placeholder numbers.
-import type { Scenario } from '../core/types';
+import type { Scenario, SiteRef } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
-import { analyseScenario, nearbyScenario, outlookScenario, runAnalysis, runNearbyInSlices } from './engine';
+import { analyseScenario, nearbyScenario, nearbyRegions, outlookScenario, runAnalysis, runNearbyInSlices, type NearbyRegionResult } from './engine';
 import type { NearbyProgress } from './nearby';
 import { findBundledTable } from './sky';
 import { dsnInstant } from './dsn';
@@ -203,6 +203,14 @@ export function compareAnalyses(a: SiteAnalysis, b: SiteAnalysis): ComparisonDif
 
 const nearbyCache = new Map<string, Promise<NearbyCandidate[]>>();
 const NEARBY_CACHE_MAX = 4;
+
+/** Landing regions from the same terrain stack as the nearby scan, computed off the UI thread. */
+export function measureNearbyRegions(centre: SiteRef, sites: SiteRef[], radiusM: number, slopeLimitDeg: number | null): Promise<NearbyRegionResult[]> {
+  return offThread<NearbyRegionResult[]>(
+    { kind: 'nearby-regions', centre, sites, radiusM, slopeLimitDeg },
+    () => nearbyRegions(centre, sites, radiusM, slopeLimitDeg),
+  );
+}
 
 /**
  * Scans alternatives around the scenario's site and ranks those within the slope limit.

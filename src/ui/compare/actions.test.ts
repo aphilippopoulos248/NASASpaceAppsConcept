@@ -100,11 +100,13 @@ const fails = async (name: string, params: unknown = {}) => {
 describe('the compare panel opens through an action', () => {
   it('openCompare opens the panel without touching the scenarios and says what it shows', async () => {
     const { store } = setup();
-    expect(await ok('openCompare')).toEqual({ open: true, tab: 'compare', A: null, B: null, comparison: 'idle', emptySlots: ['A', 'B'] });
+    expect(await ok('openCompare')).toEqual({ open: true, tab: 'rank', A: null, B: null, comparison: 'idle', emptySlots: ['A', 'B'] });
     expect(store.get()).toMatchObject({ comparing: true, compareA: null, compareB: null });
     await ok('selectSite', { site: 'im-2' });
     await ok('saveScenario', { slot: 'A' });
-    expect(await ok('openCompare', { tab: 'compare' })).toMatchObject({ open: true, A: 'IM-2 Athena', B: null, emptySlots: ['B'] });
+    expect(await ok('openCompare', { tab: 'rank' })).toMatchObject({ open: true, A: 'IM-2 Athena', B: null, emptySlots: ['B'] });
+    expect(await fails('openCompare', { tab: 'compare' })).toMatch(/must be one of: rank, windows, outlook/);
+    expect(await fails('openCompare', { tab: 'nearby' })).toMatch(/must be one of: rank, windows, outlook/);
     expect(await fails('openCompare', { tab: 'elsewhere' })).toMatch(/must be one of/);
     expect(await ok('stopCompare')).toEqual({ comparing: false });
   });
@@ -145,7 +147,7 @@ describe('delayed arrival in one step', () => {
     expect(r.diff.highlights).toEqual(['With IM-2 Athena (arrival 24 h later) the longest darkness is 2.0 h longer than with IM-2 Athena (earlier arrival) (12.0 h vs 10.0 h).']);
     // The scenario on screen keeps its own delay and the clock stays where it was.
     expect(store.get()).toMatchObject({ delayH: 0, windowStartMs: T0, timeMs: T0, comparing: true });
-    expect(panel.get().tab).toBe('compare');
+    expect(panel.get().tab).toBe('rank');
   });
 
   it('starts from the scenario saved in A, keeps a typed label and names B after it', async () => {
@@ -356,7 +358,7 @@ describe('nearby alternatives', () => {
     const r = await ok('rankNearby', { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8 });
     expect(scans).toEqual([{ site: 'im-2', options: { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8, weightSun: 1, weightEarth: 1, azStepDeg: 1, stepMin: 30 } }]);
     expect(store.get()).toMatchObject({ comparing: true, slopeLimitDeg: 8 });
-    expect(panel.get()).toMatchObject({ tab: 'nearby', nearbyRadiusM: 1500, nearbySpacingM: 250 });
+    expect(panel.get()).toMatchObject({ tab: 'rank', nearbyRadiusM: 1500, nearbySpacingM: 250 });
     expect(r).toMatchObject({
       scenario: { site: { id: 'im-2' }, startUtc: '2025-03-06T17:28Z', durationH: 24, mastHeightM: 2 },
       options: { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8 },
@@ -438,7 +440,7 @@ describe('nearby alternatives', () => {
       analysisB: { state: 'ready' },
       diff: { meaning: 'B minus A' },
     });
-    expect(panel.get().tab).toBe('compare');
+    expect(panel.get().tab).toBe('rank');
     expect(store.get().site?.kind).toBe('candidate');
 
     // A scenario already saved in A stays there.
@@ -488,7 +490,7 @@ describe('the mission-window table and its export', () => {
     const { panel } = setupExport();
     expect(await ok('openCompare', { table: 'A' })).toMatchObject({ open: true, tab: 'windows', table: 'A' });
     expect(panel.get()).toMatchObject({ tab: 'windows', tableSlot: 'A' });
-    expect(await ok('openCompare', { tab: 'compare' })).not.toHaveProperty('table');
+    expect(await ok('openCompare', { tab: 'rank' })).not.toHaveProperty('table');
     expect(await ok('openCompare', { tab: 'windows' })).toMatchObject({ table: 'A' });
     expect(await fails('openCompare', { table: 'C' })).toMatch(/must be one of: current, A, B/);
   });

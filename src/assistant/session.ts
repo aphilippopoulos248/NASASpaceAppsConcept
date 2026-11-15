@@ -23,6 +23,8 @@ export interface ChatMessage {
   source?: ReplySource;
   /** The actions this reply ran, from the action log, in order. */
   actions: ActionLogEntry[];
+  /** Hosted lookups completed during this reply, separate from app actions. */
+  searches?: string[];
   /** Still being written, or actions still running. */
   pending: boolean;
   failed?: boolean;
@@ -197,6 +199,10 @@ export class AssistantSession {
       for await (const ev of this.deps.transport.step({ messages: this.wire, tools: this.tools() }, signal)) {
         if (ev.type === 'meta') reply.source = { kind: 'model', label: ev.label, provider: ev.provider };
         else if (ev.type === 'text') show((live += ev.delta));
+        else if (ev.type === 'web_search') {
+          reply.searches ??= [];
+          if (!reply.searches.includes(ev.query)) reply.searches.push(ev.query);
+        }
         else if (ev.type === 'reset') show((live = ''));
         else if (ev.type === 'done') done = ev;
         else failure = ev.error;

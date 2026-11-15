@@ -56,6 +56,24 @@ describe('nearby scan building blocks', () => {
 });
 
 describe('rankNearby on synthetic terrain', () => {
+  it.each([-90, 90])('searches distinct points throughout the radius at latitude %s', lat => {
+    const site = { lat, lon: 39.09 };
+    const s = scen(lat, site.lon, '2025-01-01T00:00:00Z', 24);
+    const rows = rankNearbyWith(s, stackOf(fnSource('sphere', 60, () => 0)), modelEphemeris(site, 0), {
+      ...DEFAULT_NEARBY_OPTIONS, radiusM: 2000, spacingM: 600,
+    });
+    expect(rows.length).toBe(37);
+    expect(new Set(rows.map(r => `${r.site.lat.toFixed(8)},${r.site.lon.toFixed(8)}`)).size).toBe(37);
+    for (const row of rows) {
+      const distanceM = (90 - Math.abs(row.site.lat)) * RAD * R;
+      const longitude = (row.site.lon - site.lon) * RAD;
+      expect(distanceM).toBeLessThanOrEqual(2000 + 1e-6);
+      expect(distanceM).toBeCloseTo(row.distanceM, 5);
+      expect(distanceM * Math.sin(longitude)).toBeCloseTo(row.eastM, 5);
+      expect(-Math.sign(lat) * distanceM * Math.cos(longitude)).toBeCloseTo(row.northM, 5);
+    }
+  });
+
   // Polar site in a valley running east-west; a ridge crest 1.2 km to the north.
   const site = { lat: -89.3, lon: 0 };
   const north = (lat: number, lon: number) => {

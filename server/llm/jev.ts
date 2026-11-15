@@ -22,7 +22,7 @@ import type { LlmRouter, ProviderRequest } from './types';
 export const JEV_URL = 'https://api.typesafe.ai/v1/systemone';
 export const JEV_DEFAULT_MODEL = 'jev-latest';
 
-export type RequestKind = 'direct' | 'multi_step' | 'question';
+export type RequestKind = 'direct' | 'multi_step' | 'question' | 'research';
 
 const QUESTION = {
   type: 'choice',
@@ -30,7 +30,8 @@ const QUESTION = {
   criteria: {
     direct: 'A direct command that maps onto one or two of the listed actions with obvious parameters: going to a site or coordinates, setting the time, switching a view, an overlay or a setting.',
     multi_step: 'A request that needs several actions, or analysis, comparison, ranking of alternatives, or reasoning about results before answering.',
-    question: 'A question that can be answered from what is on screen, without changing anything.',
+    question: 'A question that can be answered from what is on screen, without changing anything or looking up external information.',
+    research: 'An explicit request to search the web, look up or verify published facts, find sources or links, or get current mission news or external information absent from the app. Choose research even if the request also needs ranking, comparison, or several app actions.',
   },
 } as const;
 
@@ -95,9 +96,9 @@ export async function askJev(cfg: JevConfig, req: ProviderRequest, userText: str
  */
 export function createJevRouter(cfg: JevConfig, fetchFn: FetchLike = (url, init) => fetch(url, init), log: (line: string) => void = (l) => console.warn(l)): LlmRouter {
   // Decisions of recent turns, so the steps of one turn run at one effort. In memory only.
-  const decided = new Map<string, Effort | null>();
-  const remember = (key: string, effort: Effort | null) => {
-    decided.set(key, effort);
+  const decided = new Map<string, JevDecision | null>();
+  const remember = (key: string, decision: JevDecision | null) => {
+    decided.set(key, decision);
     if (decided.size > 500) decided.delete(decided.keys().next().value!);
   };
   return {
@@ -107,14 +108,16 @@ export function createJevRouter(cfg: JevConfig, fetchFn: FetchLike = (url, init)
       const user = lastUser(req.messages);
       if (!user) return { provider: providers.primary, request: req };
       const key = `${user.index}\n${user.text}`;
-      let effort = decided.get(key);
+      let decision = decided.get(key);
       const firstStep = user.index === req.messages.length - 1;
-      if (effort === undefined && firstStep) {
-        const d = await askJev(cfg, req, user.text, fetchFn, log);
-        effort = d && d.confidence >= cfg.minConfidence && d.kind !== 'multi_step' ? cfg.simpleEffort : null;
-        remember(key, effort);
+      if (decision === undefined && firstStep) {
+        decision = await askJev(cfg, req, user.text, fetchFn, log);
+        remember(key, decision);
       }
-      return { provider: providers.primary, request: effort ? { ...req, effort } : req };
+      if (!decision || decision.confidence < cfg.minConfidence) return { provider: providers.primary, request: req };
+      if (decision.kind === 'research') return { provider: providers.primary, request: { ...req, webResearch: true } };
+      const simple = decision.kind === 'direct' || decision.kind === 'question';
+      return { provider: providers.primary, request: simple ? { ...req, effort: cfg.simpleEffort } : req };
     },
   };
 }

@@ -7,6 +7,7 @@
 import { DeterministicEngine } from '../../assistant/deterministic/engine';
 import { accuracyNote, isLanguageModel, replyLabel } from '../../assistant/labels';
 import { escapeClosesDrawer } from './escape';
+import { renderLinkedText } from './links';
 import { DETERMINISTIC_LABEL } from '../../assistant/protocol';
 import { AssistantSession, type ChatMessage } from '../../assistant/session';
 import { httpTransport } from '../../assistant/transport';
@@ -22,7 +23,7 @@ const INPUT_ID = 'assistant-input';
 const ICON_CHAT = `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 11.5a7.5 7.5 0 0 1-11.1 6.6L4 19.5l1.5-4.3A7.5 7.5 0 1 1 20 11.5Z"/><path d="M9 10.5h6M9 13.5h3.5"/></svg>`;
 const ICON_MIC = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3"/></svg>`;
 
-const SUGGESTIONS = ['Go to IM-2 and enter the surface', 'Compare with a 24 h delay', 'Find a flatter nearby site with a shorter blackout', 'help'];
+const SUGGESTIONS = ['Go to IM-2 and enter the surface', 'Open Rank sites', 'Find the best landing sites within 2 km of this point', 'help'];
 
 let shared: AssistantSession | null = null;
 let clearWhenIdle = false;
@@ -92,9 +93,11 @@ interface MessageView {
   source: HTMLElement;
   text: HTMLElement;
   actions: HTMLOListElement;
+  searches: HTMLOListElement;
   note: HTMLElement;
   pending: HTMLElement;
   shownActions: number;
+  shownSearches: number;
 }
 
 function clip(text: string, max: number): string {
@@ -283,6 +286,9 @@ export function mountAssistantDrawer(region: HTMLElement): void {
     const text = el('div', 'am-text');
     const actions = el('ol', 'am-actions');
     actions.setAttribute('aria-label', 'Actions taken');
+    const searches = el('ol', 'am-searches');
+    searches.setAttribute('aria-label', 'Web lookups completed');
+    searches.hidden = true;
     const note = el('p', 'am-note');
     const pending = el('p', 'am-pending', 'Working…');
     if (m.role === 'user') {
@@ -290,10 +296,10 @@ export function mountAssistantDrawer(region: HTMLElement): void {
     } else if (m.role === 'notice') {
       root.append(text);
     } else {
-      root.append(el('span', 'ly-visually-hidden', 'Assistant: '), source, text, actions, note, pending);
+      root.append(el('span', 'ly-visually-hidden', 'Assistant: '), source, text, searches, actions, note, pending);
     }
     log.append(root);
-    return { root, source, text, actions, note, pending, shownActions: 0 };
+    return { root, source, text, actions, searches, note, pending, shownActions: 0, shownSearches: 0 };
   };
 
   const render = () => {
@@ -308,7 +314,10 @@ export function mountAssistantDrawer(region: HTMLElement): void {
     for (const m of s.messages) {
       let v = views.get(m.id);
       if (!v) views.set(m.id, (v = makeView(m)));
-      if (v.text.textContent !== m.text) v.text.textContent = m.text;
+      if (v.text.textContent !== m.text) {
+        if (m.role === 'assistant') renderLinkedText(v.text, m.text);
+        else v.text.textContent = m.text;
+      }
       v.text.hidden = !m.text;
       if (m.role !== 'assistant') continue;
       // Every reply says who wrote it: "AI-generated · <model>", deterministic mode, or the scripted test model.
@@ -320,6 +329,9 @@ export function mountAssistantDrawer(region: HTMLElement): void {
       v.root.classList.toggle('is-failed', Boolean(m.failed));
       for (; v.shownActions < m.actions.length; v.shownActions++) v.actions.append(actionItem(m.actions[v.shownActions]));
       v.actions.hidden = m.actions.length === 0;
+      const searches = m.searches ?? [];
+      for (; v.shownSearches < searches.length; v.shownSearches++) v.searches.append(el('li', undefined, `Web lookup: ${searches[v.shownSearches]}`));
+      v.searches.hidden = searches.length === 0;
       if (v.note.textContent !== (m.note ?? '')) v.note.textContent = m.note ?? '';
       v.note.hidden = !m.note;
       v.pending.hidden = !m.pending;

@@ -50,6 +50,13 @@ describe('assistant session', () => {
     state = installFakeApp();
   });
 
+  it('keeps real web lookups separate from app actions and preserves the sourced reply', async () => {
+    const t = fakeTransport(AVAILABLE, () => [meta, { type: 'web_search', query: 'NASA Apollo 11 landing' }, done('Published source: https://www.nasa.gov/')]);
+    const s = session(t.transport);
+    await s.send('Look up Apollo 11 on the web.');
+    expect(reply(s)).toMatchObject({ searches: ['NASA Apollo 11 landing'], text: 'Published source: https://www.nasa.gov/', actions: [], pending: false });
+  });
+
   it('answers in deterministic mode, labelled, when the server has no model', async () => {
     const t = fakeTransport(NO_MODEL);
     const s = session(t.transport);

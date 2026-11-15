@@ -10,7 +10,7 @@ import { formatUtc } from '../../core/time';
 import { el } from '../dom';
 import { hoursText, pctText, signedText } from './format';
 import { rangeOf, slipRows } from './outlookView';
-import { TABLE_SLOTS, type PanelStore, type TableSlot } from './state';
+import { type PanelStore, type TableSlot } from './state';
 import type { TabKit } from './widgets';
 
 const SVG = 'http://www.w3.org/2000/svg';
@@ -37,7 +37,7 @@ export function mountOutlookTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   pick.setAttribute('role', 'group');
   pick.setAttribute('aria-label', 'Whose scenario the outlook is for');
   const pickButtons = new Map<TableSlot, HTMLButtonElement>();
-  for (const slot of TABLE_SLOTS) {
+  for (const slot of ['current'] as const) {
     const b = button(SLOT_TEXT[slot], 'ly-btn ly-btn--small', () => void act('showOutlook', { slot }, (r) => `Outlook for ${r.scenario.label}: ${r.lunarDays.length} lunar days.`));
     b.setAttribute('aria-label', slot === 'current' ? 'Outlook for the scenario on screen' : `Outlook for scenario ${slot}`);
     pick.append(b);

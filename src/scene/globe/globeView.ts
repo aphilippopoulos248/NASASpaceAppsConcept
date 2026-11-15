@@ -34,6 +34,7 @@ import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { RoverMarkers } from './roverMarkers';
+import { LandingSearchMarkers } from './landingSearchMarkers';
 import { effectiveRelief } from './reliefTiles';
 import { handleGlobeKey } from './globeKeys';
 import { flyDirection } from './flyTarget';
@@ -67,6 +68,7 @@ export class GlobeView {
   private sitePatch: SitePatch | null = null;
   private patchSiteId = '';
   private readonly pin = new Group();
+  private readonly landingSearch = new LandingSearchMarkers();
   /** The flight under way: where to, and the point asked for (the keyboard steps on from it). */
   private fly: { dir: Vector3; dist: number; done: (() => void)[]; asked: { lat: number; lon: number } } | null = null;
   private readonly camDir = new Vector3();
@@ -247,7 +249,7 @@ export class GlobeView {
     this.pin.add(ring, dot);
     this.pin.traverse((o) => (o.renderOrder = 4));
     this.pin.visible = false;
-    this.scene.add(this.pin);
+    this.scene.add(this.pin, this.landingSearch.root);
 
     this.tooltip = document.createElement('div');
     this.tooltip.className = 'ly-tooltip globe-tooltip';
@@ -617,6 +619,7 @@ export class GlobeView {
     this.pin.visible = this.introPresentation === 'done' && pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
     if (this.pin.visible) this.pin.scale.setScalar(cam.position.distanceTo(this.pin.position) * 0.006);
     this.sitePatch?.update(altNow);
+    this.landingSearch.update(cam, this.canvas, (lat, lon) => this.surfaceRadius(lat, lon));
     this.renderer.render(this.scene, cam);
     if (this.introStation?.visible) {
       const autoClear = this.renderer.autoClear;

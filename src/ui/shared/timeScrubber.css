@@ -8,11 +8,13 @@
 }
 .ts-play { grid-row: 1 / span 2; font-size: var(--fs-sm); }
 .ts-slider { display: grid; min-width: 0; }
-.ts-track { position: relative; padding-top: 14px; padding-bottom: 5px; }
+.ts-track { position: relative; padding-top: var(--ts-marks-height, 28px); padding-bottom: 5px; }
 .ts-range { width: 100%; margin: 0; accent-color: var(--accent); }
 .time-scrubber.outside .ts-range { accent-color: var(--text-muted); }
-.ts-marks { position: absolute; left: 8px; right: 8px; top: 0; height: 14px; pointer-events: none; }
-.ts-mark { position: absolute; transform: translateX(-50%); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; pointer-events: auto; }
+.ts-marks { position: absolute; left: 8px; right: 8px; top: 0; height: var(--ts-marks-height, 28px); pointer-events: none; }
+.ts-mark { position: absolute; transform: translateX(-50%); display: grid; place-items: center; width: 28px; height: 24px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; font-size: var(--fs-sm); line-height: 1; white-space: nowrap; pointer-events: auto; cursor: pointer; }
+.ts-mark:hover { background: var(--surface-2); z-index: 1; }
+.ts-mark:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 1; }
 .ts-bands { position: absolute; left: 8px; right: 8px; bottom: 0; height: 4px; pointer-events: none; }
 .ts-band { position: absolute; top: 0; height: 100%; border-radius: 2px; }
 .ts-eclipse { background: color-mix(in srgb, var(--sun) 38%, transparent); }
@@ -31,9 +33,6 @@
 .ts-row [hidden] { display: none; }
 .ts-when { display: flex; align-items: center; gap: var(--sp-1); }
 .ts-date, .ts-rate, .ts-window { width: auto; }
-.ts-jumps { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
-.ts-jump.ts-sun { color: var(--sun); }
-.ts-jump.ts-earth { color: var(--earth); }
 .ts-eventnote { flex: 1 1 200px; }
 .ts-readout { margin-left: auto; }
 .time-scrubber.even .ts-range, .time-scrubber.even .ts-readout { opacity: 0.5; }

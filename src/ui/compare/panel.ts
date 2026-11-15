@@ -5,20 +5,18 @@
 // the `compare` action reports); every control runs a registered action (decision D-1), so
 // the assistant can do whatever the panel can. Nothing here computes science: the rows and
 // sentences come from model.ts, which only formats what the science core returned.
-import { onAction, registerActions, runAction } from '../../core/actions';
+import { registerActions, runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
-import { mountAbTab } from './abTab';
-import { bindWorkingPair, createCompareActions } from './actions';
+import { createCompareActions } from './actions';
 import { compareTakesEscape, focusInHiddenPanel, returnFocusOnClose } from './focus';
-import { mountNearbyTab } from './nearbyTab';
 import { mountOutlookTab } from './outlookTab';
 import { mountRankTab } from '../decision/rankTab';
 import { mountWindowsTab } from './windowsTab';
 import { COMPARE_TABS, createPanelStore, TAB_TITLE, type CompareTab } from './state';
 import { createCompareStorage } from './storage';
-import { badge, createTabKit, nextId } from './widgets';
+import { createTabKit, nextId } from './widgets';
 import './compare.css';
 
 /** Hands a finished file to the browser as a download. */
@@ -46,8 +44,7 @@ function browserStorage(): Pick<Storage, 'getItem' | 'setItem'> | null {
 export function mountComparePanel(region: HTMLElement): void {
   const panel = createPanelStore();
   const storage = createCompareStorage(browserStorage());
-  // Before the analysis store starts (main.ts starts it after mounting), so a reload analyses the restored pair once.
-  bindWorkingPair(store, storage);
+  region.setAttribute('aria-label', 'Analysis');
   registerActions(createCompareActions({ store, analysis, panel, storage, download: browserDownload }));
 
   // ---------- launcher: the way in, on screen while the panel is closed ----------
@@ -56,8 +53,8 @@ export function mountComparePanel(region: HTMLElement): void {
     sheet.focus();
   });
   launcher.setAttribute('aria-haspopup', 'dialog');
-  const launchA = badge('A'), launchB = badge('B');
-  launcher.append(el('span', undefined, 'Compare'), launchA, launchB);
+  launcher.append(el('span', undefined, 'Analysis'));
+  launcher.setAttribute('aria-label', 'Open analysis');
 
   // ---------- sheet ----------
   const sheet = el('div', 'ly-panel cmp-sheet');
@@ -68,15 +65,15 @@ export function mountComparePanel(region: HTMLElement): void {
   sheet.hidden = true;
 
   const head = el('header', 'cmp-head');
-  const title = el('h2', 'ly-panel-title', 'Compare');
+  const title = el('h2', 'ly-panel-title', 'Analysis');
   title.id = titleId;
   const tablist = el('div', 'cmp-tabs');
   tablist.setAttribute('role', 'tablist');
-  tablist.setAttribute('aria-label', 'Sections of the comparison');
+  tablist.setAttribute('aria-label', 'Analysis sections');
   tablist.hidden = COMPARE_TABS.length < 2;
   const close = button('×', 'ly-btn ly-btn--ghost ly-btn--icon cmp-close', () => void closePanel());
-  close.setAttribute('aria-label', 'Close the comparison');
-  close.title = 'Close (Esc). Scenarios A and B are kept.';
+  close.setAttribute('aria-label', 'Close analysis');
+  close.title = 'Close (Esc)';
   head.append(title, tablist, close);
 
   const body = el('div', 'cmp-body');
@@ -117,23 +114,12 @@ export function mountComparePanel(region: HTMLElement): void {
     if (giveBack) launcher.focus();
   }
 
-  const abKit = createTabKit();
-  const ab = mountAbTab(tabPanels.get('compare')!, storage, abKit);
-  const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
   const windows = mountWindowsTab(tabPanels.get('windows')!, panel, createTabKit());
   const outlookTab = mountOutlookTab(tabPanels.get('outlook')!, panel, createTabKit());
   // Decision engine (D-17, T-74): the tab follows the stores and the decision tools itself.
   const rankTab = mountRankTab(tabPanels.get('rank')!, createTabKit());
 
   // ---------- rendering ----------
-  const renderLauncher = () => {
-    const s = store.get();
-    launchA.classList.toggle('is-filled', Boolean(s.compareA));
-    launchB.classList.toggle('is-filled', Boolean(s.compareB));
-    launcher.setAttribute('aria-label', `Compare scenarios. Slot A: ${s.compareA?.label ?? 'empty'}. Slot B: ${s.compareB?.label ?? 'empty'}.`);
-    launcher.title = `A: ${s.compareA?.label ?? 'empty'}\nB: ${s.compareB?.label ?? 'empty'}`;
-  };
-
   const renderOpen = () => {
     const s = store.get();
     sheet.hidden = !s.comparing;
@@ -145,8 +131,7 @@ export function mountComparePanel(region: HTMLElement): void {
       b.setAttribute('aria-selected', String(name === tab));
       b.tabIndex = name === tab ? 0 : -1;
     }
-    // A control that switches tabs itself ("Compare as B" in a nearby row) is hidden with its tab:
-    // focus stays in the panel, on the tab now shown, instead of falling to the page (Q-4).
+    // Keep focus in the panel when the focused tab content becomes hidden.
     const refocus = s.comparing && focusInHiddenPanel(document.activeElement, tabPanels, tab);
     for (const [name, p] of tabPanels) p.hidden = name !== tab;
     if (refocus) (tablist.hidden ? sheet : tabButtons.get(tab)!).focus();
@@ -156,20 +141,13 @@ export function mountComparePanel(region: HTMLElement): void {
   const renderTab = () => {
     if (!isOpen()) return;
     const tab = panel.get().tab;
-    if (tab === 'compare') {
-      ab.renderSetup();
-      ab.renderRequirementInputs();
-      ab.renderResult();
-      ab.renderSaved();
-    } else if (tab === 'nearby') nearby.render();
-    else if (tab === 'windows') windows.render();
+    if (tab === 'windows') windows.render();
     else if (tab === 'outlook') outlookTab.render();
     else if (tab === 'rank') rankTab.render();
   };
   const showing = (tab: CompareTab) => isOpen() && panel.get().tab === tab;
 
   const renderAll = () => {
-    renderLauncher();
     renderOpen();
     renderTab();
   };
@@ -180,54 +158,20 @@ export function mountComparePanel(region: HTMLElement): void {
       renderOpen();
       renderTab();
     }
-    if (changed.has('savedRevision') && showing('compare')) ab.renderSaved();
-    if ((changed.has('nearbyRadiusM') || changed.has('nearbySpacingM')) && showing('nearby')) nearby.render();
     if (changed.has('tableSlot') && showing('windows')) windows.render();
     if ((changed.has('outlook') || changed.has('outlookSlot') || changed.has('outlookMonths')) && showing('outlook')) outlookTab.render();
   });
   store.subscribe(['site', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => {
-    if (showing('compare')) ab.renderSetup();
-    else if (showing('nearby')) nearby.render();
-    else if (showing('windows')) windows.render();
+    if (showing('windows')) windows.render();
     else if (showing('outlook')) outlookTab.render();
   });
   store.subscribe(['compareA', 'compareB'], () => {
-    // What the A/B tab last said about the pair no longer holds once something else changed it.
-    abKit.clearIfIdle();
-    renderLauncher();
     if (showing('windows')) windows.render();
     if (showing('outlook')) outlookTab.render();
-    if (!showing('compare')) return;
-    ab.renderSetup();
-    ab.renderResult();
-    ab.renderSaved();
-  });
-  store.subscribe(['sunElMinDeg', 'sunElMaxDeg', 'maxEarthGapH', 'slopeLimitDeg'], () => {
-    if (showing('nearby')) nearby.render();
-    if (!showing('compare')) return;
-    ab.renderRequirementInputs();
-    ab.renderResult();
   });
   analysis.subscribe((slot) => {
-    if ((slot === 'A' || slot === 'B') && showing('compare')) ab.renderResult();
-    else if (slot === 'nearby' && showing('nearby')) nearby.render();
-    else if (slot !== 'nearby' && showing('windows')) windows.render();
+    if (slot !== 'nearby' && showing('windows')) windows.render();
   });
-  // One clock for both sides: follow it a few times a second while it runs, exactly when it stops.
-  let lastNowMs = -Infinity;
-  let trailing: ReturnType<typeof setTimeout> | null = null;
-  const renderNow = () => {
-    lastNowMs = performance.now();
-    if (showing('compare')) ab.renderNow();
-  };
-  store.subscribe(['timeMs'], () => {
-    if (!showing('compare')) return;
-    if (trailing) clearTimeout(trailing);
-    if (performance.now() - lastNowMs > 250) renderNow();
-    else trailing = setTimeout(renderNow, 260);
-  });
-  // `compare` means "show me the comparison": bring its tab forward when it has run.
-  onAction((entry) => entry.ok && entry.name === 'compare' && panel.set({ tab: 'compare' }));
 
   // Keys pressed inside the sheet stay inside it (the globe and the site card listen on the window).
   sheet.addEventListener('keydown', (e) => e.stopPropagation());

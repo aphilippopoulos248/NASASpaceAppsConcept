@@ -5,7 +5,7 @@
 //
 // Driven only through registered actions (D-3): listMissionProfiles, getDecisionSettings,
 // setDecisionSettings, findBestSites and compareSites (T-73), and selectSite, dropPin,
-// saveScenario and openCompare for the buttons in a row. What it shows is the last answer of
+// for the buttons in a row. What it shows is the last answer of
 // those tools, whoever asked (this tab or the assistant). A "summary" answer, the default for
 // the assistant's replies (F-12), leaves out reasons and bases: the tab asks for the same in full.
 // Every figure and sentence is the tools' own; view.ts only orders and words them.
@@ -35,8 +35,6 @@ import {
   requirementViews,
   sameProfile,
   siteArg,
-  slotConditionsNote,
-  slotSteps,
   sourceSentence,
   thresholdEdit,
   togglePick,
@@ -254,7 +252,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   fieldset.append(legend);
   const radioName = nextId('dec-src');
   const radios = new Map<SourceKind, { input: HTMLInputElement; text: HTMLElement }>();
-  for (const kind of ['catalogue', 'nearby', 'sites'] as const) {
+  for (const kind of ['catalogue', 'nearby'] as const) {
     const label = el('label', 'ly-check');
     const input = el('input');
     input.type = 'radio';
@@ -413,7 +411,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     refreshDue = true;
     setTimeout(refreshSettings, 0);
   });
-  store.subscribe(['site', 'compareA', 'compareB'], () => {
+  store.subscribe(['site'], () => {
     if (!showing()) return;
     renderSource();
     markSiteOnScreen();
@@ -562,17 +560,6 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     renderComparison();
   }
 
-  async function toSlot(r: SiteRow, slot: 'A' | 'B') {
-    const [selectStep, saveStep] = slotSteps(r.site, slot);
-    const first = await run(selectStep.name, selectStep.params);
-    if (!first.ok) return kit.complain(first.error ?? `${r.name} could not be made the site on screen.`);
-    const other = slot === 'A' ? store.get().compareB : store.get().compareA;
-    const note = ranking ? slotConditionsNote(ranking.value.profile, store.get()) : null;
-    const saved = await act(saveStep.name, saveStep.params, () => `${r.name} is scenario ${slot}.${other ? '' : ` Choose another site as ${slot === 'A' ? 'B' : 'A'} to compare them.`}${note ? ` ${note}` : ''}`);
-    // The pair is complete: show it, as "Compare as B" does in the nearby list, from the top of the panel.
-    if (saved.ok && other && (await run('openCompare', { tab: 'compare' })).ok) root.closest('.cmp-body')?.scrollTo({ top: 0 });
-  }
-
   // ---------- drawing ----------
   function renderSettings() {
     const ready = available() && profiles !== null && settings !== null;
@@ -638,16 +625,13 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     const s = store.get();
     radios.get('catalogue')!.text.textContent = 'The catalogued landings';
     radios.get('nearby')!.text.textContent = s.site ? `Around the site on screen: ${s.site.name}` : 'Around the site on screen (none is selected)';
-    const saved = [s.compareA?.site, s.compareB?.site].filter((x): x is SiteRef => Boolean(x));
-    const names = [...new Set(saved.map((x) => x.name))];
-    radios.get('sites')!.text.textContent = names.length ? `The sites in A and B: ${names.join(', ')}` : 'The sites in A and B (both are empty)';
     nearbyFields.hidden = source !== 'nearby';
     const r = radius.read() ?? null, sp = spacing.read() ?? null;
     const choice = candidatesFor(source, s, { radiusM: r, spacingM: sp });
     let note = choice.ok ? `Ranks ${choice.what} under the profile above: each one is measured over the profile's window, then checked against every threshold.` : choice.why;
     if (choice.ok && source === 'nearby' && r !== null && sp !== null) {
       const n = nearbyPointCount(r, sp);
-      note = `Scans a ${sp} m grid within ${distanceText(r)} of ${s.site!.name} (${n.toLocaleString('en-US')} points, the site itself included) with the nearby scan's faster settings and the profile's slope limit as a pre-filter; the best ${DECISION_CAPS.nearby} by the scan's own score, and the site itself, are then measured fully.`;
+      note = `Scans a ${sp} m grid within ${distanceText(r)} of ${s.site!.name} (${n.toLocaleString('en-US')} points, the site itself included) with the nearby scan's faster settings and the profile's slope limit as a pre-filter; the best ${DECISION_CAPS.nearby} by the scan's own score, and the site itself, then get landing-region measurements on the shared search terrain. Time metrics retain the scan settings.`;
     }
     if (choice.ok && source === 'catalogue') note = `Ranks the catalogued landings (at most ${DECISION_CAPS.catalogue}) under the profile above: each one is measured over the profile's window, then checked against every threshold. This takes a while: one full analysis per site.`;
     if (choice.ok && source === 'sites') note = `Ranks ${choice.what} under the profile above (at most ${DECISION_CAPS.sites} sites).`;
@@ -852,14 +836,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     const go = kit.button(open.label, 'ly-btn ly-btn--small', () => void act(open.name, open.params, () => `${r.name} is the site on screen.`));
     go.setAttribute('aria-label', open.label === 'Open' ? `Open ${r.name}: select it and fly the globe there` : `Pin ${r.name} as the site on screen`);
     go.dataset.focusKey = `open:${r.id}`;
-    const slot = (s: 'A' | 'B') => {
-      const b = kit.button(`As ${s}`, 'ly-btn ly-btn--small', () => void toSlot(r, s));
-      b.setAttribute('aria-label', `Compare ${r.name} as scenario ${s}`);
-      b.title = `Make ${r.name} the site on screen and save it as scenario ${s}; with the other slot filled, the A and B tab opens`;
-      b.dataset.focusKey = `slot-${s.toLowerCase()}:${r.id}`;
-      return b;
-    };
-    box.append(go, slot('A'), slot('B'));
+    box.append(go);
     return box;
   }
 

@@ -10,7 +10,7 @@ export const SURFACE_PANELS = [
   { id: 'surface-controls', title: 'Surface controls', selector: '.surface-hud' },
   { id: 'time', title: 'Time', selector: '.time-scrubber' },
   { id: 'locator-map', title: 'Locator map', selector: '.locator' },
-  { id: 'compare', title: 'Compare', selector: '.cmp-sheet' },
+  { id: 'compare', title: 'Analysis', selector: '.cmp-sheet' },
   { id: 'assistant', title: 'Assistant', selector: '.assistant-drawer' },
 ] as const;
 

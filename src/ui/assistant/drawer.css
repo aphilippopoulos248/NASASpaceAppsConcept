@@ -73,6 +73,9 @@
 /* ---------- messages ---------- */
 .am { max-width: 100%; line-height: var(--lh-body); overflow-wrap: anywhere; }
 .am-text { white-space: pre-wrap; }
+.am-text a { color: var(--accent); text-decoration: underline; overflow-wrap: anywhere; }
+.am-searches { margin: var(--sp-1) 0 0; padding-left: var(--sp-4); color: var(--text-muted); font-size: var(--fs-xs); }
+.am-searches[hidden] { display: none; }
 .am--user {
   align-self: flex-end;
   max-width: 88%;

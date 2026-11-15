@@ -10,6 +10,7 @@ import type { SiteRef, ViewMode } from '../../core/types';
 import { surfaceResolution } from '../autoResolution';
 import { SurfaceController } from '../surface/controller';
 import { GlobeView } from './globeView';
+import { guardSceneZoom } from './zoomGuard';
 
 export class SceneHost {
   readonly renderer: WebGLRenderer;
@@ -25,6 +26,7 @@ export class SceneHost {
   private readonly frameListeners = new Set<(dt: number) => void>();
 
   constructor(private readonly canvas: HTMLCanvasElement) {
+    guardSceneZoom(canvas);
     const r = (this.renderer = new WebGLRenderer({ canvas, antialias: true }));
     const basePixelRatio = Math.min(window.devicePixelRatio, 2);
     r.setPixelRatio(basePixelRatio);

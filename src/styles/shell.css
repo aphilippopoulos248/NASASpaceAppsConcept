@@ -15,7 +15,7 @@
 
 .shell { position: fixed; inset: 0; z-index: var(--z-hud); pointer-events: none; }
 .region { position: absolute; pointer-events: none; }
-.region > * { pointer-events: auto; }
+.region > * { pointer-events: auto; touch-action: pan-x pan-y; }
 .region:empty { display: none; }
 
 body[data-view='globe'] .region[data-views='surface'],

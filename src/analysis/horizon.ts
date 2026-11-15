@@ -61,8 +61,16 @@ function cachedSampler(source: HeightSource): UnitSampler | null {
 /** Point reached from a site after walking `distM` over the sphere towards `azDeg`. */
 export function destination(site: LatLon, azDeg: number, distM: number): LatLon {
   const la = site.lat * RAD, lo = site.lon * RAD, az = azDeg * RAD, d = distM / R;
-  const lat2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(az));
-  let lon2 = lo + Math.atan2(Math.sin(az) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(lat2));
+  const sl = Math.sin(la), cl = Math.cos(la), sd = Math.sin(d), cd = Math.cos(d);
+  // Rotate the site's up vector towards its local north/east bearing. Keeping
+  // all three components avoids cancellation in the longitude formula at the
+  // poles, where it otherwise folds a whole search circle into three points.
+  const north = sd * Math.cos(az);
+  const x = cd * cl - north * sl;
+  const y = sd * Math.sin(az);
+  const z = cd * sl + north * cl;
+  const lat2 = Math.atan2(z, Math.hypot(x, y));
+  let lon2 = lo + Math.atan2(y, x);
   lon2 = ((((lon2 / RAD + 180) % 360) + 360) % 360) - 180;
   return { lat: lat2 / RAD, lon: lon2 };
 }

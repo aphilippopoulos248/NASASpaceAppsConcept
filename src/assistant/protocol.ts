@@ -107,6 +107,8 @@ export interface StepUsage {
 export type StepEvent =
   | ({ type: 'meta' } & ModelInfo)
   | { type: 'text'; delta: string }
+  /** A hosted web lookup actually executed by the server-side model. */
+  | { type: 'web_search'; query: string }
   /** Discard the text streamed so far in this step: the step is being issued again. */
   | { type: 'reset' }
   | { type: 'done'; message: AssistantWireMessage; stop: StopKind; servedBy: ModelInfo; notice?: string; usage?: StepUsage }
