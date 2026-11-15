@@ -317,8 +317,10 @@ centre.
   - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
     met" for any window with a night, while the compare panel treats that band as no
     requirement (T-46);
-  - opening a site sometimes fails to load the 1.9 km whole-Moon elevation file, seen in
-    headless Chrome on the build machine, and the globe then keeps its coarser relief (T-40);
+  - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
+    south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
+    coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
+    download at a time, retried), and the walkthrough's re-check is still to come;
   - keyboard and screen-reader gaps are listed in
     [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 

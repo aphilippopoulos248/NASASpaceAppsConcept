@@ -5,13 +5,13 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `141a261`: `am/lunyx-experience/integration` at `4a36c4c`
-  merged with `am/lunyx/integration` at `2217dd2` (T-22 mission presets, T-37 licence notices
-  and the DOI fix, T-38 a source for every landing, T-39 the flags, all four of the science
-  project's deliveries), plus this task's documents. Since the published `cc736f8`, `public/`
-  gained `public/data/sources/` (S18 to S20), `public/data/presets.json` (S21) and
-  `public/licences/` (section 6); `package.json` gained the scripts `fetch-gcat`,
-  `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
+- **State described:** the tree at `58843c6`: `am/lunyx-experience/integration` at `4a36c4c`
+  merged with `am/lunyx/integration` at `bbd2294` (T-22 mission presets, T-37 licence notices
+  and the DOI fix, T-38 a source for every landing, T-39 the flags, T-40 the notices header,
+  all four of the science project's deliveries), plus this task's documents. Since the
+  published `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20),
+  `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json` gained
+  the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
   nothing, the entry says so and the item is on the open list in
@@ -410,12 +410,13 @@ comment, so three.js's MIT notice is not shipped with it; ten WOFF2 font files a
 no copy of the OFL text is. MIT asks that the copyright and permission notice be included in
 copies; OFL 1.1 asks that each copy of the font software contain its copyright notice and
 licence. Since T-37 (`27b0f30`) the site ships `/licences/THIRD-PARTY-NOTICES.txt`
-(`public/licences/`, 16.2 kB), written by `scripts/build-licences.mjs` (`npm run
+(`public/licences/`, 16.4 kB), written by `scripts/build-licences.mjs` (`npm run
 build-licences`) from the installed packages: three, astronomy-engine, Inter, Space Grotesk,
 Vite and Rolldown (whose module-preload helper is part of the scripts), each with its licence
 text as the package ships it; `src/licences.test.ts` fails when the file is stale. That covers
-both conditions (open list L8, now resolved). The file points readers to `docs/DATA_SOURCES.md`
-for data credits; this register is `docs/lunyx/SOURCES.md`.
+both conditions (open list L8, now resolved). Since T-40 (`bbd2294`) the file's header names
+this register, `docs/lunyx/SOURCES.md`, as the full list of sources with their licences and
+checks, and `docs/DATA_SOURCES.md` as the description of the bundled data files.
 
 **On the server only** (the Vite dev or preview server that runs `/api/*`): `@anthropic-ai/sdk`
 1.8.0 (Apache-2.0; it also ships `LICENSE-MIT`, which says the project moved from MIT to Apache
