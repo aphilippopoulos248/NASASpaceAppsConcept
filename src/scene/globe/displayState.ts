@@ -3,6 +3,7 @@
 // back for labels: the exaggeration drawn right now, which elevation data is loaded, whether
 // the polar close-up is showing. Presentation state, so it lives beside the scene.
 import { ActionError, defineAction, registerActions } from '../../core/actions';
+import { BACKGROUND_STARS_NOTE } from '../globe';
 import { imageryText, type ImageryState } from '../sitePatch';
 import type { AverageState } from './averageMaps';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
@@ -112,6 +113,8 @@ export function displaySummary() {
     coverageShown: d.coverage,
     iceTargetsShown: d.iceTargets,
     polarCloseUp: l.polar ? { elevationGridM: l.polar.resolutionM, sunShadows: l.polar.shadows, note: l.polar.note } : null,
+    /** The stars behind the globe are generated, not a catalogue. */
+    backgroundStars: BACKGROUND_STARS_NOTE,
     /** Where the view was last asked to centre, as asked, and whether the camera is still on its way (null once the globe was turned by hand). */
     viewTarget: l.viewTarget ? { latDeg: l.viewTarget.lat, lonDegEast: l.viewTarget.lon, flying: l.flying } : null,
     /** Photographic close-up around the selected site, the only thing fetched from outside the app: null when the site has none. */
