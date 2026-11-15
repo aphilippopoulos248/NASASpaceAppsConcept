@@ -121,6 +121,14 @@ Retired here, worktrees kept:
 - @ephemeris-check: independent validation is now done by lunyx-science.
 - @ice-targets: its paths are assigned task by task, e.g. @surface in `src/terrain/reader.ts` for T-40 and @analysis in `src/ui/science/**` for T-46.
 
+Decision engine (D-17, `docs/lunyx/DECISION-ENGINE.md`), new paths:
+- @coordinator: the contract (`src/analysis/decision/types.ts`, the stub signatures in `src/analysis/decision/api.ts` and `src/terrain/region.ts`, `RegionTerrain` in `src/terrain/types.ts`, the `decision*` AppState fields).
+- @analysis: `src/analysis/decision/**` bodies and tests, `public/data/mission-profiles.json` (T-71).
+- @surface: `src/terrain/region.ts` bodies and tests (T-72).
+- @globe: `src/core/decisionActions.ts` and its registration (T-73).
+- @decision-ui: `src/ui/decision/**` and the tab hook in `src/ui/compare/panel.ts`, reviewed by @analysis (T-74).
+- lunyx-experience: the assistant side (T-75).
+
 Closed task-specific grant: @globe worked in @analysis's `src/analysis/` (`fineSkyline.ts`, `horizon.ts`, `window.ts`, `types.ts`) for T-50, the finer skyline at transitions. Those files are @analysis's again.
 
 `src/analysis/types.ts` and `src/terrain/types.ts` are contracts: their owner may add
