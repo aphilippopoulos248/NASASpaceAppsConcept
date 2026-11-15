@@ -22,7 +22,7 @@ const round = (v: number | undefined, digits: number): number | null => (v === u
  * that frame, so whoever called it (a button, the assistant, a test) can look at once. A page
  * in the background gets no frames: there the wait ends after a quarter of a second.
  */
-function drawn(): Promise<void> {
+export function drawn(): Promise<void> {
   if (typeof requestAnimationFrame !== 'function') return Promise.resolve();
   return new Promise((resolve) => {
     const timer = setTimeout(resolve, 250);

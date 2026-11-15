@@ -32,6 +32,7 @@ body[data-view='surface'] .assistant-drawer > .sp-toolbar,
 body[data-view='surface'] .cmp-sheet > .sp-toolbar { padding: 8px 12px; }
 body[data-view='surface'] .time-scrubber > .ts-play { grid-row: 2 / span 2; }
 body[data-view='surface'] .locator-zoom { top: 42px; }
-/* Keep controls available when a chart is expanded; every panel can now be moved or folded. */
-body[data-view='surface'] .surface-hud { display: grid; }
+/* A strip the user has moved stays shown while the chart is expanded; in its own place it gives way
+   to the large chart (hud.css), which it would otherwise overlap at 1280x720 and at 1920x1080. */
+body[data-view='surface'] .surface-hud.sp-positioned { display: grid; }
 .sp-reset { display: block; margin-top: 6px; margin-left: auto; }
