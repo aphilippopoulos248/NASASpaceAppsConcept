@@ -25,7 +25,7 @@ import type { MeasurementInput } from '../analysis/decision/api';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis, WindowMetrics } from '../analysis/types';
 import type { Landing } from '../data/landings';
 import { getAction, listActions, registerActions, resetActions, runAction } from './actions';
-import { createDecisionActions, DECISION_CAPS, decisionRun, onDecisionRun, roundDeep, toOverrides, type DecisionEngine, type DecisionRun } from './decisionActions';
+import { createDecisionActions, DECISION_CAPS, decisionRun, onDecisionRun, roundDeep, sharedTail, toOverrides, type DecisionEngine, type DecisionRun } from './decisionActions';
 import { effectiveStartMs } from './scenario';
 import { initialState, Store } from './store';
 import type { Scenario, SiteRef } from './types';
@@ -336,9 +336,18 @@ describe('decision tools (T-73)', () => {
 
   it('compareSites: both under one profile, the engine\'s comparison echoed with the note', async () => {
     const { calls } = setup();
-    const r: any = await runAction('compareSites', { siteA: { landing: 'apollo-11' }, siteB: { lat: -85, lon: 30 } });
-    expect(r).toMatchObject({ ok: true, result: { profile: { id: 'polar-short' }, comparison: { dominance: 'a-dominates', sentences: ['fake comparison'], a: { site: { id: 'apollo-11' } }, b: { site: { id: 'pin:-85.00000,30.00000' } } }, utilityNote: UTILITY_NOTE } });
+    const pair = { siteA: { landing: 'apollo-11' }, siteB: { lat: -85, lon: 30 } };
+    // Summary (the default): the sentences, deltas, verdicts and reasons; each basis once per site.
+    const r: any = await runAction('compareSites', pair);
+    expect(r).toMatchObject({ ok: true, result: { profile: { id: 'polar-short', name: 'Polar lander, short stay' }, comparison: { dominance: 'a-dominates', sentences: ['fake comparison'], perCriterion: [], a: { siteId: 'apollo-11', summary: ['feasible'] }, b: { siteId: 'pin:-85.00000,30.00000' } }, utilityNote: UTILITY_NOTE } });
+    expect(Object.keys(r.result)).toEqual(['profile', 'relaxations', 'overrides', 'utilityNote', 'comparison', 'basis']);
+    expect(r.result.comparison.a.criteria[0]).toEqual({ id: 'sunlight', verdict: 'pass', value: 95, unit: '%', threshold: 40, score: 0.5, reason: 'sunlight pass' });
+    expect(r.result.comparison.a).not.toHaveProperty('metrics');
+    expect(r.result.basis).toMatchObject({ window: { durationH: 72 }, mastHeightM: 2, a: { values: { sunlight: 'fake' }, provenance: [expect.stringMatching(/JPL Horizons table/), expect.any(String), 'note'] } });
     expect(calls.analyse.map((s) => s.site.id)).toEqual(['apollo-11', 'pin:-85.00000,30.00000']);
+    // Full: the engine's PairComparison as it is.
+    const full: any = await runAction('compareSites', { ...pair, detail: 'full' });
+    expect(full).toMatchObject({ ok: true, result: { profile: { id: 'polar-short' }, comparison: { dominance: 'a-dominates', a: { site: { id: 'apollo-11' }, metrics: { values: { sunlight: { basis: 'fake' } } } } }, utilityNote: UTILITY_NOTE } });
   });
 
   it('findBestSites summary (the default, F-12): small fields first, one basis, per site its rows only; full is the contract Ranking', async () => {
@@ -351,11 +360,12 @@ describe('decision tools (T-73)', () => {
     expect(sum.result.basis).toMatchObject({ window: { durationH: 72 }, mastHeightM: 2, landingRadiusM: 100, criteria: { sunlight: 'sunlight', roughness: 'roughness' } });
     // The ranked site: every criterion without basis text. The others: only what decided them, with the reason.
     expect(sum.result.sites).toEqual([
-      { siteId: 'apollo-11', name: 'Apollo 11', feasibility: 'feasible', utility: 0.95, rank: 1, pareto: true, criteria: expect.any(Array) },
+      { siteId: 'apollo-11', name: 'Apollo 11', feasibility: 'feasible', utility: 0.95, rank: 1, pareto: true, summary: ['feasible'], criteria: expect.any(Array) },
       { siteId: 'im-2', name: 'IM-2 Athena', feasibility: 'feasible', deciding: [] },
       { siteId: 'luna-9', name: 'Luna 9', feasibility: 'infeasible', deciding: [{ id: 'sunlight', verdict: 'fail', value: 30, unit: '%', threshold: 50, score: 0.5, reason: 'sunlight fail' }] },
     ].filter((x) => x.siteId !== 'im-2'));
-    expect(sum.result.sites[0].criteria[0]).toEqual({ id: 'sunlight', verdict: 'pass', value: 95, unit: '%', threshold: 50, score: 0.5 });
+    // The engine's sentences stay: each criterion's reason and the site's summary lines.
+    expect(sum.result.sites[0].criteria[0]).toEqual({ id: 'sunlight', verdict: 'pass', value: 95, unit: '%', threshold: 50, score: 0.5, reason: 'sunlight pass' });
     expect(JSON.stringify(sum.result)).not.toContain('"basis":"fake"');
     // 'full' is the contract Ranking, as before.
     const full: any = await runAction('findBestSites', { ...params, detail: 'full' });
@@ -388,7 +398,8 @@ describe('decision tools (T-73)', () => {
     expect(sum.ok, sum.error).toBe(true);
     expect(sum.result.counts.candidates).toBe(catalogue.length);
     const summaryLength = JSON.stringify(sum.result).length;
-    expect(summaryLength).toBeLessThan(64_000);
+    // The model's limit is 64,000 characters: a margin of a quarter.
+    expect(summaryLength).toBeLessThan(48_000);
     const full: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, detail: 'full' });
     const fullLength = JSON.stringify(full.result).length;
     expect(fullLength).toBeGreaterThan(64_000); // why the summary exists
@@ -400,6 +411,9 @@ describe('decision tools (T-73)', () => {
   it('helpers: overrides as the engine takes them, numbers rounded (coordinates to 5 decimals)', () => {
     expect(toOverrides({ thresholds: { slope: 8 }, removeThresholds: ['roughness'], allowSafetyRelaxation: true })).toEqual({ thresholds: { slope: 8, roughness: null }, allowSafetyRelaxation: true });
     expect(toOverrides(undefined)).toEqual({});
+    const notes = 'Measured on LOLA, 60 m site window (60 m spacing): 8 samples within 100 m of the centre. Slope: 3.0°, the steepest of 8 local slopes.';
+    expect(sharedTail(`Ground slope over the region. ${notes}`, `Roughness over the region. ${notes}`)).toBe(notes);
+    expect(sharedTail('Slope, short. Same end.', 'Roughness, short. Same end.')).toBe(''); // not worth saying once
     expect(roundDeep({ utility: 0.123456, site: { lat: -84.7906123456, lon: 29.19571234 }, n: 3, list: [1.23456] })).toEqual({ utility: 0.123, site: { lat: -84.79061, lon: 29.19571 }, n: 3, list: [1.235] });
   });
 });
@@ -416,6 +430,27 @@ const engineReady = (() => {
 })();
 
 describe.skipIf(!engineReady)('decision tools on real data (slow)', () => {
+  it('compareSites summary for a pair with long terrain notes (Apollo 16, 3 m model; Chang\'e 4) stays under 48,000 characters', async () => {
+    resetActions();
+    const catalogue = (JSON.parse(readFileSync('public/data/landings.json', 'utf8')) as { landings: Landing[] }).landings;
+    const profiles = parseMissionProfiles(JSON.parse(readFileSync('public/data/mission-profiles.json', 'utf8')));
+    const store = new Store(initialState(Date.UTC(2025, 2, 6, 17, 28)));
+    registerActions(createDecisionActions({ store, landings: () => catalogue, engine: { ...realEngine, loadMissionProfiles: async () => profiles } }));
+    const pair = { siteA: { landing: 'apollo-16' }, siteB: { landing: 'change-4' } };
+    const sum: any = await runAction('compareSites', pair);
+    expect(sum.ok, sum.error).toBe(true);
+    const full: any = await runAction('compareSites', { ...pair, detail: 'full' });
+    const [s1, s2] = [JSON.stringify(sum.result).length, JSON.stringify(full.result).length];
+    expect(s1).toBeLessThan(48_000);
+    expect(s2).toBeGreaterThan(s1 * 2);
+    // The engine's sentences and deltas are all there; the landing-region notes are said once per site.
+    expect(sum.result.comparison.sentences).toEqual(full.result.comparison.sentences);
+    expect(sum.result.comparison.perCriterion).toEqual(full.result.comparison.perCriterion);
+    expect(sum.result.comparison.a.summary).toEqual(full.result.comparison.a.summary);
+    expect(sum.result.basis.a.region).toMatch(/^Measured on LROC NAC DTM/);
+    expect(sum.result.basis.a.values.slope).toMatch(/^Ground slope over the landing region of 100 m radius/);
+  }, 120_000);
+
   it('evaluateSite at Apollo 11 quotes the analysis\' own window metrics, with their basis', async () => {
     resetActions();
     const store = new Store(initialState(Date.UTC(1969, 6, 20, 20, 17)));
