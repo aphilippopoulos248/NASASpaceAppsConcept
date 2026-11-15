@@ -12,6 +12,7 @@ import {
   Vector3,
 } from 'three';
 import { landingColor, latLonToVec3 } from '../data/landings';
+import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './globe/reliefTiles';
 import type { Marker } from './markers';
 
 // The area explored at each landing site, from scripts/fetch-site-areas.mjs (see docs/DATA_SOURCES.md).
@@ -56,10 +57,21 @@ const RADIUS = 1.00014;
 const LIFT = RADIUS - 1;
 
 /**
- * Areas are drawn this many times larger (in width) than they really are, so they read on the globe.
- * The data, and the size quoted in the info card, stay true.
+ * Seen from orbit, areas are drawn this many times larger (in width) than they really are, so
+ * they read on the globe. The data, and the size quoted in the info card, stay true.
  */
 export const AREA_DISPLAY_SCALE = 10;
+
+/**
+ * How much larger than true the areas are drawn at a camera altitude: AREA_DISPLAY_SCALE from
+ * orbit, true size close to the ground, eased in between over the same altitudes as the relief
+ * exaggeration (src/scene/globe/reliefTiles.ts). At a site, where the camera is about 42 km up,
+ * ten times Apollo 17's 11.4 km would have covered the whole view.
+ */
+export function areaScale(altitudeKm: number): number {
+  const t = Math.min(1, Math.max(0, (altitudeKm - TRUE_SCALE_BELOW_KM) / (FULL_EXAGGERATION_KM - TRUE_SCALE_BELOW_KM)));
+  return 1 + (AREA_DISPLAY_SCALE - 1) * t * t * (3 - 2 * t);
+}
 
 const DEG = Math.PI / 180;
 
@@ -77,16 +89,16 @@ function enlarge(polygon: [number, number][], scale: number): [number, number][]
  * Each site's explored area drawn on the globe in its country's colour: a translucent fill with a solid
  * outline, enlarged AREA_DISPLAY_SCALE times about its centre so it reads at globe scale.
  */
-/** The vertices of one drawn piece (fill or outline) by latitude and longitude, so it can follow the relief. */
+/** The vertices of one drawn piece (fill or outline) by true latitude and longitude, so it can follow the relief and be enlarged about its centre. */
 interface Piece {
-  lat: Float32Array;
-  lon: Float32Array;
+  lat: Float64Array;
+  lon: Float64Array;
   position: BufferAttribute;
 }
 
 export class SiteAreaLayer {
   readonly root = new Group();
-  private readonly items: { marker: Marker; group: Group; pieces: Piece[] }[] = [];
+  private readonly items: { marker: Marker; group: Group; centre: [number, number]; pieces: Piece[] }[] = [];
 
   constructor(markers: Marker[], areas: Map<string, SiteArea>) {
     for (const marker of markers) {
@@ -113,31 +125,34 @@ export class SiteAreaLayer {
       const group = new Group();
       group.add(fill, outline);
       this.root.add(group);
-      const ringLat = Float32Array.from(polygon, ([lat]) => lat), ringLon = Float32Array.from(polygon, ([, lon]) => lon);
+      // The true outline (the drawn one is enlarged about the same centre, by place()).
+      const ringLat = Float64Array.from(area.polygon, ([lat]) => lat), ringLon = Float64Array.from(area.polygon, ([, lon]) => lon);
+      const middle: [number, number] = [cLat / polygon.length, cLon / polygon.length];
       const pieces: Piece[] = [
         {
-          lat: Float32Array.from([cLat / polygon.length, ...ringLat]),
-          lon: Float32Array.from([cLon / polygon.length, ...ringLon]),
+          lat: Float64Array.from([middle[0], ...ringLat]),
+          lon: Float64Array.from([middle[1], ...ringLon]),
           position: fillGeo.getAttribute('position') as BufferAttribute,
         },
         { lat: ringLat, lon: ringLon, position: lineGeo.getAttribute('position') as BufferAttribute },
       ];
-      this.items.push({ marker, group, pieces });
+      this.items.push({ marker, group, centre: middle, pieces });
     }
   }
 
   /**
    * Puts every area on the drawn surface, as the globe's other overlays do: `radius(lat, lon)` in
    * Moon radii, relief exaggeration included. Without this the areas stay on the plain sphere and
-   * disappear under raised terrain.
+   * disappear under raised terrain. `scale` enlarges each area about its centre (see areaScale).
    */
-  place(radius: (lat: number, lon: number) => number): void {
+  place(radius: (lat: number, lon: number) => number, scale = AREA_DISPLAY_SCALE): void {
     const v = new Vector3();
-    for (const { pieces } of this.items) {
+    for (const { pieces, centre: [cLat, cLon] } of this.items) {
       for (const p of pieces) {
         const out = p.position.array as Float32Array;
         for (let k = 0; k < p.lat.length; k++) {
-          latLonToVec3(p.lat[k], p.lon[k], radius(p.lat[k], p.lon[k]) + LIFT, v);
+          const lat = cLat + (p.lat[k] - cLat) * scale, lon = cLon + (p.lon[k] - cLon) * scale;
+          latLonToVec3(lat, lon, radius(lat, lon) + LIFT, v);
           out[k * 3] = v.x;
           out[k * 3 + 1] = v.y;
           out[k * 3 + 2] = v.z;

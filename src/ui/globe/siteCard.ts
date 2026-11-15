@@ -361,7 +361,7 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—');
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (on the globe drawn up to ${AREA_DISPLAY_SCALE}× larger from orbit, true to size close to the ground)` : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
