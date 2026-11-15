@@ -189,6 +189,37 @@ table above will change with it.
 IM-2's Earthset (centre 2025-03-19 04:09:38 UTC; validator 04:07:45) sits in a passage from
 2025-03-18 06:25 to 2025-03-20 07:31 UTC: Earth's disc takes 49 h to set there.
 
+### Earth by disc over 18.6 years, against the validator and PGDA product 69
+
+The window of the validator's check 3 (2010-01-01 00:00 UTC + 163 044 h, hourly; its own figures
+and PGDA's pixels are in `tests/fixtures/validation/ephemeris-check/illumination/results.json`).
+"Own" is the validator's computation on the same elevation data (SPICE Earth against its own 0.1 deg
+skyline, share of hourly instants); PGDA is `AVGVISIB_85S_060M_201608_EARTH` (60 m pixels, any part of
+the disc, span and height not stated). Opt-in test, about 12-48 s per run here:
+`LUNYX_LONG=1 npx vitest run src/analysis/transitions.test.ts -t "18.6 years" --silent=false`.
+
+| Point | Eye | Earth's centre: app / own | Any part of the disc: app / own | PGDA pixel (3 x 3 around it) | App any part minus PGDA | App any part minus centre |
+| --- | --- | --- | --- | --- | --- | --- |
+| IM-2 | 0 m | 80.80 / 80.80 % | 92.44 / 92.46 % | 92.26 % (84.26-93.00) | +0.18 | 11.64 |
+| IM-2 | 2 m | 81.12 / 81.12 | 93.31 / 93.34 | 92.26 | +1.05 | 12.19 |
+| Shackleton rim pin | 0 m | 18.02 / 18.03 | 25.23 / 25.23 | 29.31 (15.68-55.03) | -4.08 | 7.21 |
+| Shackleton rim pin | 2 m | 30.76 / 30.77 | 35.99 / 35.99 | 29.31 | +6.68 | 5.23 |
+| Connecting ridge pin | 0 m | 34.55 / 34.55 | 39.48 / 39.49 | 57.94 (0.00-57.94) | -18.46 | 4.93 |
+| Connecting ridge pin | 2 m | 53.58 / 53.60 | 58.24 / 58.25 | 57.94 | +0.30 | 4.67 |
+| Ridge top (PGDA's brightest pixel) | 0 m | 53.02 / 53.03 | 57.65 / 57.67 | 58.08 (50.38-58.09) | -0.43 | 4.64 |
+| Ridge top | 2 m | 53.49 / 53.50 | 58.16 / 58.17 | 58.08 | +0.08 | 4.66 |
+| Rim top (brightest on Shackleton's rim) | 0 m | 49.28 / 49.28 | 53.83 / 53.83 | 56.68 (42.32-56.68) | -2.85 | 4.55 |
+| Rim top | 2 m | 52.15 / 52.15 | 56.80 / 56.80 | 56.68 | +0.12 | 4.65 |
+
+- The new figure reproduces the validator's own any-part figure within 0.03 points in all ten cases
+  (the test fails above 0.5), so the definition and the code agree with an independent computation.
+- PGDA reads 4.4 to 11.1 points above the app's centre figure at the 2 m points other than the rim
+  pin; with the any-part definition the difference drops to 0.1-1.1 points at those four. That is the
+  "4 to 11 points by definition" of the validation, now shown as a like-for-like figure.
+- Where PGDA's own neighbouring pixels differ by tens of points (the rim pin, 15.7-55.0; the
+  connecting ridge pin, 0-57.9) a single-pixel comparison proves nothing, and on the ground at crest
+  points any grid point has rising ground somewhere (validation README, check 3): not forced to agree.
+
 ### Example sentences (real results, `eventText` / `transitionText` / `transitionSummary`)
 
 - Blue Ghost 1, 2 m: `Sunset: starts setting 2025-03-16 18:23, fully set 19:30 UTC`
