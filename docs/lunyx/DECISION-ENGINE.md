@@ -54,6 +54,17 @@ For each candidate site and a mission profile:
    differences), which constraints removed most candidates, and for a pair, dominance or the
    trade-off criterion by criterion.
 
+**Rulings of T-77** (from T-76's property checks; these override the wording above where they differ):
+1. **Verdicts:** a null value is always `unknown`, with or without a threshold.
+2. **Feasibility** counts only the criteria that have a threshold: every one passes means feasible;
+   any one fails means infeasible; otherwise unknown. A criterion without a threshold never blocks
+   feasibility.
+3. **Utility:** weights are normalised over every criterion with weight > 0. A null value scores 0 and
+   is named as missing in the summary, so missing data never raises a site's utility.
+4. **Pareto** compares the feasible sites on all six criteria, null counting as the worst value. Ties
+   are allowed. The front is never empty when there are feasible sites.
+5. **Relaxations** and the "Changed on request" line follow the fixed criterion order.
+
 ## 2. Mission profiles and safety
 
 `public/data/mission-profiles.json` (T-71) holds a few presets. Each has a window length, a mast
