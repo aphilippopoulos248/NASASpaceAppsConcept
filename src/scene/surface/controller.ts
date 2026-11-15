@@ -10,12 +10,11 @@ import { store } from '../../core/store';
 import type { SiteRef } from '../../core/types';
 import { SurfaceView } from '../surface';
 import { createSurfaceActions, roundedLook } from './actions';
+import { focusPlace, probeElement, surfaceCommand } from './keys';
 
 const DEFAULT_FOV_DEG = 70;
-const WALK_KEYS = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'Space', 'ShiftLeft', 'ShiftRight']);
 /** Each arrow-key press (and each auto-repeat while it is held) turns the view by this fraction of the field of view. */
 const KEY_TURN_STEP = 0.03;
-const LOOK_KEYS: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
 
 const SURFACE_LABEL =
   'Surface view of the Moon at the selected site. Drag or arrow keys to look around, scroll, pinch or plus/minus to zoom, W A S D to walk, E and Q to rise and descend, Escape to return to the globe.';
@@ -44,6 +43,7 @@ export class SurfaceController {
   private pinchDistance = 0;
   private lastLook = { azDeg: NaN, elDeg: NaN, fovDeg: NaN };
   private previousLabel: string | null = null;
+  private previousRole: string | null = null;
 
   constructor(anisotropy: number, private readonly canvas: HTMLCanvasElement) {
     // ?quality=low|high overrides the automatic choice (for testing).
@@ -94,8 +94,20 @@ export class SurfaceController {
     this.canvas.style.cursor = 'grab';
     this.previousLabel = this.canvas.getAttribute('aria-label');
     this.canvas.setAttribute('aria-label', SURFACE_LABEL);
+    // "application": screen readers pass the arrow keys on to the view instead of reading with them.
+    this.previousRole = this.canvas.getAttribute('role');
+    this.canvas.setAttribute('role', 'application');
     this.publishLook();
     this.onChange?.();
+    // Opened from a control that is now hidden (the site card's button), the focus would be
+    // nowhere: put it on the scene, whose label names the keys. Focus that is still somewhere
+    // useful (the assistant's text box, the time scrubber) stays where it is.
+    requestAnimationFrame(() => {
+      if (!this.active) return;
+      const focused = document.activeElement as HTMLElement | null;
+      const visible = (el: HTMLElement) => (typeof el.checkVisibility === 'function' ? el.checkVisibility() : el.getClientRects().length > 0);
+      if (!focused || focused === document.body || !visible(focused)) this.canvas.focus({ preventScroll: true });
+    });
   }
 
   leave(): void {
@@ -103,6 +115,8 @@ export class SurfaceController {
     this.keysDown.clear();
     this.pointers.clear();
     if (this.previousLabel !== null) this.canvas.setAttribute('aria-label', this.previousLabel);
+    if (this.previousRole === null) this.canvas.removeAttribute('role');
+    else this.canvas.setAttribute('role', this.previousRole);
   }
 
   /** The shared clock or the lighting mode changed. (The scene computes the sky for the site itself, so the geometry passed in is not needed.) */
@@ -185,34 +199,21 @@ export class SurfaceController {
     );
     window.addEventListener('keyup', (e) => this.keysDown.delete(e.code));
     window.addEventListener('blur', () => this.keysDown.clear());
+    // Keys on the whole document (rules in keys.ts): looking, walking and zooming work wherever
+    // the focus is, except in fields and in widgets with keys of their own.
     window.addEventListener('keydown', (e) => {
-      if (!this.active || e.ctrlKey || e.metaKey || e.altKey) return;
-      const t = e.target as HTMLElement | null;
-      const inside = (selector: string) => Boolean(t && t !== canvas && t !== document.body && t.closest(selector));
-      // Leave keys alone while the user is in a field, a slider or a chart.
-      if (inside('input, select, textarea, [contenteditable], [tabindex], [role="slider"], [role="application"]')) return;
-      // A button that was just clicked keeps the focus: only Space and Enter belong to it, so looking and walking go on working.
-      if (inside('button, summary, a') && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter')) return;
-      const turn = LOOK_KEYS[e.code];
-      if (turn) {
+      if (!this.active) return;
+      const command = surfaceCommand(e, focusPlace(probeElement(e.target, canvas)));
+      if (!command) return;
+      // Marked as handled, so the same key press does nothing else (Escape used to deselect the site too).
+      e.preventDefault();
+      if (command.kind === 'look') {
         // Applied per key event rather than per frame, so a tap is never lost between two slow frames.
         const look = this.view.lookDirection, step = look.fovDeg * KEY_TURN_STEP;
-        this.view.setLook(look.azDeg + turn[0] * step, look.elDeg + turn[1] * step);
-        e.preventDefault();
-      } else if (WALK_KEYS.has(e.code)) {
-        this.keysDown.add(e.code);
-        e.preventDefault();
-      } else if (e.key === '+' || e.key === '=') {
-        this.view.zoom(-1);
-        e.preventDefault();
-      } else if (e.key === '-' || e.key === '_') {
-        this.view.zoom(1);
-        e.preventDefault();
-      } else if (e.key === 'Escape') {
-        // Marked as handled: the same key press must not also reach the globe's shortcuts (it used to deselect the site).
-        e.preventDefault();
-        void runAction('exitSurface');
-      }
+        this.view.setLook(look.azDeg + command.dAz * step, look.elDeg + command.dEl * step);
+      } else if (command.kind === 'walk') this.keysDown.add(command.code);
+      else if (command.kind === 'zoom') this.view.zoom(command.dir);
+      else void runAction('exitSurface');
     });
   }
 
