@@ -1,11 +1,60 @@
 # Desktop walkthrough: screenshots and review against the mockups
 
-Task T-8 (release-candidate walkthrough, project lunyx-experience), by @desktop-workflow.
-Desktop website only (decision D-4): 1280x720 and 1920x1080. This replaces the T-2 review of
-build `27b0f30` (this file at `6a24334`); the T-2 shots stay under `27b0f30/` because
-`docs/lunyx/AI-USE.md` lists them (A32).
+Tasks T-8 and T-16 (release-candidate walkthroughs, project lunyx-experience), by
+@desktop-workflow. Desktop website only (decision D-4): 1280x720 and 1920x1080. This replaces
+the T-2 review of build `27b0f30` (this file at `6a24334`); the T-2 shots stay under `27b0f30/`
+because `docs/lunyx/AI-USE.md` lists them (A32).
 
-## What was tested
+## Release candidate bce6816 (T-16)
+
+| | |
+| --- | --- |
+| Release candidate | `bce6816` (`bce6816ffd56a15e193f83ac747aadfd292d0053`), published. Origin `feature/lunyx-navigator` is at `a72a57f`, which adds only `docs/lunyx/STATUS.md`. Over `41be074`, the only app change is the Q-7 fix of Lunyx T-56: `src/ui/compare/nearbyTab.ts` and the new `src/ui/compare/scanSettings.ts` (with its unit test). The rest is this team's test and docs commits. |
+| Tested tree | `a72a57f` merged into this branch. **Its app code is identical to `bce6816`'s**: `git diff --name-only bce6816 HEAD -- . ':(exclude)*.md' ':(exclude)docs' ':(exclude)e2e'` is empty. The script is `e2e/qa/walkthrough.mjs` at `b067068`. It is the RC's script, except that its scan step now runs the operator's Q-7 scenario (below). |
+| Renderer | As for `41be074`: ANGLE on the NVIDIA GTX 1050 Ti, full settings (`lowPower: false`). 60.2 and 60.1 fps at 1280x720; 58.6 and 60.1 fps at 1920x1080. |
+| Run | 2026-11-15 09:28 to 09:33Z, all five parts at both sizes. Report: `e2e/qa/out/rc-bce6816/report.json` (not committed). As before, the page contacted only the preview server and `trek.nasa.gov`, with no failed request, HTTP error or console error. |
+
+| Size | Steps | Value checks | Time | Load (1 min) |
+| --- | --- | --- | --- | --- |
+| 1280x720 | 41 of 41 ran | 252 of 252 | 150 s | 2.0 at the start |
+| 1920x1080 | 41 of 41 ran | 252 of 252 | 155 s | 3.0 at the end |
+
+**The changed area, at both sizes (step 7, 10 of 10 checks each).** In Compare > "Nearby
+sites":
+
+1. Radius 900 and Spacing 150 are typed and left with Tab.
+2. "Slope at most" is changed to 10° and back to 8°; each change redraws the tab.
+3. Both fields still read 900 and 150. Before the fix, the first change put 2000 and 300 back.
+4. "Scan nearby sites" runs on that grid: its options are 900 / 150 / 8, and its summary reads
+   "113 points scanned around Pin 89.450° S, 137.200° W (within 900 m, every 150 m, slope at
+   most 8°): 57 alternatives ranked, 55 over the slope limit."
+5. Rank 1 equals the scan's best (score 91.8, 150 m E and 150 m S). After the scan the fields
+   still show 900 and 150.
+6. "Compare as B" on rank 1 (step 8): the table and the requirement lines equal both analyses,
+   28 of 28 checks.
+
+Everything else matched the `41be074` run, where every screen value was checked against the
+analysis.
+
+The e2e flow file on the RC's exact tree (`2425d14`) passed 16 of 16 in the original team's run,
+the Q-7 test included. It was not repeated here (D-7).
+
+**Shots.** Only the "Nearby sites" shots changed. They are under
+`docs/lunyx/screenshots/bce6816/`:
+
+| Shot | What it shows |
+| --- | --- |
+| `1280x720/07-nearby-ranked.jpg`, `1920x1080/07-…` | "Nearby sites" after the scan. The typed 900 m and 150 m are kept, the slope limit is 8°, and 113 points give 57 ranked. Each row has Pin and "Compare as B". |
+| `1280x720/08-compare-candidate-as-b.jpg` | "A and B" after "Compare as B" on rank 1: the pin against the candidate 150 m E, 150 m S. |
+
+The other shots, in `649fc4e/`, still show this RC: nothing else in the app changed.
+
+**What changed since `41be074`, as seen on screen:** "Nearby sites" keeps a typed radius and
+spacing through every redraw, and scans what it shows. No new finding. Q-8 (the stale status
+line, original T-60) and the flag on the wordmark (original T-61) are still there, as expected:
+both are on hold, not fixed in this RC.
+
+## Release candidate 41be074 (T-8): what was tested
 
 | | |
 | --- | --- |
@@ -66,7 +115,7 @@ What the parts cover, and what equalled the analysis:
 
 The crash has not happened again; see Observations in `docs/lunyx/qa-findings.md`.
 
-## Shots
+## Shots of RC 41be074 (T-8)
 
 All under `docs/lunyx/screenshots/649fc4e/`. JPEG, quality 80; 24 at 1280x720 and 11 at
 1920x1080. The run also took the other 13 at 1920x1080; they are in the report directory and
@@ -202,13 +251,14 @@ terrain, Sun and Earth positions and sky paths as the software-rendered ones, at
 of about 1 fps, and no rendering fault was seen. When a panel covers much of the screen, the
 app may lower its drawing resolution (70 % in shot 32) and says so in the strip.
 
-## Findings from this run
+## Findings from the T-8 run
 
 The full records are in `docs/lunyx/qa-findings.md`.
 
-- **Q-7, known issue (deferred by D-14).** A radius or spacing typed into "Nearby sites" goes
-  back to the last scan's values when a requirement changes before the scan. The README's
-  known limits say so, and the e2e todo test is the marker. Still there on `649fc4e`.
+- **Q-7, fixed in RC `bce6816`.** On `649fc4e` / `41be074` it was a known issue (deferred by
+  D-14): a radius or spacing typed into "Nearby sites" went back to the last scan's values when a
+  requirement changed before the scan. Operator decision D-16 lifted the deferral; Lunyx T-56
+  fixed it, and the walkthrough verified the fix on `bce6816` at both sizes (above).
 - **Q-8, new, not blocking (D-13).** The "Nearby sites" status line keeps the outcome of an
   earlier "Compare as B" after another scan has replaced the list, for example one the
   assistant ran around a new pin. In `38-scenario-1-nearby.jpg` it says, in green, "Candidate 1
