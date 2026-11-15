@@ -24,9 +24,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const view = surface.view;
   const hud = el('div', 'ly-panel surface-hud');
 
-  // Row 1: status and quick controls.
-  const head = el('div', 'sh-head');
-  const status = el('span', 'ly-value sh-status');
+  // Keep the controls compact until the viewer opens either disclosure.
+  const status = el('p', 'ly-value sh-status');
   const controls = el('div', 'sh-controls');
   controls.setAttribute('role', 'group');
   controls.setAttribute('aria-label', 'Surface view controls');
@@ -44,30 +43,51 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const chart = button('Skyline chart', 'ly-btn ly-btn--small', () => void runAction('setChart', { show: hudState().chart === 'hidden' }));
   chart.title = 'The terrain skyline around the site with the Sun and Earth over the mission window';
   const home = button('Return to site', 'ly-btn ly-btn--small', () => void runAction('walkTo', { eastM: 0, northM: 0 }));
-  controls.append(trackSun, trackEarth, paths, generated, chart, home);
-  head.append(el('strong', 'sh-title', 'Surface view'), status, controls);
-
-  // Row 2: what the ground is built from, always on screen.
+  const disclosure = (label: string, cls: string) => {
+    const details = el('details', `sh-menu ${cls}`);
+    details.name = 'surface-toolbar-disclosure';
+    const summary = el('summary', 'ly-btn ly-btn--small sh-summary', label);
+    const pop = el('div', 'sh-pop');
+    details.append(summary, pop);
+    return { details, summary, pop };
+  };
+  const options = disclosure('Surface options', 'sh-options');
+  options.pop.append(paths, generated, chart, home);
+  const about = disclosure('About', 'sh-about');
+  about.pop.tabIndex = 0;
+  about.pop.setAttribute('role', 'region');
+  about.pop.setAttribute('aria-label', 'About the surface view');
   const ground = el('p', 'ly-note sh-ground');
-
-  // Folded: the rest of the provenance and the keys.
-  const more = el('details', 'sh-more');
-  const summary = el('summary', 'sh-summary', 'About this view');
-  const body = el('div', 'sh-body ly-note');
-  more.append(summary, body);
-  // Row 3: who the hardware at this site belongs to (filled in by syncOwner below).
   const owner = el('p', 'ly-note sh-owner');
-  hud.append(head, ground, owner, more);
+  const body = el('div', 'sh-body ly-note');
+  about.pop.append(status, ground, owner, body);
+  controls.append(trackSun, trackEarth, options.details, about.details);
+  hud.append(controls);
   region.append(hud);
 
-  // The chart shares the lower part of the screen: the strip says whether it is on, and
-  // steps aside where the chart (or, on a phone, the blockage explanation) takes its place.
+  // Escape closes the disclosure before the surface view can handle the key.
+  const menus = [options, about];
+  for (const m of menus) {
+    m.details.addEventListener('keydown', (e) => {
+      if (e.key !== 'Escape' || !m.details.open) return;
+      e.preventDefault();
+      e.stopPropagation();
+      m.details.open = false;
+      m.summary.focus();
+    });
+  }
+  document.addEventListener('pointerdown', (e) => {
+    const t = e.target as Node | null;
+    for (const m of menus) if (m.details.open && t && !m.details.contains(t)) m.details.open = false;
+  }, true);
+  hud.addEventListener('focusout', (e) => {
+    const to = (e as FocusEvent).relatedTarget as Node | null;
+    if (!to) return;
+    for (const m of menus) if (m.details.open && !m.details.contains(to)) m.details.open = false;
+  });
+
   const syncChart = () => {
-    const h = hudState();
-    chart.setAttribute('aria-pressed', String(h.chart !== 'hidden'));
-    hud.classList.toggle('surface-hud--chart-open', h.chart !== 'hidden');
-    hud.classList.toggle('surface-hud--chart-expanded', h.chart === 'expanded');
-    hud.classList.toggle('surface-hud--explaining', h.explanation !== null);
+    chart.setAttribute('aria-pressed', String(hudState().chart !== 'hidden'));
     requestHudLayout();
   };
   onHudState(syncChart);
@@ -133,19 +153,24 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
     body.replaceChildren(...parts);
   };
   surface.onChange = syncStatic;
-  store.subscribe(['view', 'lightMode', 'windowStartMs', 'windowDurationH', 'delayH'], (s) => s.view === 'surface' && syncStatic());
+  store.subscribe(['view', 'lightMode', 'windowStartMs', 'windowDurationH', 'delayH'], (s) => {
+    if (s.view === 'surface') syncStatic();
+    else for (const m of menus) m.details.open = false;
+  });
   // The folded text quotes the simulated time: bring it up to date when it is opened.
-  more.addEventListener('toggle', () => more.open && syncStatic());
+  about.details.addEventListener('toggle', () => about.details.open && syncStatic());
   syncStatic();
 
   // Whose hardware is at this site (GCAT): going near another state's hardware matters.
   const syncOwner = async () => {
     const site = store.get().site;
+    owner.hidden = true;
     const o = site?.kind === 'landing' ? (await loadOwnership())?.byLanding.get(site.id) : undefined;
+    if (store.get().site !== site) return;
     owner.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
     owner.hidden = !o;
   };
-  store.subscribe(['site', 'view'], () => void syncOwner());
+  store.subscribe(['site'], () => void syncOwner());
   void syncOwner();
 
   let text = '';
