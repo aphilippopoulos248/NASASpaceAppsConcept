@@ -20,13 +20,16 @@ const T0_MS = Date.UTC(2025, 2, 6, 17, 28);
 const HOME = { lat: 10, lon: 20, altitudeKm: 4170 };
 
 let srv, app, page;
-/** Main-frame navigations after the first load, and renderer crashes: the app never navigates itself, so each one is a finding. */
+/**
+ * Document loads after the first one, and renderer crashes: the app never reloads itself, so each one is a finding.
+ * (Not `framenavigated`: that also fires for the deep link's history.replaceState, which is no navigation.)
+ */
 const navigations = [];
 before(async () => {
   srv = await servers();
   app = await openApp(srv.deterministic);
   page = app.page;
-  page.on('framenavigated', (f) => f === page.mainFrame() && navigations.push(`${new Date().toISOString()} navigated to ${f.url()}`));
+  page.on('load', () => navigations.push(`${new Date().toISOString()} the page loaded again: ${page.url()}`));
   page.on('crash', () => navigations.push(`${new Date().toISOString()} the page crashed`));
   page.on('popup', (p) => navigations.push(`${new Date().toISOString()} popup ${p.url()}`));
 }, SLOW);
