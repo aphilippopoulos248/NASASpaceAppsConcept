@@ -1,9 +1,77 @@
 # Desktop walkthrough: screenshots and review against the mockups
 
-Tasks T-8, T-16, T-19 and T-23 (release-candidate walkthroughs, project lunyx-experience), by
-@desktop-workflow. Desktop website only (decision D-4): 1280x720 and 1920x1080. This replaces
+Tasks T-8, T-16, T-19, T-22 and T-23 (release-candidate walkthroughs, project lunyx-experience),
+by @desktop-workflow. Desktop website only (decision D-4): 1280x720 and 1920x1080. Newest first;
+each section names the app code it saw. This replaces
 the T-2 review of build `27b0f30` (this file at `6a24334`); the T-2 shots stay under `27b0f30/`
 because `docs/lunyx/AI-USE.md` lists them (A32).
+
+## T-67 head: app code dd42bdb plus T-20 (T-22)
+
+| | |
+| --- | --- |
+| Head | @upstream-sync's T-67 head `dd42bdb`: the published T-64 RC `504d51a` plus GitHub main 5775c64 (country territories, the compact surface card, "Missions to replay" at the bottom of Filters), merged as `eb88237`, with @globe's caption and preset confirmation (`ed249f4`, `f420c44`) and @surface's chart fix. Its app and test code are byte-identical to `ba95be0`, which this branch merged; `dd42bdb` adds only STATUS.md and the T-23 screenshots. |
+| Tested tree | `ba95be0` and team integration `2fba58b` merged into this branch (D-5 point 3 exception). The app code is `dd42bdb`'s plus @assistant's T-20 (the deterministic assistant without setTerritoryScale, with territory and flag replies). Script: `e2e/qa/walkthrough.mjs` at `232c74e`. |
+| Renderer | ANGLE on the NVIDIA GTX 1050 Ti, full settings (`lowPower: false`). 60 and 60.1 fps at 1280x720; 60 and 60.2 fps at 1920x1080. |
+| Run | 2026-11-15 11:08 to 11:13Z, all five parts at both sizes. Report: `e2e/qa/out/t67-dd42bdb/report.json` (not committed). The page contacted only the preview server and `trek.nasa.gov`, with no failed request, HTTP error or console error. |
+
+| Size | Steps | Value checks | Time | Load (1 min) |
+| --- | --- | --- | --- | --- |
+| 1280x720 | 41 of 41 ran | 265 of 265 | 153 s | 4.0 at the start |
+| 1920x1080 | 41 of 41 ran | 265 of 265 | 142 s | 2.1 at the end |
+
+The browser tests on the same tree (GPU, 11:04 to 11:06Z): `a11y` and `flow`, 37 of 37. That
+includes two new a11y tests: the territories checkbox, and the strip's two disclosures by
+keyboard.
+
+**What changed since the T-64 RC, as seen on screen.**
+
+- **Country territories.** Filters has "Show country territories", off by default, next to
+  "Show previous missions" and disabled while those are hidden.
+  - Ticked, the whole Moon is coloured by the country of the nearest landing shown, with a light
+    line where two countries meet.
+  - A caption under the checkbox says what the colours mean: "Colours: the country of the
+    nearest landing shown. A display of who landed nearest, not a boundary; no country owns
+    lunar ground (Outer Space Treaty, Article II)."
+  - The colouring follows the mission filters: 28 landings in 5 countries, then 27 in 4 with
+    India hidden.
+  - @globe's `f420c44` keeps the tint off the polar and site close-ups. The walkthrough does not
+    zoom into a close-up with the territories on, so this was not seen here.
+- **Explored area.** The explored area is no longer drawn on the globe, and the card's Explored
+  row gives the size only ("about 60 m across"). The "Territory size exaggeration" select is
+  gone.
+- **Surface strip.** The surface strip is one compact row: Track Sun, Track Earth, "Surface
+  options" (Sky paths, Generated detail, Skyline chart, Return to site) and "About" (the
+  status, ground and owner lines).
+  - The two disclosures close on Escape, an outside click or the focus leaving.
+  - The "Surface view" title is gone.
+  - The yellow ring on "About" in some surface shots is the keyboard focus: the walkthrough
+    closed that disclosure with Escape, which leaves the focus on it.
+- **Missions to replay.** The presets are the last section of Filters, without the per-preset
+  "Timing and data sources" disclosures (A-6 is moot). After a load the status line confirms it
+  and gives the preset's caveat, for example "Playing "IM-2 Athena, Mons Mouton". … The
+  touchdown minute is not confirmed by an official source (NASA: about 11:30 a.m. CST, 17:30
+  UTC)."
+
+Still there, as expected while on hold: Q-8 (T-60) and Japan's flag on the wordmark's "N"
+(T-61), as in `36-globe-flags.jpg`.
+
+**Shots.** The changed ones are under `docs/lunyx/screenshots/dd42bdb/`: 18 at 1280x720 and 7
+at 1920x1080.
+
+| Shot | What it shows |
+| --- | --- |
+| `1280x720/01-open.jpg`, `1920x1080/01-…` | The globe on opening: Filters starts with the arrival date; "Missions to replay" is at the bottom |
+| `1280x720/04-…`, `12-…` | The pin's card, and IM-2's card at touchdown |
+| `1280x720/13-…` to `18-…`, `1920x1080/14-…`, `17-…`, `18-…` | The surface view with the compact strip: Track Sun, Track Earth, "Surface options", "About" |
+| `1280x720/22-…`, `24-…`, `1920x1080/22-…`, `24-…` | At "Sun fully set" following the Sun; Apollo 11 at touchdown |
+| `1280x720/25-…`, `28-…` | The assistant drawer over the new Filters |
+| `1280x720/32-…`, `33-…` | The IM-2 preset at its window end; Earth zoomed in |
+| `1280x720/34-…`, `35-…` | The window table and the outlook over the compact strip |
+| `1280x720/36-globe-flags.jpg`, `1920x1080/36-…` | Country territories with their caption, country flags, the Country filter, and IM-2's card with the size-only Explored row |
+
+The rest of the T-64 RC's shots (`e54cc2d/`) still show this head: the scenario (38 to 40),
+"why?" and the chart's table at 1920x1080. So do 07 and 08 in `bce6816/`.
 
 ## Release candidate with T-64: app code e54cc2d (T-19, T-23)
 
@@ -228,7 +296,8 @@ Seen in these shots, all from the original team's work since then:
 
 - Filters opens with "Missions to replay": Blue Ghost Mission 1, IM-2 and the 14 March 2025
   eclipse. Each has its own "Timing and data sources" disclosure, named after the preset (A-6
-  is fixed).
+  is fixed). On RC 41be074; since T-67 the presets are the last section of Filters, without
+  these disclosures.
 - Every rise and set has both ends, on every screen: the card, the Key metrics countdowns, the
   scrubber's jump buttons and the window table. Earth gets three instants: starts setting,
   centre sets, fully set. The countdown buttons and the scrubber jumps go to the instant they

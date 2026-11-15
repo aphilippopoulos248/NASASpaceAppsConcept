@@ -8,17 +8,18 @@
 import { runAction } from '../../core/actions';
 import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
+import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
-import { AREA_SCALE_CHOICES, DEFAULT_AREA_SCALE, globeDisplay, reliefText } from '../../scene/globe/displayState';
+import { globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
+import { territoriesDrawn, TERRITORY_RULE } from '../../scene/globe/territories';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
-import { AREA_DISPLAY_SCALE, MAX_ORBIT_AREA_WIDTH_M, MIN_ORBIT_AREA_WIDTH_M } from '../../scene/siteAreas';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import { committedPoint, fieldText, pinPoint, viewPoint, type Written } from './centreFields';
@@ -73,9 +74,6 @@ const set = (input: HTMLInputElement, value: string) => {
 export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
-
-  // ---- Missions to replay: a real site, date and window in one step ----
-  mountPresetList(panel);
 
   // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
@@ -207,33 +205,26 @@ export function mountFiltersPanel(region: HTMLElement): void {
   showBox.type = 'checkbox';
   showBox.addEventListener('change', () => void runAction('showMissions', { show: showBox.checked }));
   show.append(showBox, el('span', undefined, 'Show previous missions'));
+  show.title = 'Marks each catalogued landing on the globe.';
+  const territories = el('label', 'ly-check fp-flags');
+  const territoriesBox = el('input');
+  territoriesBox.type = 'checkbox';
+  territoriesBox.addEventListener('change', () => void runAction('showTerritories', { show: territoriesBox.checked }));
+  territories.append(territoriesBox, el('span', undefined, 'Show country territories'));
+  territories.title = 'Colours the whole Moon by the country of the nearest landing shown: neighbouring landings of one country share one territory. Not a legal boundary: no country owns lunar ground.';
+  // What the colours mean, on screen while they are drawn (D-1: the same sentence as showTerritories' territoryRule).
+  const territoryNote = el('p', 'ly-note fp-territory-note', `Colours: the country of the nearest landing shown. ${TERRITORY_RULE}`);
   const flags = el('label', 'ly-check fp-flags');
   const flagsBox = el('input');
   flagsBox.type = 'checkbox';
   flagsBox.addEventListener('change', () => void runAction('showFlags', { show: flagsBox.checked }));
   flags.append(flagsBox, el('span', undefined, 'Show country flags'));
   flags.title = 'A flag on each landing for the state its hardware belongs to (GCAT catalogue)';
-  // Territory size: how much larger than life each landing's explored area is drawn.
-  const areaId = `fp-${++uid}`;
-  const areaLab = el('label', 'ly-label', 'Territory size exaggeration');
-  areaLab.htmlFor = areaId;
-  const areaSel = el('select', 'ly-select');
-  areaSel.id = areaId;
-  // A setting, not a width multiplier (setTerritoryScale): the options are not labelled "×N".
-  const areaLabel = (f: number) => (f === 1 ? 'True size (1)' : `${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
-  for (const f of AREA_SCALE_CHOICES) areaSel.append(new Option(areaLabel(f), String(f)));
-  areaSel.addEventListener('change', () => void runAction('setTerritoryScale', { factor: Number(areaSel.value) }));
-  const areaField = el('div', 'fp-num fp-territory');
-  areaField.title =
-    `Display setting: how much each landing's explored area is enlarged so it can be seen from orbit. 1 = true size; ${AREA_DISPLAY_SCALE} = ` +
-    `every area about ${MIN_ORBIT_AREA_WIDTH_M / 1000} to ${MAX_ORBIT_AREA_WIDTH_M / 1000} km across from orbit, whatever its true size; settings in between blend the two (default ${DEFAULT_AREA_SCALE}). ` +
-    "Not a width multiplier: the site card says how much larger each area is drawn. True size close to the ground; the Moon itself is not changed.";
-  areaField.append(areaLab, areaSel);
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, flags, areaField, missions);
+  panel.append(show, territories, territoryNote, flags, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
@@ -257,6 +248,10 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const overlayBox = el('div', 'fp-overlay');
   overlayBox.append(overlay, legend);
   panel.append(el('hr', 'ly-divider'), opt, overlayBox);
+
+  // ---- Missions to replay, last in the panel: a real site, date and window in one step ----
+  panel.append(el('hr', 'ly-divider'));
+  mountPresetList(panel);
 
   region.append(panel);
   mountMissionFilters(body, getLandings());
@@ -311,6 +306,12 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
 
   let lastLegendMs = -Infinity;
+  // The caption is up exactly while the colouring is drawn (territoriesShown): not when the filters hide every landing.
+  const syncTerritoryNote = () => {
+    const s = store.get(), f = missionFilter.get();
+    territoryNote.hidden = !territoriesDrawn(s.showMissions, s.showTerritories, getLandings().filter((l) => matchesFilter(f, l)).length);
+  };
+  missionFilter.subscribe(() => syncTerritoryNote());
   const sync = (changed?: ReadonlySet<string>) => {
     const s = store.get();
     set(date, isoUtc(s.windowStartMs).slice(0, 16));
@@ -325,12 +326,14 @@ export function mountFiltersPanel(region: HTMLElement): void {
     win.value = String(s.windowDurationH);
     for (const [mode, b] of modeButtons) b.setAttribute('aria-pressed', String(s.lightMode === mode));
     showBox.checked = s.showMissions;
+    territoriesBox.checked = s.showTerritories;
+    territoriesBox.disabled = !s.showMissions;
+    territories.classList.toggle('off', !s.showMissions);
+    syncTerritoryNote();
     flagsBox.checked = s.showFlags;
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);
     missions.classList.toggle('off', !s.showMissions);
-    areaSel.disabled = !s.showMissions;
-    areaField.classList.toggle('off', !s.showMissions);
     optBox.checked = s.overlay !== 'off';
     overlay.value = s.overlay !== 'off' ? s.overlay : lastOverlay;
     overlayBox.hidden = s.overlay === 'off';
@@ -343,8 +346,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
   const syncDisplay = () => {
     const d = globeDisplay.get(), live = globeDisplay.getLive();
-    if (![...areaSel.options].some((o) => Number(o.value) === d.areaScale)) areaSel.append(new Option(areaLabel(d.areaScale), String(d.areaScale)));
-    areaSel.value = String(d.areaScale);
     const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
     const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
     reliefNote.textContent = `${data}${rule}`;
@@ -368,7 +369,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   // A field is not overwritten while it has the focus (someone may be typing in it); bring it
   // back in step when the focus leaves.
   panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
-  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
+  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showTerritories', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
   sync();
   if (flagsWanted()) void runAction('showFlags', { show: true });
   store.subscribe(['showFlags'], (s) => {

@@ -20,7 +20,8 @@ import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapU
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
 import { globeDisplay } from '../../scene/globe/displayState';
-import { exploredText, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
+import { describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
+
 import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
@@ -380,19 +381,10 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    // True size, then how much larger it is drawn from orbit (the same words as setTerritoryScale's result).
-    facts.set('area', !l ? null : area ? exploredText(area, globeDisplay.get().areaScale) : '—');
+    facts.set('area', !l ? null : area ? describeExtent(area) : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
-
-  // The card quotes how much larger the area is drawn: keep it in step with the territory size control.
-  let shownScale = globeDisplay.get().areaScale;
-  globeDisplay.subscribe(() => {
-    if (globeDisplay.get().areaScale === shownScale) return;
-    shownScale = globeDisplay.get().areaScale;
-    renderArea(currentLanding());
-  });
 
   const render = () => {
     const site = store.get().site;

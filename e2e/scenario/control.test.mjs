@@ -100,11 +100,14 @@ function screen(page) {
         relief: labelled('Exaggeration')?.value,
         // Since T-64 the relief has no selector: the "Terrain relief" note says what is drawn.
         reliefNote: [...document.querySelectorAll('.filters-panel h3')].find((h) => h.textContent.trim() === 'Terrain relief')?.nextElementSibling?.textContent ?? '',
-        territory: labelled('Territory size exaggeration')?.value,
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
         flags: check('Show country flags'),
+        territories: check('Show country territories'),
+        territoriesDisabled: [...document.querySelectorAll('.filters-panel label.ly-check')].find((l) => l.textContent.includes('Show country territories'))?.querySelector('input')?.disabled ?? null,
+        // T-67: the caption under the checkbox, shown while the colours are drawn.
+        territoryCaption: q('.filters-panel .fp-territory-note') ? !q('.filters-panel .fp-territory-note').hidden : null,
         missions: check('Show previous missions'),
         overlayOn: check('Show optimal landing area'),
         overlay: q('.filters-panel select[aria-label="Landing-area overlay"]')?.value,
@@ -232,6 +235,8 @@ const CASES = [
   } },
   { name: 'showMissions', params: { show: false }, check: async (r, page) => {
     assert.equal(r.showMissions, false);
+    // T-67: what the markers carry is drawn only with them.
+    assert.deepEqual([r.territoriesShown, r.flagsShown], [false, false]);
     await shows(page, (s) => s.filters.missions === false, '"Show previous missions" unticked');
     await run(page, 'showMissions', { show: true });
   } },
@@ -249,13 +254,6 @@ const CASES = [
     await shows(page, (s) => s.filters.reliefNote.includes('Drawn now: ') && s.filters.reliefNote.includes('The stretch applies above'), 'the Terrain relief note says an exaggerated relief is drawn');
     await run(page, 'setReliefExaggeration', { factor: page.__relief });
   } },
-  { name: 'setTerritoryScale', prepare: async (page) => {
-    page.__territory = (await run(page, 'getState')).result.globeDisplay.territoryScale;
-  }, params: { factor: 25 }, check: async (r, page) => {
-    assert.equal(r.territoryScale, 25);
-    await shows(page, (s) => s.filters.territory === '25', 'the Territory size exaggeration selector');
-    await run(page, 'setTerritoryScale', { factor: page.__territory });
-  } },
   { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
     assert.equal(r.coverageShown, true);
     await shows(page, (s) => s.filters.coverage === true, 'coverage checkbox');
@@ -263,8 +261,29 @@ const CASES = [
   } },
   { name: 'showFlags', params: { show: true }, check: async (r, page) => {
     assert.equal(r.showFlags, true);
+    // T-67 (@globe): flagsShown says whether flags are drawn, which needs the landing markers.
+    assert.equal(r.flagsShown, true, 'previous missions are shown here');
     await shows(page, (s) => s.filters.flags === true, '"Show country flags" ticked');
     await run(page, 'showFlags', { show: false });
+  } },
+  { name: 'showTerritories', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.showTerritories, true);
+    // T-67 (@globe, f420c44): what is drawn, which needs the landing markers and a landing through the
+    // filters, and what it is: who landed nearest, never ownership.
+    assert.equal(r.territoriesShown, true, 'previous missions are shown here');
+    assert.match(r.territoryRule, /who landed nearest/);
+    assert.doesNotMatch(r.territoryRule.replace(/no country owns lunar ground/i, ''), /\bown(s|ed|er|ership)?\b/i, 'never ownership');
+    await shows(page, (s) => s.filters.territories === true && s.filters.territoriesDisabled === false && s.filters.territoryCaption === true, '"Show country territories" ticked, its caption shown');
+    // With the landings hidden: nothing drawn, the checkbox disabled, no caption.
+    const hidden = (await run(page, 'showMissions', { show: false })).result;
+    assert.deepEqual([hidden.showMissions, hidden.territoriesShown], [false, false]);
+    await shows(page, (s) => s.filters.territoriesDisabled === true && s.filters.territoryCaption === false, '"Show country territories" disabled and no caption while previous missions are hidden');
+    await run(page, 'showMissions', { show: true });
+    // With the filters hiding every landing: nothing drawn either.
+    await run(page, 'setFilters', { fromYear: 2100 });
+    assert.equal((await run(page, 'showTerritories', { show: true })).result.territoriesShown, false, 'no landing through the filters');
+    await run(page, 'setFilters', { reset: true });
+    await run(page, 'showTerritories', { show: false });
   } },
   { name: 'showIceTargets', params: { show: true }, check: async (r, page) => {
     assert.equal(r.iceTargetsShown, true);
@@ -558,11 +577,16 @@ const CASES = [
   { name: 'listPresets', check: async (r) => {
     assert.ok(r.presets.length >= 3, JSON.stringify(r.presets.map((p) => p.id)));
     assert.ok(r.presets.some((p) => p.id === 'eclipse-2025-03-14'));
+    // T-67: what is uncertain or computed rather than reported (IM-2's touchdown minute).
+    assert.match(r.presets.find((p) => p.id === 'im-2-landing')?.caveat ?? '', /touchdown minute/i);
   } },
   { name: 'loadPreset', params: { id: 'eclipse-2025-03-14', play: false }, check: async (r, page) => {
     assert.equal(r.site.id, 'blue-ghost-1');
     assert.equal(r.view, 'surface');
     assert.equal(r.playing, false);
+    // T-67: the eclipse times are computed by the app; what was reported for the lander comes with them.
+    assert.match(r.caveat ?? '', /computed/i);
+    assert.match(r.sunBehindEarth?.reported ?? '', /reported/i);
     await shows(page, (s) => s.view === 'surface' && s.scrubber.date === r.timeUtc.slice(0, 16), 'surface view at the preset\'s clock');
     await run(page, 'exitSurface');
     await run(page, 'clearSite');

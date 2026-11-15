@@ -6,7 +6,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { Landing } from '../data/landings';
 import type { OwnershipIndex } from '../data/ownership';
-import { areaDisplayScale, type SiteArea } from '../scene/siteAreas';
+import type { SiteArea } from '../scene/siteAreas';
 import { registerActions, resetActions, runAction } from './actions';
 import { createCoreActions } from './coreActions';
 import { MissionFilterStore } from './missionFilter';
@@ -75,7 +75,7 @@ describe('ownership and explored area on the site object (G-12)', () => {
       state: 'USA', stateCode: 'US', owner: 'NASA Manned Spacecraft Center', gcatId: OWNERS.byLanding.get('apollo-15')!.jcat, labelDisagrees: false,
       source: `GCAT: General Catalog of Artificial Space Objects, Jonathan C. McDowell, ${gcat.catalogVersion} (https://planet4589.org/space/gcat/)`,
     });
-    expect(r.site.exploredArea).toMatchObject({ description: 'about 6.0 km across', extentM: 6025, located: true, displayScale: areaDisplayScale(AREAS.get('apollo-15')!) });
+    expect(r.site.exploredArea).toMatchObject({ description: 'about 6.0 km across', extentM: 6025, located: true });
     expect(r.site.exploredArea.source).toMatch(/^LROC anthropogenic objects: Apollo 15 .*Apollo Analyst's Notebook/);
     expect(r.site.exploredArea).not.toHaveProperty('note');
     expect((await ok('getState')).site).toEqual(r.site);
@@ -96,7 +96,7 @@ describe('ownership and explored area on the site object (G-12)', () => {
     const luna9 = (await ok('selectSite', { site: 'luna-9' })).site;
     expect(luna9.ownership).toMatchObject({ state: 'Russia (launched by the USSR)', stateCode: 'SU', gcatId: 'D00100', labelDisagrees: false });
     expect(luna9.ownership.owner).toMatch(/^Institut Kosmicheksiye Issledovaniya/);
-    expect(luna9.exploredArea).toMatchObject({ description: 'about 60 m across', located: false, displayScale: areaDisplayScale(AREAS.get('luna-9')!) });
+    expect(luna9.exploredArea).toMatchObject({ description: 'about 60 m across', located: false });
     expect(luna9.exploredArea.note).toMatch(/^Not located in the LROC catalogue/);
     expect(luna9.exploredArea.source).toMatch(/approximate coordinates/);
     // A rover whose route is not published: the caveat comes with it.
