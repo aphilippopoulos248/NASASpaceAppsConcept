@@ -1,9 +1,10 @@
 import { beforeAll, describe, expect, it } from 'vitest';
-import { blockageAt, nextEvents } from '../../analysis/api';
+import { blockageAt, nextEvents, transitionSummary, transitionText } from '../../analysis/api';
 import type { SiteAnalysis } from '../../analysis/types';
 import type { AnalysisStatus } from '../../core/analysisStore';
 import type { Scenario } from '../../core/types';
-import { buildMetrics, EVENT_ORDER } from './metricsModel';
+import { buildMetrics, EVENT_ORDER, passageInstants, rowPassage } from './metricsModel';
+import type { SkyTransition } from '../../analysis/types';
 import { TEST_SITE, testAnalysis } from './testFixture';
 
 let analysis: SiteAnalysis, scenario: Scenario, sunsetMs: number;
@@ -75,12 +76,19 @@ describe('key metrics', () => {
     expect(next.sunset).not.toBeNull();
     expect(sunset.timeMs).toBe(next.sunset!.timeMs);
     expect(sunset.inHours).toBeCloseTo((next.sunset!.timeMs - t) / H, 9);
-    expect(sunset.text).toMatch(/^in \d/);
+    // D-8: both ends of the passage, from the science core's own span, and the countdown names the instant it counts to.
+    const span = next.sunset!.span!;
+    expect(span.kind).toBe('set');
+    expect(span.end.timeMs).toBe(next.sunset!.timeMs);
+    expect(sunset.span).toBe(transitionSummary(span));
+    expect(sunset.span).toMatch(/^starts setting \d{4}-\d{2}-\d{2} \d{2}:\d{2}, fully set \d{2}:\d{2} UTC$/);
+    expect(sunset.text).toMatch(/^Sun starts setting in \d/);
+    expect(sunset.detail.startsWith(transitionText(span))).toBe(true);
     // The ridge hides the Sun before it reaches the horizontal.
     expect(next.sunset!.timeMs).toBeLessThan(sunsetMs);
     // Every event time says which instant of the transition it is (decision D-8)...
     expect(v.countdowns!.map((c) => c.instant)).toEqual(['Sun fully set', 'Sun starts rising', "Earth's centre sets", "Earth's centre rises"]);
-    expect(sunset.detail).toMatch(/the last limb of the Sun goes behind the terrain skyline/);
+    expect(sunset.detail).toMatch(/to the moment its last part goes behind the skyline/);
     // ...and the label is true of the science core's event: some of the disc still shows just before it, none just after.
     expect(blockageAt(analysis, 'sun', sunset.timeMs! - 3 * 60_000).discVisibleFraction!).toBeGreaterThan(0);
     expect(blockageAt(analysis, 'sun', sunset.timeMs! + 3 * 60_000).discVisibleFraction!).toBe(0);
@@ -91,7 +99,26 @@ describe('key metrics', () => {
     expect(sunrise.text).toBe('none before the window ends');
     // The hint names the end of the window it was searched to.
     expect(sunrise.detail).toMatch(/^No sunrise between now and the end of the analysed mission window \(\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\)\. Sunrise here means: the first limb of the Sun appears/);
-    expect(sunset.detail).toMatch(/^Sunset at \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC: the last limb of the Sun goes behind the terrain skyline/);
+    expect(sunset.detail).toMatch(/Clicking moves the clock to "Sun fully set" \(\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\)\.$/);
+  });
+
+  it('while the Sun is setting, counts down to "fully set" and says it is setting', () => {
+    const span = nextEvents(analysis, scenario.startMs).sunset!.span!;
+    const t = (span.start.timeMs + span.end.timeMs) / 2;
+    const v = buildMetrics({ state: 'ready', scenario, value: analysis }, scenario.id, req(t));
+    const sunset = v.countdowns!.find((c) => c.type === 'sunset')!;
+    expect(sunset.text).toMatch(/^Sun fully set in \d+ min, setting now$/);
+    expect(sunset.span).toBe(transitionSummary(span));
+    // The disc is partly showing then, as the state line says.
+    expect(v.sun!.state).toBe('partial');
+  });
+
+  it('gives Earth by its centre and by any part of its disc, each labelled', () => {
+    const v = buildMetrics({ state: 'ready', scenario, value: analysis }, scenario.id, req(scenario.startMs));
+    expect(v.window!.earthAnyPct).toBe(analysis.metrics.earthAnyPct);
+    // Earth never sets at this near-side site: no gap by either definition.
+    expect(v.window!.longestEarthAnyGapText).toBe('none');
+    expect(v.window!.longestEarthGapText).toBe('none');
   });
 
   it('says why there are no countdowns once the clock has left the window', () => {
@@ -160,5 +187,32 @@ describe('key metrics', () => {
     expect(v.provenanceShort).toBe('Observer 2 m above the ground · in-app sky model · skyline from Synthetic ridge 60 m, 60 m per sample');
     // Nothing is claimed before an analysis exists.
     expect(buildMetrics({ state: 'loading', scenario }, scenario.id, req(scenario.startMs)).provenanceShort).toBe('');
+  });
+});
+
+describe('passages in the countdowns', () => {
+  const at = (t: number, inWindow = true) => ({ timeMs: t, azDeg: 270, inWindow });
+  const base = { body: 'sun' as const, centre: [], hours: 1, minVisibleFraction: 0.2, maxVisibleFraction: 1, limitDays: 60 };
+  const set: SkyTransition = { ...base, kind: 'set', start: { ...at(1000), edge: 'first-cut' }, end: { ...at(5000, false), edge: 'last-limb' } };
+  const rise: SkyTransition = { ...base, kind: 'rise', start: { ...at(1000), edge: 'first-limb' }, end: { ...at(5000), edge: 'whole-clear' } };
+
+  it('takes a set that begins before the window ends for the sunset row, and a rise for the sunrise row', () => {
+    expect(rowPassage('sunset', set, 3000)).toBe(set);
+    expect(rowPassage('sunrise', set, 3000)).toBeNull();
+    expect(rowPassage('sunrise', rise, 3000)).toBe(rise);
+    // One that begins only after the window ends is not this window's.
+    expect(rowPassage('sunset', set, 900)).toBeNull();
+    // An unresolved passage counts by the edge it starts with.
+    expect(rowPassage('sunset', { ...set, kind: 'unresolved' }, 3000)).not.toBeNull();
+    expect(rowPassage('sunrise', { ...set, kind: 'unresolved' }, 3000)).toBeNull();
+  });
+
+  it('lists the instants in order, each named, and leaves out an end that was not found', () => {
+    expect(passageInstants(set)).toEqual([
+      { label: 'Sun starts setting', timeMs: 1000, inWindow: true },
+      { label: 'Sun fully set', timeMs: 5000, inWindow: false },
+    ]);
+    const earth: SkyTransition = { ...set, body: 'earth', centre: [{ ...at(3000), up: false }], end: { ...at(9000, false), edge: 'unresolved' } };
+    expect(passageInstants(earth).map((x) => x.label)).toEqual(['Earth starts setting', "Earth's centre sets"]);
   });
 });
