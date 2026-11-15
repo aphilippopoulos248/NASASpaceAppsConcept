@@ -12,6 +12,9 @@ const CELL_PX = 8;
 /** Tiles built or rebuilt per frame at most (each takes a fraction of a millisecond). */
 const BUILDS_PER_FRAME = 12;
 const MAX_TILES = 700;
+/** Rounds of asking for the 16 px/deg grid (each one is three tries in the loader), and the pause after the first failed round, seconds (doubled after the second). */
+const FINE_ROUNDS = 3;
+const FINE_RETRY_S = 20;
 
 interface Tile {
   id: TileId;
@@ -36,12 +39,19 @@ export class ReliefGlobe {
   private frame = 0;
   private builds = 0;
   private fineRequested = false;
+  /** Failed loads of the 16 px/deg grid so far, and when it may be asked for again. */
+  private fineFailures = 0;
+  private fineRetryAt = 0;
   /** Set when a grid could not be loaded: shown instead of pretending there is relief. */
   problem: string | null = null;
   /** Settles when the grid being fetched (if any) has been taken in. */
   private pending: Promise<void> = Promise.resolve();
 
-  constructor(private readonly material: Material) {
+  constructor(
+    private readonly material: Material,
+    /** Milliseconds, for the pause before asking again (tests pass their own clock). */
+    private readonly now: () => number = () => performance.now(),
+  ) {
     for (const t of rootTiles()) this.build(t);
   }
 
@@ -68,8 +78,21 @@ export class ReliefGlobe {
       this.pyramid.add(d, 1);
       this.version++;
       this.problem = null;
+      if (ppd === 16) this.fineFailures = 0;
     } catch (err) {
       this.problem = `The ${ppd} px/deg whole-Moon elevation grid could not be loaded (${err instanceof Error ? err.message : String(err)}).`;
+      if (ppd === 16) {
+        // The loader has already tried three times. Ask again later, a few rounds, and say so meanwhile:
+        // the globe does not stay on the coarser relief without telling.
+        this.fineFailures++;
+        const coarser = this.pyramid.maxPpd ? ` The globe shows the ${this.pyramid.maxPpd} px/deg relief` : ' The globe shows no relief';
+        if (this.fineFailures < FINE_ROUNDS) {
+          const waitS = FINE_RETRY_S * this.fineFailures;
+          this.fineRequested = false;
+          this.fineRetryAt = this.now() + waitS * 1000;
+          this.problem += `${coarser} and tries again in ${waitS} s.`;
+        } else this.problem += `${coarser}.`;
+      }
       console.warn(this.problem);
     }
   }
@@ -163,7 +186,7 @@ export class ReliefGlobe {
       return true;
     };
     const chosen = selectTiles(view, available, inView);
-    if (wantsFiner && !this.fineRequested) {
+    if (wantsFiner && !this.fineRequested && this.now() >= this.fineRetryAt) {
       this.fineRequested = true;
       this.pending = this.load(16);
     }
