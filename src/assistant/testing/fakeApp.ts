@@ -58,6 +58,8 @@ export interface FakeState {
   filter: { programs: string[] | null; countries: string[] | null; type: string; fromYear: number | null; toYear: number | null };
   /** Globe drawing (displayActions). */
   reliefFactor: number;
+  /** How many times wider than life the explored areas are drawn (setTerritoryScale, T-64). */
+  territoryScale: number;
   coverage: boolean;
   iceTargets: boolean;
   locatorZoom: number;
@@ -76,6 +78,10 @@ export interface FakeState {
   saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
   /** Where the globe view was last asked to centre (option viewTarget); null after a hand turn. */
   viewTarget: { latDeg: number; lonDegEast: number } | null;
+  /** The body the surface camera keeps facing (setBodyTracking, PR #2). */
+  tracking: 'sun' | 'earth' | null;
+  /** Surface panels moved or folded (option surfacePanels), by id. */
+  panels: Record<string, { folded: boolean; x: number | null; y: number | null }>;
 }
 
 export const T0 = Date.UTC(2026, 2, 1, 12, 0);
@@ -166,7 +172,20 @@ export interface FakeAppOptions {
   bandRule?: boolean;
   /** T-44: getState.wallClockUtc, and a catalogued site's `ownership` and `exploredArea` (the card's "Belongs to", "Owner", "Explored"). */
   siteRecords?: boolean;
+  /** T-65: the surface view's movable panels (setSurfacePanel, resetSurfacePanels, getSurfacePanels). */
+  surfacePanels?: boolean;
 }
+
+/** As src/ui/surface/panelLayout.ts SURFACE_PANELS, with stand-in boxes (1280 x 720 window). */
+export const FAKE_PANELS = [
+  { id: 'key-metrics', title: 'Key metrics', box: { x: 16, y: 80, width: 360, height: 300 } },
+  { id: 'skyline-chart', title: 'Skyline chart', box: { x: 16, y: 400, width: 360, height: 200 } },
+  { id: 'surface-controls', title: 'Surface controls', box: { x: 400, y: 16, width: 600, height: 90 } },
+  { id: 'time', title: 'Time', box: { x: 400, y: 620, width: 700, height: 90 } },
+  { id: 'locator-map', title: 'Locator map', box: { x: 1060, y: 16, width: 200, height: 200 } },
+  { id: 'compare', title: 'Compare', box: { x: 800, y: 120, width: 460, height: 480 } },
+  { id: 'assistant', title: 'Assistant', box: { x: 860, y: 60, width: 400, height: 640 } },
+] as const;
 
 /** Stand-in records (not the real GCAT data): IM-2 has both, the other landings none. */
 export const SITE_RECORDS: Record<string, { ownership: Record<string, unknown> | null; exploredArea: Record<string, unknown> | null }> = {
@@ -192,7 +211,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true, siteRecords: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true, siteRecords: true, surfacePanels: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -231,6 +250,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     comparing: false,
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
     reliefFactor: 10,
+    territoryScale: 100,
     coverage: false,
     iceTargets: false,
     locatorZoom: 1,
@@ -244,6 +264,8 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     preset: null,
     flags: false,
     viewTarget: null,
+    tracking: null,
+    panels: {},
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
   let compareCalls = 0;
@@ -609,6 +631,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       reliefDrawnNow: state.reliefFactor,
       reliefRule: state.reliefFactor > 1 ? 'The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km.' : null,
       reliefDataSamplesPerDegree: 16,
+      territoryScale: state.territoryScale,
       coverageShown: state.coverage,
       iceTargetsShown: state.iceTargets,
       polarCloseUp: null,
@@ -618,6 +641,19 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
     actions.push(
       defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
+      defineAction<{ factor: number }, unknown>({
+        name: 'setTerritoryScale', title: 'Territory size exaggeration', description: 'Display setting for how much the explored areas are enlarged from orbit. Not a width multiplier.', effect: 'command',
+        params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 1, maximum: 100 } }, required: ['factor'] },
+        run: ({ factor }) => {
+          state.territoryScale = factor;
+          // As src/scene/globe/displayState.ts selectedSiteArea: the selected landing's area in the card's words (IM-2's stand-in record).
+          const site = state.site;
+          const rec = site && site.kind === 'landing' ? SITE_RECORDS[site.id]?.exploredArea : null;
+          const k = factor <= 1 ? 1 : Math.round((1 + (factor - 1) * 0.5) * 10) / 10;
+          const selectedSiteArea = rec && site ? { site: site.id, name: site.name, extentM: 40, widthFactorFromOrbit: k, drawnWidthFromOrbitKm: Math.round(40 * k / 100) / 10, text: k <= 1 ? 'about 40 m across (drawn at true size on the globe)' : `about 40 m across (drawn ${k}× larger in width from orbit, about ${Math.round(40 * k)} m across, so it can be seen; true size close to the ground)` } : null;
+          return { ...display(), territoryRule: factor > 1 ? 'A display setting, not a width multiplier.' : null, selectedSiteArea };
+        },
+      }),
       bool('showCoverage', 'Show elevation data coverage', 'coverage'),
       bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
       defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),
@@ -706,6 +742,19 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           return { body, azDeg: b.azDeg, elDeg: b.elDeg, angularDiameterDeg: body === 'sun' ? 0.533 : 1.9, belowHorizontal: b.elDeg < 0, look: state.look, timeUtc: isoUtc(state.timeMs), directions: 'topocentric (for the site itself), airless' };
         },
       }),
+      defineAction<{ body: 'sun' | 'earth'; on: boolean }, unknown>({
+        name: 'setBodyTracking', title: 'Track the Sun or Earth', description: 'Keeps facing a body as the clock runs.', effect: 'command',
+        params: { type: 'object', properties: { body: { type: 'string', description: 'body', enum: ['sun', 'earth'] }, on: { type: 'boolean', description: 'on' } }, required: ['body', 'on'] },
+        run: ({ body, on }) => {
+          requireSurface();
+          if (on) {
+            const b = SKY[body];
+            state.look = { ...state.look, azDeg: b.azDeg, elDeg: b.elDeg };
+            state.tracking = body;
+          } else if (state.tracking === body) state.tracking = null;
+          return { body, tracking: state.tracking, look: state.look };
+        },
+      }),
       defineAction<{ eastM: number; northM: number; liftM?: number }, unknown>({
         name: 'walkTo', title: 'Walk to', description: 'Moves the viewer.', effect: 'command',
         params: { type: 'object', properties: { eastM: { type: 'number', description: 'east', minimum: -30000, maximum: 30000 }, northM: { type: 'number', description: 'north', minimum: -30000, maximum: 30000 }, liftM: { type: 'number', description: 'lift', minimum: 0, maximum: 500 } }, required: ['eastM', 'northM'] },
@@ -728,6 +777,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         name: 'getSurfaceView', title: 'Surface view state', description: 'What the surface view shows.', effect: 'query', params: none,
         run: () => ({
           active: state.view === 'surface',
+          trackingBody: state.tracking,
           site: siteOut(state.site),
           look: state.look,
           position: positionOut(),
@@ -737,6 +787,39 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           annotations: { ...state.annotations, window: null },
         }),
       }),
+    );
+  }
+  if (options.surfacePanels) {
+    const shownOf = (id: string) => state.view === 'surface' && (id !== 'compare' || state.comparing) && (id !== 'assistant' || state.assistantOpen);
+    const panelOut = (p: (typeof FAKE_PANELS)[number]) => {
+      const s = state.panels[p.id] ?? { folded: false, x: null, y: null };
+      const shown = shownOf(p.id);
+      const box = { ...p.box, ...(s.x !== null && { x: s.x }), ...(s.y !== null && { y: s.y }), ...(s.folded && { height: 36 }) };
+      return { panel: p.id, title: p.title, shown, folded: s.folded, moved: s.x !== null || s.y !== null, xPx: shown ? box.x : null, yPx: shown ? box.y : null, widthPx: shown ? box.width : null, heightPx: shown ? box.height : null };
+    };
+    const ids = FAKE_PANELS.map((p) => p.id);
+    actions.push(
+      defineAction<{ panel: string; folded?: boolean; xPx?: number; yPx?: number }, unknown>({
+        name: 'setSurfacePanel', title: 'Move or fold a surface panel', description: 'Moves and/or folds a panel.', effect: 'command',
+        params: { type: 'object', properties: { panel: { type: 'string', description: 'panel', enum: ids }, folded: { type: 'boolean', description: 'folded' }, xPx: { type: 'number', description: 'x', minimum: -100000, maximum: 100000 }, yPx: { type: 'number', description: 'y', minimum: -100000, maximum: 100000 } }, required: ['panel'] },
+        run: ({ panel, folded, xPx, yPx }) => {
+          if (folded === undefined && xPx === undefined && yPx === undefined) throw new ActionError('Give `folded`, or `xPx` and/or `yPx`.');
+          if (state.view !== 'surface') throw new ActionError('The panels move and fold in the surface view only: enter it first (enterSurface).');
+          const p = FAKE_PANELS.find((x) => x.id === panel)!;
+          if (!shownOf(panel)) throw new ActionError(`The ${p.title} panel is not on screen.${panel === 'compare' ? ' Open the comparison first.' : panel === 'assistant' ? ' Open the assistant first.' : ''}`);
+          const s = state.panels[panel] ?? { folded: false, x: null, y: null };
+          // Kept 8 px inside a 1280 x 720 window, as panelLayout.ts constrainPanel.
+          const keep = (v: number, size: number, max: number) => Math.max(8, Math.min(v, max - size - 8));
+          state.panels[panel] = {
+            folded: folded ?? s.folded,
+            x: xPx !== undefined ? keep(xPx, p.box.width, 1280) : s.x,
+            y: yPx !== undefined ? keep(yPx, p.box.height, 720) : s.y,
+          };
+          return panelOut(p);
+        },
+      }),
+      defineAction({ name: 'resetSurfacePanels', title: 'Reset the surface panels', description: 'Every panel back in place and open.', effect: 'command', params: none, run: () => { state.panels = {}; return { panels: FAKE_PANELS.map(panelOut) }; } }),
+      defineAction({ name: 'getSurfacePanels', title: 'Surface panels', description: 'The panels and their state.', effect: 'query', params: none, run: () => ({ surfaceView: state.view === 'surface', panels: FAKE_PANELS.map(panelOut) }) }),
     );
   }
   if (options.hudActions) {

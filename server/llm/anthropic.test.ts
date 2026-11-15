@@ -3,7 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 import type { StepEvent, WireMessage, WireTool } from '../../src/assistant/protocol';
-import { AnthropicProvider, BETAS, buildParams, describeFailure, echoBlocks, toMessageParams, toToolParams, type MessagesClient } from './anthropic';
+import { AnthropicProvider, BETAS, buildParams, credentialsProblem, describeFailure, echoBlocks, NO_CREDENTIALS, toMessageParams, toToolParams, type MessagesClient } from './anthropic';
 import type { LlmConfig } from './env';
 import type { ProviderRequest } from './types';
 
@@ -256,5 +256,32 @@ describe('failures and recovery', () => {
     await collect(provider(fakeClient([{ throws: apiError(400, `x ${SECRET}`) }, { throws: apiError(401, `y ${SECRET}`) }])), request([USER]));
     expect(logs.length).toBeGreaterThan(0);
     expect(logs.join('\n')).not.toContain(SECRET);
+  });
+});
+
+describe('no credentials (SDK 1.8: the client builds, the first request fails with a plain Error)', () => {
+  it('maps the SDK\'s plain "Could not resolve authentication method" and a missing profile to no_model', () => {
+    const cfg = { model: 'claude-opus-5-5', secrets: [] };
+    const plain = new Error('Could not resolve authentication method. Expected one of apiKey, authToken, credentials, config, or profile to be set. Or for the "Authorization" header to be explicitly omitted');
+    expect(describeFailure(plain, cfg)).toEqual({ kind: 'no_model', message: NO_CREDENTIALS });
+    expect(describeFailure(new Anthropic.AnthropicError('Profile "work" could not be resolved (no <config_dir>/configs/work.json found).'), cfg).kind).toBe('no_model');
+    expect(describeFailure(new Error('something else'), cfg).kind).not.toBe('no_model');
+  });
+
+  it('finds the credentials problem without sending a request', async () => {
+    expect(await credentialsProblem({ apiKey: 'k' }, async () => null)).toBeNull();
+    expect(await credentialsProblem({ authToken: 't' }, async () => null)).toBeNull();
+    expect(await credentialsProblem({ apiKey: null, authToken: null }, async () => ({ provider: {} }))).toBeNull();
+    expect(await credentialsProblem({ apiKey: null, authToken: null }, async () => null)).toBe(NO_CREDENTIALS);
+    expect(await credentialsProblem({}, async () => { throw new Error('Profile "x" could not be resolved'); })).toBe(`${NO_CREDENTIALS} (Profile "x" could not be resolved)`);
+  });
+
+  it('checks once per provider, and a stand-in client is ready', async () => {
+    let calls = 0;
+    const p = new AnthropicProvider(cfg(), fakeClient([]), () => {}, async () => (calls++, NO_CREDENTIALS));
+    expect(await p.ready()).toBe(NO_CREDENTIALS);
+    expect(await p.ready()).toBe(NO_CREDENTIALS);
+    expect(calls).toBe(1);
+    expect(await new AnthropicProvider(cfg(), fakeClient([])).ready()).toBeNull();
   });
 });

@@ -24,6 +24,13 @@ let srv, app, page;
  * (Not `framenavigated`: that also fires for the deep link's history.replaceState, which is no navigation.)
  */
 const navigations = [];
+/**
+ * performance.timeOrigin of the document openApp loaded. Its own `load` event can come after
+ * openApp has returned (the event waits for every image and data file), so a `load` of that same
+ * document is noted but is no new load; another timeOrigin is a new document (F-9).
+ */
+let firstDocument = null;
+const firstDocumentLoads = [];
 /** The test running when an event is recorded. */
 let running = '';
 beforeEach((t) => {
@@ -33,10 +40,15 @@ before(async () => {
   srv = await servers();
   app = await openApp(srv.deterministic);
   page = app.page;
+  firstDocument = await page.evaluate(() => performance.timeOrigin);
   page.on('load', async () => {
     const at = new Date().toISOString(), during = running;
     // "reload" (the document reloaded itself) or "navigate" (something loaded a URL), and from where.
-    const how = await page.evaluate(() => ({ type: performance.getEntriesByType('navigation')[0]?.type ?? null, referrer: document.referrer })).catch(() => null);
+    const how = await page.evaluate(() => ({ origin: performance.timeOrigin, type: performance.getEntriesByType('navigation')[0]?.type ?? null, referrer: document.referrer })).catch(() => null);
+    if (how && how.origin === firstDocument) {
+      firstDocumentLoads.push(`${at} the first document's own load event (it arrived after the app was ready), during "${during}"`);
+      return;
+    }
     navigations.push(`${at} the page loaded again (${how?.type ?? 'type unknown'}${how?.referrer ? `, from ${how.referrer}` : ''}): ${page.url()}, during "${during}"`);
   });
   page.on('crash', () => navigations.push(`${new Date().toISOString()} the page crashed, during "${running}"`));
@@ -78,12 +90,16 @@ function snapshot() {
       assistantOpen: raw.assistantOpen,
       comparing: raw.comparing,
       flags: s.showFlags ?? null,
-      display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
+      display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, territory: s.globeDisplay.territoryScale ?? null, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
       slots: { A: s.compare.A, B: s.compare.B },
       compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
       panels: s.panels ?? null,
       surface: s.view === 'surface' && actions.getAction('getSurfaceView')
-        ? await Promise.resolve(actions.getAction('getSurfaceView').run({})).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null }))
+        ? await Promise.resolve(actions.getAction('getSurfaceView').run({})).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null, tracking: v.trackingBody ?? null }))
+        : null,
+      // The surface panels (T-65): on screen, folded, moved, and where a moved one is.
+      surfacePanels: actions.getAction('getSurfacePanels')
+        ? Object.fromEntries((await Promise.resolve(actions.getAction('getSurfacePanels').run({}))).panels.map((p) => [p.panel, { shown: p.shown, folded: p.folded, moved: p.moved, x: p.moved ? p.xPx : null, y: p.moved ? p.yPx : null }]))
         : null,
       hud: { chart: document.querySelector('.skc')?.dataset.size ?? null, chartShown: document.querySelector('.skc') ? !document.querySelector('.skc').hidden : null, metricsOpen: document.querySelector('.km .km-body') ? !document.querySelector('.km .km-body').hidden : null },
     };
@@ -118,7 +134,7 @@ async function reset(site = null) {
       await run('setFilters', { reset: true });
       await run('setLocatorZoom', { zoom: 1 });
       await run('showPanel', { panel: 'site-details', open: true });
-      for (const [n, p] of [['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }]]) {
+      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['setTerritoryScale', { factor: 100 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }], ['resetSurfacePanels', {}]]) {
         if (window.lunyx.actions.getAction(n)) await run(n, p);
       }
       if (siteId) await run('selectSite', { site: siteId, fly: false });
@@ -669,9 +685,10 @@ describe('equivalence: controls added since the 33-action build', () => {
   };
   const hudButton = (name) => page.locator('.surface-hud .sh-controls').getByRole('button', { name, exact: true });
 
-  test('Filters: relief exaggeration, coverage and ice-target outlines', SLOW, async () => {
-    const relief = await equivalent({ ui: () => filters().getByLabel('Exaggeration').selectOption('5'), expect: 'setReliefExaggeration', action: ['setReliefExaggeration', { factor: 5 }], keys: ['display'] });
-    assert.equal(relief.display.relief, 5);
+  // The relief has had no control of its own since T-64 (setReliefExaggeration is the assistant's alone).
+  test('Filters: territory size, coverage and ice-target outlines', SLOW, async () => {
+    const territory = await equivalent({ ui: () => filters().getByLabel('Territory size exaggeration').selectOption('25'), expect: 'setTerritoryScale', action: ['setTerritoryScale', { factor: 25 }], keys: ['display'] });
+    assert.equal(territory.display.territory, 25);
     const cover = await equivalent({ ui: () => filters().getByLabel('Show elevation data coverage').check(), expect: 'showCoverage', action: ['showCoverage', { show: true }], keys: ['display'] });
     assert.equal(cover.display.coverage, true);
     const ice = await equivalent({ ui: () => filters().getByLabel('Show mapped ice targets').check(), expect: 'showIceTargets', action: ['showIceTargets', { show: true }], keys: ['display'] });
@@ -717,9 +734,11 @@ describe('equivalence: controls added since the 33-action build', () => {
     assert.deepEqual(emptied.slots, { A: null, B: null });
   });
 
-  test('surface HUD: Face Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
-    const face = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Face Sun').click(), expect: 'lookAtBody', action: ['lookAtBody', { body: 'sun' }], keys: ['surface'] });
-    assert.ok(face.surface && Number.isFinite(face.surface.look.azDeg), JSON.stringify(face.surface));
+  // Pull request #2: the HUD's "Face Sun" / "Face Earth" became the toggles "Track Sun" / "Track Earth".
+  test('surface HUD: Track Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
+    const track = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Track Sun').click(), expect: 'setBodyTracking', action: ['setBodyTracking', { body: 'sun', on: true }], keys: ['surface'] });
+    assert.equal(track.surface?.tracking, 'sun', JSON.stringify(track.surface));
+    assert.equal(await hudButton('Track Sun').getAttribute('aria-pressed'), 'true');
     const paths = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Sky paths').click(), expect: 'setSkyAnnotations', action: ['setSkyAnnotations', { tracks: false, labels: false }], keys: ['surface'] });
     assert.deepEqual([paths.surface.tracks, paths.surface.labels], [false, false]);
     const gen = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Generated detail').click(), expect: 'setGeneratedDetail', action: ['setGeneratedDetail', { on: false }], keys: ['surface'] });
@@ -735,6 +754,48 @@ describe('equivalence: controls added since the 33-action build', () => {
     assert.equal(metrics.hud.metricsOpen, false);
     const chart = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Skyline chart').click(), expect: 'setChart', action: ['setChart', { show: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.skc')?.hidden === true) });
     assert.equal(chart.hud.chartShown, false);
+  });
+});
+
+describe('equivalence: the surface panels (T-65)', () => {
+  const enterSurface = async () => {
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface');
+  };
+
+  test('a panel\'s Fold button = setSurfacePanel { panel, folded }', SLOW, async () => {
+    const s = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => page.getByRole('button', { name: 'Fold Time', exact: true }).click(), expect: 'setSurfacePanel', action: ['setSurfacePanel', { panel: 'time', folded: true }], keys: ['surfacePanels'] });
+    assert.deepEqual([s.surfacePanels.time.folded, s.surfacePanels.time.moved], [true, false]);
+  });
+
+  test('arrow keys on a panel\'s grip = setSurfacePanel { panel, xPx, yPx } with the place they reach', SLOW, async () => {
+    const s = await equivalent({
+      site: 'im-2',
+      prepare: enterSurface,
+      ui: async () => {
+        const grip = page.getByRole('button', { name: 'Move Locator map panel' });
+        await grip.focus();
+        for (let i = 1; i <= 2; i++) {
+          const from = await lastSeq(page);
+          await page.keyboard.press('ArrowLeft');
+          await until(page, (seq) => window.lunyx.actions.actionLog().some((e) => e.seq > seq && e.name === 'setSurfacePanel' && e.origin === 'ui'), from);
+        }
+      },
+      expect: 'setSurfacePanel',
+      action: (ui) => [['setSurfacePanel', { panel: 'locator-map', xPx: ui.surfacePanels['locator-map'].x, yPx: ui.surfacePanels['locator-map'].y }]],
+      keys: ['surfacePanels'],
+    });
+    assert.equal(s.surfacePanels['locator-map'].moved, true);
+  });
+
+  test('"Reset panels" = resetSurfacePanels', SLOW, async () => {
+    const moved = async () => {
+      await enterSurface();
+      await result(page, 'setSurfacePanel', { panel: 'time', folded: true });
+      await result(page, 'setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 });
+    };
+    const s = await equivalent({ site: 'im-2', prepare: moved, ui: () => page.getByRole('button', { name: 'Reset panels' }).click(), expect: 'resetSurfacePanels', action: ['resetSurfacePanels', {}], keys: ['surfacePanels'] });
+    assert.ok(Object.values(s.surfacePanels).every((p) => !p.folded && !p.moved), JSON.stringify(s.surfacePanels));
   });
 });
 
@@ -775,15 +836,17 @@ describe('equivalence: assistant drawer and deep links', () => {
     }
   });
 
-  test('the page raised no errors during all of the above', SLOW, async (t) => {
-    for (const n of navigations) t.diagnostic(n);
+  test('the page raised no errors during all of the above', SLOW, async () => {
     assert.deepEqual(app.problems, []);
   });
 
-  // F-9 in docs/lunyx/actions.md: on the GPU the page has loaded itself again, at "/" and once per
-  // run at most, during a different test each time; nothing in the app navigates. The diagnostics
-  // above name the test and the kind of load. The mark comes off when the cause is found.
-  test('the page never reloaded or crashed', { ...SLOW, todo: 'F-9: an unexplained page load during the GPU runs; see the diagnostics' }, async () => {
+  // F-9 in docs/lunyx/actions.md: on the GPU a second "load" was seen at "/", at most once per run,
+  // in the first equivalence test when the test was named (09:33Z on 0de7e06, type "navigate", no
+  // referrer): the first document's own load event arriving after openApp had returned. Such an
+  // event is now told apart by performance.timeOrigin; any other document still fails here.
+  test('the page never reloaded or crashed', { ...SLOW, todo: 'F-9: under watch; the late load event of the first document is no longer counted' }, async (t) => {
+    for (const n of firstDocumentLoads) t.diagnostic(n);
+    for (const n of navigations) t.diagnostic(n);
     assert.deepEqual(navigations, [], 'the page navigated or crashed during the run');
   });
 });
