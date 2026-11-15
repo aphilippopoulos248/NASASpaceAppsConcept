@@ -26,7 +26,9 @@
     "build-shadowcam-index": "node --experimental-strip-types --no-warnings scripts/build-shadowcam-index.mjs",
     "fetch-gcat": "node scripts/fetch-gcat-landers.mjs",
     "fetch-site-areas": "node scripts/fetch-site-areas.mjs",
-    "build-licences": "node scripts/build-licences.mjs"
+    "build-licences": "node scripts/build-licences.mjs",
+    "build-rovers": "node scripts/build-rovers.mjs",
+    "build-rover-model": "node scripts/build-rover-model.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

@@ -32,7 +32,9 @@ import type { LightMode } from '../core/types';
 import { BOULDER_SHAPES, BOULDER_SIZE_M, BOULDERS_EACH, craterField, detailNormalMap, exposureFor, grainTexture, lightHeight, loadDetail, requestDetailMaps, ROCK_CELL_M, ROCK_REACH_M, rockGeometry, SMALL_ROCK_SHAPES, SMALL_ROCKS_EACH } from './surface/assets';
 import { blendEdge, decimate, generatedRelief, Ground, halfExtent, offsetLatLon, sampleGrid, sampleSmooth, seededRandom, upsample, type Grid } from './surface/ground';
 import { describeGround, FINE_LEVEL, loadGround, type GroundBand, type SiteLike } from './surface/groundSource';
+import { buildTrack, localOffset, roverNowMs, simulatedRovers } from '../data/rovers';
 import { earthshine, groundMaterial, rockMaterial, type RockGround } from './surface/materials';
+import { ROVER_MODEL_CREDIT, SurfaceRovers } from './surface/rovers';
 import { createField, litAt, sweepSunlight, type SweepField } from './surface/shadowSweep';
 import { EarthGlobe, SunDisc } from './surface/skyBodies';
 import { azElToScene, DEG, discAreaAbove, discCoveredFraction, niceStepH, sceneToAzEl, wrapAz } from './surface/skyMath';
@@ -87,6 +89,9 @@ const SITE_CLEAR_M = 4;
 const EARTH_RADIUS_KM = 6378.137;
 const SUN_RADIUS_KM = 695_700;
 const AU_KM = 149_597_870.7;
+
+/** SIMULATED rovers are shown at a site when their circuit starts within this distance of it, metres. */
+const ROVER_REACH_M = 5000;
 
 /** What to drape over a terrain mesh: map tiles looked up by lat/lon, one image covering the grid exactly, or the whole-Moon colour map per vertex. */
 type Drape = { layer: ImageryLayer } | { image: string } | { global: true };
@@ -269,6 +274,8 @@ export class SurfaceView {
   private readonly terrain = new Group();
   private readonly beacon = new Group();
   private beaconLabel: Label | null = null;
+  /** SIMULATED rovers near the site (not data): part of the generated detail, hidden with it. */
+  private readonly rovers = new SurfaceRovers([NEAR_LAYER, FAR_LAYER], NEAR_LAYER);
   /** Many small rocks share a few light meshes; the rare boulders, which one can walk up to, get detailed ones. */
   private readonly rocks: RockSet[] = [];
   private readonly rockGround: RockGround = { map: { value: null }, hasMap: { value: 0 }, color: { value: new Color(0.2, 0.2, 0.2) }, half: { value: 1 } };
@@ -378,7 +385,7 @@ export class SurfaceView {
     this.paths.overlay.traverse((o) => o.layers.enable(NEAR_LAYER));
     this.beacon.visible = false;
 
-    this.scene.add(this.ambient, this.sun, this.sun.target, this.sunDisc.mesh, this.earthGlobe.mesh, this.paths.sky, this.paths.overlay, this.terrain, ...this.rocks.map((r) => r.mesh));
+    this.scene.add(this.ambient, this.sun, this.sun.target, this.sunDisc.mesh, this.earthGlobe.mesh, this.paths.sky, this.paths.overlay, this.terrain, this.rovers.group, ...this.rocks.map((r) => r.mesh));
   }
 
   // ------------------------------------------------------------------ loading a site
@@ -445,6 +452,7 @@ export class SurfaceView {
     this.addNearMesh(this.levels[0], detailMap, 'image' in drapeFine);
     this.buildBeacon();
     this.terrain.add(this.beacon);
+    void this.placeRovers(site, token);
 
     // Stand on the site itself, at the observer height: the skyline seen is the one the analysis is
     // about. Where an orbital photo is draped over the ground, the lander and its shadow are in
@@ -457,6 +465,24 @@ export class SurfaceView {
     this.pathsDirty = this.pathWindow !== null;
     if (Number.isFinite(this.timeMs)) this.setTime(this.timeMs);
     this.step(0, { forward: 0, strafe: 0, rise: 0, fast: false });
+  }
+
+  /** Puts the SIMULATED rovers whose circuits lie near this site on the ground. */
+  private async placeRovers(site: SiteLike, token: number): Promise<void> {
+    const file = await simulatedRovers();
+    if (!file || token !== this.loadToken) return;
+    const near = file.rovers.filter((r) => {
+      const home = localOffset(site.lat, site.lon, r.home.lat, r.home.lon);
+      return Math.hypot(home.eastM, home.northM) < ROVER_REACH_M;
+    });
+    this.rovers.setTracks(near.map((r) => buildTrack(r, site, file.epochMs)));
+    if (near.length && this.ground) this.ground.generated += ` Simulated, not real: the rover${near.length > 1 ? 's' : ''} ${near.map((r) => r.name).join(' and ')}. ${ROVER_MODEL_CREDIT}.`;
+    this.prepareFrame();
+  }
+
+  /** Names of the simulated rovers at the current site. */
+  get roverNames(): string[] {
+    return this.rovers.names;
   }
 
   /**
@@ -1304,6 +1330,13 @@ export class SurfaceView {
       this.beaconLabel.place(cam, to.multiplyScalar(Math.min(1, 1000 / d)).add(cam.position), 0, this.viewportHeight);
     }
 
+    // Simulated rovers: generated detail, so they go when it is switched off.
+    this.rovers.group.visible = this.generated && this.levels.length > 0;
+    if (this.rovers.group.visible) {
+      const field = real ? this.nearField : null;
+      if (this.rovers.update(roverNowMs(), this.model, cam, this.viewportHeight, (e, n) => (field ? litAt(field, e, n) : 1))) this.sun.shadow.needsUpdate = true;
+    }
+
   }
 
   /**
@@ -1380,6 +1413,7 @@ export class SurfaceView {
     this.nearBuild = null;
     this.beaconLabel?.dispose();
     this.beaconLabel = null;
+    this.rovers.setTracks([]);
     this.levels = [];
     for (const r of this.rocks) r.mesh.count = 0;
     this.rockGround.map.value = null;

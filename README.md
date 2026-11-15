@@ -127,6 +127,8 @@ The data the app needs is committed. These scripts rebuild it from the original 
 | `node scripts/build-horizons-bundle.mjs`, `npm run fetch-horizons` | `public/data/horizons/` and `public/data/horizons-check.json` from JPL Horizons | small |
 | `npm run fetch-gcat` | `public/data/sources/gcat-landers.json`: who owns the hardware at each landing (GCAT) | two catalogue tables |
 | `npm run fetch-site-areas` | `public/data/sources/`: LROC's measured hardware positions and the explored area at each site | small |
+| `npm run build-rovers` | `public/data/rovers.json`: **simulated** rovers and their routes (invented, not data; see `docs/DATA_SOURCES.md` section 12) | none |
+| `npm run build-rover-model -- <folder>` | `public/models/opportunity-rover/`: the rover model (clgreene86, CC BY 4.0) from the unzipped Sketchfab download, textures reduced | none (download by hand) |
 | `npm run build-licences` | `public/licences/THIRD-PARTY-NOTICES.txt`, from the installed packages (no download) | none |
 
 `scripts/make-surface-detail.mjs` remakes `public/textures/surface_detail_*.jpg` from a

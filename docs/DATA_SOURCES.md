@@ -21,6 +21,8 @@ Last reviewed: 14 November 2026.
 | 9 | [Sun and Earth positions](#9-sun-and-earth-positions) | astronomy-engine; checked against JPL Horizons | Lighting, phases, sky | `public/data/horizons-check.json` | `npm run fetch-horizons`, `npm run check-ephemeris` |
 | 10 | [Close-up surface maps](#10-close-up-surface-maps) | "moon-surface" asset pack (third party) | Generated detail | `public/textures/surface_detail_*` | `scripts/make-surface-detail.mjs` |
 | 11 | [Explored area at each site](#11-explored-area-at-each-site) | NASA PDS: LROC anthropogenic objects and traverse maps; Apollo Analyst's Notebook | Coloured area on the globe, "Explored" in the card | `public/data/sources/site-areas.json`, `lroc-anthropogenic-objects.csv` | `npm run fetch-site-areas` |
+| 12 | [Simulated rovers](#12-simulated-rovers) — **fake, not data** | This project (invented) | Rovers near a site: globe, site card, surface view | `public/data/rovers.json` | `npm run build-rovers` |
+| 13 | [Rover 3D model](#13-rover-3d-model) | clgreene86, Sketchfab (third party, CC BY 4.0) | Shape of the simulated rovers in the surface view | `public/models/opportunity-rover/` | `npm run build-rover-model` |
 
 Downloaded source files are cached in `scripts/.cache/` (git-ignored, about 600 MB) so the scripts can be re-run
 without downloading again.
@@ -229,6 +231,92 @@ without downloading again.
 - **Also useful:** the catalogue's lander positions are independent measurements that could be used to check the
   coordinates in `landings.json` (not done yet).
 
+## 12. Simulated rovers
+
+> **This is fake data.** Every rover in `public/data/rovers.json` is invented by this project. No mission,
+> catalogue or measurement stands behind any name, operator, mass, speed, position or route in it. It exists so
+> that the surface view has vehicles moving at a believable pace. It must never be presented as real, and it is
+> kept apart from every real dataset above: it is read only to draw and list the rovers, and it changes no other file.
+
+- **File:** `public/data/rovers.json` — 12 rovers beside 10 of the landing sites. The file opens with
+  `"simulated": true` and a note saying so, and every rover carries `"simulated": true`; the loader
+  (`src/data/rovers.ts`) refuses a file or a rover without it.
+- **The only real thing in it:** the landing each rover is placed beside (`siteId`, from dataset 1) and that
+  landing's country. The agencies named as `operator` are real organisations, but **none of them operates, has
+  announced or is associated with any of these rovers**; the names are there only so the rows look like the
+  landing list.
+- **Fields:** `id`, `name`, `siteId`, `country`, `operator`, `kind` (`robotic` or `crewed`), `role`, `massKg`,
+  `speedMps` (driving speed), `phaseS`, `lengthM` (one lap), `home` (first point of the path) and `path`.
+- **Routes:** `path` is a closed circuit of latitude/longitude points a few metres apart (same frame as
+  `landings.json`). The rover drives from point to point in straight lines at `speedMps`, and from the last point
+  back to the first. At a point with `stopS` it halts for that many seconds; `activity` says what for. The circuit
+  repeats without end from `epochUtc` (2026-01-01 00:00 UTC), and `phaseS` is how far into a lap the rover is at
+  that instant, so every clock time, past or future, gives a position. At one simulated second per real second a
+  rover covers `speedMps` metres each second.
+- **How it is made:** `scripts/build-rovers.mjs` holds the roster, written by hand. For each rover it picks a few
+  stations at random bearings and distances around a point near the lander, joins them with a smooth curve, samples
+  it every 2–14 m with a small sideways wobble, and gives each station a halt. The random numbers are seeded by the
+  rover's id, so re-running the script writes the same file. No route comes within 8 m of the lander.
+- **What was made to look plausible:** speeds are in the range of real vehicles — 0.05–0.4 m/s for the robotic
+  rovers (Yutu-2 drove at up to about 0.06 m/s, VIPER was designed for about 0.2 m/s) and 2.8 m/s, about 10 km/h,
+  for the one crewed vehicle (the Apollo Lunar Roving Vehicle averaged about 9 km/h). Robotic circuits are
+  130–730 m long and stay within 250 m of the lander; the crewed one is 3.3 km. A lap takes 0.8–3.5 hours.
+
+  | Site | Rovers (all invented) |
+  |---|---|
+  | IM-2 Athena | Prospector-1, Kestrel |
+  | IM-1 Odysseus | Malapert Relay Rover |
+  | Chandrayaan-3 | Anveshak-1 |
+  | Chang'e 4 | Tansuo-1 |
+  | Chang'e 6 | Tansuo-2 |
+  | Chang'e 3 | Guanghan |
+  | SLIM | Hayate |
+  | Blue Ghost Mission 1 | Juniper |
+  | Apollo 15 | Hadley Scout |
+  | Apollo 17 | Mule-2, LTV Pathfinder (crewed) |
+
+- **On screen:** the surface view (`src/scene/surface/rovers.ts`) draws each rover whose circuit starts within
+  5 km of the site with the model of dataset 13 scaled to a size worked out from its mass (a plain box on wheels
+  until the model has loaded), standing on the ground as drawn, with the label
+  "<name> · simulated rover" (and what it is doing while halted). They are part of the generated detail: the
+  **Generated detail** button hides them.
+- **On the globe** (`src/scene/globe/roverMarkers.ts`): shown and filtered with the landing markers, in amber.
+  From far away a site with rovers has a bold amber ring round its landing marker and, at the ring's upper right,
+  an amber badge with a small rover drawn on it and the number of rovers when there is more than one; both keep
+  their size on screen at every altitude. Within about 350 km the rovers are named under the ring ("Hayate ·
+  simulated rover"). The left panel carries a one-line key to these symbols. Once the circuits are wide enough on screen, each
+  is drawn as a line with the rover as an amber diamond on it, at its true position, moving, with its name. The
+  camera comes no closer than about 10 km, where a pixel is about 8 m, so circuits that stay within about 60 m of
+  the lander (Hayate, Anveshak-1) keep the ring at every zoom.
+- **In the site card:** the row "Rovers (simulated)" gives each rover's present distance and compass bearing from
+  the lander, whether it is driving or halted, and how far its circuit reaches — the ground to keep clear of.
+- **Their clock:** the rovers run on real time, not on the app's clock, so they always drive at their stated
+  speed and stand in the same place in every view. The app's clock usually runs at an hour a second or stands still; scrubbing it moves the Sun, not the
+  rovers.
+- **Limits:** routes ignore the terrain and may cross craters or slopes no rover would drive. They have nothing to
+  do with the real rovers at some of these sites (Yutu, Yutu-2, Pragyan, the Apollo LRVs), whose final positions
+  are in dataset 11. The rovers exist at every date, including before their site's landing.
+- **Checked by:** `src/data/rovers.test.ts` (labelling, sites, speeds, continuity of each circuit, and that a rover
+  never moves faster than its stated speed).
+
+## 13. Rover 3D model
+
+- **What it is:** "NASA Opportunity Rover", a 3D model by **clgreene86** on Sketchfab
+  (<https://sketchfab.com/3d-models/nasa-opportunity-rover-448474b302be4035baa2895878d6b29b>). An artist's model
+  of NASA's Mars rover Opportunity. **Not a NASA product and not lunar hardware.**
+- **Licence:** CC BY 4.0 (<http://creativecommons.org/licenses/by/4.0/>): the author must be credited and changes
+  stated. Credit as: *This work is based on "NASA Opportunity Rover" by clgreene86, licensed under CC-BY-4.0.*
+  The licence text as downloaded, with the changes added, is shipped beside the model in
+  `public/models/opportunity-rover/LICENSE.txt`, and the credit is shown in the surface view's ground note at any
+  site with rovers.
+- **Changes made** (`scripts/build-rover-model.mjs`): the two colour textures are resized from 2048 to 1024 pixels
+  and saved as JPEG; the two metal/roughness textures are left out. The geometry is unchanged (about 9,800
+  triangles). In the app it is drawn with plain diffuse shading and scaled to each rover's size.
+- **Used for:** the shape of every simulated rover (dataset 12) in the surface view, the crewed vehicle included.
+  It says nothing about what those invented rovers would look like: a Mars rover stands in for all of them.
+- **Not in the repo:** the original download (`nasa_opportunity_rover.zip`, 4.6 MB). To rebuild, download it from
+  the page above, unzip it, and run `npm run build-rover-model -- <folder>`.
+
 ## Colours
 
 Sites are coloured by the country their hardware belongs to: USA blue, Russia (USSR) red, China yellow, India
@@ -244,5 +332,8 @@ Shown in the surface view and switched off by the **Generated detail** button:
 - rocks and boulders;
 - sub-metre surface texture and tone variation (dataset 10);
 - at the 9 sites without high-resolution terrain, small craters and bumps within about 770 m of the landing point.
+
+- the **simulated rovers** (section 12): their names, positions and routes are invented. Each carries the label
+  "simulated rover" on screen.
 
 The surface view's note states which kind of ground the viewer is on at each site.

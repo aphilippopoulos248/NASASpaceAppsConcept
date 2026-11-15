@@ -16,6 +16,7 @@ import { throttle } from '../../core/throttle';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
+import { buildTrack, describeRovers, roverNowMs, simulatedRovers, type RoverTrack } from '../../data/rovers';
 import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapUrl, trekUrl } from '../../data/landings';
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
@@ -94,7 +95,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const body = el('div', 'sc-body');
   body.id = bodyId;
 
-  const facts = factList('sc-facts', [['date', 'Landed'], ['country', 'Belongs to'], ['owner', 'Owner'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['area', 'Explored'], ['elevation', 'Elevation'], ['coverage', 'Elevation data']]);
+  const facts = factList('sc-facts', [['date', 'Landed'], ['country', 'Belongs to'], ['owner', 'Owner'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['area', 'Explored'], ['rovers', 'Rovers (simulated)'], ['elevation', 'Elevation'], ['coverage', 'Elevation data']]);
   facts.rows.coverage.dd.classList.add('sc-oneline');
   const areaNote = el('p', 'ly-note sc-area-note');
   const mismatch = el('p', 'sc-mismatch');
@@ -379,6 +380,23 @@ export function mountSiteCard(region: HTMLElement): void {
     mismatch.hidden = !labelDisagrees(l.country, o);
     mismatch.textContent = `Check: this site's own data says "${l.country}", but the GCAT catalogue records ${o.stateFullName ?? o.state}.`;
   };
+  // SIMULATED rovers beside the site (not data): where each is now, for keeping clear of them.
+  let roverTracks: RoverTrack[] = [];
+  void simulatedRovers().then((file) => {
+    if (!file) return;
+    const byId = new Map(getLandings().map((l) => [l.id, l]));
+    roverTracks = file.rovers.flatMap((r) => (byId.has(r.siteId) ? [buildTrack(r, byId.get(r.siteId)!, file.epochMs)] : []));
+    render();
+  });
+  const renderRovers = (l: Landing | undefined) => {
+    const here = l ? roverTracks.filter((t) => t.rover.siteId === l.id) : [];
+    facts.set('rovers', here.length ? describeRovers(here, roverNowMs()) : null);
+    facts.rows.rovers.dd.title = 'Invented for this simulation, not real vehicles. Positions are for the present moment (real time), not the simulated clock.';
+  };
+  // They move: keep the line current while a site with rovers is open.
+  setInterval(() => {
+    if (!card.hidden && !facts.rows.rovers.dd.hidden) renderRovers(currentLanding());
+  }, 5000);
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
     facts.set('area', !l ? null : area ? describeExtent(area) : '—');
@@ -410,6 +428,7 @@ export function mountSiteCard(region: HTMLElement): void {
     facts.set('region', l?.region ?? null);
     facts.set('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}; longitude east-positive`);
     renderArea(l);
+    renderRovers(l);
     renderCredit(site);
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';

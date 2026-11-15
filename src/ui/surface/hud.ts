@@ -39,7 +39,7 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   });
   paths.title = 'Dotted tracks of the Sun and Earth over the mission window, and their name labels';
   const generated = button('Generated detail', 'ly-btn ly-btn--small', () => void runAction('setGeneratedDetail', { on: !view.generated }));
-  generated.title = 'Rocks, sub-metre texture and (where no survey exists) small craters: generated, not measured';
+  generated.title = 'Rocks, sub-metre texture, (where no survey exists) small craters and the simulated rovers: generated, not measured';
   const chart = button('Skyline chart', 'ly-btn ly-btn--small', () => void runAction('setChart', { show: hudState().chart === 'hidden' }));
   chart.title = 'The terrain skyline around the site with the Sun and Earth over the mission window';
   const home = button('Return to site', 'ly-btn ly-btn--small', () => void runAction('walkTo', { eastM: 0, northM: 0 }));

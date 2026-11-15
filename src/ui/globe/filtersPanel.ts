@@ -219,7 +219,9 @@ export function mountFiltersPanel(region: HTMLElement): void {
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, territories, flags, missions);
+  // Key to the amber symbols (src/scene/globe/roverMarkers.ts): they are invented, and must say so.
+  const roversKey = el('p', 'ly-note fp-rovers', 'Amber ring and rover badge: simulated rovers beside a landing (invented, not real). Zoom in for their routes; the site card lists where each is.');
+  panel.append(show, territories, flags, roversKey, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
