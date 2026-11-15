@@ -149,7 +149,12 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   // of the latitude asked for. Fixed upstream (original T-43, a59162f); kept as a regression test.
   test('typing coordinates centres the view exactly on them', SLOW, async () => {
     assert.ok(typedCentre, 'the previous test did not run');
-    assert.ok(Math.abs(typedCentre.lat - -88) < 0.001, `typed latitude -88, the view is centred on ${typedCentre.lat.toFixed(4)}`);
+    assert.ok(Math.abs(typedCentre.lat - -88) < 1e-4 && Math.abs(typedCentre.lon - 136.7) < 1e-4, `typed -88, 136.7; the view is centred on ${typedCentre.lat.toFixed(5)}, ${typedCentre.lon.toFixed(5)}`);
+    // The fields ran setGlobeCamera; none of those reported a view centred elsewhere (centredLatDeg
+    // appears only when the latitude asked for cannot be the centre, within 0.1° of a pole).
+    const cams = await page.evaluate(() => window.lunyx.actions.actionLog().filter((e) => e.name === 'setGlobeCamera' && e.origin === 'ui').map((e) => e.result ?? null).slice(-2));
+    assert.equal(cams.length, 2, 'the latitude and the longitude field each ran setGlobeCamera');
+    assert.ok(cams.every((r) => r && r.centredLatDeg === undefined && r.target?.latDeg === -88), JSON.stringify(cams));
   });
 
   test('search criteria in the compare panel reach the app state, and the pin is saved as A', SLOW, async () => {

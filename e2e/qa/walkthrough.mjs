@@ -1031,6 +1031,14 @@ try {
       if (mine.has('surface')) await partSurface(app, step);
       if (mine.has('assistant')) await partAssistant(app, step);
       if (mine.has('extras')) await partExtras(app, step);
+      await step('Elevation downloads (T-40, Q-6): every .lxg file arrived, nothing "could not be loaded"', 'control', async ({ check, note }) => {
+        const failed = app.diag.failed.filter((f) => /\.lxg\b/.test(f.url));
+        const said = await page.evaluate(() => (document.body.innerText.match(/[^.\n]*could not be loaded[^.\n]*/gi) ?? []).slice(0, 5));
+        const logged = app.diag.console.filter((c) => /could not be loaded/i.test(c.text));
+        check('No elevation file failed to download', failed.map((f) => `${f.url.split('/').pop()} ${f.error}`).join(', ') || 'none', 'none', failed.length === 0, { finding: 'Q-6' });
+        check('Nothing on screen says "could not be loaded"', said.join(' | ') || 'none', 'none', said.length === 0, { finding: 'Q-6' });
+        if (logged.length) note(`Console: ${logged.map((c) => c.text).join(' | ').slice(0, 400)}`);
+      });
     } catch (err) {
       log(`walk aborted: ${err?.stack ?? err}`);
       pr.aborted = String(err?.message ?? err);
