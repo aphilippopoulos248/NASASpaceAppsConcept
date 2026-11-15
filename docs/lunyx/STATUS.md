@@ -1,8 +1,9 @@
 # Lunyx status
 
 Kept by the coordinator of the original hub project `lunyx`. Last updated 2026-11-15
-06:50 UTC, for release candidate **RC `41be074`** (decision D-15). The published head `06f6f74`
-adds documentation only on top of it. The RC holds:
+09:40 UTC, for release candidate **RC `bce6816`** (decisions D-15 and D-16). It is the earlier RC
+`41be074` plus the fix for the nearby-scan settings (T-56, Q-7), with its regression test enabled.
+The RC holds:
 - the navigator, with both ends of each sunrise and sunset on every screen;
 - the finer polar skyline;
 - the assistant work, browser tests and documents of the `lunyx-experience` project;
@@ -65,6 +66,7 @@ Two rounds of independent end-to-end validation and the `lunyx-science` validati
 
 | Claim | Checked against | Result |
 | --- | --- | --- |
+| Release candidate `bce6816` (D-16): the nearby-scan settings fix (T-56, Q-7) on top of `41be074` | `fcc5482` (the fix on `ce09c48`; the same app code as the RC); `2425d14` (the RC's tree); a review of each merge; lunyx-standby's redraw-path regression on `2425d14` | `npm test`: 995 passed, 6 skipped; science checks 10/10. GPU smoke 18/18. The operator's scenario in GPU Chromium: Radius 900 and Spacing 150 keep their values through "Slope at most" 30, the scan uses 900/150/30, and its summary reads "within 900 m, every 150 m, slope at most 30°". The e2e flow file passes 16/16 with the Q-7 test enabled. lunyx-standby's regression passes 26/26 on every redraw path: requirements, mast, delay, window, site, tab, drawer, a scan in progress and emptied fields. Owner review (@analysis): ok. The app change over `41be074` is only `nearbyTab.ts` plus the new `scanSettings.ts` and its test |
 | Release candidate `41be074` as a whole (D-15) | One full `npm test` and GPU runs on trees whose app code equals the RC's (the RC adds only `README.md` lines over `a47fe1f`; its app code equals `lunyx-experience`'s `649fc4e`); a fresh clone from GitHub at the RC | `npm test`: 946 passed, 6 skipped; science checks 10/10. GPU smoke 18/18. Browser suites on the GPU: flow 15 pass and 1 todo (Q-7, deferred), accessibility 15/15, assistant 17/17, equivalence 29 pass and 1 todo, control 134/134, scenario 11/11. Desktop release walkthrough with real controls: 41/41 steps and 247/247 checks at 1280x720, the same at 1920x1080, with no failed request or console error (`lunyx-experience` T-8). The fresh clone passed every README step: install, development server, build and preview. Offline with no key it opened Apollo 11 and IM-2 on the globe and in the surface view, and the assistant answered in its labelled deterministic mode (`lunyx-standby` T-6). Nothing here involves a real language model |
 | Sun/Earth azimuth and elevation | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035, fetched independently of the model's author | Worst difference 0.0036 deg. After 2035 the error grows (0.006 deg in 2060, 0.021 deg in 2099) because predictions of Earth's rotation differ |
 | Skyline geometry | Analytic cases (smooth sphere, ridge, bowl), Apollo 15 against published heights of Mons Hadley and Hadley Delta | Within the tolerances in `docs/lunyx/validation.md` section 3 |
@@ -87,12 +89,6 @@ Two rounds of independent end-to-end validation and the `lunyx-science` validati
 
 ## 5. Limits that affect how results should be read
 
-- **Known defect, deferred (operator decision D-14, task T-56).** In the compare panel's Nearby sites
-  tab, a Radius or Spacing typed before a scan is put back to the last scan's value when any
-  requirement changes (slope limit, solar band, Earth gap). The scan then uses the restored value,
-  not the one that was typed. Its summary names the radius it used ("within 2.0 km"), so check that line,
-  or type the radius again after changing a requirement. A fix has been written but not verified or
-  integrated: `8c58f49`, kept on `am/lunyx-standby/integration` at `46ce096`.
 - **Known defect, low (Q-8, found by the RC walkthrough).** After a nearby scan started from somewhere
   other than the tab's own button (for example by the assistant's `rankNearby`), the Nearby sites
   tab can keep an old green status line such as "Candidate 1 is pinned and loaded as B" above the
