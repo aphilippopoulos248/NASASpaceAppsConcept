@@ -8,7 +8,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
 import { iceTargetLayer } from '../../science/siteScience';
-import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
+import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
 import { MOON_RADIUS_KM, MOON_RADIUS_M, SiteRef, wrapLon } from '../../core/types';
@@ -31,6 +31,7 @@ import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { effectiveRelief } from './reliefTiles';
+import { handleGlobeKey } from './globeKeys';
 import { flyDirection } from './flyTarget';
 import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
@@ -56,7 +57,8 @@ export class GlobeView {
   private sitePatch: SitePatch | null = null;
   private patchSiteId = '';
   private readonly pin = new Group();
-  private fly: { dir: Vector3; dist: number; done: (() => void)[] } | null = null;
+  /** The flight under way: where to, and the point asked for (the keyboard steps on from it). */
+  private fly: { dir: Vector3; dist: number; done: (() => void)[]; asked: { lat: number; lon: number } } | null = null;
   private readonly camDir = new Vector3();
   private readonly axis = new Vector3();
   private readonly right = new Vector3();
@@ -145,29 +147,26 @@ export class GlobeView {
   }
 
   /** Keyboard on the focused globe: arrows turn, +/- zoom, Enter drops a pin at the centre. */
+  /** Keyboard on the focused globe: arrows turn, +/- zoom, Enter drops a pin at the centre (globeKeys.ts). */
   private bindKeyboard(): void {
     this.canvas.addEventListener('keydown', (e) => {
       if (!this.active) return;
-      const c = store.get().globeCenter;
-      // Turn by about a tenth of the visible width.
-      const stepDeg = Math.min(20, Math.max(0.02, (c.altitudeKm / MOON_RADIUS_KM) * 12));
-      let lat = c.lat, lon = c.lon, alt = c.altitudeKm;
-      switch (e.key) {
-        case 'ArrowUp': lat = Math.min(89, lat + stepDeg); break;
-        case 'ArrowDown': lat = Math.max(-89, lat - stepDeg); break;
-        case 'ArrowLeft': lon = wrapLon(lon - stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
-        case 'ArrowRight': lon = wrapLon(lon + stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
-        case '+': case '=': alt = Math.max(MIN_ALTITUDE_KM, alt / 1.5); break;
-        case '-': case '_': alt = Math.min(MAX_ALTITUDE_KM, alt * 1.5); break;
-        case 'Enter':
-          e.preventDefault();
-          void runAction('dropPin', { lat: round5(c.lat), lon: round5(c.lon) });
-          return;
-        default: return;
-      }
+      const used = handleGlobeKey(e.key, {
+        // Step from where the globe is going, so presses within one drawn frame add up (F-7).
+        pose: () => {
+          const f = this.fly;
+          return f ? { lat: f.asked.lat, lon: f.asked.lon, altitudeKm: (f.dist - 1) * MOON_RADIUS_KM } : store.get().globeCenter;
+        },
+        go: (to) => void runAction('setGlobeCamera', { lat: to.lat, lon: to.lon, altitudeKm: to.altitudeKm }),
+        pin: () => {
+          const p = globeDisplay.getLive().viewTarget ?? store.get().globeCenter;
+          void runAction('dropPin', { lat: round5(p.lat), lon: round5(p.lon) });
+        },
+      });
+      if (!used) return;
       e.preventDefault();
-      e.stopPropagation();
-      void runAction('setGlobeCamera', { lat, lon, altitudeKm: alt });
+      // The arrows are the globe's here, not the site card's (Earlier / Later).
+      if (e.key !== 'Enter') e.stopPropagation();
     });
   }
 
@@ -353,8 +352,9 @@ export class GlobeView {
     // Exactly over the point asked for; only right over a pole it stops 0.1 degree short (flyTarget.ts).
     const d = flyDirection(dir, this.camera.position);
     const waiting = this.fly?.done ?? [];
-    this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting };
-    globeDisplay.setLive({ viewTarget: asked ?? vec3ToLatLon(dir), flying: true });
+    const target = asked ?? vec3ToLatLon(dir);
+    this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting, asked: target };
+    globeDisplay.setLive({ viewTarget: target, flying: true });
   }
 
   private stepFly(dt: number): void {
