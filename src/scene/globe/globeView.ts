@@ -16,6 +16,7 @@ import type { MoonGeometry } from '../../astro/ephemeris';
 import { getLandings } from '../../data/catalog';
 import { landingColor, latLonToVec3 } from '../../data/landings';
 import { loadOwnership } from '../../data/ownership';
+import { roverNowMs, simulatedRovers } from '../../data/rovers';
 import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
@@ -30,6 +31,7 @@ import { IceOutlines } from './iceOutlines';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
+import { RoverMarkers } from './roverMarkers';
 import { effectiveRelief } from './reliefTiles';
 import { handleGlobeKey } from './globeKeys';
 import { flyDirection } from './flyTarget';
@@ -55,6 +57,8 @@ export class GlobeView {
   readonly controls: OrbitControls;
   private readonly sky = new Sky();
   private markers: Markers | null = null;
+  /** SIMULATED rovers beside some landings (not data): shown and filtered with the landing markers. */
+  private rovers: RoverMarkers | null = null;
   private sitePatch: SitePatch | null = null;
   private patchSiteId = '';
   private readonly pin = new Group();
@@ -198,6 +202,7 @@ export class GlobeView {
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
     void this.loadMissionLayers(this.markers);
+    void this.loadRovers();
     const s = store.get();
     this.applyFilter();
     this.applySite(s.site);
@@ -218,10 +223,21 @@ export class GlobeView {
     this.placed.version = -1; // place them with the markers
   }
 
+  private async loadRovers(): Promise<void> {
+    const file = await simulatedRovers();
+    if (!file) return;
+    this.rovers = new RoverMarkers(file, getLandings());
+    this.scene.add(this.rovers.root);
+    this.applyFilter();
+    this.applyMissions();
+    this.placed.version = -1; // place them with the markers
+  }
+
   /** Markers, the country territories and flags show together; flags only when also asked for. */
   private applyMissions(): void {
     const { showMissions, showFlags } = store.get();
     if (this.markers) this.markers.root.visible = showMissions;
+    if (this.rovers) this.rovers.root.visible = showMissions;
     this.applyFeatures();
     this.flags?.setEnabled(showMissions && showFlags);
     setTerritories(this.uniforms, showMissions ? this.visibleMarkers.map((m) => m.landing) : []);
@@ -307,6 +323,7 @@ export class GlobeView {
   private applyFilter(): void {
     const f = missionFilter.get();
     this.markers?.setFilter((l) => matchesFilter(f, l));
+    this.rovers?.setFilter((l) => matchesFilter(f, l));
     // The Moon is divided among the sites shown: hiding a site hands its ground to its neighbours.
     setTerritories(this.uniforms, this.visibleMarkers.map((m) => m.landing));
   }
@@ -428,6 +445,7 @@ export class GlobeView {
     this.updateRelief(altNow * MOON_RADIUS_KM);
     this.uniforms.uTerrFill.value = territoryFill(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
+    if (this.rovers?.root.visible) this.rovers.update(cam, roverNowMs(), this.renderer.domElement.clientHeight);
     this.flags?.update(cam, nowSec, this.sky.litDirection);
     if (this.coverage?.root.visible) this.coverage.update(cam);
     if (this.ice?.root.visible) this.ice.update(cam);
@@ -469,6 +487,7 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
+      this.rovers?.place((l) => this.surfaceRadius(l.lat, l.lon));
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);

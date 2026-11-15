@@ -1,0 +1,13 @@
+Model Information:
+* title:	NASA Opportunity Rover
+* source:	https://sketchfab.com/3d-models/nasa-opportunity-rover-448474b302be4035baa2895878d6b29b
+* author:	clgreene86 (https://sketchfab.com/clgreene86)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "NASA Opportunity Rover" (https://sketchfab.com/3d-models/nasa-opportunity-rover-448474b302be4035baa2895878d6b29b) by clgreene86 (https://sketchfab.com/clgreene86) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+
+Changes made for this project: Colour textures resized to 1024 px and saved as JPEG; metal/roughness textures removed. Geometry unchanged. See scripts/build-rover-model.mjs.
