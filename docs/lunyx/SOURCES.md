@@ -5,9 +5,9 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `caf4ce7`: `am/lunyx-experience/integration` at `895c026`
-  (the same tree as the published `0cc5553`) merged with `am/lunyx/integration` at `27b0f30`
-  (T-37: licence notices in the site, the ice-target DOI fix), plus this task's documents. Since the
+- **State described:** the tree at `51552b6`: `am/lunyx-experience/integration` at `2f7e813`
+  merged with `am/lunyx/integration` at `102cef8` (T-37: licence notices and the DOI fix; T-38:
+  a source for every landing), plus this task's documents. Since the
   earlier published `cc736f8`, `public/` gained only `public/data/sources/` (S18 to S20),
   `package.json` gained the scripts `fetch-gcat` and `fetch-site-areas`, and the lockfile is
   unchanged.
@@ -85,7 +85,7 @@ says so.
 | S13 | Ice-bearing permanently shaded regions (Lemelin et al. 2021) | `public/data/ice-targets/lemelin2021-psr.geojson` | 0.24 MB | **CC BY 4.0** (Zenodo record) | Shown in the Filters panel: "Lemelin et al. 2021 (Zenodo 4646092), CC BY 4.0" |
 | S14 | Diviner annual maximum and annual mean temperature (Schorghofer and Williams) | `public/data/science/diviner/*.lxg` (4), `index.json` | 9.55 MB | **CC0 1.0** (Harvard Dataverse record) | Site card, "Surface temperature (Diviner, annual)", under "Source and limits": the citation and "Licence: CC0 1.0 …"; also in every result's basis text |
 | S15 | ShadowCam controlled-mosaic index (links and footprints, no imagery) | `public/data/science/shadowcam/{index.json,shadowcam_coverage.lxg}` | 0.13 MB | Not stated: the bundle label carries citation information only (checked again 2026-11-15) | Site card, ShadowCam links, under "Credit and terms": the index's credit note and citations; links only |
-| S16 | Catalogue of the 28 landings | `public/data/landings.json` | 8.2 kB | **Not established**: no source is recorded for any entry (open list L3) | None |
+| S16 | Catalogue of the 28 landings | `public/data/landings.json` | 17.0 kB | Facts with a cited source per row since T-38: LROC positions (S19) and published touchdown times | `sources` field of each row |
 | S17 | List of LROC NAC products near each site | `scripts/nac-dtm-candidates.json` | 12.1 kB | Built from the PDS archive's file listing (as S4) | — |
 | S18 | Who owns the hardware at each landing (GCAT) | `public/data/sources/gcat-landers.json` | 13.1 kB | **CC BY 4.0** (GCAT's copyright notice) | Site card: "source: GCAT" with a link and the catalogue id; surface view: "(GCAT)" |
 | S19 | LROC catalogue of hardware positions on the Moon | `public/data/sources/lroc-anthropogenic-objects.csv` | 21.0 kB | As S4 (public domain as a PDS product) | Recorded in `site-areas.json`; not shown on screen |
@@ -332,15 +332,25 @@ any AI tool made them are not established (open list L2).**
 
 `public/data/landings.json`: 28 successful soft landings, 1966 to 2025, with name, programme,
 country, date, touchdown time (UTC), latitude, longitude, region, a one-sentence summary and an
-`approx` flag. It arrived in the teammate's first commit (`4ab3892`, which carries a "Co-Authored-By:
-Claude Fable 5.2" trailer) and has not changed since. The file names no source for any value.
-The teammate's data-sources note (`docs/DATA_SOURCES.md`) says the list was
-"entered by hand during development from general knowledge, **not** copied from a single
-published source", that only Apollo 11's coordinates were checked (against NASA's NSSDCA
-record), and that landing times were not checked against a published source. None of the
-validation records (`docs/lunyx/validation.md`, T-26) checks these coordinates. Whether the
-values and summaries were typed by a person or produced by the AI model is not recorded (open
-list L3, and AI-USE.md section 4).
+`approx` flag. It arrived in the teammate's first commit (`4ab3892`, "Co-Authored-By: Claude Fable
+5.2") without any source. The original team's task T-38 (`ab228cf`, 2026-11-15) added a
+`sources.position` and a `sources.time` to every row:
+
+- **Positions:** 26 are the lander's measured position in LROC's catalogue of anthropogenic
+  objects (S19; Wagner et al. 2017), with the catalogue's method and uncertainty; for Apollo, the
+  descent stage. Luna 9 and Luna 13 have not been found in LRO images and keep the NSSDCA
+  positions, marked approximate (uncertain by kilometres). The move to LROC's positions shifted
+  IM-2 by 22 m, Blue Ghost 1 by 8 m and Chang'e 4 by 417 m (`docs/lunyx/validation.md`).
+- **Times:** NSSDCA pages, Siddiqi, *Beyond Earth* (NASA SP-2018-4041, 2018), CNSA/Xinhua, ISRO,
+  JAXA, NASA, Firefly and LROC, quoted per row. Three times are listed in the row's `unsourced`
+  field because no checked source confirms them to the minute shown: Luna 23's time of day,
+  Chandrayaan-3's minute and IM-2's minute.
+- **Checked here (2026-11-15):** all 26 LROC-sourced positions equal the bundled LROC table to
+  within 0.00005°; the NSSDCA entries cited for Luna 9 (18:44:52 UT; 7.08 N, 295.63 E) and
+  Surveyor 1 (06:17:36 UT) read the same at the source. The other cited times were not re-read.
+- `public/data/horizons-check.json` (S11) was refreshed for the one corrected time (Luna 17).
+- **Not established:** who wrote the one-sentence summaries, and whether the AI model supplied
+  any of the original values before T-38 replaced them (open list L3).
 
 ## 4. Fetched at run time (not stored in the repository)
 
@@ -535,12 +545,12 @@ entry by entry. The note is the teammate's and was not edited.
 
 | Entry in DATA_SOURCES.md | Here | Agrees | Differs or adds |
 | --- | --- | --- | --- |
-| 1. Landing list | S16 | Yes: "entered by hand during development from general knowledge"; only Apollo 11 checked | Adds that the file records no source and that its AI status is not established (L3) |
+| 1. Landing list | S16 | Yes: since `c023022` its section 1 describes the per-row sources added by T-38 | Adds the verification of the 26 LROC positions and that the summaries' origin is not established (L3) |
 | 2. Ownership record (GCAT) | S18 | Yes: CC BY 4.0, checked at planet4589.org | Adds GCAT's own citation wording |
 | 3. Globe colour and relief | S6, S7 | Yes: `lroc_color_poles_8k.tif`, `ldem_16_uint.tif`, `LDEM_64.IMG` from the MIT mirror, relief ×4 | Quotes the SVS and NASA usage statements instead of a summary |
 | 4. Earth texture | S8 | Yes: SVS 2915, cloud-free | Adds the credit line SVS asks for |
 | 5. Site imagery tiles | R1 | Yes: the two layers and the on-screen credit | Its "To check before public release: JAXA's reuse terms" is answered from Moon Trek's metadata (scientific and educational use; L6) |
-| 6. Terrain around each site | S3 | Yes: products, 129 × 129 grids at 60 m and 480 m | Its archive link `…/lro/lro-l-lroc-5-rdr-v1/lrolol_1xxx/data/` answers HTTP 404; the archive is `…/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/` |
+| 6. Terrain around each site | S3 | Yes: products, 129 × 129 grids at 60 m and 480 m | Its archive link used to answer HTTP 404; `c023022` corrected it to the LOLA archive |
 | 7. High-resolution site terrain | S4 | Yes: release `LROLRC_2001`, 19 sites, credit NASA/GSFC/ASU | Adds the LROC terms (PDS products are public domain) and the citations |
 | 8. Photo-derived relief | S5 | Yes | — |
 | 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |

@@ -178,8 +178,12 @@ the data and its own code, not from the app's code. They are not a NASA or peer 
 | Longest darkness and Earth gap followed past the window edge | Same, at IM-2, Chandrayaan-3 and Apollo 11 | Ends within 3.1 min |
 | Slope | An independent recomputation at the 28 sites and 10 scan candidates | Identical. But a slope measured over 120 m on a 60 m grid cannot see lander-scale tilt: Surveyor 3 is published at 14°, the app gives 12.5° over 10 m on the 3 m model and 3.7° over 120 m; Apollo 14: 7° published, 7.2° against 1.3° |
 | Surface view picture | — | Checked by eye in software-rendered headless Chromium only; full settings at a polar site have not been seen on a real GPU |
-| Landing catalogue positions and times | — | **Not checked**; the teammate's note says only Apollo 11's position was compared with a published record (see SOURCES.md, S16) |
+| Landing positions and touchdown times | LROC's measured lander positions and published times (NSSDCA, Siddiqi 2018, the space agencies, Firefly), task T-38 | Every row now names its sources (SOURCES.md, S16). Luna 9 and Luna 13 have not been found in LRO images: approximate, uncertain by kilometres. Three times are not confirmed to the minute shown: Luna 23's time of day, Chandrayaan-3's and IM-2's minutes |
 | Assistant with a real language model; the Jev router | — | **Never run** (see [The assistant](#the-assistant)) |
+
+The figures above were computed at the catalogue positions used before T-38 moved the landers to
+LROC's measured positions (IM-2 by 22 m, Blue Ghost 1 by 8 m, Chang'e 4 by 417 m). At IM-2 the
+change is 0.1 point of sunlight and 0.2 h of darkness (validation.md).
 
 **Sunset means "Sun fully set".** Wherever the app reports a sunset or sunrise it means the
 instant the last of the Sun's disc goes behind the terrain (or the first of it appears).
@@ -259,8 +263,9 @@ centre.
 - **Generated detail.** In the surface view, rocks, small craters and sub-metre texture are
   generated, not measured, and labelled as such; a switch turns them off. The stars behind
   the globe are decoration, not a star map.
-- **Landing catalogue.** The 28 positions and touchdown times have no recorded source yet;
-  only Apollo 11's position was compared with a published record.
+- **Landing catalogue.** Every landing names the source of its position and time. Luna 9 and
+  Luna 13 are approximate (not found in LRO images), and three touchdown times are not confirmed
+  to the minute shown (Luna 23, Chandrayaan-3, IM-2).
 - **Ownership, areas and flags.** "Belongs to" is the state responsible for the hardware in the
   GCAT catalogue (USSR hardware is shown as Russia); no country owns lunar ground. Explored
   areas are drawn ten times larger than true size on the globe so they can be seen; the card
