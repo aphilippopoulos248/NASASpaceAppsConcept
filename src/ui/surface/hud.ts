@@ -54,7 +54,7 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const body = el('div', 'sh-body ly-note');
   more.append(summary, body);
   // Row 3: who the hardware at this site belongs to (filled in by syncOwner below).
-  const owner = el('p', 'sh-owner');
+  const owner = el('p', 'ly-note sh-owner');
   hud.append(head, ground, owner, more);
   region.append(hud);
 
