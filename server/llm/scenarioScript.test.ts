@@ -66,7 +66,7 @@ describe('scripted test model, scenario script', () => {
     const { pick, reference } = pickCandidate(scan[0].result) as { pick: Row; reference: Row };
     expect(pick.id).toBe('cand-2');
     let r = reply(s);
-    expect(r.source).toEqual({ kind: 'model', label: 'Scripted test model (not a language model)' });
+    expect(r.source).toEqual({ kind: 'model', label: 'Scripted test model (not a language model)', provider: 'scripted' });
     for (const x of [pick.slopeDeg, reference.slopeDeg, pick.longestDarknessH, reference.longestDarknessH, pick.illuminationPct, pick.earthVisiblePct]) expect(r.text).toContain(String(x));
     expect(state.site?.id).toBe('im-2');
 

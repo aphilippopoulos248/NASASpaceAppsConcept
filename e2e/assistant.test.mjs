@@ -158,7 +158,7 @@ describe('assistant: scripted test model through the real /api/assistant route',
 
   test('a chain of tool calls changes the app and every result returns to the model', SLOW, async () => {
     const reply = await ask(page, 'call selectSite {"site":"Apollo 11"}; call setTime {"utc":"1969-07-20T20:17Z"}; call setMastHeight {"metres":5}');
-    assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL });
+    assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL, provider: 'scripted' });
     assert.equal(reply.shownLabel, SCRIPTED_LABEL);
     assert.deepEqual(reply.actions.map((a) => [a.name, a.ok, a.origin]), [['selectSite', true, 'assistant'], ['setTime', true, 'assistant'], ['setMastHeight', true, 'assistant']]);
     const s = await state(page);

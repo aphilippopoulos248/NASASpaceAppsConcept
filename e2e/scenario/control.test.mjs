@@ -427,7 +427,7 @@ describe('control: every action through the scripted model and the real route', 
       const reply = await send(page, `call ${c.name}${c.params ? ` ${JSON.stringify(c.params)}` : ''}`);
       // clearConversation empties the drawer once the turn is over, reply included.
       const cleared = c.name === 'clearConversation';
-      if (!cleared) assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL });
+      if (!cleared) assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL, provider: 'scripted' });
       const entry = reply.entries.find((e) => e.name === c.name && e.origin === 'assistant');
       assert.ok(entry, `the model's call did not reach the registry: ${JSON.stringify(reply.entries.map((e) => e.name))}`);
       assert.ok(entry.ok, `${c.name} failed: ${entry.error}`);

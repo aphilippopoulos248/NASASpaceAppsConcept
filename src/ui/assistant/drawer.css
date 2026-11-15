@@ -137,6 +137,8 @@
 .ad-mic[hidden], .ad-send[hidden], .ad-stop[hidden] { display: none; }
 .ad-mic.is-listening { color: var(--danger); border-color: var(--danger); background: rgba(255, 143, 133, 0.12); }
 .ad-voice-note:empty { display: none; }
+/* The standing note under the message box: always shown, small, never over the conversation. */
+.ad-disclaimer { margin: 0; }
 
 @media (max-width: 700px) {
   .assistant-drawer { width: 100vw; border-left: 0; }
