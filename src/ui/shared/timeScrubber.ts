@@ -4,15 +4,18 @@
 // jump-to-event buttons. Every control is an action (jumpToEvent is in core/coreActions.ts).
 //
 // A rise or a set is not one moment (decision D-8), so no mark, button or tooltip here names a
-// "sunset" with a time on its own: each says which instant it is ("Sun fully set"), in the
-// words of core/skyEvents.ts, which the actions use too.
+// "sunset" with a time on its own: each says which instant it is ("Sun starts setting", "Sun
+// fully set"), in the words of core/skyEvents.ts and the science core, which the actions use too.
+// The marks show each passage of a disc through the skyline as a span, not a tick, and the jump
+// buttons go to each end of it in turn.
+import { eventText, transitionText } from '../../analysis/api';
 import type { SiteAnalysis, SkyEvent } from '../../analysis/types';
 import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { RATE_PRESETS } from '../../core/coreActions';
 import { moonPhaseAt, moonPhaseDetail, moonPhaseText } from '../../core/moonPhase';
 import { effectiveStartMs, spanText } from '../../core/scenario';
-import { eclipseSpans, eclipseText, EVENT_INFO, EVENT_TYPES, findEvent } from '../../core/skyEvents';
+import { eclipseSpans, eclipseText, EVENT_INFO, EVENT_TYPES, nextInstantOfType } from '../../core/skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, store } from '../../core/store';
 import { throttle } from '../../core/throttle';
 import { formatUtc, isoUtc } from '../../core/time';
@@ -104,8 +107,13 @@ export function mountTimeScrubber(region: HTMLElement): void {
   const jumps = el('div', 'ts-jumps');
   jumps.setAttribute('role', 'group');
   jumps.setAttribute('aria-label', 'Jump to the next rise or set');
+  // One button per kind of event; it goes to the next end of that event's passages in turn
+  // ("Sun starts setting", then "Sun fully set"), and its label says which.
   const jumpButtons = EVENTS.map((e) => {
-    const b = button(`${e.glyph} ${e.label}`, `ly-btn ly-btn--small ts-jump ts-${e.body}`, () => void runAction('jumpToEvent', { type: e.type }));
+    const b = button(`${e.glyph} ${e.label}`, `ly-btn ly-btn--small ts-jump ts-${e.body}`, () => {
+      const next = events && nextInstantOfType(events, e.type, store.get().timeMs);
+      if (next) void runAction('jumpToEvent', { type: e.type, instant: next.choice });
+    });
     jumps.append(b);
     return { ...e, button: b };
   });
@@ -126,11 +134,13 @@ export function mountTimeScrubber(region: HTMLElement): void {
     if (!events) return;
     const t = store.get().timeMs;
     for (const j of jumpButtons) {
-      const next = findEvent(events, j.type, 'next', t);
+      const next = nextInstantOfType(events, j.type, t);
       j.button.disabled = !next;
+      const label = next ? next.label : j.label;
+      if (j.button.textContent !== `${j.glyph} ${label}`) j.button.textContent = `${j.glyph} ${label}`;
       const text = next
-        ? `Jump to ${formatUtc(next.timeMs)}: ${j.label} (${j.instant})`
-        : `${j.label}: not after the simulated time inside the mission window (${j.instant})`;
+        ? `Jump to ${formatUtc(next.timeMs)}: ${next.label} (${next.instant})${next.inWindow ? '' : ', just outside the analysed window'}. ${eventText(next.event)}`
+        : `${j.label}: no ${j.name.toLowerCase()} after the simulated time inside the mission window (${j.instant})`;
       j.button.setAttribute('aria-label', text);
       j.button.title = text;
     }
@@ -167,7 +177,10 @@ export function mountTimeScrubber(region: HTMLElement): void {
     const eclipseLine = eclipses.length ? ` ${eclipseText(eclipses)}` : '';
     jumps.hidden = events === null || none;
     eventNote.hidden = events !== null && !none;
-    eventNote.textContent = 'reason' in ev ? ev.reason : none ? `Neither the Sun nor Earth's centre rises or sets in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).${eclipseLine}` : '';
+    // Passages of a disc through the skyline in the window: sets and rises, and grazes and peeks, which have no event.
+    const passes = 'analysis' in ev ? (ev.analysis.transitions ?? []).filter((tr) => tr.end.timeMs > start && tr.start.timeMs < start + span) : [];
+    const touches = none && passes.length ? ` ${passes.map((tr) => transitionText(tr)).join(' ')}` : '';
+    eventNote.textContent = 'reason' in ev ? ev.reason : none ? `Neither the Sun nor Earth's centre rises or sets in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).${touches}${eclipseLine}` : '';
     if (!events) return;
     syncJumps();
     const place = (node: HTMLElement, fromMs: number, toMs: number) => {
@@ -192,13 +205,20 @@ export function mountTimeScrubber(region: HTMLElement): void {
       m.title = eclipseText([e]);
       marks.append(m);
     }
+    // Each passage as a span under the glyphs: from its first cut (or first limb) to its last limb (or whole disc clear).
+    for (const tr of passes) {
+      const bar = el('span', `ts-pass ts-${tr.body}${tr.kind === 'graze' || tr.kind === 'peek' ? ' ts-pass--partial' : ''}`);
+      if (!place(bar, tr.start.timeMs, tr.end.timeMs)) continue;
+      bar.title = transitionText(tr);
+      marks.append(bar);
+    }
     for (const e of events) {
       const f = (e.timeMs - start) / span;
       if (f < 0 || f > 1) continue;
       const info = EVENT_INFO[e.type];
       const m = el('span', `ts-mark ts-${info.body}`, GLYPH[e.type]);
       m.style.left = `${f * 100}%`;
-      m.title = `${info.label} ${formatUtc(e.timeMs)}, azimuth ${e.azDeg.toFixed(1)}° (${info.instant})`;
+      m.title = `${eventText(e)}. Azimuth ${e.azDeg.toFixed(1)}° when ${info.instant}.`;
       marks.append(m);
     }
   };
