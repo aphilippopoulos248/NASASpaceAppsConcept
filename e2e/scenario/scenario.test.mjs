@@ -134,6 +134,12 @@ async function checkStep2(page, r, { pinId, startMs, pick }) {
   assert.equal(s.site.id, pick.id, 'the candidate is the selected site');
   assert.equal(s.comparing, true);
   await shows(page, (x) => x.compare?.tab === 'A and B' && x.compare.text.includes(cmp.A) && x.compare.text.includes(cmp.B), 'the A/B comparison on screen with both labels');
+  // The panel shows the same figures (to one decimal; the result is rounded to two, so either neighbour of a .x5 is accepted).
+  const forms = (v, f) => [...new Set([v - 0.005, v, v + 0.005].map(f))];
+  const pct = (v) => `${v.toFixed(1).replace('-', '−')} %`;
+  const signed = (v) => (Number(v.toFixed(1)) === 0 ? '0.0' : `${v > 0 ? '+' : '−'}${Math.abs(v).toFixed(1)}`);
+  const want = [forms(cmp.analysisA.illuminationPct, pct), forms(cmp.analysisB.illuminationPct, pct), forms(cmp.analysisA.earthVisiblePct, pct), forms(cmp.analysisB.earthVisiblePct, pct), forms(cmp.diff.illuminationPct, (v) => `${signed(v)} points`)];
+  await shows(page, (x) => want.every((alts) => alts.some((w) => x.compare.text.includes(w))), `the panel shows the reported figures ${JSON.stringify(want)}`);
   return cmp;
 }
 
