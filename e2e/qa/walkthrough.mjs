@@ -8,7 +8,7 @@
 //              a ranked alternative as B (or, in a build without the scan, B = A arriving 24 h
 //              later), and the compare table against the analysis.
 //   surface    IM-2 from its globe marker, looking around, its card and surface view at the
-//              landing time, Face Earth / Face Sun / sky paths, the 29.5-day window, scrubbing
+//              landing time, Track Earth / Track Sun / sky paths, the 29.5-day window, scrubbing
 //              and event jumps, Escape; Apollo 11 at its landing time. On a GPU the surface is
 //              drawn at full settings (the app picks low-power settings only for a software
 //              renderer); the shots pair with the software-rendered ones in docs/lunyx/handover.
@@ -277,6 +277,49 @@ async function markerPoint(page, id) {
 }
 
 /** Types into a number field at a human pace. */
+/**
+ * Turns the surface view to the Sun or Earth from the HUD. Since GitHub PR #2 the HUD has toggles,
+ * "Track Sun" and "Track Earth": pressed, the view turns to the body and follows it as the clock
+ * moves; pressed again, it stops. Earlier builds had one-off "Face Sun" / "Face Earth" buttons.
+ * A toggle that is already on is left on. Returns which kind the build has.
+ */
+async function faceBody(page, body) {
+  const hud = page.locator('.surface-hud');
+  const track = hud.getByRole('button', { name: `Track ${body}`, exact: true });
+  if (await track.count()) {
+    if ((await track.getAttribute('aria-pressed')) !== 'true') await track.click();
+    await page.waitForFunction((b) => [...document.querySelectorAll('.surface-hud button')].some((x) => x.textContent.trim() === `Track ${b}` && x.getAttribute('aria-pressed') === 'true'), body, { timeout: 10_000 });
+    return 'track';
+  }
+  await hud.getByRole('button', { name: `Face ${body}`, exact: true }).click();
+  return 'face';
+}
+
+/**
+ * Opens a landing's surface view from its globe marker. Since the original T-64 a click selects
+ * the landing and shows its details on the card while the view stays on the globe, and a
+ * double-click opens the surface view. Earlier builds stepped straight down on a click. Both are
+ * handled; the step's notes say which one this build does.
+ */
+async function openFromMarker(page, id, p, { check, note }) {
+  await page.mouse.click(p.x, p.y);
+  await page.waitForFunction((siteId) => window.lunyx.store.get().site?.id === siteId, id, { timeout: 20_000 });
+  await sleep(1200);
+  if ((await appState(page)).view === 'surface') {
+    note('A single marker click selected the landing and stepped straight down into its surface view (a build before the original T-64).');
+    return;
+  }
+  const card = await page.evaluate(() => ({ title: document.querySelector('.site-card .sc-title')?.textContent.trim() ?? '', body: Boolean(document.querySelector('.site-card .sc-body')?.getClientRects().length) }));
+  const view = (await appState(page)).view;
+  check("A marker click shows the landing's details (card open, view stays on the globe)", `${card.title}, details ${card.body ? 'shown' : 'hidden'}, view ${view}`, 'details shown, globe', card.body && view === 'globe');
+  // The camera may have moved to the selection: find the marker again.
+  const q = await markerPoint(page, id);
+  if (!q.visible || q.covered) throw new Error(`Marker not clickable after the click: ${JSON.stringify(q)}`);
+  await page.mouse.dblclick(q.x, q.y);
+  await page.waitForFunction(() => window.lunyx.store.get().view === 'surface', null, { timeout: 20_000 });
+  note('A click showed the details on the globe; a double-click opened the surface view (original T-64).');
+}
+
 async function typeInto(locator, text) {
   await locator.click();
   await locator.fill('');
@@ -498,7 +541,7 @@ async function partSearch(app, step) {
 async function partSurface(app, step) {
   const { page } = app;
 
-  await step('IM-2: click its marker on the globe', 'control', async ({ check, note }) => {
+  await step('IM-2: its marker on the globe (a click shows the details, a double-click opens the surface view)', 'control', async ({ check, note }) => {
     let p = await markerPoint(page, IM2.id);
     note(`IM-2 marker: ${JSON.stringify(p)}.`);
     if (!p.visible || p.covered) {
@@ -508,12 +551,10 @@ async function partSurface(app, step) {
       note(`Brought IM-2 to the centre by typing its coordinates (centre ${r.centre.lat.toFixed(3)}, ${r.centre.lon.toFixed(3)}); marker now ${JSON.stringify(p)}.`);
     }
     if (!p.visible) throw new Error('IM-2 marker not visible');
-    await page.mouse.click(p.x, p.y);
-    await page.waitForFunction((id) => window.lunyx.store.get().site?.id === id, IM2.id, { timeout: 20_000 });
-    note('A marker click selects the landing and steps straight down into its surface view.');
+    await openFromMarker(page, IM2.id, p, { check, note });
     await surfaceReady(page);
     const s = await appState(page);
-    check('View after the marker click', s.view, 'surface', s.view === 'surface');
+    check('View after opening the marker', s.view, 'surface', s.view === 'surface');
     // First arrival at a site faces the Sun (or Earth when the Sun is down): faceOnArrival in the surface controller.
     await sleep(500);
     const v = await surfaceView(page);
@@ -644,8 +685,9 @@ async function partSurface(app, step) {
     await back.click();
   });
 
-  await step('Face Earth (HUD button)', 'control', async ({ check }) => {
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
+  await step('Turn to Earth from the HUD ("Track Earth"; "Face Earth" before GitHub PR #2)', 'control', async ({ check, note }) => {
+    const how = await faceBody(page, 'Earth');
+    note(how === 'track' ? '"Track Earth" is pressed: the view follows Earth as the clock moves.' : 'One-off "Face Earth" button (a build before GitHub PR #2).');
     await sleep(800);
     const v = await surfaceView(page);
     check('Look azimuth = Earth azimuth', v.look.azDeg, v.sky.earth.azDeg, close(v.look.azDeg, v.sky.earth.azDeg, 0.2));
@@ -653,8 +695,12 @@ async function partSurface(app, step) {
     check('Earth phase (lit %) shown in the scene', v.sky.earth.litPct, 'a number', Number.isFinite(v.sky.earth.litPct));
   }, { shot: 'im2-surface-earth' });
 
-  await step('Face Sun and show sky paths (HUD buttons)', 'control', async ({ check }) => {
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+  await step('Turn to the Sun ("Track Sun") and show sky paths (HUD toggles)', 'control', async ({ check, note }) => {
+    const how = await faceBody(page, 'Sun');
+    if (how === 'track') {
+      const earth = await page.locator('.surface-hud').getByRole('button', { name: 'Track Earth', exact: true }).getAttribute('aria-pressed');
+      check('Tracking the Sun replaces tracking Earth', `Track Earth pressed: ${earth}`, 'false', earth === 'false');
+    }
     const paths = page.locator('.surface-hud').getByRole('button', { name: 'Sky paths' });
     if ((await paths.getAttribute('aria-pressed')) !== 'true') await paths.click();
     await sleep(800);
@@ -734,7 +780,7 @@ async function partSurface(app, step) {
           sunsetShot = true;
           const a = await getAnalysis(page);
           note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}°.`);
-          await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+          await faceBody(page, 'Sun');
           await sleep(800);
           app.extraShots.push(await shot(page, `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`));
         }
@@ -750,7 +796,7 @@ async function partSurface(app, step) {
     check('View is the globe, IM-2 still selected', `${s.view} ${s.site?.id}`, 'globe im-2', s.view === 'globe' && s.site?.id === IM2.id);
   });
 
-  await step('Apollo 11: click its marker, close, "At landing time", "Enter surface view", Face Sun', 'control', async ({ check, note }) => {
+  await step('Apollo 11: open it from its marker, close, "At landing time", "Enter surface view", turn to the Sun', 'control', async ({ check, note }) => {
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
     let p = await markerPoint(page, APOLLO11.id);
@@ -761,8 +807,7 @@ async function partSurface(app, step) {
       note(`Brought Apollo 11 to the centre by typing its coordinates (centre ${r.centre.lat.toFixed(3)}, ${r.centre.lon.toFixed(3)}); marker now ${JSON.stringify(p)}.`);
     }
     if (!p.visible || p.covered) throw new Error(`Apollo 11 marker not clickable: ${JSON.stringify(p)}`);
-    await page.mouse.click(p.x, p.y);
-    await page.waitForFunction((id) => window.lunyx.store.get().site?.id === id, APOLLO11.id, { timeout: 20_000 });
+    await openFromMarker(page, APOLLO11.id, p, { check, note });
     await surfaceReady(page);
     await page.getByRole('button', { name: 'Close the surface view and return to the globe' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().view === 'globe', null, { timeout: 15_000 });
@@ -771,7 +816,7 @@ async function partSurface(app, step) {
     await page.locator('.site-card').getByRole('button', { name: 'Enter surface view' }).click();
     await surfaceReady(page);
     await analysisSettled(page);
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+    await faceBody(page, 'Sun');
     await sleep(800);
     const [v, a] = [await surfaceView(page), await getAnalysis(page)];
     app.report.values.push({ profile: app.profile, where: 'Apollo 11 surface at landing', surface: { look: v.look, sky: v.sky, ground: v.ground }, analysisNow: a.now });
@@ -916,11 +961,11 @@ async function partExtras(app, step) {
     check('The clock stops at the end of the window', new Date(s1.timeMs).toISOString(), new Date(end).toISOString(), s1.timeMs === end);
   }, { shot: 'preset-im2-end', timeout: 300_000 });
 
-  await step('Zoomed Earth at IM-2 touchdown ("Face Earth", then + until about 8° field of view)', 'keyboard', async ({ check, note }) => {
+  await step('Zoomed Earth at IM-2 touchdown (turn to Earth, then + until about 8° field of view)', 'keyboard', async ({ check, note }) => {
     await page.locator('.ts-date').fill('2025-03-06T17:28');
     await page.locator('.ts-date').press('Enter');
     await page.waitForFunction(() => window.lunyx.store.get().timeMs === Date.UTC(2025, 2, 6, 17, 28), null, { timeout: 15_000 }).catch(() => note('The date field did not move the clock to touchdown.'));
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
+    await faceBody(page, 'Earth');
     await page.locator('#scene').focus();
     for (let i = 0; i < 25 && (await appState(page)).look.fovDeg > 8.5; i++) await page.keyboard.press('+');
     await sleep(800);
