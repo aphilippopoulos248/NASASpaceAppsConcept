@@ -40,6 +40,12 @@ export interface HorizonOptions {
   refine?: boolean;
   /** Points tried inside each marching step the fine search looks into (default 6; then half as many around the best at a quarter of that spacing). */
   searchPoints?: number;
+  /**
+   * March only these azimuths (degrees), in this order, instead of the full circle every `azStepDeg`:
+   * the profile's arrays then hold one entry per listed azimuth (used for the fine skyline,
+   * src/analysis/fineSkyline.ts). Each ray is marched exactly as in the full profile.
+   */
+  azimuthsDeg?: ArrayLike<number>;
 }
 
 const samplerCache = new WeakMap<HeightSource, UnitSampler | null>();
@@ -164,8 +170,24 @@ export function sourceReach(source: HeightSource, site: LatLon): SourceReach {
   return r;
 }
 
-/** Skyline elevation at any azimuth, degrees, interpolated between profile samples. */
+/** Skyline elevation at any azimuth, degrees, interpolated between profile samples (between fine samples where `p.fine` covers the azimuth). */
 export function skylineAt(p: HorizonProfile, azDeg: number): number {
+  const fine = p.fine;
+  if (fine && fine.length) {
+    for (let s = 0; s < fine.length; s++) {
+      const seg = fine[s];
+      const m = seg.elevDeg.length;
+      let x = azDeg * seg.perDeg - seg.k0;
+      const turn = 360 * seg.perDeg;
+      // Bring the azimuth into the segment's turn (a segment may run past 360 deg).
+      x -= Math.floor(x / turn) * turn;
+      if (x <= m - 1) {
+        const i = Math.floor(x);
+        if (i >= m - 1) return seg.elevDeg[m - 1];
+        return seg.elevDeg[i] + (seg.elevDeg[i + 1] - seg.elevDeg[i]) * (x - i);
+      }
+    }
+  }
   const n = p.elevDeg.length;
   let x = (((azDeg % 360) + 360) % 360) / p.azStepDeg;
   const i = Math.floor(x) % n;
@@ -206,8 +228,9 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   const resFrac = options.resFraction ?? 0.7;
   const nearFrac = options.nearFraction ?? 0.05;
   const nSub = Math.max(2, Math.round(options.searchPoints ?? 6)), nRef = nSub >> 1;
-  const nAz = Math.max(1, Math.round(360 / azStep));
-  const azStepDeg = 360 / nAz;
+  const azList = options.azimuthsDeg;
+  const nAz = azList ? azList.length : Math.max(1, Math.round(360 / azStep));
+  const azStepDeg = azList ? NaN : 360 / nAz;
   const warnings: string[] = [];
   const sources = stack.sources;
 
@@ -299,7 +322,7 @@ export function computeHorizon(stack: TerrainStack, site: LatLon, mastHeightM: n
   };
 
   for (let a = 0; a < nAz; a++) {
-    const az = a * azStepDeg * RAD;
+    const az = (azList ? azList[a] : a * azStepDeg) * RAD;
     const ca = Math.cos(az), sa = Math.sin(az);
     tx = ca * north[0] + sa * east[0];
     ty = ca * north[1] + sa * east[1];

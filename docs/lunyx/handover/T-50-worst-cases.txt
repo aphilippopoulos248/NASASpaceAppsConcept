@@ -1,0 +1,74 @@
+T-50: every passage at the validator's three worst-case pins (2 m, 60 days from 2025-03-01 00:00 UTC, in-app model), on the main profile only (fine=false) and with the fine skyline (fine=true). Times UTC, MM-DD HH:MM:SS. Reference values: lunyx-science bca1ff0, tests/fixtures/validation/ephemeris-check/transitions/results-9bc4878.txt.
+
+im-2-pin fine=false 866 ms, eph model, fine rays 0, segments 0
+  sun rise first-limb 03-05 22:44:08 | centre up 03-06 00:40:32 | whole-clear 03-06 03:35:42
+  earth set first-cut 03-18 06:22:15 | centre down 03-19 04:05:42 | last-limb 03-20 07:27:34
+  sun set first-cut 03-19 16:42:06 | centre down 03-19 20:03:30 | last-limb 03-19 23:16:47
+  earth rise first-limb 03-24 07:59:27 | centre up 03-25 08:18:59 | whole-clear 03-26 02:51:29
+  sun rise first-limb 04-04 19:03:40 | centre up 04-04 21:25:32 | whole-clear 04-04 23:37:25
+  earth set first-cut 04-14 13:15:51 | centre down 04-15 12:47:15 | last-limb 04-16 20:26:00
+  sun graze first-cut 04-16 07:17:53 |  | whole-clear 04-17 02:25:42
+  sun set first-cut 04-17 16:13:12 | centre down 04-17 20:53:02 | last-limb 04-18 02:05:23
+  earth rise first-limb 04-20 12:04:55 | centre up 04-21 14:48:49 | whole-clear 04-22 10:43:40
+im-2-pin fine=true 1052 ms, eph model, fine rays 1063, segments 3
+  sun rise first-limb 03-05 22:43:40 | centre up 03-06 00:32:44 | whole-clear 03-06 03:38:02
+  earth set first-cut 03-18 06:22:34 | centre down 03-19 04:03:40 | last-limb 03-20 07:36:38
+  sun set first-cut 03-19 16:43:40 | centre down 03-19 20:03:30 | last-limb 03-19 23:16:47
+  earth rise first-limb 03-24 07:59:27 | centre up 03-25 08:17:06 | whole-clear 03-26 02:54:08
+  sun rise first-limb 04-04 19:04:55 | centre up 04-04 21:24:55 | whole-clear 04-04 23:37:25
+  earth set first-cut 04-14 13:10:14 | centre down 04-15 12:50:14 | last-limb 04-16 20:29:17
+  sun graze first-cut 04-16 07:18:30 |  | whole-clear 04-17 02:29:17
+  sun set first-cut 04-17 16:13:02 | centre down 04-17 20:45:42 | last-limb 04-18 02:06:29
+  earth rise first-limb 04-20 12:03:21 | centre up 04-21 14:49:08 | whole-clear 04-22 10:43:49
+connecting-ridge fine=false 666 ms, eph model, fine rays 0, segments 0
+  earth rise first-limb 02-27 23:12:28 | centre up 02-28 15:16:31 | whole-clear 03-01 09:36:29
+  earth set first-cut 03-14 02:56:19 | centre down 03-14 18:19:55 | last-limb 03-15 10:08:40
+  sun graze first-cut 03-25 07:48:21 |  | whole-clear 03-25 10:42:34
+  earth rise first-limb 03-27 07:06:00 | centre up 03-27 22:33:59 | whole-clear 03-28 13:50:32
+  sun set first-cut 04-07 23:47:44 | centre down 04-08 12:11:19 | last-limb 04-08 21:36:19
+  sun peek first-limb 04-09 13:27:06 |  | last-limb 04-09 22:22:25
+  sun peek first-limb 04-10 00:08:30 |  | last-limb 04-10 01:53:49
+  earth set first-cut 04-10 08:53:59 | centre down 04-10 23:43:21 | last-limb 04-11 15:17:15
+  sun rise first-limb 04-10 22:55:23 | centre up 04-11 09:30:23 | whole-clear 04-11 20:20:23
+  sun set first-cut 04-12 04:29:27 | centre down 04-12 06:18:49 | last-limb 04-12 08:47:25
+  sun rise first-limb 04-12 13:08:40 | centre up 04-13 00:34:36 | whole-clear 04-13 03:47:25
+  sun graze first-cut 04-16 11:42:44 |  | whole-clear 04-16 20:02:34
+  sun set first-cut 04-22 17:15:42 | centre down 04-23 04:00:14 | last-limb 04-23 11:26:57
+  earth rise first-limb 04-23 12:56:38 | centre up 04-24 05:03:21 | whole-clear 04-24 20:48:40
+  sun rise first-limb 04-26 09:13:49 | centre up 04-28 00:36:19 | whole-clear 04-28 11:53:12
+connecting-ridge fine=true 1616 ms, eph model, fine rays 3614, segments 5
+  earth rise first-limb 02-27 23:12:07 | centre up 02-28 15:18:30 | whole-clear 03-01 09:37:34
+  earth set first-cut 03-14 02:52:53 | centre down 03-14 18:19:55 | last-limb 03-15 10:06:10
+  sun graze first-cut 03-25 07:48:21 |  | whole-clear 03-25 10:42:15
+  earth rise first-limb 03-27 07:08:12 | centre up 03-27 22:36:19 | whole-clear 03-28 13:48:40
+  sun set first-cut 04-07 23:47:34 | centre down 04-08 12:12:06 | last-limb 04-08 21:35:14
+  sun peek first-limb 04-09 13:26:38 |  | last-limb 04-09 22:43:21
+  sun peek first-limb 04-09 23:51:47 |  | last-limb 04-10 01:52:44
+  earth set first-cut 04-10 08:54:55 | centre down 04-10 23:38:40 | last-limb 04-11 15:17:44
+  sun rise first-limb 04-10 22:55:23 | centre up 04-11 09:29:55 | whole-clear 04-11 20:19:55
+  sun set first-cut 04-12 04:31:47 | centre down 04-12 06:16:47 | last-limb 04-12 08:41:00
+  sun rise first-limb 04-12 13:06:19 | centre up 04-13 00:35:23 | whole-clear 04-13 03:48:40
+  sun graze first-cut 04-16 11:41:47 | centre down 04-16 15:29:27 centre up 04-16 16:27:44 | whole-clear 04-16 19:59:55
+  sun set first-cut 04-22 17:16:57 | centre down 04-23 04:00:14 | last-limb 04-23 11:26:57
+  earth rise first-limb 04-23 12:43:30 | centre up 04-24 05:00:42 | whole-clear 04-24 20:53:21
+  sun rise first-limb 04-26 09:16:57 | centre up 04-28 00:36:19 | whole-clear 04-28 11:53:12
+limb-east fine=false 548 ms, eph model, fine rays 0, segments 0
+  earth rise first-limb 03-01 19:59:55 | centre up 03-02 11:24:17 | whole-clear 03-03 03:11:10
+  sun set first-cut 03-14 12:04:36 | centre down 03-14 12:36:10 | last-limb 03-14 13:07:53
+  earth set first-cut 03-15 17:29:36 | centre down 03-16 10:05:51 | last-limb 03-17 02:11:47
+  sun rise first-limb 03-29 06:22:15 | centre up 03-29 06:53:49 | whole-clear 03-29 07:25:23
+  earth rise first-limb 03-30 02:37:44 | centre up 03-30 15:19:36 | whole-clear 03-31 04:06:57
+  earth set first-cut 04-12 13:29:36 | centre down 04-13 05:28:49 | last-limb 04-13 21:26:38
+  sun set first-cut 04-13 00:57:44 | centre down 04-13 01:29:08 | last-limb 04-13 02:00:23
+  earth rise first-limb 04-27 11:51:57 | centre up 04-27 23:45:04 | whole-clear 04-28 11:37:34
+  sun rise first-limb 04-27 18:51:57 | centre up 04-27 19:23:12 | whole-clear 04-27 19:54:27
+limb-east fine=true 529 ms, eph model, fine rays 285, segments 2
+  earth rise first-limb 03-01 19:59:55 | centre up 03-02 11:24:17 | whole-clear 03-03 03:11:10
+  sun set first-cut 03-14 12:04:36 | centre down 03-14 12:36:10 | last-limb 03-14 13:07:53
+  earth set first-cut 03-15 17:29:36 | centre down 03-16 10:05:51 | last-limb 03-17 02:11:47
+  sun rise first-limb 03-29 06:21:19 | centre up 03-29 06:52:53 | whole-clear 03-29 07:24:17
+  earth rise first-limb 03-30 02:37:44 | centre up 03-30 15:19:36 | whole-clear 03-31 04:06:57
+  earth set first-cut 04-12 13:29:36 | centre down 04-13 05:28:49 | last-limb 04-13 21:26:38
+  sun set first-cut 04-13 00:57:44 | centre down 04-13 01:29:08 | last-limb 04-13 02:00:23
+  earth rise first-limb 04-27 11:51:57 | centre up 04-27 23:45:04 | whole-clear 04-28 11:37:34
+  sun rise first-limb 04-27 18:51:57 | centre up 04-27 19:23:12 | whole-clear 04-27 19:54:27
