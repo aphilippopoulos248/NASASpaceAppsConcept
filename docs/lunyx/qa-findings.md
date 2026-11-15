@@ -12,10 +12,10 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 
 | # | Finding | Owner | Seen on | Status |
 | --- | --- | --- | --- | --- |
-| Q-1 | Filters > Centre of view, typed in the natural order (latitude, Tab, longitude, Enter): the latitude field is refilled with the centre of the still-flying camera when it loses focus, and the longitude commit sends that in-flight latitude, not the typed one. The view ends far from the typed point. | @globe | f928038, c4aaba5 | PENDING-NUMBERS |
-| Q-2 | Typing both coordinates and pressing "Drop pin at centre" straight away pins wherever the camera is at the moment of the click (mid-flight), not the typed point. | @globe | f928038, c4aaba5 | PENDING-NUMBERS |
-| F-3 | (legacy, already reported) Poleward of 80.06° the fly-to clamps the camera direction, so the view stops short of the typed latitude and "Drop pin at centre" pins off the typed point, even when each field is committed with Enter and each flight is awaited. Each further commit of either field re-sends the shifted latitude shown in the field and moves the view again. | @globe | f928038, c4aaba5 | PENDING-NUMBERS |
-| Q-3 | After load the globe auto-rotates; when the first flight stops the rotation, the rotation's damped momentum keeps turning the camera after arrival, so a short first hop ends off in longitude. | @globe | f928038 | PENDING-CONFIRMATION |
+| Q-1 | Filters > Centre of view, typed in the natural order (latitude, Tab, longitude, Enter): the latitude field is refilled with the centre of the still-flying camera when it loses focus, and the longitude commit sends that in-flight latitude, not the typed one. Typed 84.79° S, 29.2° E: the view ends at 57.43° S (830 km off) when typed quickly, 81.63° S (96 km) at 80 ms per key, 83.37° S (43 km) at 150 ms per key, and 84.67° S (3.6 km, F-3 twice) when the typist waits for the flight. | @globe | f928038, 2f7e813 | open, new; e2e todo test in `e2e/flow.test.mjs` |
+| Q-2 | Typing both coordinates and pressing "Drop pin at centre" straight away pins wherever the camera is at the moment of the click, mid-flight, with the old longitude: typed 84.79° S, 29.2° E, pinned 55.92681° S, 0.06° W (879 km off) and 83.02705° S, 0.06° W (97 km off). | @globe | f928038, 2f7e813 | open, new; e2e todo test |
+| F-3 | (legacy, reported 2026-11-14) Poleward of 80.06° the fly-to clamps the camera direction, so the view stops short of the typed latitude and "Drop pin at centre" pins off the typed point, even when each field is committed with Enter and each flight is awaited: IM-2's 84.79° S, 29.2° E gives a pin at 84.67269° S (3.56 km off: the clamp once on the latitude, once more when the longitude commit re-sends the shifted latitude shown in the field); 89.45° S, 137.2° W gives 89.4315° S (0.56 km). The same at both poles; exact at 80° and below. | @globe | f928038, 2f7e813 | open; e2e todo test |
+| Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | open, new, low |
 
 ## Reproductions
 
@@ -30,17 +30,56 @@ flock /tmp/lunyx-gpu.lock node e2e/qa/repro-centre.mjs     # writes e2e/qa/out/r
 centre 8.37° N, 0.06° W, reached by action and verified, and types IM-2's coordinates
 (84.79° S, 29.2° E) into Filters > Centre of view.
 
-PENDING-TABLES
+Run on the app tree of team integration 2f7e813 (= published 27b0f30; the run's commit
+887f893 only adds e2e files), 2026-11-15 03:31Z, renderer ANGLE (NVIDIA GeForce GTX 1050 Ti,
+OpenGL ES 3.2), load 12.6 to 11.3, report `e2e/qa/out/repro-centre-887f893/repro-centre.json`.
+
+**Q-1**, latitude, Tab, longitude, Enter:
+
+| Typing | Latitude field just after Tab | Latitude field at Enter | View ends at | Off by |
+| --- | --- | --- | --- | --- |
+| at once | −1.01 | −50.93 | 57.43° S, 29.2° E | 27.36°, 830 km |
+| 80 ms per key, 0.2 s pause | −1.04 | −80.94 | 81.63° S | 3.16°, 96 km |
+| 150 ms per key, 0.5 s pause | −9.52 | −83.35 | 83.37° S | 1.42°, 43 km |
+| 250 ms per key, 1.2 s pause | −1.04 | −84.73 | 84.67° S | 0.12°, 3.6 km |
+| 250 ms per key, 4 s pause | −23.98 | −84.73 | 84.67° S | 0.12°, 3.6 km |
+
+**Q-2**, both fields typed, then "Drop pin at centre" at once:
+
+| Typing | Pin | Off by |
+| --- | --- | --- |
+| at once | 55.92681° S, 0.06° W | 879 km |
+| 120 ms per key | 83.02705° S, 0.06° W | 97 km |
+
+**F-3**, latitude + Enter, wait for the flight, longitude + Enter, wait, then the button. The
+prediction is the clamp in `flyTo` applied to the typed latitude and again to the two-decimal
+value the field shows:
+
+| Typed | After the latitude | After the longitude | Pin | Off by | Predicted |
+| --- | --- | --- | --- | --- | --- |
+| 84.79° S, 29.2° E (IM-2) | 84.7328° S | 84.6727° S | 84.67269° S, 29.2° E | 3.56 km | 84.7328, 84.6727 |
+| 89.45° S, 137.2° W | 89.4417° S | 89.4315° S | 89.43150° S, 137.2° W | 0.56 km | 89.4417, 89.4315 |
+| 70° S, 10° E | 70° S | 70° S | 70° S, 10° E | 0 | exact |
+
+By action (`setGlobeCamera`): 84.79° S gives 84.7328° S; 88° S gives 87.9708° S; 89.45° S
+gives 89.4417° S; 80.5° S gives 80.4878° S; 79.9° S is exact; 84.79° N gives 84.7328° N.
+
+**Q-3**, the first flight after load: a 1° hop east from the auto-rotating start view ended at
+0.6042° E on arrival and 0.5927° E once the camera rested (target 0.6055° E); the next 1° hop
+was exact.
 
 ### By hand
 
-1. Open the app at 1280x720 and wait for it to load.
-2. Filters > Latitude: type `-84.79`, press Tab. The field at once shows the latitude of the
-   moving camera (for example `8.37`), not `-84.79`.
-3. Type `29.2` in Longitude and press Enter straight away: the globe turns to about 8° N,
-   29.2° E instead of the south pole.
-4. Repeat 2, then type `29.2` and click "Drop pin at centre" without pressing Enter: the pin
-   lands between the start and the pole, at longitude 0.06° W.
+1. Open the app at 1280x720 and wait for it to load (motion on, the default).
+2. Filters > Latitude: type `-84.79`, press Tab. The globe starts to fly south, and the
+   latitude field at once shows where the camera is on its way (−1.01 in the measured run),
+   no longer `-84.79`.
+3. Type `29.2` in Longitude and press Enter straight away: the globe stops between the start
+   and the pole (57.43° S in the measured run) instead of at 84.79° S.
+4. Reload. Type `-84.79`, Tab, `29.2`, and click "Drop pin at centre" without pressing Enter:
+   the pin lands mid-way (55.92681° S, 0.06° W in the measured run).
+5. Reload. Type `-84.79` + Enter, wait until the globe stops, then `29.2` + Enter, wait, then
+   "Drop pin at centre": the pin is at 84.67269° S, 3.56 km from the typed point (F-3).
 
 ## Causes, for the owner
 

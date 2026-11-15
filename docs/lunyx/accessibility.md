@@ -1,79 +1,60 @@
-DRAFT (checkpoint 2026-11-15): first round only, on build 4f007f1; see docs/lunyx/handover/T-16-T-17-checkpoint.md
-
 # Accessibility pass
 
-Owner: @assistant (task T-17). First round, 2026-11-14, on the integrated build
-(`am/lunyx/integration` at 4f007f1): globe view, site card, time scrubber, locator map,
-assistant drawer, and the surface view as it stands. The surface HUD and chart (T-10), the
-compare panel (T-11) and the rebuilt surface scene (T-9) are not built yet and will get
-their own round.
+Owner: @desktop-workflow (project lunyx-experience, task T-7; original Lunyx T-17 item 3).
+Scope: the desktop website (decision D-4), 1280x720. Phone widths are not a release
+criterion; the responsive code stays but is not checked here.
 
-**How it was done.** Automated checks in `e2e/a11y.test.mjs` (run by `npm run e2e`), a
-keyboard-only walk of the main journey, and reading the key and pointer handlers.
-**Not done:** listening with a screen reader. There is none on the build machine, so
-wording and announcements are judged from the accessibility tree only.
+| Round | Build | By | What |
+| --- | --- | --- | --- |
+| 1 | `am/lunyx/integration` 4f007f1 (2026-11-14) | @assistant (retired) | globe view, site card, scrubber, locator, drawer, the first surface view |
+| 2 | team integration 2f7e813 = published 27b0f30 (2026-11-15) | @desktop-workflow | everything since: the rebuilt surface view with Key metrics and skyline chart (T-10), the compare panel with its nearby list (T-11), the keyboard rules of T-37, the rewritten Filters panel (T-36) |
 
-## Automated checks
+**How.** Automated checks in `e2e/a11y.test.mjs` (`npm run e2e -- a11y`), a keyboard-only walk
+of the main journey in the same file, and reading the key handlers. **Not done:** listening
+with a screen reader. There is none on the build machine, so wording and announcements are
+judged from the accessibility tree only.
 
-| Check | How | Result |
-| --- | --- | --- |
-| Every control has an accessible name | Chromium's accessibility tree: every button, link, field, slider, checkbox and selector must have a name. Globe view with a site selected (drawer closed and open), surface view, 390 px width (Filters sheet closed and open) | pass |
-| Tab reaches every control once | one round of Tab from the top, 1280 x 720, IM-2 selected | pass: 35 controls |
-| Focus never enters a hidden region | closed drawer is `inert`; folded panels are skipped | pass |
-| Focus is visible | each stop draws the 2 px focus ring | pass |
-| Text contrast, WCAG AA (4.5:1, large text 3:1) | every text node in the panels, composited over black space and over sunlit ground (the two extremes behind a translucent panel) | pass: Filters, site card, scrubber, locator, wordmark, surface strip, assistant drawer |
-| Reduced motion | with `prefers-reduced-motion: reduce` the duration tokens are zero, the drawer does not slide, and the view change is immediate | pass |
-| Phone width | names, the "Filters" button states `aria-expanded`, no panel wider than the screen, the drawer covers the width, its controls are at least 24 px | pass |
+## Automated checks (round 2)
 
-Tab order found (globe view, a site selected): globe canvas; Filters: arrival date,
-latitude, longitude, "Drop pin at centre", solar elevation minimum and maximum, mast height,
-mission window, arrival delay, Real, Even, "Show previous missions", "Mission filters",
-"Show optimal landing area"; site card: fold, close, "Elevation data" details, QuickMap and
-Moon Trek links, Earlier, "At landing time", "Enter surface view", "Whole Moon"; compass;
-scrubber: play, slider, date, Now, speed, window length; locator map and its zoom; the
-little person; the assistant button. It follows the screen from the left panel to the right
-card and then along the bottom. Each date-and-time field takes six presses (the browser's own
-day / month / year / hour / minute parts and its picker button).
+ROUND2-RESULTS
 
-## Keyboard-only walk of the main journey
+## Keyboard-only walk of the main journey (round 2)
+
+`e2e/a11y.test.mjs`, "a keyboard-only walk": Tab is pressed until the named control has the
+focus (the test fails if it never does), then Enter, the arrow keys or typing. No pointer.
 
 | Step | Keyboard path | Works? |
 | --- | --- | --- |
-| Turn and zoom the globe | focus the globe: arrow keys, + and - | yes |
-| Pin a place | type latitude and longitude in Filters, "Drop pin at centre"; or Enter on the focused globe | yes (but see F-3 below near the poles) |
-| Open a catalogued landing | **no direct path when nothing is selected** (markers answer to the pointer only); possible through the assistant ("go to IM-2"), a link (`?site=`), or Earlier / Later once some site is open | finding A-1 |
-| Go down to the surface | "Enter surface view" on the card, or the little person (Enter / Space) | yes |
-| Look around on the surface | **pointer drag only**; W A S D walk | finding A-2 |
-| Leave the surface | Escape, the close button, "Back to orbit" | yes, but Escape also deselects the site: F-1 |
-| Scrub time | slider with arrow keys; play / pause; date field | yes |
-| Delay, mast, window, requirements | Filters fields | yes |
-| Ask the assistant | button, then type; Enter sends, Shift+Enter adds a line, Escape closes and returns focus to the button | yes |
+| Pin typed coordinates | Tab to Filters > Latitude, type, Enter; Longitude, type, Enter; Tab to "Drop pin at centre", Enter | ROUND2 (near the poles the pin is off the typed point: F-3) |
+| Open a catalogued landing from the globe | no direct path when no site is selected (markers answer to the pointer only); the assistant, a link (`?site=`) or Earlier / Later on an open card | not checked again: A-1 is with @globe (their m450) |
+| Go down to the surface | "Enter surface view" on the card; focus then lands on the scene, which is announced as an application | ROUND2 |
+| Look around on the surface | arrow keys, from the scene or from a HUD button | ROUND2 (A-2) |
+| Leave the surface | Escape, once, keeping the site | ROUND2 (F-1) |
+| Compare | Tab to the launcher, Enter: focus moves into the dialog; "Save as A"; the tabs with the arrow keys; Radius, Spacing, "Scan nearby sites"; "Compare as B" in a ranked row; Escape closes and focus goes back to the launcher | ROUND2 |
+| Ask the assistant | Tab to the button, Enter: focus in the message box; type, Enter; Escape closes and returns focus to the button | ROUND2 |
 
 ## Findings
 
-| # | Finding | Owner | Severity |
-| --- | --- | --- | --- |
-| A-1 | A keyboard or screen-reader user cannot open a catalogued landing from the globe when no site is selected: markers are pointer targets inside the canvas, and Enter drops a pin instead. The assistant and deep links are the only ways in. A list or selector of the landings shown (it could live under "Mission filters"), or Enter opening the marker under the centre of view, would close it. | @globe | high for keyboard users |
-| A-2 | In the surface view the look direction can only be changed by dragging. The assistant can turn the view (`lookAt`), a keyboard user cannot. Arrow keys for looking (they are free: walking uses W A S D) would close it. | @surface | high for keyboard users |
-| F-1 | Escape in the surface view leaves it and also deselects the site (two handlers act on one key press). A keyboard user loses the site they were studying. | @surface, @globe | medium |
-| F-3 | Near the poles the view stops short of a typed latitude, so the keyboard way to pin coordinates is inexact there (up to 1.7 km at 85 degrees). | @globe | medium |
-| A-3 | The jump buttons' names include their glyphs ("☀↑ Sunrise"); a screen reader may read the symbols before the word. Hiding the glyph from assistive technology (`aria-hidden` on a span) keeps the name clean. | @globe | low |
-| A-4 | The "Arrival delay" field's tooltip, its only explanation, disappears after the first edit (F-4 in `actions.md`). | @globe | low |
-
-F-1, F-3 and F-4 are described with their causes in `docs/lunyx/actions.md`.
+| # | Finding | Owner | Severity | Status |
+| --- | --- | --- | --- | --- |
+| A-1 | A keyboard or screen-reader user cannot open a catalogued landing from the globe when no site is selected: markers are pointer targets inside the canvas, and Enter on the globe drops a pin. A list of the landings shown that calls `selectSite` would close it. | @globe | high for keyboard users | open; requested by @surface for T-37 (Lunyx m450) |
+| A-2 | The look direction in the surface view could only be changed by dragging. | @surface | high for keyboard users | fixed upstream in T-37 (arrow keys look wherever the focus is, except in fields and widgets with keys of their own); ROUND2-A2 |
+| A-3 | The jump buttons' names included their glyphs ("☀↑ Sunrise"). | @globe | low | since T-33 the visible jump buttons carry glyph-free `aria-label`s (per @surface, T-37); ROUND2-A3 |
+| A-4 | The "Arrival delay" field's tooltip, its only explanation, disappears after the first edit (F-4 in `actions.md`). | @globe | low | open; ROUND2-A4 |
+| F-1 | One Escape in the surface view also deselected the site. | @surface, @globe | medium | fixed by T-33; ROUND2-F1 |
+| F-3 | Near the poles the view stops short of a typed latitude, so the keyboard way to pin coordinates is inexact there (up to 1.7 km at 85°). | @globe | medium | open (see also Q-1 and Q-2 in `qa-findings.md`) |
 
 ## What is good and should stay
 
 - One focus ring style everywhere, visible on dark and light ground.
 - Live regions where things change without focus moving: the toast area, the card's
-  analysis status, the assistant conversation (each reply is marked busy until it is complete).
+  analysis status, the compare panel's status and state lines, the scan progress, the Key
+  metrics message, the assistant conversation.
 - The closed drawer is `inert`, so it is neither focusable nor read.
-- Requirements and states are said in words, not only shown in colour ("clock paused",
-  "runs into the window edge", deterministic mode named on every reply).
+- Requirements and states are said in words, not only shown in colour.
 - The app honours reduced motion in its own animations and in the camera flights.
+- The skyline chart has a data-table view with a caption, so its content is available as text.
 
 ## Still to do
 
-- The same checks on the surface HUD, the skyline chart (it needs a text or table
-  alternative), the compare panel and the nearby list when T-9 / T-10 / T-11 land.
 - A screen-reader listening pass by a person.

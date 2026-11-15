@@ -61,20 +61,22 @@ export async function settledComparison(page, timeout = 300_000) {
 
 /** The compare table's figures against the two published analyses and their difference. */
 export function compareRowsAgainst(view, pub) {
+  // Each figure with the labels it has had (the T-31 wording rule renamed "Earth in view").
   const lines = [
-    ['Sunlight', (x) => x.metrics.illuminationPct, firstNumber, 0.051],
-    ['Any Sun above the skyline', (x) => x.metrics.sunAnyPct, firstNumber, 0.051],
-    ['Longest darkness in the window', (x) => x.metrics.longestDarknessH, hoursOf, 0.051],
-    ['Earth in view', (x) => x.metrics.earthVisiblePct, firstNumber, 0.051],
-    ['Longest Earth gap in the window', (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
-    ['Slope', (x) => x.slope.slopeDeg, firstNumber, 0.051],
-    ['Site elevation', (x) => x.horizon.siteElevationM, firstNumber, 0.51],
+    [['Sunlight'], (x) => x.metrics.illuminationPct, firstNumber, 0.051],
+    [['Any Sun above the skyline'], (x) => x.metrics.sunAnyPct, firstNumber, 0.051],
+    [['Longest darkness in the window'], (x) => x.metrics.longestDarknessH, hoursOf, 0.051],
+    [["Earth's centre in view", 'Earth in view'], (x) => x.metrics.earthVisiblePct, firstNumber, 0.051],
+    [['Longest Earth gap in the window'], (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
+    [['Ground slope', 'Slope'], (x) => x.slope.slopeDeg, firstNumber, 0.051],
+    [['Site elevation'], (x) => x.horizon.siteElevationM, firstNumber, 0.51],
   ];
   const out = [];
-  for (const [label, value, parse, tol] of lines) {
+  for (const [labels, value, parse, tol] of lines) {
+    const label = labels.find((l) => view.rows?.[l]) ?? labels[0];
     const row = view.rows?.[label];
     if (!row) {
-      out.push({ what: `compare table: row "${label}"`, shown: 'missing', expected: 'a row', pass: false });
+      out.push({ what: `compare table: row "${labels.join('" or "')}"`, shown: 'missing', expected: 'a row', pass: false });
       continue;
     }
     const va = value(pub.a), vb = value(pub.b), d = vb - va;
@@ -85,16 +87,20 @@ export function compareRowsAgainst(view, pub) {
   return out;
 }
 
+/** A requirement line without its status word ("Met: ", "Not met: ", "No requirement: "). */
+const lineBody = (f) => f.replace(/^(?:Met|Not met|No requirement|Unknown|Cannot check)\s*:\s*/i, '');
+
 /** The requirement lines of the compare panel against the limits and the two analyses (slope and Earth gap). */
 export function requirementLinesAgainst(view, pub, limits) {
   const out = [];
+  const flags = (view.flags ?? []).map(lineBody);
   for (const [slot, x] of [['A', pub.a], ['B', pub.b]]) {
-    const slopeLine = view.flags.find((f) => f.startsWith(`${slot}: the slope`));
+    const slopeLine = flags.find((f) => f.startsWith(`${slot}: the slope`));
     const slope = x.slope.slopeDeg;
     const over = Number.isFinite(slope) && slope > limits.slopeLimitDeg;
-    out.push({ what: `requirements: ${slot} slope against the ${limits.slopeLimitDeg}° limit`, shown: slopeLine ?? 'no line', expected: `${slope.toFixed(1)}° ${over ? 'over' : 'within'}`, pass: over ? Boolean(slopeLine && /is over the/.test(slopeLine)) : !slopeLine || !/is over the/.test(slopeLine) });
+    out.push({ what: `requirements: ${slot} slope against the ${limits.slopeLimitDeg}° limit`, shown: slopeLine ?? 'no line', expected: `${slope.toFixed(1)}° ${over ? 'over' : 'within'}`, pass: Boolean(slopeLine && (over ? /is over the/.test(slopeLine) : /is within the/.test(slopeLine))) });
     if (limits.maxEarthGapH !== null && limits.maxEarthGapH !== undefined) {
-      const gapLine = view.flags.find((f) => f.startsWith(`${slot}: the longest Earth gap`));
+      const gapLine = flags.find((f) => f.startsWith(`${slot}: the longest Earth gap`));
       const gapOver = x.metrics.longestEarthGapH > limits.maxEarthGapH;
       out.push({ what: `requirements: ${slot} Earth gap against the ${limits.maxEarthGapH} h limit`, shown: gapLine ?? 'no line', expected: `${x.metrics.longestEarthGapH.toFixed(1)} h ${gapOver ? 'over' : 'within'}`, pass: Boolean(gapLine && (gapOver ? /is over the/.test(gapLine) : /is within the/.test(gapLine))) });
     }

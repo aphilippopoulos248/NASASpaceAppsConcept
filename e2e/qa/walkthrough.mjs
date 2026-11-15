@@ -29,8 +29,9 @@ import { execSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ask } from '../lib/app.mjs';
+import { compareRowsAgainst, firstNumber, requirementLinesAgainst } from '../lib/read.mjs';
 import { ROOT, servers } from '../lib/servers.mjs';
-import { analysisSettled, firstNumber, fps, GL, globeSettled, launch, makeStepper, mouseDrag, numbers, openPage, parseDurationH, PROFILES, rendering, shot, sleep, surfaceReady } from './lib.mjs';
+import { analysisSettled, fps, GL, globeSettled, launch, makeStepper, mouseDrag, numbers, openPage, parseDurationH, PROFILES, rendering, shot, sleep, surfaceReady } from './lib.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
@@ -234,45 +235,13 @@ function checkCard(check, card, a, st) {
   check('Card: site elevation vs siteElevationM', card.facts.Elevation, a.siteElevationM, close(firstNumber(card.facts.Elevation ?? ''), a.siteElevationM, 1.01), { note: 'card samples the finest elevation product at the point; the analysis reports the elevation it used' });
 }
 
-/** The compare table against the two published analyses (A and B) and their difference. */
+/** The compare table's figures and the requirement lines, checked with the shared readers (e2e/lib/read.mjs). */
 function checkCompareTable(check, view, pub) {
-  const lines = [
-    ['Sunlight', (m) => m.metrics.illuminationPct, firstNumber, 0.051],
-    ['Any Sun above the skyline', (m) => m.metrics.sunAnyPct, firstNumber, 0.051],
-    ['Longest darkness in the window', (m) => m.metrics.longestDarknessH, hoursOf, 0.051],
-    ['Earth in view', (m) => m.metrics.earthVisiblePct, firstNumber, 0.051],
-    ['Longest Earth gap in the window', (m) => m.metrics.longestEarthGapH, hoursOf, 0.051],
-    ['Slope', (m) => m.slope.slopeDeg, firstNumber, 0.051],
-    ['Site elevation', (m) => m.horizon.siteElevationM, firstNumber, 0.51],
-  ];
-  for (const [label, value, parse, tol] of lines) {
-    const row = view.rows[label];
-    if (!row) {
-      check(`Compare table: row "${label}" shown`, 'missing', 'a row', false);
-      continue;
-    }
-    const va = value(pub.a), vb = value(pub.b);
-    check(`Compare table: ${label}, A = analysis A`, row.a, va, close(parse(row.a), va, tol));
-    check(`Compare table: ${label}, B = analysis B`, row.b, vb, close(parse(row.b), vb, tol));
-    const d = vb - va;
-    const shownD = firstNumber(row.delta);
-    check(`Compare table: ${label}, B − A = analysis B − A`, row.delta, Math.round(d * 10) / 10, row.delta === '' ? !Number.isFinite(d) : close(shownD, d, tol + 0.05));
-  }
+  for (const r of compareRowsAgainst(view, pub)) check(r.what, r.shown, r.expected, r.pass);
 }
 
-/** Requirement lines against the requirements and the two analyses. */
 function checkRequirements(check, view, pub, st) {
-  for (const [slot, x] of [['A', pub.a], ['B', pub.b]]) {
-    const slopeLine = view.flags.find((f) => f.startsWith(`${slot}: the slope`));
-    const slope = x.slope.slopeDeg;
-    if (Number.isFinite(slope) && slope > st.slopeLimitDeg) check(`Requirements: ${slot} slope over the ${st.slopeLimitDeg}° limit is flagged`, slopeLine ?? 'no line', `slope ${slope.toFixed(1)}° > ${st.slopeLimitDeg}°`, Boolean(slopeLine && /is over the/.test(slopeLine)));
-    else check(`Requirements: ${slot} slope within the limit is not flagged as over`, slopeLine ?? 'no line', `slope ${slope.toFixed(1)}° <= ${st.slopeLimitDeg}°`, !slopeLine || !/is over the/.test(slopeLine));
-    if (st.maxEarthGapH !== null) {
-      const gapLine = view.flags.find((f) => f.startsWith(`${slot}: the longest Earth gap`));
-      const over = x.metrics.longestEarthGapH > st.maxEarthGapH;
-      check(`Requirements: ${slot} Earth gap against the ${st.maxEarthGapH} h limit`, gapLine ?? 'no line', `${x.metrics.longestEarthGapH.toFixed(1)} h ${over ? '>' : '<='} ${st.maxEarthGapH} h`, Boolean(gapLine && (over ? /is over the/.test(gapLine) : /is within the/.test(gapLine))));
-    }
-  }
+  for (const r of requirementLinesAgainst(view, pub, { slopeLimitDeg: st.slopeLimitDeg, maxEarthGapH: st.maxEarthGapH })) check(r.what, r.shown, r.expected, r.pass);
 }
 
 async function markerPoint(page, id) {
@@ -426,6 +395,12 @@ async function partSearch(app, step) {
     await step('Compare the rank 1 alternative as B ("Compare as B" in its row)', 'control', async ({ check, note }) => {
       await page.getByRole('button', { name: /^Pin candidate 1, .* and load it as scenario B$/ }).click();
       const pub = await comparisonSettled(page);
+      await sleep(300);
+      const focus = await page.evaluate(() => {
+        const el = document.activeElement;
+        return { inDialog: Boolean(el && document.querySelector('.cmp-sheet')?.contains(el)), what: el === document.body ? 'body' : `${el?.tagName.toLowerCase()} "${(el?.getAttribute('aria-label') || el?.textContent || '').trim().slice(0, 60)}"`, tab: document.querySelector('.cmp-tab[aria-selected="true"]')?.textContent.trim() };
+      });
+      check('Focus stays in the compare dialog after "Compare as B"', `${focus.what} (tab now "${focus.tab}")`, 'inside the dialog', focus.inDialog, { finding: 'Q-4' });
       check('Comparison ready', pub.state, 'ready', pub.state === 'ready');
       await page.waitForFunction(() => !document.querySelector('.cmp-sheet')?.hidden, null, { timeout: 10_000 });
       await sleep(500);
@@ -496,6 +471,11 @@ async function partSurface(app, step) {
     await surfaceReady(page);
     const s = await appState(page);
     check('View after the marker click', s.view, 'surface', s.view === 'surface');
+    // First arrival at a site faces the Sun (or Earth when the Sun is down): faceOnArrival in the surface controller.
+    await sleep(500);
+    const v = await surfaceView(page);
+    if (v.sky.sun.elDeg > -1) check('First arrival faces the Sun (azimuth)', v.look.azDeg, v.sky.sun.azDeg, close(v.look.azDeg, v.sky.sun.azDeg, 1) || close(v.look.azDeg, v.sky.sun.azDeg - 360, 1) || close(v.look.azDeg, v.sky.sun.azDeg + 360, 1));
+    app.lookBeforeLeaving = null;
   }, { timeout: 180_000 });
 
   await step('Look around: drag, then arrow keys', 'control', async ({ check }) => {
@@ -522,6 +502,7 @@ async function partSurface(app, step) {
   });
 
   await step('Close the surface view (× button), then "At landing time" (card): IM-2 card values', 'control', async ({ check, note }) => {
+    app.lookBeforeLeaving = (await appState(page)).look;
     await page.getByRole('button', { name: 'Close the surface view and return to the globe' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().view === 'globe', null, { timeout: 15_000 });
     await page.locator('.site-card').getByRole('button', { name: /^At landing time/ }).click();
@@ -548,7 +529,9 @@ async function partSurface(app, step) {
     }
     const ratio = v.sky.earth.angularDiameterDeg / v.sky.sun.angularDiameterDeg;
     check("Earth drawn about 3.6x the Sun's width", ratio.toFixed(2), '3.4 to 3.8', ratio > 3.4 && ratio < 3.8);
-    check('View opens facing the Sun (azimuth)', v.look.azDeg, v.sky.sun.azDeg, close(v.look.azDeg, v.sky.sun.azDeg, 1));
+    // Coming back to the same site keeps the direction the viewer was looking in (by design).
+    const was = app.lookBeforeLeaving;
+    if (was) check('Back at the same site, the view keeps its last direction (azimuth)', v.look.azDeg, was.azDeg, close(v.look.azDeg, was.azDeg, 1));
     const settings = await page.evaluate(() => ({ lowPower: window.lunyx.scene.surface.view.lowPower ?? null, pixelRatio: window.lunyx.scene.surface.view.renderer?.getPixelRatio?.() ?? null }));
     note(`Surface settings: ${JSON.stringify(settings)} (the app uses low-power settings only for a software renderer).`);
     note(`HUD: ${await page.locator('.surface-hud .sh-status').textContent()}`);
@@ -616,8 +599,12 @@ async function partSurface(app, step) {
       check(`Chart table ${time}: Sun az/el/clearance = series`, `${sunAz} / ${sunEl} / ${sunClear}`, `${v.sunAz.toFixed(1)} / ${v.sunEl.toFixed(2)} / ${v.sunClearance.toFixed(2)}`, close(firstNumber(sunAz), v.sunAz, 0.051) && close(firstNumber(sunEl), v.sunEl, 0.006) && close(firstNumber(sunClear), v.sunClearance, 0.006));
       check(`Chart table ${time}: Earth az/el/clearance = series`, `${earthAz} / ${earthEl} / ${earthClear}`, `${v.earthAz.toFixed(1)} / ${v.earthEl.toFixed(2)} / ${v.earthClearance.toFixed(2)}`, close(firstNumber(earthAz), v.earthAz, 0.051) && close(firstNumber(earthEl), v.earthEl, 0.006) && close(firstNumber(earthClear), v.earthClearance, 0.006));
     }
-    await page.getByRole('button', { name: 'Table', exact: true }).click();
-  }, { shot: 'im2-surface-chart-table' });
+    const back = page.getByRole('button', { name: 'Chart', exact: true });
+    const pressed = await back.getAttribute('aria-pressed');
+    check('The toggle now reads "Chart" and is pressed', pressed, 'true', pressed === 'true');
+    app.extraShots.push(await shot(page, `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-chart-table.jpg`));
+    await back.click();
+  });
 
   await step('Face Earth (HUD button)', 'control', async ({ check }) => {
     await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
@@ -630,7 +617,8 @@ async function partSurface(app, step) {
 
   await step('Face Sun and show sky paths (HUD buttons)', 'control', async ({ check }) => {
     await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
-    await page.locator('.surface-hud').getByRole('button', { name: 'Sky paths' }).click();
+    const paths = page.locator('.surface-hud').getByRole('button', { name: 'Sky paths' });
+    if ((await paths.getAttribute('aria-pressed')) !== 'true') await paths.click();
     await sleep(800);
     const v = await surfaceView(page);
     check('Sky paths on', v.annotations.tracks, true, v.annotations.tracks === true);
@@ -727,7 +715,7 @@ async function partSurface(app, step) {
   });
 
   await step('Apollo 11: click its marker, close, "At landing time", "Enter surface view", Face Sun', 'control', async ({ check, note }) => {
-    await page.locator('.site-card').getByRole('button', { name: 'Whole Moon' }).click();
+    await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
     let p = await markerPoint(page, APOLLO11.id);
     note(`Apollo 11 marker after "Whole Moon": ${JSON.stringify(p)}.`);
@@ -816,24 +804,29 @@ async function partAssistant(app, step) {
       check('Reply says the nearby scan is not available here', reply.text.slice(0, 200), 'says not available', /not available|cannot|can't|no .*action|not .*this build/i.test(reply.text));
       return;
     }
+    const ranked = reply.actions.find((x) => x.name === 'rankNearby' && x.ok)?.result ?? null;
     const scan = await page.evaluate(() => {
       const n = window.lunyx.analysis.nearby();
-      return n.state === 'ready' ? n.value.map((c) => ({ ref: c.isReference, slope: c.slope.slopeDeg, sun: c.metrics?.illuminationPct, dark: c.metrics?.longestDarknessH, earth: c.metrics?.earthVisiblePct, rank: c.rank })) : null;
+      return n.state === 'ready'
+        ? { scenario: n.scenario.label, options: n.options, rows: n.value.map((c) => ({ id: c.site.id, name: c.site.name, ref: Boolean(c.isReference), slope: c.slope.slopeDeg, sun: c.metrics?.illuminationPct ?? null, dark: c.metrics?.longestDarknessH ?? null, earth: c.metrics?.earthVisiblePct ?? null, score: c.score })) }
+        : { state: n.state };
     });
-    check('The scan behind the reply is on screen (analysis.nearby ready)', scan ? 'ready' : 'none', 'ready', Boolean(scan));
+    app.report.values.push({ profile: app.profile, where: 'assistant nearby request', result: ranked && { scenario: ranked.scenario, options: ranked.options, reference: ranked.reference, candidates: ranked.candidates }, scanOnScreen: scan });
     const found = /Found a site with[^:]*: (.*?)\n/.exec(reply.text);
-    if (!scan || !found) {
-      note('No "Found a site" line in the reply; nothing to check against the scan.');
+    if (!ranked || !found) {
+      note('No "Found a site" line, or no rankNearby result, to check.');
       return;
     }
     const nums = /slope ([\d.]+)°, illumination ([\d.]+) %, longest darkness (none|[\d.]+ h)/.exec(found[1]);
-    const ref = scan.find((c) => c.ref);
-    const hit = nums && scan.find((c) => !c.ref && close(c.slope, Number(nums[1]), 0.051) && close(c.sun, Number(nums[2]), 0.051));
-    check('The site the reply names is in the scan with the quoted slope and illumination', nums?.slice(1).join(', '), 'a scan row', Boolean(hit));
-    if (hit && ref) {
-      check('It is flatter than the pin (scan values)', `${hit.slope.toFixed(1)}° vs ${ref.slope.toFixed(1)}°`, 'lower', hit.slope < ref.slope);
-      check('Its longest darkness is shorter than the pin\'s (scan values)', `${hit.dark.toFixed(1)} h vs ${ref.dark.toFixed(1)} h`, 'shorter', hit.dark < ref.dark);
-      check('Quoted longest darkness = scan value', nums[3], hit.dark, close(hoursOf(nums[3]), hit.dark, 0.051));
+    const row = nums && ranked.candidates.find((c) => found[1].startsWith(`${c.name} (`));
+    check('The site the reply names is a row of the rankNearby result', row?.name ?? found[1].slice(0, 80), 'a candidate', Boolean(row));
+    if (row) {
+      check('Reply slope = rankNearby row', nums[1], row.slopeDeg, close(Number(nums[1]), row.slopeDeg, 0.051));
+      check('Reply illumination = rankNearby row', nums[2], row.illuminationPct, close(Number(nums[2]), row.illuminationPct, 0.051));
+      check('Reply longest darkness = rankNearby row', nums[3], row.longestDarknessH, close(hoursOf(nums[3]), row.longestDarknessH, 0.051));
+      check('It is flatter than the site and its darkness shorter (rankNearby values)', `${row.slopeDeg}° vs ${ranked.reference?.slopeDeg}°; ${row.longestDarknessH} h vs ${ranked.reference?.longestDarknessH} h`, 'both lower', row.slopeDeg < ranked.reference?.slopeDeg && row.longestDarknessH < ranked.reference?.longestDarknessH);
+      const onScreen = scan.rows?.find((c) => c.id === row.id);
+      check('The same candidate in the scan on screen, same figures', onScreen ? `${onScreen.slope?.toFixed(2)}°, ${onScreen.sun?.toFixed(2)} %` : 'not in the list on screen', `${row.slopeDeg}°, ${row.illuminationPct} %`, Boolean(onScreen) && close(onScreen.slope, row.slopeDeg, 0.006) && close(onScreen.sun, row.illuminationPct, 0.006));
     }
   });
   await askStep('enter the surface then look at the sun', async (reply, { check }) => {
