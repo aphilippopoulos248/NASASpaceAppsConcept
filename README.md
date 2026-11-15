@@ -333,12 +333,6 @@ centre.
   drawings made by the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
-- **Nearby-scan radius and spacing: deferred (operator decision D-14).** A radius or spacing typed
-  into Compare > "Nearby sites" before a scan is put back to the last scan's value when any
-  requirement changes (slope limit, solar band, Earth gap), and the scan then uses the restored
-  value. Its summary names the radius it used ("within 2.0 km"), so check that line, or set the
-  requirements first and type the radius and spacing again before scanning. A fix exists but is
-  neither verified nor in this build.
 - **Nearby tab status line (Q-8): known defect, low, on hold, not fixed in release candidate
   `41be074`.** After a nearby scan started from somewhere other than the tab's own button (for
   example by the assistant), the Nearby sites tab can keep an old green status line such as
@@ -356,6 +350,13 @@ centre.
   [docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md)). Nobody has
   listened to the app with a screen reader: there is none on the build machine, so wording and
   announcements are judged from the accessibility tree only.
+
+**Fixed after release candidate `41be074`.** A radius or spacing typed into Compare > "Nearby
+sites" used to be put back to the last scan's value when a requirement changed before the scan,
+which then ran with the old value (Q-7). The operator first deferred it (decision D-14), then
+lifted that (decision D-16): the original team's T-56 (`8c58f49`) keeps a typed radius and
+spacing through every redraw, and the scan uses them. It is to be verified in the release
+candidate that follows `41be074`.
 
 ## The demo for the submission
 
