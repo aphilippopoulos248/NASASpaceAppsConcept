@@ -134,7 +134,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
 
     const { a, facts } = await cardAndAnalysis();
     close(firstNumber(facts.Sunlight), a.metrics.illuminationPct, 'sunlight');
-    close(firstNumber(facts['Earth in view']), a.metrics.earthVisiblePct, 'Earth in view');
+    close(firstNumber(facts["Earth's centre in view"] ?? facts['Earth in view']), a.metrics.earthVisiblePct, "Earth's centre in view");
     close(firstNumber(facts.Slope), a.slope.slopeDeg, 'slope');
     // The result names the elevation data it rests on, and it is a bundled polar grid (no network was available).
     assert.ok(a.provenance.elevationData.length > 0);
@@ -295,7 +295,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.equal(after.a.scenario.startUtc, '2025-03-07T17:28Z');
     assert.equal(before.a.scenario.startUtc, '2025-03-06T17:28Z');
     close(firstNumber(after.facts.Sunlight), after.a.metrics.illuminationPct, 'sunlight after the delay');
-    close(firstNumber(after.facts['Earth in view']), after.a.metrics.earthVisiblePct, 'Earth in view after the delay');
+    close(firstNumber(after.facts["Earth's centre in view"] ?? after.facts['Earth in view']), after.a.metrics.earthVisiblePct, "Earth's centre in view after the delay");
     assert.match(await filters().locator('.fp-datenote').textContent(), /With the 24 h delay the mission window starts 2025-03-07 17:28 UTC/);
     await setField(page, filters().getByLabel('Arrival delay'), 0);
     await until(page, () => window.lunyx.store.get().delayH === 0);
