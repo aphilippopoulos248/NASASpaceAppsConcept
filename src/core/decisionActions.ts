@@ -18,6 +18,7 @@ import {
   CRITERIA,
   UTILITY_NOTE,
   type CriterionId,
+  type CriterionResult,
   type MissionProfile,
   type ProfileOverrides,
   type RegionTerrain,
@@ -188,6 +189,70 @@ const TIME_CRITERIA: readonly CriterionId[] = ['sunlight', 'darkness', 'earthVis
 const TERRAIN_CRITERIA: readonly CriterionId[] = ['slope', 'roughness'];
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+// ---------------------------------------------------------------- findBestSites in summary
+
+/** One criterion without its basis text: what a ranking table needs. */
+const criterionRow = (c: CriterionResult) => ({
+  id: c.id,
+  verdict: c.verdict,
+  value: c.measured.value,
+  unit: c.measured.unit,
+  ...(c.measured.bound && { bound: c.measured.bound }),
+  threshold: c.threshold,
+  score: c.score,
+});
+
+/**
+ * findBestSites with detail 'summary' (F-12): a language model takes at most 64,000 characters
+ * per tool result, and the full evaluations repeat long basis texts per site and criterion
+ * (three sites gave 74,872 characters). So the small fields come first, the basis is said once,
+ * and each site carries only its rows: every criterion for the ranked sites, and for an unknown
+ * or infeasible one only the criteria that decided it, with their reasons.
+ */
+export function summariseRanking(o: {
+  profile: MissionProfile;
+  overrides: ProfileOverrides;
+  relaxations: Relaxation[];
+  counts: unknown;
+  cap: number;
+  dropped: number;
+  candidates: Record<string, unknown>;
+  paretoFront: string[];
+  ranked: { siteId: string; name: string; rank: number; utility: number; pareto: boolean }[];
+  explanation: string[];
+  evaluations: SiteEvaluation[];
+  definitions: Partial<Record<CriterionId, string>>;
+}) {
+  const rankOf = new Map(o.ranked.map((x) => [x.siteId, x]));
+  const window = o.evaluations[0]?.metrics.window;
+  return roundDeep({
+    profile: { id: o.profile.id, name: o.profile.name },
+    relaxations: o.relaxations,
+    overrides: o.overrides,
+    counts: o.counts,
+    cap: o.cap,
+    dropped: o.dropped,
+    candidates: o.candidates,
+    utilityNote: UTILITY_NOTE,
+    paretoFront: o.paretoFront,
+    ranked: o.ranked,
+    explanation: o.explanation,
+    basis: {
+      ...(window && { window }),
+      mastHeightM: o.profile.mastHeightM,
+      landingRadiusM: o.profile.landingRadiusM,
+      criteria: o.definitions,
+      perSite: 'Each site\'s data sources (elevation grid and spacing, ephemeris) are in evaluateSite, or in findBestSites with detail "full".',
+    },
+    sites: o.evaluations.map((e) => {
+      const r = rankOf.get(e.site.id);
+      return r
+        ? { siteId: e.site.id, name: e.site.name, feasibility: e.feasibility, utility: e.utility, rank: r.rank, pareto: r.pareto, criteria: e.criteria.map(criterionRow) }
+        : { siteId: e.site.id, name: e.site.name, feasibility: e.feasibility, deciding: e.criteria.filter((c) => c.verdict !== 'pass').map((c) => ({ ...criterionRow(c), reason: c.reason })) };
+    }),
+  });
+}
 
 // ---------------------------------------------------------------- the actions
 
@@ -467,7 +532,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       },
     }),
     defineAction<
-      { candidates: { from: 'catalogue' | 'sites' | 'nearby'; sites?: SiteParam[]; around?: SiteParam; radiusM?: number; spacingM?: number }; limit?: number } & ProfileParams,
+      { candidates: { from: 'catalogue' | 'sites' | 'nearby'; sites?: SiteParam[]; around?: SiteParam; radiusM?: number; spacingM?: number }; limit?: number; detail?: 'summary' | 'full' } & ProfileParams,
       unknown
     >({
       name: 'findBestSites',
@@ -475,7 +540,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       description:
         'Measures and ranks candidate sites for a mission profile. Candidates: {from: "catalogue"} (every catalogued landing), {from: "sites", sites: [...]} (up to 12), or {from: "nearby", around?, radiusM, spacingM} (a grid around a site, default the selected one, from the nearby scan with its faster settings and its slope pre-filter; the best ' +
         `${DECISION_CAPS.nearby} by the scan's own score are measured fully). Only feasible sites are ranked (by utility, ties by site id), with the Pareto front; unknown and infeasible sites are listed with the criteria that decided them. ` +
-        'Returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
+        'With detail "summary" (the default) the result is compact for a reply: the small fields first (profile id and name, relaxations, counts, cap, dropped, candidates, utilityNote, paretoFront, ranked, explanation), one shared `basis`, then `sites`: every criterion\'s verdict, value, unit, bound, threshold and score for the ranked sites, and only the deciding criteria with their reasons for the unknown and infeasible ones. With detail "full" it returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
       effect: 'query',
       params: {
         type: 'object',
@@ -493,12 +558,17 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
             required: ['from'],
           },
           limit: { type: 'integer', description: 'How many ranked sites to return (default 5).', minimum: 1, maximum: 50 },
+          detail: {
+            type: 'string',
+            description: '"summary" (the default): compact, for a reply; per site its verdicts and values, without the basis texts. "full": every SiteEvaluation in full, with each value\'s basis (large: thousands of characters per site).',
+            enum: ['summary', 'full'],
+          },
           profileId: PROFILE_ID,
           overrides: OVERRIDES_SCHEMA,
         },
         required: ['candidates'],
       },
-      run: async ({ candidates: c, limit = 5, profileId, overrides }) => {
+      run: async ({ candidates: c, limit = 5, detail = 'summary', profileId, overrides }) => {
         const only = (allowed: string[]) => {
           const extra = (['sites', 'around', 'radiusM', 'spacingM'] as const).filter((k) => c[k] !== undefined && !allowed.includes(k));
           if (extra.length) throw new ActionError(`candidates.${extra.join(', candidates.')} does not apply to from: "${c.from}".`);
@@ -580,6 +650,13 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           ...ranking.evaluations.filter((e) => e.feasibility === 'unknown'),
           ...ranking.evaluations.filter((e) => e.feasibility === 'infeasible'),
         ];
+        if (detail === 'summary') {
+          const definitions = Object.fromEntries(engineCall('list the criteria', () => engine.criterionDefs()).map((d) => [d.id, d.definition]));
+          return summariseRanking({
+            profile: r.profile, overrides: r.overrides, relaxations: r.relaxations, counts: ranking.counts, cap, dropped, candidates: source,
+            paretoFront: ranking.paretoFront, ranked: top, explanation: ranking.explanation, evaluations: shown, definitions,
+          });
+        }
         return {
           ...echo(r),
           ranked: roundDeep(top),

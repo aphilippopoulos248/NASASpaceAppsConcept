@@ -1,6 +1,7 @@
 // The decision tools (T-73) against fakes of the engine (T-71), the analysis and the region
 // terrain (T-72): what the actions build, pass on, refuse and report. The engine's own rules are
 // tested in src/analysis/decision; the fakes here only follow its contract.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type {
   CriterionDef,
@@ -19,6 +20,7 @@ import type {
 import { CRITERIA, UTILITY_NOTE } from '../analysis/decision/types';
 import { analyse as realAnalyse } from '../analysis/api';
 import * as realEngine from '../analysis/decision/api';
+import { parseMissionProfiles } from '../analysis/decision/profiles';
 import type { MeasurementInput } from '../analysis/decision/api';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis, WindowMetrics } from '../analysis/types';
 import type { Landing } from '../data/landings';
@@ -262,7 +264,7 @@ describe('decision tools (T-73)', () => {
     });
     const seen: DecisionRun[] = [];
     const off = onDecisionRun((p) => seen.push({ ...p }));
-    const r: any = await runAction('findBestSites', { candidates: { from: 'catalogue' } });
+    const r: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, detail: 'full' });
     off();
     expect(r.ok).toBe(true);
     expect(calls.analyse).toHaveLength(3);
@@ -293,7 +295,7 @@ describe('decision tools (T-73)', () => {
 
   it('findBestSites: feasible first by utility, infeasible ones with the criteria that decided, the top `limit`, every echo', async () => {
     setup();
-    const r: any = await runAction('findBestSites', { candidates: { from: 'sites', sites: [{ landing: 'luna-9' }, { landing: 'apollo-11' }, { landing: 'im-2' }, { landing: 'Apollo 11' }] }, limit: 1, overrides: { thresholds: { sunlight: 50 } } });
+    const r: any = await runAction('findBestSites', { candidates: { from: 'sites', sites: [{ landing: 'luna-9' }, { landing: 'apollo-11' }, { landing: 'im-2' }, { landing: 'Apollo 11' }] }, limit: 1, overrides: { thresholds: { sunlight: 50 } }, detail: 'full' });
     expect(r.ok).toBe(true);
     // The duplicate is measured once.
     expect(r.result).toMatchObject({ candidates: { from: 'sites', considered: 3 }, cap: DECISION_CAPS.sites, dropped: 0 });
@@ -304,7 +306,7 @@ describe('decision tools (T-73)', () => {
     expect(r.result.evaluations[1].criteria.filter((c: any) => c.verdict === 'fail').map((c: any) => c.reason)).toEqual(['sunlight fail']);
     expect(r.result).toMatchObject({ profile: { id: 'custom', thresholds: { sunlight: 50 } }, overrides: { thresholds: { sunlight: 50 } }, relaxations: [], paretoFront: ['apollo-11'], explanation: ['fake explanation'], utilityNote: UTILITY_NOTE });
     // A profile given alone runs as it is, without the current overrides.
-    const r2: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, profileId: 'polar-short' });
+    const r2: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, profileId: 'polar-short', detail: 'full' });
     expect(r2.ok && r2.result).toMatchObject({ profile: { id: 'polar-short' }, overrides: {}, candidates: { from: 'catalogue', considered: 3, total: 3 }, cap: DECISION_CAPS.catalogue, dropped: 0 });
   });
 
@@ -314,7 +316,7 @@ describe('decision tools (T-73)', () => {
     const scan = [cand(0, null, true), ...Array.from({ length: 20 }, (_, i) => cand(i + 1, null)), cand(30, 'slope'), cand(31, 'slope'), cand(32, 'no-data')];
     const { store, calls } = setup({ nearby: async () => scan });
     store.set({ site: { id: 'im-2', name: 'IM-2 Athena', kind: 'landing', lat: -84.7906, lon: 29.1957 } });
-    const r: any = await runAction('findBestSites', { candidates: { from: 'nearby', radiusM: 1000, spacingM: 100 }, limit: 3 });
+    const r: any = await runAction('findBestSites', { candidates: { from: 'nearby', radiusM: 1000, spacingM: 100 }, limit: 3, detail: 'full' });
     expect(r.ok).toBe(true);
     expect(calls.nearby[0][1]).toEqual({ radiusM: 1000, spacingM: 100, slopeLimitDeg: 10, weightSun: 1, weightEarth: 1 });
     expect(calls.nearby[0][0]).toMatchObject({ site: { id: 'im-2' }, durationH: 72, mastHeightM: 2 });
@@ -337,6 +339,62 @@ describe('decision tools (T-73)', () => {
     const r: any = await runAction('compareSites', { siteA: { landing: 'apollo-11' }, siteB: { lat: -85, lon: 30 } });
     expect(r).toMatchObject({ ok: true, result: { profile: { id: 'polar-short' }, comparison: { dominance: 'a-dominates', sentences: ['fake comparison'], a: { site: { id: 'apollo-11' } }, b: { site: { id: 'pin:-85.00000,30.00000' } } }, utilityNote: UTILITY_NOTE } });
     expect(calls.analyse.map((s) => s.site.id)).toEqual(['apollo-11', 'pin:-85.00000,30.00000']);
+  });
+
+  it('findBestSites summary (the default, F-12): small fields first, one basis, per site its rows only; full is the contract Ranking', async () => {
+    setup();
+    const params = { candidates: { from: 'sites', sites: [{ landing: 'luna-9' }, { landing: 'apollo-11' }, { landing: 'im-2' }] }, limit: 1, overrides: { thresholds: { sunlight: 50 } } };
+    const sum: any = await runAction('findBestSites', params);
+    expect(sum.ok).toBe(true);
+    expect(Object.keys(sum.result)).toEqual(['profile', 'relaxations', 'overrides', 'counts', 'cap', 'dropped', 'candidates', 'utilityNote', 'paretoFront', 'ranked', 'explanation', 'basis', 'sites']);
+    expect(sum.result.profile).toEqual({ id: 'custom', name: 'Polar lander, short stay' });
+    expect(sum.result.basis).toMatchObject({ window: { durationH: 72 }, mastHeightM: 2, landingRadiusM: 100, criteria: { sunlight: 'sunlight', roughness: 'roughness' } });
+    // The ranked site: every criterion without basis text. The others: only what decided them, with the reason.
+    expect(sum.result.sites).toEqual([
+      { siteId: 'apollo-11', name: 'Apollo 11', feasibility: 'feasible', utility: 0.95, rank: 1, pareto: true, criteria: expect.any(Array) },
+      { siteId: 'im-2', name: 'IM-2 Athena', feasibility: 'feasible', deciding: [] },
+      { siteId: 'luna-9', name: 'Luna 9', feasibility: 'infeasible', deciding: [{ id: 'sunlight', verdict: 'fail', value: 30, unit: '%', threshold: 50, score: 0.5, reason: 'sunlight fail' }] },
+    ].filter((x) => x.siteId !== 'im-2'));
+    expect(sum.result.sites[0].criteria[0]).toEqual({ id: 'sunlight', verdict: 'pass', value: 95, unit: '%', threshold: 50, score: 0.5 });
+    expect(JSON.stringify(sum.result)).not.toContain('"basis":"fake"');
+    // 'full' is the contract Ranking, as before.
+    const full: any = await runAction('findBestSites', { ...params, detail: 'full' });
+    expect(Object.keys(full.result)).toEqual(['profile', 'overrides', 'relaxations', 'ranked', 'paretoFront', 'counts', 'explanation', 'evaluations', 'cap', 'dropped', 'candidates', 'utilityNote']);
+    expect(full.result.evaluations[0].metrics.values.sunlight.basis).toBe('fake');
+    expect(await runAction('findBestSites', { ...params, detail: 'brief' })).toMatchObject({ ok: false, error: 'params.detail must be one of: summary, full' });
+  });
+
+  it('findBestSites summary on the whole catalogue stays under a model\'s 64,000-character tool result (real engine, realistic texts)', async () => {
+    resetActions();
+    const catalogue = (JSON.parse(readFileSync('public/data/landings.json', 'utf8')) as { landings: Landing[] }).landings;
+    const profiles = parseMissionProfiles(JSON.parse(readFileSync('public/data/mission-profiles.json', 'utf8')));
+    const longNote = (site: SiteRef) => [
+      `Measured on LROC NAC DTM NAC_DTM_${site.id.toUpperCase()}_E008N0234.IMG (2.0 m), 3 m site window (3 m spacing): 3505 samples within 100 m of the centre.`,
+      'Slope: 5.3°, the 95th percentile of 3480 local slopes, each measured across one 3 m grid cell; the steepest is 27.0°. The region\'s best-fit plane tilts 1.5°.',
+      'Roughness: 0.67 m, the RMS height difference between the 3505 samples and the region\'s best-fit plane. It takes in relief from the 3 m scale up to the size of the region, the model\'s own height noise included.',
+      '0 % of the local slopes (12 of 3480) are steeper than the 10° limit. At 3 m spacing, rocks under about 6 m across are invisible.',
+    ];
+    const store = new Store(initialState(Date.UTC(2025, 2, 6, 17, 28)));
+    registerActions(
+      createDecisionActions({
+        store,
+        landings: () => catalogue,
+        engine: { ...realEngine, loadMissionProfiles: async () => profiles },
+        analyse: async (s) => ({ ...analysisFor(s, 40 + (s.site.lat % 60)), provenance: { ephemeris: 'model', ephemerisNote: 'Validated against JPL Horizons: within 0.02 deg over 1966-2035 samples.', dem: [{ name: 'LOLA LDEM_80S_20M', resolutionM: 20, fromM: 0, toM: 1500 }, { name: 'SLDEM2015 512 ppd', resolutionM: 59, fromM: 1500, toM: 30000 }, { name: 'LOLA whole-Moon grid', resolutionM: 1895, fromM: 30000, toM: 400000 }], assumptions: [], terrainNotes: ['A 60 m site window was built from LDEM_80S_20M.', 'The skyline beyond 400 km rests on the 1.9 km grid.'] } }) as unknown as SiteAnalysis,
+        loadRegionTerrain: async (site, r) => ({ ...regionFor(site, r, 4 + Math.abs(site.lat % 9), 0.3 + Math.abs(site.lon % 1.2)), demName: 'LROC NAC DTM, 3 m site window', gridSpacingM: 3, samples: 3505, notes: longNote(site) }),
+      }),
+    );
+    const sum: any = await runAction('findBestSites', { candidates: { from: 'catalogue' } });
+    expect(sum.ok, sum.error).toBe(true);
+    expect(sum.result.counts.candidates).toBe(catalogue.length);
+    const summaryLength = JSON.stringify(sum.result).length;
+    expect(summaryLength).toBeLessThan(64_000);
+    const full: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, detail: 'full' });
+    const fullLength = JSON.stringify(full.result).length;
+    expect(fullLength).toBeGreaterThan(64_000); // why the summary exists
+    expect(summaryLength).toBeLessThan(fullLength / 4);
+    // The small fields survive any cut: they come first.
+    expect(JSON.stringify(sum.result).slice(0, 4000)).toContain('"utilityNote"');
   });
 
   it('helpers: overrides as the engine takes them, numbers rounded (coordinates to 5 decimals)', () => {
