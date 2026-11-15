@@ -6,7 +6,7 @@
 //      prints the renderer; with --lock it then waits for the shared lock that matches
 //      (/tmp/lunyx-gpu.lock for the GPU, /tmp/lunyx-heavy.lock for software rendering);
 //   3. starts two `vite preview` servers on free ports (no model, scripted test model);
-//   4. runs e2e/*.test.mjs with node:test, one file at a time;
+//   4. runs e2e/*.test.mjs and e2e/scenario/*.test.mjs with node:test, one file at a time;
 //   5. stops the servers, prints the duration and the load, and exits with the tests' status.
 //
 // Arguments after the flags select test files by substring:  npm run e2e -- assistant
@@ -72,11 +72,11 @@ if (lock) {
   process.exit(code);
 }
 
-const files = readdirSync(join(ROOT, 'e2e'))
-  .filter((f) => f.endsWith('.test.mjs'))
+// e2e/*.test.mjs and e2e/scenario/*.test.mjs (the assistant's browser scenarios).
+const testsIn = (dir) => (existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter((f) => f.endsWith('.test.mjs')).map((f) => join(dir, f)) : []);
+const files = [...testsIn('e2e'), ...testsIn(join('e2e', 'scenario'))]
   .filter((f) => !filters.length || filters.some((s) => f.includes(s)))
-  .sort()
-  .map((f) => join('e2e', f));
+  .sort();
 if (!files.length) {
   console.error(`e2e: no test file matches ${filters.join(', ')}`);
   process.exit(1);
