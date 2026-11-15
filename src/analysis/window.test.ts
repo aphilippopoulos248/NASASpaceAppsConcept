@@ -314,6 +314,27 @@ describe('blockageAt, nextEvents, compareAnalyses', () => {
     // Outside the window the model is used.
     expect(Number.isFinite(blockageAt(a, 'earth', a.scenario.startMs - 10 * H).bodyElDeg)).toBe(true);
   });
+  it('names the ground at the observer\'s feet, and gives near terrain in metres', () => {
+    // A dome 30 m east of the observer (h = 500 - 0.004 r^2): with no mast the ground itself, rising at 13.5 deg, is the eastern skyline.
+    const site = { lat: 0, lon: 0 };
+    const dome = stackOf(radialSource('dome', 40, 0, (30 / 1_737_400) * (180 / Math.PI), (r) => 500 - 0.004 * Math.min(r, 150) ** 2));
+    // 10 March 2025: lunar morning at 0 E, the Sun in the east.
+    const onGround = run(scen(site.lat, site.lon, '2025-03-10T00:00:00Z', 6, 30, 0), dome);
+    const b = blockageAt(onGround, 'sun', onGround.scenario.startMs);
+    expect(b.bodyAzDeg).toBeGreaterThan(60);
+    expect(b.bodyAzDeg).toBeLessThan(120);
+    expect(b.ridgeDistanceM).toBe(0);
+    expect(b.skylineElDeg).toBeGreaterThan(11);
+    expect(b.explanation).toContain('formed by the ground at the observer\'s own feet, at 496 m (dome, 40 m grid)');
+    expect(onGround.warnings.join(' ')).toMatch(/With the observer on the ground, the skyline in \d+ of 720 directions is the ground within 28 m of the observer/);
+    // Two metres up, the same slope forms the skyline from about 22 m away, lower.
+    const raised = run(scen(site.lat, site.lon, '2025-03-10T00:00:00Z', 6, 30, 2), dome);
+    const c = blockageAt(raised, 'sun', raised.scenario.startMs);
+    expect(c.ridgeDistanceM).toBeGreaterThan(15);
+    expect(c.ridgeDistanceM).toBeLessThan(30);
+    expect(c.skylineElDeg).toBeLessThan(b.skylineElDeg - 5);
+    expect(c.explanation).toMatch(/formed by terrain \d\d m away at 500 m \(dome, 40 m grid\)/);
+  });
   it('nextEvents finds the next of each kind, null when none in the window', () => {
     const a = run(scen(0, 0, '2025-01-01T00:00:00Z', 29.53 * 24, 20, 0));
     const n = nextEvents(a, a.scenario.startMs);
