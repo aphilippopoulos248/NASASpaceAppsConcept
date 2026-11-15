@@ -255,7 +255,7 @@ export function roverStateAt(track: RoverTrack, timeMs: number): RoverState {
 
 /**
  * Where the rovers of one site are at an instant, in a line for a reader who has to keep clear
- * of them: "Kestrel: 34 m NW of the lander, driving (circuit within 45 m)". Tracks must be laid
+ * of them: "Rover 2: 34 m NW of the lander, driving (circuit within 45 m)". Tracks must be laid
  * out around the lander.
  */
 export function describeRovers(tracks: readonly RoverTrack[], timeMs: number): string {

@@ -12,7 +12,7 @@
 //     sideways wobble as if steering round rocks. The rover stops at each station for a while.
 //   - Only the landing's own coordinates come from landings.json; every route is laid out in metres
 //     east and north of the lander and converted to latitude and longitude.
-// The random numbers are seeded by the rover's id, so a re-run writes the same file.
+// The random numbers are seeded by each rover's `seed` word, so a re-run writes the same file.
 // Routes know nothing about the terrain: they may cross craters or slopes no rover would drive.
 //
 // Run with: npm run build-rovers
@@ -29,32 +29,33 @@ const EPOCH_UTC = '2026-01-01T00:00:00Z';
 /** No route comes closer to the lander than this, metres. */
 const LANDER_CLEAR_M = 8;
 
+// Rovers are simply numbered. seed: the word its random route is drawn from (changing it changes the route).
 // centre: where the circuit is centred, metres [east, north] of the lander. radius: [nearest, furthest]
 // station from that centre. stepM: spacing of the route points. stopS: [shortest, longest] halt at a station.
 const ROSTER = [
-  { id: 'prospector-1', name: 'Prospector-1', siteId: 'im-2', operator: 'NASA', kind: 'robotic', role: 'Volatiles prospecting', massKg: 430, speedMps: 0.2,
+  { id: 'rover-1', name: 'Rover 1', seed: 'prospector-1', siteId: 'im-2', operator: 'NASA', kind: 'robotic', role: 'Volatiles prospecting', massKg: 430, speedMps: 0.2,
     centre: [35, 40], radius: [70, 140], stations: 7, stepM: 4, stopS: [300, 900], activities: ['Neutron spectrometer reading', 'Drill to 1 m', 'Mass spectrometer reading', 'Panorama'] },
-  { id: 'kestrel', name: 'Kestrel', siteId: 'im-2', operator: 'NASA', kind: 'robotic', role: 'Scout micro-rover', massKg: 12, speedMps: 0.1,
+  { id: 'rover-2', name: 'Rover 2', seed: 'kestrel', siteId: 'im-2', operator: 'NASA', kind: 'robotic', role: 'Scout micro-rover', massKg: 12, speedMps: 0.1,
     centre: [-12, -6], radius: [18, 42], stations: 5, stepM: 2, stopS: [60, 240], activities: ['Stereo imaging', 'Relay check', 'Thermal reading'] },
-  { id: 'malapert-relay', name: 'Malapert Relay Rover', siteId: 'im-1', operator: 'NASA', kind: 'robotic', role: 'Communications relay survey', massKg: 60, speedMps: 0.1,
+  { id: 'rover-3', name: 'Rover 3', seed: 'malapert-relay', siteId: 'im-1', operator: 'NASA', kind: 'robotic', role: 'Communications relay survey', massKg: 60, speedMps: 0.1,
     centre: [10, 22], radius: [30, 75], stations: 6, stepM: 3, stopS: [120, 480], activities: ['Earth link test', 'Horizon survey', 'Panorama'] },
-  { id: 'anveshak-1', name: 'Anveshak-1', siteId: 'chandrayaan-3', operator: 'ISRO', kind: 'robotic', role: 'Regolith composition', massKg: 32, speedMps: 0.05,
+  { id: 'rover-4', name: 'Rover 4', seed: 'anveshak-1', siteId: 'chandrayaan-3', operator: 'ISRO', kind: 'robotic', role: 'Regolith composition', massKg: 32, speedMps: 0.05,
     centre: [6, -10], radius: [14, 34], stations: 5, stepM: 2, stopS: [240, 720], activities: ['LIBS reading', 'APXS reading', 'Wheel-track imaging'] },
-  { id: 'tansuo-1', name: 'Tansuo-1', siteId: 'change-4', operator: 'CNSA', kind: 'robotic', role: 'Far-side geology', massKg: 140, speedMps: 0.055,
+  { id: 'rover-5', name: 'Rover 5', seed: 'tansuo-1', siteId: 'change-4', operator: 'CNSA', kind: 'robotic', role: 'Far-side geology', massKg: 140, speedMps: 0.055,
     centre: [-15, 12], radius: [24, 60], stations: 6, stepM: 2.5, stopS: [300, 900], activities: ['Ground-penetrating radar profile', 'Infrared spectrometer reading', 'Panorama'] },
-  { id: 'tansuo-2', name: 'Tansuo-2', siteId: 'change-6', operator: 'CNSA', kind: 'robotic', role: 'Basin floor survey', massKg: 140, speedMps: 0.055,
+  { id: 'rover-6', name: 'Rover 6', seed: 'tansuo-2', siteId: 'change-6', operator: 'CNSA', kind: 'robotic', role: 'Basin floor survey', massKg: 140, speedMps: 0.055,
     centre: [14, 8], radius: [22, 55], stations: 6, stepM: 2.5, stopS: [300, 900], activities: ['Ground-penetrating radar profile', 'Infrared spectrometer reading', 'Panorama'] },
-  { id: 'guanghan', name: 'Guanghan', siteId: 'change-3', operator: 'CNSA', kind: 'robotic', role: 'Mare basalt survey', massKg: 120, speedMps: 0.06,
+  { id: 'rover-7', name: 'Rover 7', seed: 'guanghan', siteId: 'change-3', operator: 'CNSA', kind: 'robotic', role: 'Mare basalt survey', massKg: 120, speedMps: 0.06,
     centre: [4, 18], radius: [20, 48], stations: 5, stepM: 2.5, stopS: [300, 720], activities: ['APXS reading', 'Radar profile', 'Panorama'] },
-  { id: 'hayate', name: 'Hayate', siteId: 'slim', operator: 'JAXA', kind: 'robotic', role: 'Olivine outcrop imaging', massKg: 18, speedMps: 0.08,
+  { id: 'rover-8', name: 'Rover 8', seed: 'hayate', siteId: 'slim', operator: 'JAXA', kind: 'robotic', role: 'Olivine outcrop imaging', massKg: 18, speedMps: 0.08,
     centre: [-8, 5], radius: [12, 30], stations: 5, stepM: 2, stopS: [120, 480], activities: ['Multiband imaging', 'Rock close-up', 'Panorama'] },
-  { id: 'juniper', name: 'Juniper', siteId: 'blue-ghost-1', operator: 'NASA', kind: 'robotic', role: 'Regolith and heat-flow survey', massKg: 85, speedMps: 0.12,
+  { id: 'rover-9', name: 'Rover 9', seed: 'juniper', siteId: 'blue-ghost-1', operator: 'NASA', kind: 'robotic', role: 'Regolith and heat-flow survey', massKg: 85, speedMps: 0.12,
     centre: [18, -14], radius: [26, 70], stations: 6, stepM: 3, stopS: [180, 600], activities: ['Regolith sample', 'Heat-flow probe reading', 'Panorama'] },
-  { id: 'hadley-scout', name: 'Hadley Scout', siteId: 'apollo-15', operator: 'NASA', kind: 'robotic', role: 'Rille-edge reconnaissance', massKg: 95, speedMps: 0.15,
+  { id: 'rover-10', name: 'Rover 10', seed: 'hadley-scout', siteId: 'apollo-15', operator: 'NASA', kind: 'robotic', role: 'Rille-edge reconnaissance', massKg: 95, speedMps: 0.15,
     centre: [-20, 10], radius: [45, 110], stations: 6, stepM: 3.5, stopS: [180, 600], activities: ['Stereo imaging', 'Spectrometer reading', 'Panorama'] },
-  { id: 'mule-2', name: 'Mule-2', siteId: 'apollo-17', operator: 'NASA', kind: 'robotic', role: 'Cargo carrier', massKg: 310, speedMps: 0.4,
+  { id: 'rover-11', name: 'Rover 11', seed: 'mule-2', siteId: 'apollo-17', operator: 'NASA', kind: 'robotic', role: 'Cargo carrier', massKg: 310, speedMps: 0.4,
     centre: [50, 35], radius: [40, 115], stations: 5, stepM: 5, stopS: [240, 900], activities: ['Unloading', 'Recharge', 'Waiting for crew'] },
-  { id: 'ltv-pathfinder', name: 'LTV Pathfinder', siteId: 'apollo-17', operator: 'NASA', kind: 'crewed', role: 'Crew traverse vehicle', massKg: 900, speedMps: 2.8,
+  { id: 'rover-12', name: 'Rover 12', seed: 'ltv-pathfinder', siteId: 'apollo-17', operator: 'NASA', kind: 'crewed', role: 'Crew traverse vehicle', massKg: 900, speedMps: 2.8,
     centre: [-180, 240], radius: [260, 720], stations: 7, stepM: 14, stopS: [600, 2400], activities: ['Sampling stop', 'Geology station', 'Gravimeter reading', 'Navigation fix'] },
 ];
 
@@ -91,7 +92,7 @@ function spline(p0, p1, p2, p3, u) {
 
 /** A closed route in metres [east, north] of the lander; station points carry a stop. */
 function layRoute(spec) {
-  const rand = seeded(spec.id);
+  const rand = seeded(spec.seed);
   const n = spec.stations;
   const turn = rand() < 0.5 ? 1 : -1;
   const start = rand() * 2 * Math.PI;
@@ -149,7 +150,7 @@ const rovers = ROSTER.map((spec) => {
     massKg: spec.massKg,
     speedMps: spec.speedMps,
     // Where on the circuit the rover is at the epoch, seconds into a lap, so rovers do not all start at a station.
-    phaseS: Math.round(seeded(`${spec.id}/phase`)() * lapS),
+    phaseS: Math.round(seeded(`${spec.seed}/phase`)() * lapS),
     lengthM: Math.round(lengthM),
     home: { lat: path[0].lat, lon: path[0].lon },
     path,

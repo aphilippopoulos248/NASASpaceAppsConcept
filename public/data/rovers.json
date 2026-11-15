@@ -4,8 +4,8 @@
  "epochUtc": "2026-01-01T00:00:00Z",
  "rovers": [
   {
-   "id": "prospector-1",
-   "name": "Prospector-1",
+   "id": "rover-1",
+   "name": "Rover 1",
    "simulated": true,
    "siteId": "im-2",
    "country": "USA",
@@ -197,8 +197,8 @@
    ]
   },
   {
-   "id": "kestrel",
-   "name": "Kestrel",
+   "id": "rover-2",
+   "name": "Rover 2",
    "simulated": true,
    "siteId": "im-2",
    "country": "USA",
@@ -304,8 +304,8 @@
    ]
   },
   {
-   "id": "malapert-relay",
-   "name": "Malapert Relay Rover",
+   "id": "rover-3",
+   "name": "Rover 3",
    "simulated": true,
    "siteId": "im-1",
    "country": "USA",
@@ -439,8 +439,8 @@
    ]
   },
   {
-   "id": "anveshak-1",
-   "name": "Anveshak-1",
+   "id": "rover-4",
+   "name": "Rover 4",
    "simulated": true,
    "siteId": "chandrayaan-3",
    "country": "India",
@@ -537,8 +537,8 @@
    ]
   },
   {
-   "id": "tansuo-1",
-   "name": "Tansuo-1",
+   "id": "rover-5",
+   "name": "Rover 5",
    "simulated": true,
    "siteId": "change-4",
    "country": "China",
@@ -653,8 +653,8 @@
    ]
   },
   {
-   "id": "tansuo-2",
-   "name": "Tansuo-2",
+   "id": "rover-6",
+   "name": "Rover 6",
    "simulated": true,
    "siteId": "change-6",
    "country": "China",
@@ -772,8 +772,8 @@
    ]
   },
   {
-   "id": "guanghan",
-   "name": "Guanghan",
+   "id": "rover-7",
+   "name": "Rover 7",
    "simulated": true,
    "siteId": "change-3",
    "country": "China",
@@ -864,8 +864,8 @@
    ]
   },
   {
-   "id": "hayate",
-   "name": "Hayate",
+   "id": "rover-8",
+   "name": "Rover 8",
    "simulated": true,
    "siteId": "slim",
    "country": "Japan",
@@ -944,8 +944,8 @@
    ]
   },
   {
-   "id": "juniper",
-   "name": "Juniper",
+   "id": "rover-9",
+   "name": "Rover 9",
    "simulated": true,
    "siteId": "blue-ghost-1",
    "country": "USA",
@@ -1072,8 +1072,8 @@
    ]
   },
   {
-   "id": "hadley-scout",
-   "name": "Hadley Scout",
+   "id": "rover-10",
+   "name": "Rover 10",
    "simulated": true,
    "siteId": "apollo-15",
    "country": "USA",
@@ -1226,8 +1226,8 @@
    ]
   },
   {
-   "id": "mule-2",
-   "name": "Mule-2",
+   "id": "rover-11",
+   "name": "Rover 11",
    "simulated": true,
    "siteId": "apollo-17",
    "country": "USA",
@@ -1352,8 +1352,8 @@
    ]
   },
   {
-   "id": "ltv-pathfinder",
-   "name": "LTV Pathfinder",
+   "id": "rover-12",
+   "name": "Rover 12",
    "simulated": true,
    "siteId": "apollo-17",
    "country": "USA",

@@ -26,7 +26,7 @@ describe('the packaged rovers (simulated)', () => {
       expect(r.country).toBe(site!.country);
       expect(r.home).toEqual({ lat: r.path[0].lat, lon: r.path[0].lon });
     }
-    expect(roversAtSite(file.rovers, 'apollo-17').map((r) => r.id)).toEqual(['mule-2', 'ltv-pathfinder']);
+    expect(roversAtSite(file.rovers, 'apollo-17').map((r) => r.id)).toEqual(['rover-11', 'rover-12']);
     expect(roversAtSite(file.rovers, 'apollo-11')).toEqual([]);
   });
 
@@ -85,7 +85,7 @@ describe('roverStateAt', () => {
   });
 
   it('halts at a station for its stop, facing the way it arrived, then drives on', () => {
-    const t = tracks.find((x) => x.rover.id === 'kestrel')!;
+    const t = tracks.find((x) => x.rover.id === 'rover-2')!;
     const first = t.rover.path[0];
     // Seconds into the lap are 0 at this instant.
     const lapStart = file.epochMs - t.rover.phaseS * 1000;
@@ -119,13 +119,13 @@ describe('parseRovers', () => {
     expect(() => parseRovers({ ...one(), simulated: false })).toThrow(/simulated/);
     const f = one();
     delete f.rovers[0].simulated;
-    expect(() => parseRovers(f)).toThrow(/"prospector-1": must be marked "simulated": true/);
+    expect(() => parseRovers(f)).toThrow(/"rover-1": must be marked "simulated": true/);
   });
 
   it('names the rover and the field that is wrong', () => {
     const f = one();
     f.rovers[0].speedMps = 0;
-    expect(() => parseRovers(f)).toThrow(/rover "prospector-1": "speedMps" must be a number/);
+    expect(() => parseRovers(f)).toThrow(/rover "rover-1": "speedMps" must be a number/);
     const g = one();
     (g.rovers[0].path as { lat: unknown }[])[2].lat = 'north';
     expect(() => parseRovers(g)).toThrow(/"path\[2\]\.lat"/);
@@ -138,12 +138,12 @@ describe('parseRovers', () => {
 describe('describeRovers', () => {
   it('says where each rover of a site is from the lander, and how far its circuit reaches', () => {
     const here = tracks.filter((t) => t.rover.siteId === 'im-2');
-    const kestrel = here.find((t) => t.rover.id === 'kestrel')!;
-    const lapStart = file.epochMs - kestrel.rover.phaseS * 1000;
-    const p = kestrel.points[0];
+    const second = here.find((t) => t.rover.id === 'rover-2')!;
+    const lapStart = file.epochMs - second.rover.phaseS * 1000;
+    const p = second.points[0];
     const line = describeRovers(here, lapStart + 1000);
-    expect(line).toContain(`Kestrel: ${Math.round(Math.hypot(p.eastM, p.northM))} m ${compassPoint(p.eastM, p.northM)} of the lander, halted: ${kestrel.rover.path[0].activity!.toLowerCase()} (circuit within ${Math.ceil(trackReachM(kestrel))} m)`);
-    expect(line).toMatch(/^Prospector-1: \d+ m [NESW]{1,2} of the lander, /);
+    expect(line).toContain(`Rover 2: ${Math.round(Math.hypot(p.eastM, p.northM))} m ${compassPoint(p.eastM, p.northM)} of the lander, halted: ${second.rover.path[0].activity!.toLowerCase()} (circuit within ${Math.ceil(trackReachM(second))} m)`);
+    expect(line).toMatch(/^Rover 1: \d+ m [NESW]{1,2} of the lander, /);
     expect(describeRovers([], 0)).toBe('');
   });
 

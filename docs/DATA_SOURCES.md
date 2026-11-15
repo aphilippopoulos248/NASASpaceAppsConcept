@@ -260,8 +260,8 @@ without downloading again.
   rover covers `speedMps` metres each second.
 - **How it is made:** `scripts/build-rovers.mjs` holds the roster, written by hand. For each rover it picks a few
   stations at random bearings and distances around a point near the lander, joins them with a smooth curve, samples
-  it every 2–14 m with a small sideways wobble, and gives each station a halt. The random numbers are seeded by the
-  rover's id, so re-running the script writes the same file. No route comes within 8 m of the lander.
+  it every 2–14 m with a small sideways wobble, and gives each station a halt. The rovers are simply numbered, Rover 1 to Rover 12. The random numbers are seeded by a
+  word kept for each rover in the roster, so re-running the script writes the same file. No route comes within 8 m of the lander.
 - **What was made to look plausible:** speeds are in the range of real vehicles — 0.05–0.4 m/s for the robotic
   rovers (Yutu-2 drove at up to about 0.06 m/s, VIPER was designed for about 0.2 m/s) and 2.8 m/s, about 10 km/h,
   for the one crewed vehicle (the Apollo Lunar Roving Vehicle averaged about 9 km/h). Robotic circuits are
@@ -269,16 +269,16 @@ without downloading again.
 
   | Site | Rovers (all invented) |
   |---|---|
-  | IM-2 Athena | Prospector-1, Kestrel |
-  | IM-1 Odysseus | Malapert Relay Rover |
-  | Chandrayaan-3 | Anveshak-1 |
-  | Chang'e 4 | Tansuo-1 |
-  | Chang'e 6 | Tansuo-2 |
-  | Chang'e 3 | Guanghan |
-  | SLIM | Hayate |
-  | Blue Ghost Mission 1 | Juniper |
-  | Apollo 15 | Hadley Scout |
-  | Apollo 17 | Mule-2, LTV Pathfinder (crewed) |
+  | IM-2 Athena | Rover 1, Rover 2 |
+  | IM-1 Odysseus | Rover 3 |
+  | Chandrayaan-3 | Rover 4 |
+  | Chang'e 4 | Rover 5 |
+  | Chang'e 6 | Rover 6 |
+  | Chang'e 3 | Rover 7 |
+  | SLIM | Rover 8 |
+  | Blue Ghost Mission 1 | Rover 9 |
+  | Apollo 15 | Rover 10 |
+  | Apollo 17 | Rover 11, Rover 12 (crewed) |
 
 - **On screen:** the surface view (`src/scene/surface/rovers.ts`) draws each rover whose circuit starts within
   5 km of the site with the model of dataset 13 scaled to a size worked out from its mass (a plain box on wheels
@@ -288,11 +288,11 @@ without downloading again.
 - **On the globe** (`src/scene/globe/roverMarkers.ts`): shown and filtered with the landing markers, in amber.
   From far away a site with rovers has a bold amber ring round its landing marker and, at the ring's upper right,
   an amber badge with a small rover drawn on it and the number of rovers when there is more than one; both keep
-  their size on screen at every altitude. Within about 350 km the rovers are named under the ring ("Hayate ·
+  their size on screen at every altitude. Within about 350 km the rovers are named under the ring ("Rover 8 ·
   simulated rover"). The left panel carries a one-line key to these symbols. Once the circuits are wide enough on screen, each
   is drawn as a line with the rover as an amber diamond on it, at its true position, moving, with its name. The
   camera comes no closer than about 10 km, where a pixel is about 8 m, so circuits that stay within about 60 m of
-  the lander (Hayate, Anveshak-1) keep the ring at every zoom.
+  the lander (Rover 8, Rover 4) keep the ring at every zoom.
 - **In the site card:** the row "Rovers (simulated)" gives each rover's present distance and compass bearing from
   the lander, whether it is driving or halted, and how far its circuit reaches — the ground to keep clear of.
 - **Their clock:** the rovers run on real time, not on the app's clock, so they always drive at their stated
