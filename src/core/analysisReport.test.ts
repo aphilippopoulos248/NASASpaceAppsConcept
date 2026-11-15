@@ -53,8 +53,10 @@ describe('analysis report', () => {
         sun: { azDeg: 65.68, elDeg: 2.46, skylineElDeg: 0.83, clearanceDeg: 1.63, centreAboveSkyline: true, skylineTerrain: { distanceKm: 18.35, heightM: 5687, latDeg: -84.5115, lonDegEast: 34.9662, demResolutionM: 80 }, explanation: 'because' },
         earth: { clearanceDeg: -0.33, centreAboveSkyline: false },
       },
-      nextEvents: { sunset: { timeUtc: '2025-03-06T22:28Z', azDeg: 268.9, inHours: 3 }, sunrise: { timeUtc: '2025-03-07T13:28Z', inHours: 18 }, earthrise: null, earthset: null },
-      events: [{ type: 'sunset', timeUtc: '2025-03-06T22:28Z', azDeg: 268.9 }, { type: 'sunrise', timeUtc: '2025-03-07T13:28Z', azDeg: 91.3 }],
+      // Each time says which instant of the rise or set it is (decision D-8).
+      nextEvents: { sunset: { label: 'Sun fully set', timeUtc: '2025-03-06T22:28Z', azDeg: 268.9, inHours: 3 }, sunrise: { label: 'Sun starts rising', timeUtc: '2025-03-07T13:28Z', inHours: 18 }, earthrise: null, earthset: null },
+      events: [{ type: 'sunset', label: 'Sun fully set', timeUtc: '2025-03-06T22:28Z', azDeg: 268.9 }, { type: 'sunrise', label: 'Sun starts rising', timeUtc: '2025-03-07T13:28Z', azDeg: 91.3 }],
+      eventDefinitions: { sunset: "Sun fully set: the last part of the Sun's disc goes behind the terrain skyline.", earthset: "Earth's centre sets: the centre of Earth's disc goes behind the terrain skyline." },
       intervals: { darkness: [{ startUtc: '2025-03-06T17:28Z', endUtc: '2025-03-06T23:28Z', hours: 6, touchesWindowStart: true }], earthGaps: [], sunBehindEarth: [] },
       skyline: { highestElDeg: 4.07, highestAzDeg: 90, lowestElDeg: -1.5, lowestAzDeg: 180, smoothMoonHorizonDeg: -0.087, searchedToKm: 189 },
       provenance: { ephemeris: 'model', elevationData: [{ name: 'test grid', resolutionM: 60, fromKm: 0, toKm: 5.4 }], assumptions: ['a'] },

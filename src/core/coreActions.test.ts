@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { SiteAnalysis } from '../analysis/types';
-import type { Landing } from '../data/landings';
+import { quickmapUrl, trekUrl, type Landing } from '../data/landings';
+import { MAX_FOV_DEG, MIN_FOV_DEG } from '../scene/surface/actions';
 import { registerActions, resetActions, runAction } from './actions';
 import { AnalysisStore } from './analysisStore';
 import { onCommand } from './bus';
-import { createCoreActions } from './coreActions';
+import { createCoreActions, MAX_LOOK_FOV_DEG, MIN_LOOK_FOV_DEG } from './coreActions';
 import { MissionFilterStore } from './missionFilter';
+import { moonPhaseText } from './moonPhase';
+import { EVENT_INFO } from './skyEvents';
 import { initialState, Store } from './store';
 import type { SiteRef } from './types';
 
@@ -143,6 +146,58 @@ describe('core actions', () => {
     expect(await runAction('setFilters', { fromYear: 2000, toYear: 1990 })).toMatchObject({ ok: false });
   });
 
+  it('lists the catalogue oldest first, marking what the filters show', async () => {
+    const { store } = setup();
+    const before = JSON.stringify(store.get());
+    const all = await runAction<any>('listSites');
+    expect(all).toMatchObject({ ok: true, result: { total: 4, shown: 4, listed: 4, markersOnGlobe: true, selectedId: null } });
+    if (!all.ok) return;
+    expect(all.result.sites.map((x: any) => x.id)).toEqual(['luna-9', 'apollo-11', 'luna-17', 'change-4']);
+    expect(all.result.sites[1]).toEqual({
+      id: 'apollo-11', name: 'Apollo 11', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA',
+      landedUtc: '1969-07-20T12:00Z', crewed: true, region: 'r', positionApproximate: false, summary: 's', shown: true,
+    });
+    // A query: nothing on screen changed.
+    expect(JSON.stringify(store.get())).toBe(before);
+
+    await runAction('setFilters', { programs: ['luna'] });
+    await runAction('selectSite', { site: 'luna-17' });
+    await runAction('showMissions', { show: false });
+    const marked = await runAction<any>('listSites');
+    expect(marked).toMatchObject({ ok: true, result: { total: 4, shown: 2, listed: 4, markersOnGlobe: false, selectedId: 'luna-17', filter: { programs: ['Luna'] } } });
+    expect(marked.ok && marked.result.sites.map((x: any) => x.shown)).toEqual([true, false, true, false]);
+    const shown = await runAction<any>('listSites', { shownOnly: true });
+    expect(shown).toMatchObject({ ok: true, result: { total: 4, shown: 2, listed: 2 } });
+    expect(shown.ok && shown.result.sites.map((x: any) => x.name)).toEqual(['Luna 9', 'Luna 17 / Lunokhod 1']);
+    // Every name it lists is one selectSite takes.
+    for (const row of all.result.sites) expect(await runAction('selectSite', { site: row.name, fly: false })).toMatchObject({ ok: true, result: { site: { id: row.id } } });
+    expect(JSON.parse(JSON.stringify(all))).toEqual(all);
+  });
+
+  it('gives a catalogued site its summary and outside links, as the site card shows them; a pin has neither', async () => {
+    setup();
+    const r = await runAction<any>('selectSite', { site: 'apollo-11' });
+    expect(r).toMatchObject({ ok: true, result: { site: { id: 'apollo-11', region: 'r', summary: 's', links: { quickMap: quickmapUrl(LANDINGS[1]), moonTrek: trekUrl(LANDINGS[1]) } } } });
+    if (!r.ok) return;
+    expect(r.result.site.links.quickMap).toMatch(/^https:\/\/quickmap\.lroc\./);
+    expect(r.result.site.links.moonTrek).toMatch(/^https:\/\/trek\.nasa\.gov\/moon\//);
+    const state = await runAction<any>('getState');
+    expect(state.ok && state.result.site).toEqual(r.result.site);
+    const pin = await runAction<any>('dropPin', { lat: 1, lon: 2 });
+    expect(pin.ok && pin.result.site).toEqual({ id: 'pin:1.00000,2.00000', name: 'Pin 1.000° N, 2.000° E', kind: 'custom', latDeg: 1, lonDegEast: 2 });
+  });
+
+  it('lookAt takes the whole field-of-view range of the surface scene', async () => {
+    expect([MIN_LOOK_FOV_DEG, MAX_LOOK_FOV_DEG]).toEqual([MIN_FOV_DEG, MAX_FOV_DEG]);
+    setup(() => Promise.resolve());
+    await runAction('selectSite', { site: 'apollo-11', surface: true });
+    // Narrow enough to fill the screen with the Sun's disc, and the widest view.
+    expect(await runAction('lookAt', { azDeg: 90, elDeg: 10, fovDeg: MIN_FOV_DEG })).toEqual({ ok: true, result: { look: { azDeg: 90, elDeg: 10, fovDeg: 4 } } });
+    expect(await runAction('lookAt', { azDeg: 90, fovDeg: MAX_FOV_DEG })).toEqual({ ok: true, result: { look: { azDeg: 90, elDeg: 10, fovDeg: 100 } } });
+    expect(await runAction('lookAt', { azDeg: 90, fovDeg: 3.9 })).toEqual({ ok: false, error: 'params.fovDeg must be at least 4' });
+    expect(await runAction('lookAt', { azDeg: 90, fovDeg: 100.5 })).toEqual({ ok: false, error: 'params.fovDeg must be at most 100' });
+  });
+
   it('saves scenarios A/B (with the delay applied) and compares them', async () => {
     const { store } = setup();
     expect(await runAction('saveScenario', { slot: 'A' })).toMatchObject({ ok: false });
@@ -163,6 +218,33 @@ describe('core actions', () => {
     const r = await runAction<Record<string, any>>('getState');
     expect(r.ok && r.result).toMatchObject({ view: 'globe', timeUtc: '2025-03-14T06:00Z', site: { id: 'luna-9', lonDegEast: -64.37 }, missionsShown: { shown: 4, total: 4 } });
     expect(JSON.parse(JSON.stringify(r))).toEqual(r);
+    // No shell is attached here: what only the shell knows is null, not a guess.
+    expect(r.ok && [r.result.locatorZoom, r.result.panels]).toEqual([null, null]);
+  });
+
+  it('reports what the shell shows beside the state: the Moon\'s phase line, the locator map zoom, the panels', async () => {
+    resetActions();
+    const store = new Store(initialState(T0));
+    const shell = { locatorZoom: 1, panels: { filters: true, 'site-details': true, 'site-science': true } };
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => LANDINGS, shell: () => ({ ...shell, panels: { ...shell.panels } }) }));
+    const read = async () => {
+      const r = await runAction<any>('getState');
+      if (!r.ok) throw new Error(r.error);
+      return r.result;
+    };
+    // 14 March 2025, 06:00 UTC: full Moon (the hour of the total lunar eclipse).
+    let s = await read();
+    expect(s.moonPhase).toMatchObject({ name: 'Full Moon', litFromEarthPct: 100 });
+    expect(moonPhaseText(s.moonPhase)).toBe('Full Moon · 100% lit from Earth');
+    expect([s.locatorZoom, s.panels]).toEqual([1, { filters: true, 'site-details': true, 'site-science': true }]);
+    // IM-2's touchdown, a week earlier: the line under the scrubber reads "First quarter · 51% lit from Earth".
+    await runAction('setTime', { utc: '2025-03-06T17:28Z' });
+    shell.locatorZoom = 8;
+    shell.panels['site-science'] = false;
+    s = await read();
+    expect(s.moonPhase).toEqual({ name: 'First quarter', litFromEarthPct: 51, waxing: true });
+    expect([s.locatorZoom, s.panels['site-science']]).toEqual([8, false]);
+    expect(JSON.parse(JSON.stringify(s))).toEqual(s);
   });
 });
 
@@ -345,7 +427,8 @@ describe('jumpToEvent', () => {
     await runAction('setMissionWindow', { durationH: 720 });
     store.set({ playing: true });
     const r = await runAction<any>('jumpToEvent', { type: 'sunset' });
-    expect(r).toMatchObject({ ok: true, result: { event: 'sunset', playing: false } });
+    // The result says which instant of the sunset this is (decision D-8).
+    expect(r).toMatchObject({ ok: true, result: { event: 'sunset', label: 'Sun fully set', instant: EVENT_INFO.sunset.instant, playing: false } });
     if (!r.ok) return;
     const t = store.get().timeMs;
     expect(t).toBeGreaterThan(Date.UTC(1969, 7, 2));
@@ -357,7 +440,9 @@ describe('jumpToEvent', () => {
     // From there, the previous sunset does not exist in the window, and Earth never sets at this site.
     expect(await runAction('jumpToEvent', { type: 'sunset', which: 'previous' })).toMatchObject({ ok: false, error: expect.stringContaining('There is no previous sunset before the simulated time inside the analysed mission window (1969-07-20T20:17Z to 1969-08-19T20:17Z)') });
     expect(await runAction('jumpToEvent', { type: 'earthset' })).toMatchObject({ ok: false, error: expect.stringContaining('There is no next earthset') });
+    expect(await runAction('jumpToEvent', { type: 'earthset' })).toMatchObject({ ok: false, error: expect.stringContaining('Here "earthset" is the instant the centre of Earth\'s disc goes behind the terrain skyline.') });
     const sunrise = await runAction<any>('jumpToEvent', { type: 'sunrise' });
+    expect(sunrise).toMatchObject({ ok: true, result: { label: 'Sun starts rising' } });
     expect(sunrise.ok && store.get().timeMs).toBeGreaterThan(Date.UTC(1969, 7, 16));
     analysis.stop();
   }, LONG);

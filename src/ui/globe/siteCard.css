@@ -47,6 +47,10 @@
 .sc-status:empty { display: none; }
 .sc-status { margin-top: var(--sp-2); color: var(--warn); }
 
-.sc-science { display: grid; gap: var(--sp-3); }
-.sc-sci-head { margin: 0 0 var(--sp-1); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
-.sc-sci-block .ly-note { margin-top: var(--sp-1); }
+/* "Site science": the heading is the button that folds the section (showPanel site-science). */
+.sc-scitoggle { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); width: 100%; padding: 0; border: 0; background: none; color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer; }
+.sc-scitoggle:hover { color: var(--text); }
+.sc-scitoggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: var(--radius-sm); }
+.sc-scimark { color: var(--text-muted); }
+.sc-scihint { margin-top: var(--sp-1); }
+.sc-science { margin-top: var(--sp-2); }
