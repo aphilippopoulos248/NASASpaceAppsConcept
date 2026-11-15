@@ -28,11 +28,16 @@ export interface SurfaceApi {
   setAnnotations(tracks: boolean, labels?: boolean): void;
 }
 
+export type TrackedBody = 'sun' | 'earth';
+
 export interface SurfaceActionContext {
   store: Store;
   view: SurfaceApi;
   /** True while the surface view is on screen. */
   active: () => boolean;
+  /** The body the surface camera continuously follows, if any. This is surface-only state. */
+  trackingBody: () => TrackedBody | null;
+  setTrackingBody: (body: TrackedBody | null) => void;
   /** Tells the HUD that something it shows has changed. */
   changed: () => void;
 }
@@ -71,6 +76,16 @@ export function skySummary(sky: SurfaceSky | null) {
     },
     note: 'Visibility here is against the terrain as drawn, from where the viewer stands. The mission-window numbers come from the analysis (getAnalysis). Earth visibility is geometric line of sight, not a radio link.',
   };
+}
+
+/** Turns the view to a body at the current simulated time. Returns null until the sky is ready. */
+export function aimAtBody(view: SurfaceApi, body: TrackedBody, fovDeg?: number): SurfaceSky | null {
+  const sky = view.skyNow;
+  if (!sky) return null;
+  const target = body === 'sun' ? sky.sun : sky.earth;
+  // A body just under the horizontal can still show over a low skyline, so look straight at it down to -5 degrees.
+  view.setLook(target.azDeg, target.elDeg < -5 ? 0 : target.elDeg, fovDeg);
+  return sky;
 }
 
 export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, any>[] {
@@ -151,11 +166,14 @@ export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, 
       },
       run: ({ body, fovDeg }) => {
         requireSurface();
-        const sky = view.skyNow;
+        // Facing the other body ends tracking; otherwise the next clock change would turn the view back.
+        if (ctx.trackingBody() && ctx.trackingBody() !== body) {
+          ctx.setTrackingBody(null);
+          ctx.changed();
+        }
+        const sky = aimAtBody(view, body, fovDeg);
         if (!sky) throw new ActionError('The sky is not ready yet for this site.');
         const b = body === 'sun' ? sky.sun : sky.earth;
-        // A body just under the horizontal can still show over a low skyline, so look straight at it down to -5 degrees.
-        view.setLook(b.azDeg, b.elDeg < -5 ? 0 : b.elDeg, fovDeg);
         const summary = skySummary(sky)!;
         return {
           body,
@@ -165,6 +183,32 @@ export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, 
           timeUtc: summary.timeUtc,
           directions: summary.directions,
         };
+      },
+    }),
+    defineAction<{ body: TrackedBody; on: boolean }, unknown>({
+      name: 'setBodyTracking',
+      title: 'Track the Sun or Earth',
+      description:
+        'In the surface view, starts or stops continuously facing the Sun or Earth as simulated time changes. Starting one body replaces tracking the other and turns to it immediately. Dragging the camera or using the arrow keys stops tracking.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          body: { type: 'string', description: 'Which body to track.', enum: ['sun', 'earth'] },
+          on: { type: 'boolean', description: 'Whether to start or stop tracking this body.' },
+        },
+        required: ['body', 'on'],
+      },
+      run: ({ body, on }) => {
+        requireSurface();
+        if (on) {
+          if (!aimAtBody(view, body)) throw new ActionError('The sky is not ready yet for this site.');
+          ctx.setTrackingBody(body);
+        } else if (ctx.trackingBody() === body) {
+          ctx.setTrackingBody(null);
+        }
+        ctx.changed();
+        return { body, tracking: ctx.trackingBody(), look: publishLook() };
       },
     }),
     defineAction<{ eastM: number; northM: number; liftM?: number }, unknown>({
@@ -222,6 +266,7 @@ export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, 
         const steps = view.pathSteps;
         return {
           active: ctx.active(),
+          trackingBody: ctx.trackingBody(),
           site: view.site ? { id: view.site.id, name: view.site.name ?? view.site.id, latDeg: view.site.lat, lonDegEast: view.site.lon } : null,
           look: roundedLook(view),
           position: positionSummary(),
