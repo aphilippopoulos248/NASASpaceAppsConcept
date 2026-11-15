@@ -1,7 +1,26 @@
 # T-11 Compare panel: handover (@analysis)
 
-Branch am/lunyx/agent/analysis. Code in `src/ui/compare/`. Screenshots: `screens/t11-*.png`.
-Delivered in slices; this note grows with each one.
+Branch am/lunyx/agent/analysis. Code in `src/ui/compare/`, plus `src/analysis/edges.ts`.
+Screenshots: `screens/t11-*.png`. Acceptance is the desktop website (D-9); the responsive code
+for narrow screens stays but is no longer checked.
+
+## All registered actions (13)
+
+| Action | Effect | Waits | Slice |
+| --- | --- | --- | --- |
+| `openCompare { tab?, table? }` | opens the panel / a tab / whose window table | no | 1, 3 |
+| `compareDelayedArrival { delayH? = 24, basis? }` | B = A arriving later | both analyses | 1 |
+| `compareMastHeights { heightBM, heightAM?, basis? }` | B = A with another mast | both analyses | 1 |
+| `swapComparison {}` | exchanges A and B | both analyses | 1 |
+| `clearComparison { slot? }` | empties A, B or both | no | 1 |
+| `saveComparison { name? }` / `loadComparison { name }` / `deleteComparison { name }` / `listComparisons {}` | named comparisons in localStorage | load waits | 1 |
+| `rankNearby { radiusM?, spacingM?, slopeLimitDeg? }` | scans and ranks nearby sites | the scan | 2 |
+| `selectCandidate { rank \| id, asB? }` | pins a candidate, optionally as B | with asB, both analyses | 2 |
+| `exportResults { format, slot? }` | downloads the window table as CSV, or everything as JSON | the analyses | 3 |
+| `showOutlook { months?, slot? }` | the seasonal outlook | outlook() | 4 |
+
+Plus the core actions the panel's controls also run: `saveScenario`, `compare`, `stopCompare`,
+`setTime`, `setSunBand`, `setMaxEarthGap`, `setSlopeLimit`. Result shapes below.
 
 | Slice | What | State |
 |---|---|---|
@@ -19,6 +38,12 @@ Delivered in slices; this note grows with each one.
 - `abTab.ts`: the "A and B" tab. `model.ts`: the rows and sentences, as pure functions of the
   science core's results (tested without a browser). `storage.ts`: localStorage.
   `actions.ts`: the registered actions. `widgets.ts`, `format.ts`: shared pieces.
+- `nearbyTab.ts` / `nearbyView.ts`: the "Nearby sites" tab and its rows. `windowsTab.ts` /
+  `windowTable.ts`: the "Window table" tab, its rows and the CSV / JSON builders.
+  `outlookTab.ts` / `outlookView.ts`: the "Outlook" tab (SVG chart drawn at the panel's width,
+  crosshair under the pointer and by the arrow keys, table alternative) and its result.
+- `src/analysis/edges.ts`: `edgeSpells(analysis)` follows every spell at a window edge to its
+  real ends (the search analyse() runs for the longest darkness), for the window table.
 - The differences in words are `analysis.comparison().diff.highlights`, the same object the
   `compare` action reports. The B − A column is the same subtraction, shown to one decimal.
 - Nothing is computed here: a missing value is a dash or "not available", a slot that is still
