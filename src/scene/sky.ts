@@ -101,6 +101,11 @@ export class Sky {
     this.root.add(this.ambient, this.sunLight, this.sunGlow, this.earth);
   }
 
+  /** Direction to the Sun in scene space, or null when the scene is lit evenly. */
+  get litDirection(): Vector3 | null {
+    return this.mode === 'real' ? this.sunDir : null;
+  }
+
   setMode(mode: LightMode): void {
     this.mode = mode;
     this.ambient.intensity = mode === 'real' ? 0.07 : 0.22;
