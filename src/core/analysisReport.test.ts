@@ -92,7 +92,7 @@ describe('analysis report', () => {
     });
     const strict = checkRequirements(a, { sunElMinDeg: 3, sunElMaxDeg: 30, maxEarthGapH: 6 }, 2.5);
     expect(strict.sunElevationBand).toMatchObject({ metNow: false, metForWholeWindow: false });
-    expect(strict.maxEarthGap).toEqual({ limitH: 6, longestEarthGapH: 7.5, met: false, gapRunsIntoWindowEdge: true });
+    expect(strict.maxEarthGap).toEqual({ limitH: 6, basis: "Earth's centre", longestEarthGapH: 7.5, met: false, gapRunsIntoWindowEdge: true });
     expect(checkRequirements(a, { sunElMinDeg: 0, sunElMaxDeg: 90, maxEarthGapH: 8 }, NaN)).toMatchObject({ sunElevationBand: { sunElNowDeg: null, metNow: null }, maxEarthGap: { met: true } });
   });
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SkyEvent } from '../analysis/types';
-import { eclipseSpans, eclipseText, EVENT_INFO, EVENT_TYPES, eventDefinitions, findEvent } from './skyEvents';
+import type { SkyEvent, SkyTransition } from '../analysis/types';
+import { eclipseSpans, eclipseText, edgeLabel, EVENT_INFO, EVENT_TYPES, eventDefinitions, eventInstant, findEvent, findInstant, nextInstantOfType, spanReport } from './skyEvents';
 
 const ev = (type: SkyEvent['type'], h: number) => ({ type, timeMs: h * 3_600_000, azDeg: 90 }) as SkyEvent;
 
@@ -63,5 +63,81 @@ describe('Earth in front of the Sun, for the scrubber', () => {
     expect(eclipseText(partial)).toBe('Earth passes in front of the Sun 2025-03-14 23:30 UTC to 2025-03-15 00:40 UTC.');
     expect(eclipseSpans({ metrics: { darkIntervals: [] } })).toEqual([]);
     expect(eclipseText([])).toBe('');
+  });
+});
+
+describe('both ends of a passage (D-8, science core T-31)', () => {
+  const at = (text: string) => Date.parse(text);
+  const instant = (text: string, inWindow = true) => ({ timeMs: at(text), azDeg: 264.6, inWindow });
+  const set = (body: 'sun' | 'earth', from: string, to: string, kind: SkyTransition['kind'] = 'set'): SkyTransition => ({
+    body,
+    kind,
+    start: { ...instant(from), edge: kind === 'rise' || kind === 'peek' ? 'first-limb' : 'first-cut' },
+    end: { ...instant(to), edge: kind === 'rise' || kind === 'graze' ? 'whole-clear' : 'last-limb' },
+    hours: (at(to) - at(from)) / 3_600_000,
+    centre: [],
+    minVisibleFraction: NaN,
+    maxVisibleFraction: NaN,
+    limitDays: 60,
+  });
+  // Blue Ghost at 2 m, 16 March 2025: first cut 18:23, last limb (the sunset event) 19:30 UTC.
+  const sunsetPass = set('sun', '2025-03-16T18:23:36Z', '2025-03-16T19:30:00Z');
+  const sunset: SkyEvent = { type: 'sunset', timeMs: sunsetPass.end.timeMs, azDeg: 264.6, span: sunsetPass };
+  const risePass = set('sun', '2025-03-30T10:00:00Z', '2025-03-30T11:10:00Z', 'rise');
+  const sunrise: SkyEvent = { type: 'sunrise', timeMs: risePass.start.timeMs, azDeg: 95, span: risePass };
+
+  it('names each end in the words of the contract, and grazes and peeks as neither set nor rise', () => {
+    expect([edgeLabel(sunsetPass, 'start'), edgeLabel(sunsetPass, 'end')]).toEqual(['Sun starts setting', 'Sun fully set']);
+    expect([edgeLabel(risePass, 'start'), edgeLabel(risePass, 'end')]).toEqual(['Sun starts rising', 'Sun fully risen']);
+    const graze = set('earth', '2025-03-18T06:25:00Z', '2025-03-18T09:00:00Z', 'graze');
+    expect([edgeLabel(graze, 'start'), edgeLabel(graze, 'end')]).toEqual(['Earth partly hidden', "Earth's whole disc clear again"]);
+    const unresolved: SkyTransition = { ...sunsetPass, kind: 'unresolved', end: { ...sunsetPass.end, edge: 'unresolved', inWindow: false } };
+    expect(edgeLabel(unresolved, 'end')).toBeNull();
+  });
+
+  it('reports a passage as plain JSON with both ends and the D-8 sentence', () => {
+    const r = spanReport(sunsetPass);
+    expect(r).toMatchObject({
+      body: 'sun',
+      kind: 'set',
+      start: { edge: 'first-cut', label: 'Sun starts setting', timeUtc: '2025-03-16T18:23Z', inWindow: true },
+      end: { edge: 'last-limb', label: 'Sun fully set', timeUtc: '2025-03-16T19:30Z', inWindow: true },
+      hours: 1.11,
+      summary: 'starts setting 2025-03-16 18:23, fully set 19:30 UTC',
+    });
+    expect(JSON.parse(JSON.stringify(r))).toEqual(r);
+    // An end that was not found has no time.
+    const open: SkyTransition = { ...sunsetPass, kind: 'unresolved', end: { ...sunsetPass.end, edge: 'unresolved', inWindow: false } };
+    expect(spanReport(open).end).toEqual({ edge: 'unresolved', label: null, timeUtc: null, inWindow: false });
+  });
+
+  it('finds the start, the end or the event itself, next or previous', () => {
+    const events = [sunset, sunrise];
+    const t = at('2025-03-16T12:00:00Z');
+    expect(findInstant(events, 'sunset', 'start', 'next', t)).toMatchObject({ choice: 'start', label: 'Sun starts setting', timeMs: at('2025-03-16T18:23:36Z') });
+    expect(findInstant(events, 'sunset', 'event', 'next', t)).toMatchObject({ choice: 'event', label: 'Sun fully set', timeMs: at('2025-03-16T19:30:00Z') });
+    expect(findInstant(events, 'sunset', 'end', 'next', t)?.timeMs).toBe(at('2025-03-16T19:30:00Z'));
+    expect(findInstant(events, 'sunrise', 'end', 'next', t)).toMatchObject({ label: 'Sun fully risen', timeMs: at('2025-03-30T11:10:00Z') });
+    // Between the two ends of the sunset, the previous start and the next end.
+    const mid = at('2025-03-16T19:00:00Z');
+    expect(findInstant(events, 'sunset', 'start', 'previous', mid)?.timeMs).toBe(at('2025-03-16T18:23:36Z'));
+    expect(findInstant(events, 'sunset', 'start', 'next', mid)).toBeNull();
+    // An event without a passage has no start or end to go to.
+    expect(eventInstant({ type: 'sunset', timeMs: 0, azDeg: 0 }, 'start')).toBeNull();
+  });
+
+  it('the jump buttons go to each end in turn', () => {
+    const events = [sunset, sunrise];
+    let t = at('2025-03-16T12:00:00Z');
+    const seen: string[] = [];
+    for (let i = 0; i < 3; i++) {
+      const x = nextInstantOfType(events, 'sunset', t);
+      if (!x) break;
+      seen.push(`${x.label} ${new Date(x.timeMs).toISOString().slice(11, 16)}`);
+      t = x.timeMs;
+    }
+    expect(seen).toEqual(['Sun starts setting 18:23', 'Sun fully set 19:30']);
+    expect(nextInstantOfType(events, 'sunrise', at('2025-03-20T00:00Z'))).toMatchObject({ choice: 'event', label: 'Sun starts rising' });
+    expect(nextInstantOfType(events, 'sunrise', at('2025-03-30T10:30Z'))).toMatchObject({ choice: 'end', label: 'Sun fully risen' });
   });
 });
