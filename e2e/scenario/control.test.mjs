@@ -97,7 +97,6 @@ function screen(page) {
         mast: labelled('Mast height')?.value,
         window: labelled('Mission window')?.value,
         delay: labelled('Arrival delay')?.value,
-        relief: labelled('Exaggeration')?.value,
         // Since T-64 the relief has no selector: the "Terrain relief" note says what is drawn.
         reliefNote: [...document.querySelectorAll('.filters-panel h3')].find((h) => h.textContent.trim() === 'Terrain relief')?.nextElementSibling?.textContent ?? '',
         band,
@@ -245,14 +244,13 @@ const CASES = [
     await shows(page, (s) => s.filters.crewedPressed === 'true' && s.filters.landingCount === `${r.shown} of ${r.total} landings`, 'Crewed pressed and the landing count');
     await run(page, 'setFilters', { reset: true });
   } },
-  { name: 'setReliefExaggeration', prepare: async (page) => {
-    page.__relief = (await run(page, 'getState')).result.globeDisplay.reliefExaggeration;
-  }, params: { factor: 5 }, check: async (r, page) => {
-    assert.equal(r.reliefExaggeration, 5);
-    // No selector since T-64 (the assistant's own control); the Filters note gives the factor drawn now.
-    // (It names the factor drawn at the camera's altitude, which eases towards true scale close in.)
-    await shows(page, (s) => s.filters.reliefNote.includes('Drawn now: ') && s.filters.reliefNote.includes('The stretch applies above'), 'the Terrain relief note says an exaggerated relief is drawn');
-    await run(page, 'setReliefExaggeration', { factor: page.__relief });
+  { name: 'setReliefExaggeration', params: { factor: 0 }, check: async (r, page) => {
+    assert.equal(r.reliefExaggeration, 0);
+    // Heights are never exaggerated: more than true scale is refused.
+    assert.equal((await page.evaluate(() => window.lunyx.actions.runAction('setReliefExaggeration', { factor: 5 }, 'test'))).ok, false);
+    // No selector since T-64: the "Terrain relief" note says what is drawn.
+    await shows(page, (s) => s.filters.reliefNote.includes('Drawn now: smooth sphere (relief off)'), 'the Terrain relief note says the relief is off');
+    await run(page, 'setReliefExaggeration', { factor: 1 });
   } },
   { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
     assert.equal(r.coverageShown, true);
@@ -715,7 +713,7 @@ describe('control: every action through deterministic mode, by its phrase', () =
     const steps = [
       ['setAssistantOpen', { open: true }], ['stopCompare'], ['clearComparison'], ['exitSurface'], ['clearSite'], ['pause'], ['setLightMode', { mode: 'real' }],
       ['setDelay', { hours: 0 }], ['setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true }], ['setMastHeight', { metres: 2 }], ['setSunBand', { minDeg: 0, maxDeg: 90 }],
-      ['setOverlay', { mode: 'off' }], ['showMissions', { show: true }], ['setFilters', { reset: true }], ['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }],
+      ['setOverlay', { mode: 'off' }], ['showMissions', { show: true }], ['setFilters', { reset: true }], ['setReliefExaggeration', { factor: 1 }], ['showCoverage', { show: false }],
       ['showIceTargets', { show: false }], ['setLocatorZoom', { zoom: 1 }], ['showPanel', { panel: 'site-details', open: true }],
     ];
     for (const [name, params] of steps) if (await has(page, name)) await run(page, name, params ?? {});

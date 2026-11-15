@@ -51,14 +51,15 @@ export const relief: Intent = (step) => {
   }
   if (factor === undefined) return null;
   const f = factor;
-  return plan(f === 0 ? 'turn the globe relief off' : f === 1 ? 'draw the globe relief at true scale' : `exaggerate the globe relief ×${f}`, async (ctx) => {
-    const r = await ctx.run('setReliefExaggeration', { factor: f });
-    const chosen = num(r, 'reliefExaggeration') ?? f;
+  // Heights are never exaggerated: asking for more than true scale gets true scale, and says so.
+  const asked = Math.min(f, 1);
+  return plan(asked === 0 ? 'turn the globe relief off' : asked === 1 ? 'draw the globe relief at true scale' : `draw the globe relief at ×${asked}`, async (ctx) => {
+    const r = await ctx.run('setReliefExaggeration', { factor: asked });
+    const chosen = num(r, 'reliefExaggeration') ?? asked;
     if (chosen === 0) return 'Relief is off: the globe is drawn as a smooth sphere. The analysis never uses the drawn relief.';
+    if (f > 1) return `The globe's relief is not exaggerated: it is drawn at true scale (×1), not ×${f}.`;
     if (chosen === 1) return 'Relief is drawn at true scale (×1).';
-    const drawn = num(r, 'reliefDrawnNow');
-    const rule = str(r, 'reliefRule');
-    return `Relief exaggeration set to ×${chosen}${drawn !== undefined ? `; drawn at ×${drawn} at the present camera altitude` : ''}.${rule ? ` ${rule}` : ''} The analysis never uses the exaggeration.`;
+    return `Relief is drawn at ×${chosen} of its true height. The analysis never uses the drawn relief.`;
   });
 };
 
@@ -824,7 +825,7 @@ export const realClock: Intent = (step) => {
 
 /** For the help text: one example per group, shown only when the build has the action. */
 export const LATER_HELP: [needs: string[], text: string][] = [
-  [['setReliefExaggeration'], 'Globe drawing: "relief x5", "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
+  [['setReliefExaggeration'], 'Globe drawing: "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
   [['getSiteScience'], 'Site science: "dsn stations", "long-term averages here", "temperature", "shadowcam", "site science"'],
   [['nearestIceTargets'], 'Ice targets: "nearest ice targets", "how far is the nearest ice"'],
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],

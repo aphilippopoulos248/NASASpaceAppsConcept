@@ -8,7 +8,6 @@
 import { Vector3 } from 'three';
 import { landingColor, latLonToVec3, type Landing } from '../../data/landings';
 import { displayCountry } from '../../data/ownership';
-import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
 import { MAX_TERRITORY_SITES, type SurfaceUniforms } from './surfaceShader';
 
 /** The country a landing's territory is drawn for ("USSR" sites count as Russia, as everywhere in the app). */
@@ -65,9 +64,12 @@ export function territoriesDrawn(showMissions: boolean, showTerritories: boolean
 
 const ORBIT_FILL = 0.24;
 const GROUND_FILL = 0.1;
+/** Camera altitudes between which the fill eases from its ground strength to its orbit strength (km). */
+const GROUND_BELOW_KM = 100;
+const ORBIT_ABOVE_KM = 1500;
 
 /** How strongly the country colour tints the ground: clear from orbit, faint close to the ground so the terrain and imagery stay readable. */
 export function territoryFill(altitudeKm: number): number {
-  const t = Math.min(1, Math.max(0, (altitudeKm - TRUE_SCALE_BELOW_KM) / (FULL_EXAGGERATION_KM - TRUE_SCALE_BELOW_KM)));
+  const t = Math.min(1, Math.max(0, (altitudeKm - GROUND_BELOW_KM) / (ORBIT_ABOVE_KM - GROUND_BELOW_KM)));
   return GROUND_FILL + (ORBIT_FILL - GROUND_FILL) * t * t * (3 - 2 * t);
 }

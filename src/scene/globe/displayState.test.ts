@@ -10,27 +10,29 @@ import { imageryText } from '../sitePatch';
 const uniforms = () => createSurfaceUniforms(OVERLAY_RAMP, SUN_BAND_COLOUR, COVERAGE_STYLE.map((c) => c.colour));
 
 describe('globe display actions', () => {
-  it('sets the relief exaggeration and the coverage outlines, and reports what is drawn', async () => {
+  it('sets the relief scale and the coverage outlines, refuses exaggeration, and reports what is drawn', async () => {
     resetActions();
     registerDisplayActions();
     expect(globeDisplay.get()).toEqual({ reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false });
     let heard = 0;
     const off = globeDisplay.subscribe(() => heard++);
 
-    const r = await runAction<any>('setReliefExaggeration', { factor: 20 });
-    expect(r).toMatchObject({ ok: true, result: { reliefExaggeration: 20, coverageShown: false, polarCloseUp: null } });
-    expect(r.ok && r.result.reliefRule).toContain('eases to true scale (1) below 100 km');
-    expect(globeDisplay.get().reliefFactor).toBe(20);
+    // Heights are never exaggerated: anything above true scale is refused and nothing changes.
+    expect(await runAction('setReliefExaggeration', { factor: 20 })).toMatchObject({ ok: false, error: 'params.factor must be at most 1' });
+    expect(globeDisplay.get().reliefFactor).toBe(DEFAULT_RELIEF);
+    expect(heard).toBe(0);
+
+    const r = await runAction<any>('setReliefExaggeration', { factor: 0 });
+    expect(r).toMatchObject({ ok: true, result: { reliefExaggeration: 0, coverageShown: false, polarCloseUp: null } });
+    expect(globeDisplay.get().reliefFactor).toBe(0);
     expect(heard).toBe(1);
-    await runAction('setReliefExaggeration', { factor: 20 }); // no change, no notification
+    await runAction('setReliefExaggeration', { factor: 0 }); // no change, no notification
     expect(heard).toBe(1);
 
-    // The scene reports what it actually draws: near the ground that is true scale whatever was chosen.
+    // The scene reports what it actually draws.
     globeDisplay.setLive({ reliefNow: 1, reliefPpd: 16 });
-    expect(displaySummary()).toMatchObject({ reliefExaggeration: 20, reliefDrawnNow: 1, reliefDataSamplesPerDegree: 16 });
-
-    expect(await runAction('setReliefExaggeration', { factor: 0 })).toMatchObject({ ok: true, result: { reliefExaggeration: 0, reliefRule: null } });
-    expect(await runAction('setReliefExaggeration', { factor: 31 })).toMatchObject({ ok: false, error: 'params.factor must be at most 30' });
+    expect(displaySummary()).toMatchObject({ reliefExaggeration: 0, reliefDrawnNow: 1, reliefDataSamplesPerDegree: 16 });
+    expect(displaySummary()).not.toHaveProperty('reliefRule');
     expect(await runAction('showCoverage', { show: true })).toMatchObject({ ok: true, result: { coverageShown: true } });
     expect(globeDisplay.get().coverage).toBe(true);
     expect(await runAction('showIceTargets', { show: true })).toMatchObject({ ok: true, result: { iceTargetsShown: true, coverageShown: true } });
@@ -41,9 +43,8 @@ describe('globe display actions', () => {
     resetActions();
   });
 
-  it('words the exaggeration for the on-screen label', () => {
-    expect(reliefText(10)).toBe('relief ×10');
-    expect(reliefText(5.44)).toBe('relief ×5.4');
+  it('words the relief scale for the on-screen label', () => {
+    expect(reliefText(0.5)).toBe('relief ×0.5');
     expect(reliefText(1)).toBe('relief at true scale');
     expect(reliefText(0)).toBe('smooth sphere (relief off)');
   });
@@ -51,9 +52,9 @@ describe('globe display actions', () => {
   it('tells listeners only when something they show has changed', () => {
     let heard = 0;
     const off = globeDisplay.subscribe(() => heard++);
-    globeDisplay.setLive({ reliefNow: 7.31, reliefPpd: 16, reliefProblem: null });
+    globeDisplay.setLive({ reliefNow: 0.31, reliefPpd: 16, reliefProblem: null });
     const base = heard;
-    globeDisplay.setLive({ reliefNow: 7.32 }); // within a twentieth: the label would read the same
+    globeDisplay.setLive({ reliefNow: 0.32 }); // within a twentieth: the label would read the same
     expect(heard).toBe(base);
     globeDisplay.setLive({ polar: { resolutionM: 80, shadows: true, note: 'n' } });
     globeDisplay.setLive({ polar: { resolutionM: 80, shadows: true, note: 'n' } });
