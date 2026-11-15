@@ -1163,6 +1163,7 @@ const INTENTS: Intent[] = [
   later.fieldOfView,
   look, globe, pin, exportResults,
   later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags,
+  later.siteRecords, later.realClock,
   questions, site,
 ];
 

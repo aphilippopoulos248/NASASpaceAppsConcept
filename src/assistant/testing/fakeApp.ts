@@ -164,7 +164,17 @@ export interface FakeAppOptions {
   viewTarget?: boolean;
   /** T-46: the solar band at its default (0 to 90 deg) is no requirement: `required: false`, the "met" fields null, a `note`. Without it, the earlier core's `metForWholeWindow: false`. */
   bandRule?: boolean;
+  /** T-44: getState.wallClockUtc, and a catalogued site's `ownership` and `exploredArea` (the card's "Belongs to", "Owner", "Explored"). */
+  siteRecords?: boolean;
 }
+
+/** Stand-in records (not the real GCAT data): IM-2 has both, the other landings none. */
+export const SITE_RECORDS: Record<string, { ownership: Record<string, unknown> | null; exploredArea: Record<string, unknown> | null }> = {
+  'im-2': {
+    ownership: { state: 'United States', stateCode: 'US', owner: 'Intuitive Machines', gcatId: 'fixture-im-2', labelDisagrees: false, source: 'GCAT stand-in record' },
+    exploredArea: { description: 'about 40 m across', extentM: 40, areaM2: 1257, located: true, displayScale: 25, source: 'stand-in area' },
+  },
+};
 
 /** As public/data/presets.json (ids, titles, sites, views). */
 export const PRESETS = [
@@ -182,7 +192,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true, siteRecords: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -239,7 +249,12 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
   let compareCalls = 0;
   const nearbyRows = options.nearby ?? NEARBY;
   const none = { type: 'object', properties: {} } as const;
-  const siteOut = (s: FakeSite | null) => (s ? { id: s.id, name: s.name, kind: s.kind, latDeg: s.latDeg, lonDegEast: s.lonDegEast } : null);
+  const siteOut = (s: FakeSite | null) => {
+    if (!s) return null;
+    const base = { id: s.id, name: s.name, kind: s.kind, latDeg: s.latDeg, lonDegEast: s.lonDegEast };
+    // As the real site results: a catalogued landing carries its records, null where there are none.
+    return options.siteRecords && s.kind === 'landing' ? { ...base, ownership: SITE_RECORDS[s.id]?.ownership ?? null, exploredArea: SITE_RECORDS[s.id]?.exploredArea ?? null } : base;
+  };
   const viewOut = () => ({ view: state.view, site: siteOut(state.site) });
   const timeOut = () => ({ timeUtc: isoUtc(state.timeMs), playing: state.playing, rateSimSecondsPerSecond: state.rate });
   const requireSite = () => {
@@ -478,6 +493,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       run: () => ({
         view: state.view,
         ...timeOut(),
+        ...(options.siteRecords && { wallClockUtc: new Date(REAL_NOW).toISOString().slice(0, 19) + 'Z' }),
         lightMode: state.lightMode,
         site: siteOut(state.site),
         globeCenter: state.globeCenter,

@@ -1,7 +1,8 @@
-// Deterministic mode and T-47's results (T-1 batch 4): both ends of each rise and set (D-8),
-// Earth by its centre and by any part of its disc, the default solar band (finding Q-5) and the
-// view's target (getState.globeDisplay.viewTarget). Against the stand-in app, which gives the
-// same result shapes as src/core (docs/lunyx/handover/T-47-event-spans-ui.md).
+// Deterministic mode and the newest results (T-1 batch 4): both ends of each rise and set (D-8,
+// T-47), Earth by its centre and by any part of its disc, the default solar band (finding Q-5,
+// T-46), the view's target (getState.globeDisplay.viewTarget), the card's ownership and
+// explored-area rows and the real clock (T-44). Against the stand-in app, which gives the same
+// result shapes as src/core (docs/lunyx/handover/T-47-event-spans-ui.md).
 import { beforeEach, describe, expect, it } from 'vitest';
 import { actionLog } from '../../core/actions';
 import { ALL_ACTIONS, installFakeApp, T0, type FakeState } from '../testing/fakeApp';
@@ -205,5 +206,37 @@ describe("deterministic mode: the view's target, not its momentary centre", () =
     from = lastSeq();
     await e.reply('zoom in');
     expect(ranSince(from).filter((x) => x.name === 'setGlobeCamera').map((x) => x.params)).toEqual([{ lat: 12, lon: 30, altitudeKm: 2000 }]);
+  });
+});
+
+describe("deterministic mode: the card's records and the real clock (T-44)", () => {
+  beforeEach(() => {
+    installFakeApp(ALL_ACTIONS);
+  });
+
+  it('says who the hardware belongs to and how big the explored area is, with the sources', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    const from = lastSeq();
+    expect((await e.reply('who owns this site?')).text).toBe('IM-2 Athena belongs to United States (GCAT state code US); owner: Intuitive Machines, GCAT id fixture-im-2. Source: GCAT stand-in record.');
+    expect((await e.reply('how big is the explored area?')).text).toBe('The explored area at IM-2 Athena: about 40 m across, 1,257 m² (true size; the globe draws it 25 times wider so it can be seen). Source: stand-in area.');
+    // Read from getState only: nothing changed.
+    expect(ranSince(from).map((x) => x.name)).toEqual(['getState', 'getState']);
+  });
+
+  it('says plainly when there is no record, and that a pin has none', async () => {
+    const e = engine();
+    await e.reply('go to Chandrayaan-3');
+    expect((await e.reply('who does it belong to')).text).toBe('No ownership record is available for Chandrayaan-3.');
+    await e.reply('drop a pin at 10 N 20 E');
+    expect((await e.reply('who owns this site')).text).toContain('is not a catalogued landing, so it has no ownership record and no explored area.');
+  });
+
+  it('reads the real clock apart from the simulated one', async () => {
+    const e = engine();
+    const r = await e.reply('what is the real time?');
+    expect(r.text).toBe('The real date and time on this computer is 2026-11-15 04:00 UTC. The simulated clock shows 2026-03-01 12:00 UTC and is paused. "Start the mission window now in real time" starts the window at the real time.');
+    // The simulated time is still its own question.
+    expect((await e.reply('what time is it?')).text).toBe('The simulated time is 2026-03-01 12:00 UTC, and the clock is paused.');
   });
 });

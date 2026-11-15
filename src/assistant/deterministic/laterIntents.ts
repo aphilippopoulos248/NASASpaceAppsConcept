@@ -618,6 +618,59 @@ export const flags: Intent = (step) => {
   });
 };
 
+// ---------------------------------------------------------------- the site card's records, the real clock
+
+const THIS_SITE = '(?:\\s+(?:it|this|this site|the site|this landing|the landing|here|this lander|the lander|this hardware|the hardware))?';
+
+/**
+ * The card's "Belongs to", "Owner" and "Explored" rows, read from getState's site (T-44: the
+ * GCAT record and the explored area, with their sources). The current site only: a name in the
+ * question is not looked up, so the answer is never about a different site than the card's.
+ */
+export const siteRecords: Intent = (step) => {
+  const owner = new RegExp(`^(?:who\\s+(?:owns|operates|built|landed|is responsible for)${THIS_SITE}|who\\s+does${THIS_SITE}\\s+belong to|(?:what|which)\\s+(?:country|state|nation)\\s+(?:does${THIS_SITE}\\s+belong to|(?:owns|is responsible for)${THIS_SITE}|is${THIS_SITE}\\s+from)|whose\\s+(?:site|lander|hardware|landing)(?:\\s+is\\s+(?:this|it))?|(?:ownership|owner)(?:\\s+of${THIS_SITE})?)$`).test(step);
+  const explored = /^(?:how (?:big|large|wide) is the explored area|(?:what is |show )?the explored area|explored area|how much (?:was|has been|is) explored(?: here)?|how far did (?:it|they) (?:go|explore|travel))$/.test(step);
+  if (!owner && !explored) return null;
+  return plan(owner ? 'say who the hardware at this site belongs to' : 'say how big the explored area at this site is', async (ctx) => {
+    const s = await ctx.state();
+    const site = s.site;
+    if (!isObject(site)) throw new Halt('No site is selected. Select a landing site first.');
+    const name = str(site, 'name') ?? 'This site';
+    if (str(site, 'kind') !== 'landing') throw new Halt(`${name} is not a catalogued landing, so it has no ownership record and no explored area.`);
+    if (owner) {
+      const o = site.ownership;
+      if (o === undefined) throw new Halt('This build does not report who a site belongs to.');
+      if (!isObject(o)) return `No ownership record is available for ${name}.`;
+      return [
+        `${name} belongs to ${str(o, 'state') ?? UNAVAILABLE}${str(o, 'stateCode') ? ` (GCAT state code ${str(o, 'stateCode')})` : ''}; owner: ${str(o, 'owner') ?? UNAVAILABLE}${str(o, 'gcatId') ? `, GCAT id ${str(o, 'gcatId')}` : ''}.`,
+        ...(str(o, 'note') ? [str(o, 'note')!] : []),
+        ...(str(o, 'source') ? [`Source: ${str(o, 'source')}.`] : []),
+      ].join(' ');
+    }
+    const a = site.exploredArea;
+    if (a === undefined) throw new Halt('This build does not report the explored area of a site.');
+    if (!isObject(a)) return `The explored area of ${name} is not available.`;
+    const scale = num(a, 'displayScale');
+    return [
+      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size${scale && scale !== 1 ? `; the globe draws it ${scale} times wider so it can be seen` : ''}).`,
+      ...(a.located === false ? ['The lander has not been found in LRO images: this is the lander alone at the catalogue\'s approximate position.'] : []),
+      ...(str(a, 'note') ? [str(a, 'note')!] : []),
+      ...(str(a, 'source') ? [`Source: ${str(a, 'source')}.`] : []),
+    ].join(' ');
+  });
+};
+
+/** The real date and time on the user's computer (getState.wallClockUtc, T-44), next to the simulated clock. */
+export const realClock: Intent = (step) => {
+  if (!/^(?:what(?:'s| is) the (?:real|actual|current real|real-world|wall[- ]clock) (?:time|date)(?: now)?|what (?:time|date|day) is it (?:really|in the real world|actually|for real)|real (?:time|date|clock)|wall[- ]?clock|what is today's date)$/.test(step)) return null;
+  return plan('say the real date and time', async (ctx) => {
+    const s = await ctx.state();
+    const real = str(s, 'wallClockUtc');
+    if (!real) throw new Halt('This build does not report the real clock. The simulated time is on the time slider.');
+    return `The real date and time on this computer is ${utc(real)}. The simulated clock shows ${utc(str(s, 'timeUtc'))}${s.playing === true ? ' and is running' : ' and is paused'}. "Start the mission window now in real time" starts the window at the real time.`;
+  });
+};
+
 /** For the help text: one example per group, shown only when the build has the action. */
 export const LATER_HELP: [needs: string[], text: string][] = [
   [['setReliefExaggeration'], 'Globe drawing: "relief x5", "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
@@ -631,4 +684,5 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
   [['loadPreset'], 'Replays: "list the presets", "replay the eclipse", "replay IM-2 landing"'],
   [['showFlags'], 'Flags: "show country flags", "hide the flags"'],
+  [['getState'], 'Site records and the real clock: "who owns this site", "how big is the explored area", "what is the real time"'],
 ];

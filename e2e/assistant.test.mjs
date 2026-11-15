@@ -77,6 +77,25 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.ok(reply.shownText.includes(`Selected IM-2 Athena (latitude ${site.latDeg.toFixed(4)}°, longitude ${site.lonDegEast.toFixed(4)}° (east-positive)`), reply.shownText);
   });
 
+  test("the card's owner and explored area, and the real clock, are read from getState (T-44)", SLOW, async () => {
+    await ask(page, 'go to IM-2');
+    const st = await result(page, 'getState');
+    const o = st.site.ownership, area = st.site.exploredArea;
+    assert.ok(o && area, `IM-2 has no records in this build: ${JSON.stringify({ o, area })}`);
+    const owner = await ask(page, 'who owns this site?');
+    assert.ok(owner.text.startsWith(`IM-2 Athena belongs to ${o.state}`) && owner.text.includes(`owner: ${o.owner}`), owner.text);
+    assert.ok(owner.text.includes(`Source: ${o.source}.`), owner.text);
+    const explored = await ask(page, 'how big is the explored area?');
+    assert.ok(explored.text.includes(`The explored area at IM-2 Athena: ${area.description}`), explored.text);
+    const clock = await ask(page, 'what is the real time?');
+    const real = (await result(page, 'getState')).wallClockUtc;
+    // The reply and this reading may straddle a minute.
+    assert.match(clock.text, /^The real date and time on this computer is \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\./);
+    const said = Date.parse(`${clock.text.slice(43, 59).replace(' ', 'T')}Z`);
+    assert.ok(Math.abs(Date.parse(real) - said) < 120_000, `${clock.text} vs ${real}`);
+    for (const r of [owner, explored, clock]) assert.ok(r.actions.every((x) => x.name === 'getState'), JSON.stringify(r.actions.map((x) => x.name)));
+  });
+
   test('numbers in a reply are the numbers the app computed', SLOW, async () => {
     await ask(page, 'show IM-2 at its landing time');
     const reply = await ask(page, 'what is the illumination?');
