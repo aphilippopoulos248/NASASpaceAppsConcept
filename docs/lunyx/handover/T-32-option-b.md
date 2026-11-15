@@ -6,7 +6,8 @@ whether option B is worth building. Prototype: `scripts/terrain-seams-option-b.m
 app's own terrain, skyline and event code); LOLA comparison: `scripts/terrain-seams-check.py lola` (its own reader and its
 own implementation of the rule). Measured 2026-11-15 on branch am/lunyx-science/agent/terrain,
 on the stored stack of 30389f2 / 0b01acb (the same heights, equal to integration's), heavy runs
-under the shared lock.
+under the shared lock. The Blue Ghost figures in this note are for the catalogue pin as it stood
+before original T-38 (18.562 N, 61.81 E).
 
 **Recommendation: no-go for now.** B does what it promises on average: just outside the edge
 it brings the ground closer to LOLA's at 15 of 17 sites, but by 0.15 m RMS on average. It also
@@ -104,7 +105,8 @@ edge, and the model was lower than the window at the nearest edge point. B pulls
 down towards the model's edge, and the skyline is then formed farther out or inside the model.
 At Luna 23 (azimuth 274.5) it drops past the horizontal to a ridge 11.6 km away.
 
-**Blue Ghost, 16 March 2025** (Sun at azimuth 269.7 to 269.95 deg):
+**Blue Ghost, 16 March 2025** (Sun at azimuth 269.7 to 269.95 deg; at the catalogue pin before
+original T-38, 18.562 N, 61.81 E):
 
 | Observer | Stack | Skyline starts to cut the Sun | Last limb gone |
 | --- | --- | --- | --- |
@@ -197,7 +199,8 @@ B's error there falls at 15 of 17 sites. It does not say whether the guess is ri
 directions that matter. B's largest skyline moves (0.2 to 0.36 deg) and its new event moves (10
 to 20 minutes) fall where LOLA has no shots. A keeps the measured grids and states the seam,
 its sensitivity (about 9 minutes per metre at the edge) and, at Blue Ghost, the two products'
-spread (3.5 to 3.7 minutes). B would replace the known step with an extrapolation whose error
+spread (3.5 to 3.7 minutes at the catalogue pin before original T-38, 6.2 to 7.5 at the current
+one: 3.5 to 7.5 minutes, depending on where within 8 m the lander stood; lunyx-science D-12). B would replace the known step with an extrapolation whose error
 beyond the edge is unmeasured at the azimuths that matter. It also needs @surface's work to
 keep the picture with the analysis. If the
 seam is to be removed later, the evidence points to B with a narrow band (64.5 m: better than
