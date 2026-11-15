@@ -1,0 +1,212 @@
+{
+ "note": "Input for fetch_horizons_pairs.mjs. 'station-sees-site': a point on the Moon as target (COMMAND 'g: lonE, lat, altKm @ 301') seen from Horizons' own DSN site (-14@399, -43@399, -63@399). 'site-sees-station': the station as a point on Earth, seen from the lunar site; its coordinates are taken from the header of the first reply, i.e. from Horizons, not from the app.",
+ "queries": [
+  {
+   "id": "chandrayaan-3.2023-08.dss14.station-sees-site",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-14",
+   "direction": "station-sees-site",
+   "command": "g: 32.32, -69.3741, 0.531 @ 301",
+   "center": "-14@399",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "chandrayaan-3.2023-08.dss14.site-sees-station",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-14",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "32.32,-69.3741,0.531",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 30
+  },
+  {
+   "id": "chandrayaan-3.2023-08.dss43.station-sees-site",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-43",
+   "direction": "station-sees-site",
+   "command": "g: 32.32, -69.3741, 0.531 @ 301",
+   "center": "-43@399",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "chandrayaan-3.2023-08.dss43.site-sees-station",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-43",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "32.32,-69.3741,0.531",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 30
+  },
+  {
+   "id": "chandrayaan-3.2023-08.dss63.station-sees-site",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-63",
+   "direction": "station-sees-site",
+   "command": "g: 32.32, -69.3741, 0.531 @ 301",
+   "center": "-63@399",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "chandrayaan-3.2023-08.dss63.site-sees-station",
+   "scenario": "chandrayaan-3.2023-08",
+   "station": "DSS-63",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "32.32,-69.3741,0.531",
+   "start": "2023-08-23T12:00:00Z",
+   "stop": "2023-08-26T12:00:00Z",
+   "stepMinutes": 30
+  },
+  {
+   "id": "im-2.2025-03.dss14.station-sees-site",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-14",
+   "direction": "station-sees-site",
+   "command": "g: 29.2, -84.79, 5.323 @ 301",
+   "center": "-14@399",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "im-2.2025-03.dss14.site-sees-station",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-14",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "29.2,-84.79,5.323",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "im-2.2025-03.dss43.station-sees-site",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-43",
+   "direction": "station-sees-site",
+   "command": "g: 29.2, -84.79, 5.323 @ 301",
+   "center": "-43@399",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "im-2.2025-03.dss43.site-sees-station",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-43",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "29.2,-84.79,5.323",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "im-2.2025-03.dss63.station-sees-site",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-63",
+   "direction": "station-sees-site",
+   "command": "g: 29.2, -84.79, 5.323 @ 301",
+   "center": "-63@399",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "im-2.2025-03.dss63.site-sees-station",
+   "scenario": "im-2.2025-03",
+   "station": "DSS-63",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "29.2,-84.79,5.323",
+   "start": "2025-03-17T12:00:00Z",
+   "stop": "2025-03-20T12:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "apollo-11.2031-04.dss14.station-sees-site",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-14",
+   "direction": "station-sees-site",
+   "command": "g: 23.47314, 0.67416, -1.923 @ 301",
+   "center": "-14@399",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "apollo-11.2031-04.dss14.site-sees-station",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-14",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "23.47314,0.67416,-1.923",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 30
+  },
+  {
+   "id": "apollo-11.2031-04.dss43.station-sees-site",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-43",
+   "direction": "station-sees-site",
+   "command": "g: 23.47314, 0.67416, -1.923 @ 301",
+   "center": "-43@399",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "apollo-11.2031-04.dss43.site-sees-station",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-43",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "23.47314,0.67416,-1.923",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 30
+  },
+  {
+   "id": "apollo-11.2031-04.dss63.station-sees-site",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-63",
+   "direction": "station-sees-site",
+   "command": "g: 23.47314, 0.67416, -1.923 @ 301",
+   "center": "-63@399",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 5
+  },
+  {
+   "id": "apollo-11.2031-04.dss63.site-sees-station",
+   "scenario": "apollo-11.2031-04",
+   "station": "DSS-63",
+   "direction": "site-sees-station",
+   "command": "STATION",
+   "center": "coord@301",
+   "siteCoord": "23.47314,0.67416,-1.923",
+   "start": "2031-04-10T00:00:00Z",
+   "stop": "2031-04-13T00:00:00Z",
+   "stepMinutes": 30
+  }
+ ]
+}
