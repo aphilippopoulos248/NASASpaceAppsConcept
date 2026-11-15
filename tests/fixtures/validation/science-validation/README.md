@@ -66,6 +66,12 @@ no change under public/ since 32ef35a); recomputing one gives 0.00000 deg.
 JPL Horizons Sun, the ray march over the bundled files, disc events bisected to 1 s. The script was
 written before T-32's rule was read; the eased row was added afterwards and is labelled.
 
+All figures in this section are for the catalogue pin as it stood before original T-38
+(18.562 N, 61.81 E), and stay valid for it. T-38 moved the pin 8.4 m to LROC's measured position
+(18.5622 N, 61.8102 E); there, at 2 m, the 3 m model gives first cut / last limb 18:24:16 / 19:30:50
+UTC and the 60 m window alone 18:30:27 / 19:38:22, 6.2-7.5 min apart (`blue-ghost-products/new-pin.txt`,
+decision D-12).
+
 | Eye | Terrain | Skyline cuts the Sun | Half hidden | Last limb gone |
 | --- | --- | --- | --- | --- |
 | 2 m | 3 m model alone (= the stored stack) | 18:23:40 | 18:56:53 | 19:30:03 |
@@ -78,8 +84,10 @@ written before T-32's rule was read; the eased row was added afterwards and is l
 - Under the setting Sun the skyline is the 3 m model's edge, 768 m west: the 3 m model alone gives
   the stored stack's times to the second, so nothing beyond the edge matters there.
 - **The two measured products, each used throughout, put the sunset 3.5-3.7 min apart at 2 m**
-  (9.3 min at 0.5 m, where the 60 m window's own near relief forms the skyline; 1.0-1.2 min at 5 m).
-  That spread is the uncertainty the elevation data leave (decision D-10).
+  at this pin (9.3 min at 0.5 m, where the 60 m window's own near relief forms the skyline; 1.0-1.2
+  min at 5 m), and 6.2-7.5 min at 2 m at the current pin. That spread is the uncertainty the
+  elevation data leave (decision D-12, which replaced D-10: "3.5 to 7.5 min apart, depending on
+  where within 8 m the lander stood").
 - The eased stack is identical, to the second at all three heights, to "60 m terrain seen from the
   3 m model's ground": easing moves the skyline-forming ground onto the 60 m window but leaves the
   observer on the 3 m model, which stands 1.11 m above the window at the lander (1.6 m at the edge).
@@ -87,9 +95,11 @@ written before T-32's rule was read; the eased row was added afterwards and is l
   measurement. (@terrain's LOLA comparison, read after this was written, finds the same direction:
   T-32-verification.md @ 0d27f2c.)
 - Firefly's start of night, about 18:15-18:35 UTC (`../ephemeris-check/events/sources.json`), holds
-  either product's first cut at 2 m; the eased one falls just after it. Firefly does not define the
-  term, so this is weak support.
-- Round 1's figures reproduce (18:23, 18:56, 19:30:03); a march twice as fine moves them by 1-2 s.
+  either product's first cut at 2 m at this pin (at the current pin the first cuts are 18:24:16 and
+  18:30:27); the eased one, computed at this pin only, falls just after it. Firefly does not define
+  the term, so this is weak support.
+- Round 1's figures, at the same pin, reproduce (18:23, 18:56, 19:30:03); a march twice as fine
+  moves them by 1-2 s.
 
 Seam check in both modes (`../ephemeris-check/check0b_layer_seams.py --eased`, results in
 `../ephemeris-check/terrain/seams-eased.txt`): at the 19 sites with a 3 m model the as-stored
@@ -125,7 +135,9 @@ A time difference is scored as the skyline error that explains it (dt x the rate
 clearance changes); tolerance 0.01 deg.
 
 - Blue Ghost, all three eye heights: every instant within 4 s (2 m: 18:23:41 / 18:56:49 / 19:30:04
-  against 18:23:40 / 18:56:51 / 19:30:03).
+  against 18:23:40 / 18:56:51 / 19:30:03). Both are at the catalogue pin before original T-38
+  (18.562 N, 61.81 E); at the current pin the validator's 2 m first cut / last limb are 18:24:16 /
+  19:30:50 UTC (decision D-12).
 - Worst over all: 0.0185 deg (the Sun's centre rising at IM-2 on 6 March, 7.7 min late), then
   0.0140 (an Earthrise's first limb at the connecting-ridge pin, 13.9 min) and 0.009 (a sunrise at
   the east-limb pin, 1 min). With this fixture's skyline read only every 0.5 deg, as the app keeps
