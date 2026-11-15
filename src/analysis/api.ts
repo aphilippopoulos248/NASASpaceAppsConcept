@@ -254,9 +254,13 @@ export function outlook(scenario: Scenario, options: OutlookOptions = {}): Promi
   } else {
     p = offThread<Outlook>({ kind: 'outlook', scenario, options }, () => outlookScenario(scenario, options));
     const mine = p;
-    p.catch(() => {
+    const forget = () => {
       if (outlookCache.get(key) === mine) outlookCache.delete(key);
-    });
+    };
+    // As for analyse(): a failure, or a result computed while elevation data could not be fetched, is not remembered.
+    p.then((o) => {
+      if (o.warnings.some((w) => /could not/i.test(w))) forget();
+    }, forget);
     outlookCache.set(key, p);
     if (outlookCache.size > OUTLOOK_CACHE_MAX) outlookCache.delete(outlookCache.keys().next().value as string);
   }
