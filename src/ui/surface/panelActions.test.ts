@@ -51,6 +51,8 @@ describe('surface panel actions', () => {
     expect(await fail({ panel: 'key-metrics' })).toMatch(/Give `folded`, or `xPx` and\/or `yPx`/);
     expect(await fail({ panel: 'compare', folded: true })).toBe('The Compare panel is not on screen. Open the comparison first.');
     expect(await fail({ panel: 'assistant', folded: true })).toBe('The Assistant panel is not on this page.');
+    layout.register('surface-controls', fakePanel(undefined, false).host);
+    expect(await fail({ panel: 'surface-controls', xPx: 300 })).toBe('The Surface controls panel is not on screen. It gives way while the skyline chart is expanded: shrink the chart first (setChart with expanded false).');
     expect(await fail({ panel: 'chart', folded: true })).toMatch(/panel/);
     surface = false;
     expect(await fail({ panel: 'key-metrics', folded: true })).toMatch(/surface view only/);
