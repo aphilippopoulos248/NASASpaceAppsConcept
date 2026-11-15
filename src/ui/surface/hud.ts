@@ -57,10 +57,6 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   more.append(summary, body);
   // Row 3: who the hardware at this site belongs to (filled in by syncOwner below).
   const owner = el('p', 'ly-note sh-owner');
-  // On windows up to 800 px tall these two lines move into "About this view" (hud.css), so the
-  // strip stays below the horizon at the centre of the screen, where a low Sun stands.
-  const groundCompact = el('p', 'sh-compact-only');
-  const ownerCompact = el('p', 'sh-compact-only');
   hud.append(head, ground, owner, more);
   region.append(hud);
 
@@ -97,10 +93,9 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
     }
     ground.append(el('strong', undefined, 'Ground (elevation data): '), `${g.summary}. `);
     ground.append(el('span', g.surveyed ? undefined : 'sh-flag', view.generated ? g.generated : 'Generated detail is off: only measured or interpolated terrain is drawn.'));
-    groundCompact.replaceChildren(...[...ground.childNodes].map((n) => n.cloneNode(true)));
 
     const sky = view.skyNow, steps = view.pathSteps;
-    const parts: HTMLElement[] = [groundCompact, ownerCompact];
+    const parts: HTMLElement[] = [];
     if (sky) {
       const ratio = sky.earth.radiusDeg / sky.sun.radiusDeg;
       parts.push(
@@ -147,8 +142,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const syncOwner = async () => {
     const site = store.get().site;
     const o = site?.kind === 'landing' ? (await loadOwnership())?.byLanding.get(site.id) : undefined;
-    owner.textContent = ownerCompact.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
-    owner.hidden = ownerCompact.hidden = !o;
+    owner.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
+    owner.hidden = !o;
   };
   store.subscribe(['site', 'view'], () => void syncOwner());
   void syncOwner();

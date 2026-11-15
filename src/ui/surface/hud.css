@@ -23,12 +23,3 @@
 }
 /* Who the hardware at the site belongs to: a note like the ground line (the strip's grid gap spaces it). */
 .sh-owner { margin: 0; }
-
-/* Windows up to 800 px tall: the ground line and the ownership line are read in "About this view"
-   instead, which keeps the strip below the horizon band at the centre of the screen (a low Sun at a
-   polar site stands there, at the default look). Larger windows show them in the strip itself. */
-.sh-compact-only { display: none; }
-@media (max-height: 800px) {
-  body[data-view='surface'] .sh-ground, body[data-view='surface'] .sh-owner { display: none; }
-  .sh-body > .sh-compact-only:not([hidden]) { display: block; }
-}
