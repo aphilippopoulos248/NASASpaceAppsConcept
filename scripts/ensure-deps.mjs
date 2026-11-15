@@ -26,7 +26,8 @@ const reason = stale();
 if (reason) {
   console.log(`[ensure-deps] ${reason}: running npm ci`);
   const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-  const r = spawnSync(npm, ['ci', '--no-audit', '--no-fund'], { cwd: ROOT, stdio: 'inherit' });
+  // npm is a .cmd on Windows, which Node only runs through a shell.
+  const r = spawnSync(npm, ['ci', '--no-audit', '--no-fund'], { cwd: ROOT, stdio: 'inherit', shell: process.platform === 'win32' });
   if (r.status !== 0) {
     console.error('[ensure-deps] npm ci failed');
     process.exit(r.status ?? 1);

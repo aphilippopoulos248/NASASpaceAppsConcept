@@ -45,7 +45,14 @@ const LABEL_SUCCESSORS: Record<string, string> = { USSR: 'Russia' };
 /** Our own country labels as GCAT writes them, so the two can be compared. */
 const LABEL_TO_STATE: Record<string, string> = { USSR: 'SU', USA: 'US', China: 'CN', India: 'IN', Japan: 'J' };
 
-export async function loadOwnership(): Promise<OwnershipIndex | null> {
+let ownershipLoad: Promise<OwnershipIndex | null> | null = null;
+
+/** The ownership record, fetched once and shared by everything that shows it. */
+export function loadOwnership(): Promise<OwnershipIndex | null> {
+  return (ownershipLoad ??= fetchOwnership());
+}
+
+async function fetchOwnership(): Promise<OwnershipIndex | null> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}data/sources/gcat-landers.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

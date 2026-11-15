@@ -24,7 +24,14 @@ export interface SiteArea {
   note: string | null;
 }
 
-export async function loadSiteAreas(): Promise<Map<string, SiteArea>> {
+let areasLoad: Promise<Map<string, SiteArea>> | null = null;
+
+/** The explored areas, fetched once and shared by the globe layer and the site card. */
+export function loadSiteAreas(): Promise<Map<string, SiteArea>> {
+  return (areasLoad ??= fetchSiteAreas());
+}
+
+async function fetchSiteAreas(): Promise<Map<string, SiteArea>> {
   try {
     const res = await fetch(`${import.meta.env.BASE_URL}data/sources/site-areas.json`);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

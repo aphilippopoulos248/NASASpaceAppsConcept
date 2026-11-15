@@ -1,5 +1,6 @@
-// The selected site's card (globe view): what the site is, Sun and Earth now, analysis
-// status, links, stepping through the visible landings, and the way down to the surface.
+// The selected site's card (globe view): what the site is, who its hardware belongs to (GCAT),
+// the area explored there, Sun and Earth now, analysis status, links, stepping through the
+// visible landings, and the way down to the surface.
 import { skyAt } from '../../analysis/api';
 import { elevation, moonGeometry } from '../../astro/ephemeris';
 import { runAction } from '../../core/actions';
@@ -11,7 +12,10 @@ import { isoUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
 import { loadTerrainFor } from '../../terrain/api';
-import { formatCoords, formatDate, Landing, landingDate, programColor, quickmapUrl, trekUrl } from '../../data/landings';
+import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapUrl, trekUrl } from '../../data/landings';
+import { flagCode, labelDisagrees, loadOwnership, OwnershipIndex, stateLabel } from '../../data/ownership';
+import { flagCanvas } from '../../scene/flags';
+import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, SiteArea } from '../../scene/siteAreas';
 import { SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
 import { button, el, isTypingTarget } from '../dom';
 import './siteCard.css';
@@ -46,7 +50,7 @@ export function mountSiteCard(region: HTMLElement): void {
   const title = el('h2', 'sc-title');
   const dl = el('dl', 'ly-kv sc-facts');
   const rows: Record<string, Row> = {};
-  for (const [key, label] of [['date', 'Landed'], ['country', 'Country'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['elevation', 'Elevation'], ['coverage', 'Elevation data'], ['sun', 'Sun'], ['earth', 'Earth'], ['analysis', 'Analysis']] as const) {
+  for (const [key, label] of [['date', 'Landed'], ['country', 'Belongs to'], ['owner', 'Owner'], ['type', 'Type'], ['region', 'Region'], ['coords', 'Coordinates'], ['area', 'Explored'], ['elevation', 'Elevation'], ['coverage', 'Elevation data'], ['sun', 'Sun'], ['earth', 'Earth'], ['analysis', 'Analysis']] as const) {
     const dt = el('dt', undefined, label), dd = el('dd');
     dl.append(dt, dd);
     rows[key] = { dt, dd };
@@ -61,6 +65,8 @@ export function mountSiteCard(region: HTMLElement): void {
     a.rel = 'noopener';
   }
   links.append(quickmap, trek);
+  const areaNote = el('p', 'ly-note sc-area-note');
+  const mismatch = el('p', 'sc-mismatch');
   const credit = el('p', 'ly-note sc-credit', `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`);
   const nav = el('div', 'sc-nav');
   const prev = button('← Earlier', 'ly-btn ly-btn--small', () => step(-1));
@@ -86,7 +92,7 @@ export function mountSiteCard(region: HTMLElement): void {
   actions.append(landingLight, surface, whole);
   const status = el('p', 'ly-note sc-status');
   status.setAttribute('role', 'status');
-  card.append(close, program, title, dl, skyNote, summary, links, credit, nav, actions, status);
+  card.append(close, program, title, dl, skyNote, summary, links, areaNote, mismatch, credit, nav, actions, status);
   region.append(card);
 
   const visible = () => getLandings().filter((l) => matchesFilter(missionFilter.get(), l));
@@ -104,6 +110,48 @@ export function mountSiteCard(region: HTMLElement): void {
   const setRow = (key: string, text: string | null) => {
     rows[key].dt.hidden = rows[key].dd.hidden = text === null;
     rows[key].dd.textContent = text ?? '';
+  };
+
+  // Who the hardware belongs to (GCAT) and the area explored; both load once, then the card redraws.
+  let owners: OwnershipIndex | null = null;
+  let areas = new Map<string, SiteArea>();
+  void Promise.all([loadOwnership(), loadSiteAreas()]).then(([o, a]) => {
+    owners = o;
+    areas = a;
+    render();
+  });
+  const renderOwnership = (l: Landing | undefined) => {
+    const o = l ? owners?.byLanding.get(l.id) : undefined;
+    mismatch.hidden = true;
+    if (!l) {
+      setRow('country', null);
+      setRow('owner', null);
+      return;
+    }
+    if (!o || !owners) {
+      setRow('country', `${l.country} (not checked against a catalogue)`);
+      setRow('owner', null);
+      return;
+    }
+    const link = el('a', undefined, 'GCAT');
+    link.href = owners.sourceUrl;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    const src = el('span', 'sc-source');
+    src.append(' · source: ', link, ` ${o.jcat}`);
+    const flag = flagCanvas(flagCode(o), 18);
+    if (flag) flag.className = 'sc-flag';
+    setRow('country', '');
+    rows.country.dd.replaceChildren(...(flag ? [flag] : []), stateLabel(o), src);
+    setRow('owner', o.ownerName ?? o.owner);
+    mismatch.hidden = !labelDisagrees(l.country, o);
+    mismatch.textContent = `Check: this site's own data says "${l.country}", but the GCAT catalogue records ${o.stateFullName ?? o.state}.`;
+  };
+  const renderArea = (l: Landing | undefined) => {
+    const area = l ? areas.get(l.id) : undefined;
+    setRow('area', !l ? null : area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—');
+    areaNote.textContent = area?.note ?? '';
+    areaNote.hidden = !area?.note;
   };
 
   let lastSkyMs = -Infinity;
@@ -135,16 +183,17 @@ export function mountSiteCard(region: HTMLElement): void {
     card.hidden = false;
     program.hidden = !l;
     if (l) {
-      swatch.style.background = programColor(l.program);
+      swatch.style.background = landingColor(l);
       programName.textContent = l.program;
     }
     title.textContent = l ? l.name : 'Pinned location';
     setRow('date', l ? formatDate(l.date) : null);
-    setRow('country', l?.country ?? null);
+    renderOwnership(l);
     setRow('type', l ? (l.crewed ? 'Crewed' : 'Robotic') : null);
     setRow('region', l?.region ?? null);
     const approx = l && (l as Landing & { approx?: boolean }).approx;
     setRow('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}`);
+    renderArea(l);
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';
     links.hidden = !l;

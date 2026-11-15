@@ -7,3 +7,5 @@
 @media (max-width: 700px) {
   .sh-note, .sh-help { display: none; }
 }
+.sh-owner { margin: var(--sp-1) 0 0; font-size: var(--fs-xs); }
+.sh-owner[hidden] { display: none; }

@@ -1,5 +1,5 @@
-// The 3D globe: Moon, stars, Sun/Earth, landing markers, custom pin, close-up imagery,
-// orbit controls and fly-to. It follows the store (time, light, site, filters) and writes
+// The 3D globe: Moon, stars, Sun/Earth, landing markers (coloured by country) with their explored
+// areas and optional country flags, custom pin, close-up imagery, orbit controls and fly-to. It follows the store (time, light, site, filters) and writes
 // the camera pose back (globeCenter); clicks and picks go out as actions.
 import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -11,9 +11,12 @@ import { store } from '../../core/store';
 import { MOON_RADIUS_KM, SiteRef, wrapLon } from '../../core/types';
 import type { MoonGeometry } from '../../astro/ephemeris';
 import { getLandings } from '../../data/catalog';
-import { latLonToVec3, programColor } from '../../data/landings';
+import { landingColor, latLonToVec3 } from '../../data/landings';
+import { loadOwnership } from '../../data/ownership';
+import { FlagMarkers } from '../flags';
 import { createMoon, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
+import { loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 
@@ -36,6 +39,8 @@ export class GlobeView {
   readonly controls: OrbitControls;
   private readonly sky = new Sky();
   private markers: Markers | null = null;
+  private areas: SiteAreaLayer | null = null;
+  private flags: FlagMarkers | null = null;
   private sitePatch: SitePatch | null = null;
   private patchSiteId = '';
   private readonly pin = new Group();
@@ -127,19 +132,21 @@ export class GlobeView {
   }
 
   async load(): Promise<void> {
-    const moon = await createMoon(this.renderer);
+    const [moon, owners, areas] = await Promise.all([createMoon(this.renderer), loadOwnership(), loadSiteAreas()]);
     this.scene.add(moon);
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
+    // Explored area of each site in its country's colour (globe view only), and the optional flags.
+    this.areas = new SiteAreaLayer(this.markers.items, areas);
+    this.flags = new FlagMarkers(this.markers.items, (id) => owners?.byLanding.get(id));
+    this.scene.add(this.areas.root, this.flags.root);
     const s = store.get();
     this.applyFilter();
     this.applySite(s.site);
-    this.markers.root.visible = s.showMissions;
+    this.applyMissions(s.showMissions, s.showFlags);
     this.sky.setMode(s.lightMode);
     store.subscribe(['site'], (st) => this.applySite(st.site));
-    store.subscribe(['showMissions'], (st) => {
-      if (this.markers) this.markers.root.visible = st.showMissions;
-    });
+    store.subscribe(['showMissions', 'showFlags'], (st) => this.applyMissions(st.showMissions, st.showFlags));
     store.subscribe(['lightMode'], (st) => this.sky.setMode(st.lightMode));
     missionFilter.subscribe(() => this.applyFilter());
   }
@@ -151,6 +158,13 @@ export class GlobeView {
   /** Markers in display order (filtered), for picking and stepping. */
   get visibleMarkers(): Marker[] {
     return this.markers?.visible ?? [];
+  }
+
+  /** Markers, their explored areas and flags show together; flags only when also asked for. */
+  private applyMissions(showMissions: boolean, showFlags: boolean): void {
+    if (this.markers) this.markers.root.visible = showMissions;
+    if (this.areas) this.areas.root.visible = showMissions;
+    this.flags?.setEnabled(showMissions && showFlags);
   }
 
   private applyFilter(): void {
@@ -251,6 +265,8 @@ export class GlobeView {
     cam.matrixWorld.extractBasis(this.right, this.up, this.camDir);
     this.sky.update(cam, this.right, this.up);
     this.markers?.update(cam, nowSec);
+    this.areas?.update(cam);
+    this.flags?.update(cam, nowSec, this.sky.litDirection);
     const s = this.pin.visible ? cam.position.distanceTo(this.pin.position) * 0.006 : 0;
     if (s) this.pin.scale.setScalar(s);
     this.sitePatch?.update(altNow);
@@ -295,7 +311,7 @@ export class GlobeView {
           row.className = 'tip-row';
           const sw = document.createElement('span');
           sw.className = 'ly-swatch';
-          sw.style.background = programColor(m.landing.program);
+          sw.style.background = landingColor(m.landing);
           const date = document.createElement('span');
           date.className = 'ly-value tip-date';
           date.textContent = m.landing.date.slice(0, 4);

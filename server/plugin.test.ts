@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { apiMiddleware, type ApiHandler } from './plugin';
 
@@ -19,7 +19,7 @@ describe('API middleware', () => {
         throw new Error('secret detail');
       },
     };
-    const mw = apiMiddleware(root, async (file) => ({ default: handlers[file.split('/').pop()!.replace('.ts', '')] }));
+    const mw = apiMiddleware(root, async (file) => ({ default: handlers[basename(file, '.ts')] }));
     server = createServer((req, res) => mw(req as never, res, () => {
       res.statusCode = 418;
       res.end();
