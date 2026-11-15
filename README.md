@@ -310,10 +310,6 @@ centre.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Open defects** (being fixed by the original team at the time of writing):
-  - typing coordinates into Filters > Centre of view could leave the view, or a pin dropped
-    straight after, short of the typed point; fixed in the code (the fields by T-43, the flights
-    poleward of 80° by `0c15435`; both in `6d4da06`), and the walkthrough's re-check of the fix is
-    still to come;
   - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
     met" for any window with a night, while the compare panel treats that band as no
     requirement (T-46);
@@ -321,7 +317,9 @@ centre.
     south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
     coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
     download at a time, retried), and the walkthrough's re-check is still to come;
-  - keyboard and screen-reader gaps are listed in
+  - two keyboard and screen-reader gaps (T-46): after "Compare as B" in the nearby list the
+    focus falls out of the compare panel, and the site-science section has two disclosures with
+    the same name, "Source and limits"; the others are listed in
     [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 
 ## The demo for the submission
@@ -334,10 +332,13 @@ slide deck must show the team name, the names of the team members and the challe
 Navigator's earlier answer on GitHub (discussion 1991) gave the same limits; the guide
 confirms them.
 
-An outline built on the presets. Confirm each step in the desktop walkthrough (task T-2) before
-recording it: at the time of writing the walkthrough had confirmed the surface view at full
-settings on a real GPU (IM-2 and Apollo 11, 60 frames per second), and had not reported on the
-presets, the compare panel or the assistant yet.
+An outline built on the presets. Confirm each step in the desktop walkthrough before recording
+it. At the time of writing the walkthrough (task T-2, on build `27b0f30`; record in
+[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)) had seen working the globe
+and site search, the compare panel with nearby sites and the assistant in deterministic mode at
+1280x720, and the surface view at full settings on a real GPU at 1280x720 and 1920x1080 (IM-2 and
+Apollo 11, 60 frames per second). It had not run the presets, which came later; its run on the
+release candidate (T-8) is still to come.
 
 - **Video, 30 seconds or less.** The guide's own beats: who you are (0-2 s), the challenge
   (2-5 s), the project's name (5-10 s), how it works (10-20 s), what it could do (20-30 s). For
@@ -350,9 +351,6 @@ presets, the compare panel or the assistant yet.
   surface view from a preset (IM-2's low Sun near the pole). 5: the compare panel (arrival 24 h
   later, nearby alternatives, the mission-window table). 6: NASA data used and how it was
   checked (with "not fully validated"). 7: how AI was used, and what comes next.
-
-Until the walkthrough has re-checked the T-43 fix, steer around typing coordinates into Filters >
-Centre of view: use a preset, "Go to a landing site", a catalogued site or a click on the globe.
 
 What it must not claim: that the results are fully validated; that Earth visibility is a
 working radio link; a sunset or sunrise time without saying which instant it is; that NASA
