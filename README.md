@@ -22,8 +22,9 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   map and a mission-window time scrubber with jumps to rise and set events. Landing markers are
   coloured by the country their hardware belongs to, with optional flags. The site card shows
   who owns the hardware (from the GCAT catalogue), the area explored at the site, the data
-  behind the site, the Sun and Earth against its skyline, and a site-science section: Deep Space Network station opportunities, long-term averages, the nearest mapped
-  ice targets, Diviner annual maximum and mean temperature, and ShadowCam mosaics as links.
+  behind the site, the Sun and Earth against its skyline, and a site-science section: Deep
+  Space Network station opportunities, long-term averages, the nearest mapped ice targets,
+  Diviner annual maximum and mean temperature, and ShadowCam mosaics as links.
 - **Surface view.** Stand at the site and look around: black sky, terrain drawn from the
   elevation data out to 246 km, the Sun and Earth at their computed positions and sizes,
   Earth's phase, terrain shadows and both bodies' tracks. Key metrics (upper left): Sun and
@@ -43,14 +44,14 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   language-model key it answers in a labelled deterministic mode (see
   [The assistant](#the-assistant)).
 
-Every number is computed from the datasets in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md)
-or shown as unavailable with the reason. Earth visibility is geometric line of sight over the
+Every number comes from the datasets in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md), is
+computed from them, or is shown as unavailable with the reason. Earth visibility is geometric line of sight over the
 terrain, not a radio link budget. Sunlight percentage is a share of time with the Sun's disc
 visible, not electrical power.
 
 **Not built yet:** an eclipse replay preset; the start and the end of each sunset and sunrise
-as a pair (see [How accurate it is](#how-accurate-it-is)); historical mission trajectories. What is
-shipped, built and planned is tracked in [docs/lunyx/STATUS.md](docs/lunyx/STATUS.md).
+as a pair (see [How accurate it is](#how-accurate-it-is)); historical mission trajectories.
+What is shipped, built and planned is tracked in [docs/lunyx/STATUS.md](docs/lunyx/STATUS.md).
 
 ## Run it
 
