@@ -36,7 +36,7 @@ import {
 } from 'three';
 import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MoonGeometry, Vec3 } from '../astro/ephemeris';
-import { Landing, programColor } from '../data/landings';
+import { Landing, landingColor } from '../data/landings';
 import { createStars } from './globe';
 import { CONTEXT_LAYER, createTileMosaic, DETAIL_LAYER, ImageryLayer, TileMosaic } from './sitePatch';
 import type { LightMode } from './sky';
@@ -1419,7 +1419,7 @@ void main() {
   /** A marker at the exact landing coordinates. */
   private buildBeacon(landing: Landing): Group {
     const g = new Group();
-    const color = new Color(programColor(landing.program));
+    const color = new Color(landingColor(landing));
     const flat = (opacity: number) => new MeshBasicMaterial({ color, toneMapped: false, transparent: opacity < 1, opacity, depthWrite: opacity === 1 });
     // A ring around the spot and a beam above it, leaving the ground at the landing point itself uncovered.
     const seg = 96, pos: number[] = [], idx: number[] = [], p = new Vector3();

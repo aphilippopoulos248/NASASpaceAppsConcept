@@ -19,7 +19,9 @@
     "derive-detail": "node scripts/derive-detail.mjs",
     "build-ice-targets": "python3 -I scripts/build-ice-targets.py",
     "test:science": "node --experimental-strip-types --no-warnings --test tests/iceTargets.test.ts",
-    "build-dem": "node --experimental-strip-types --no-warnings scripts/build-dem.mjs"
+    "build-dem": "node --experimental-strip-types --no-warnings scripts/build-dem.mjs",
+    "fetch-gcat": "node scripts/fetch-gcat-landers.mjs",
+    "fetch-site-areas": "node scripts/fetch-site-areas.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",

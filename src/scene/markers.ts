@@ -8,7 +8,7 @@ import {
   SphereGeometry,
   Vector3,
 } from 'three';
-import { Landing, latLonToVec3, programColor } from '../data/landings';
+import { Landing, landingColor, latLonToVec3 } from '../data/landings';
 
 /** Marker size as a fraction of camera distance, so markers stay a constant size on screen. */
 const SCREEN_SCALE = 0.006;
@@ -36,7 +36,7 @@ export class Markers {
     const crewRingGeo = new RingGeometry(2.6, 2.85, 40);
 
     for (const landing of landings) {
-      const color = programColor(landing.program);
+      const color = landingColor(landing);
       const dir = latLonToVec3(landing.lat, landing.lon);
       const group = new Group();
       group.position.copy(dir).multiplyScalar(1.0002);
