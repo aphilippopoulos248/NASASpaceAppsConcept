@@ -663,12 +663,11 @@ async function partSurface(app, step) {
 
   await step('Countdown button for the Sun setting (Key metrics) moves the clock to the instant it names', 'control', async ({ check, note }) => {
     await sleep(400);
-    const at = await page.evaluate(() => document.querySelector('.km .km-count li .km-count-at')?.textContent.trim() ?? '');
-    const named = /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC/.exec(at);
-    if (!named) {
-      note(`No time on the first countdown ("${at}").`);
-      return;
-    }
+    // The button's title says where it goes: '... Clicking moves the clock to "Sun starts setting" (2025-03-19 16:36 UTC).'
+    const [at, title] = await page.evaluate(() => [document.querySelector('.km .km-count li .km-count-at')?.textContent.trim() ?? '', document.querySelector('.km .km-count-btn')?.title ?? '']);
+    const named = /Clicking moves the clock to "[^"]+" \((\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC\)/.exec(title) ?? /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC/.exec(at);
+    check('The first countdown names where its button goes', title.slice(-90) || at, 'an instant with its time', Boolean(named));
+    if (!named) return;
     const s0 = await appState(page);
     await page.locator('.km .km-count-btn').first().click();
     await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 10_000 });
