@@ -22,6 +22,15 @@ export function presetTiming(p: MissionPreset): string {
   return `${from}, played in about ${seconds} s`;
 }
 
+/**
+ * Accessible name of a preset's "Timing and data sources" disclosure. The three disclosures share
+ * one visible text, so each name also says which preset it belongs to (accessibility finding A-6).
+ * It starts with the visible text, so speech input still finds it.
+ */
+export function sourcesLabel(p: Pick<MissionPreset, 'title'>): string {
+  return `Timing and data sources of ${p.title}`;
+}
+
 export function mountPresetList(parent: HTMLElement): void {
   const box = el('details', 'pl');
   box.open = true;
@@ -77,7 +86,9 @@ export function mountPresetList(parent: HTMLElement): void {
         b.addEventListener('click', () => void load(p));
         buttons.set(p.id, b);
         const more = el('details', 'pl-more');
-        more.append(el('summary', undefined, 'Timing and data sources'), el('p', 'ly-note', `${presetTiming(p)}.`));
+        const summary = el('summary', undefined, 'Timing and data sources');
+        summary.setAttribute('aria-label', sourcesLabel(p));
+        more.append(summary, el('p', 'ly-note', `${presetTiming(p)}.`));
         if (p.sunBehindEarth) more.append(el('p', 'ly-note', p.sunBehindEarth.reported));
         more.append(...p.sources.map((s) => el('p', 'ly-note', s)));
         li.append(b, more);

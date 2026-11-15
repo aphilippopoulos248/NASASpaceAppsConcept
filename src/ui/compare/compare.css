@@ -235,6 +235,7 @@ body[data-view='surface'] .cmp-launcher { left: 50%; transform: translateX(-50%)
 .cmp-arrivals dd { margin: 0; font-variant-numeric: tabular-nums; }
 .cmp-orow { display: grid; grid-template-columns: minmax(0, 1.9fr) repeat(5, minmax(0, 1fr)); gap: 0 var(--sp-3); align-items: baseline; padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); }
 .cmp-orow--slip { grid-template-columns: minmax(0, 1.9fr) repeat(4, minmax(0, 1fr)); }
+.cmp-orow--days { grid-template-columns: minmax(0, 1.7fr) repeat(6, minmax(0, 1fr)); }
 .cmp-ohead { color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); border-bottom-color: var(--border-strong); }
 .cmp-more > .cmp-ntable, .cmp-more > .cmp-assumelist { margin-top: var(--sp-2); }
 @container cmp-body (max-width: 700px) {

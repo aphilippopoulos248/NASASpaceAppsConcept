@@ -195,7 +195,7 @@ export function mountOutlookTab(root: HTMLElement, panel: PanelStore, kit: TabKi
   };
 
   const readoutText = (r: OutlookRow) =>
-    `Lunar day ${r.index}, ${day(r.startMs)} to ${day(r.endMs)} ${new Date(r.endMs).getUTCFullYear()}: sunlight ${pctText(r.illuminationPct)}, Earth's centre in view ${pctText(r.earthVisiblePct)}, longest darkness ${r.darknessComplete ? '' : 'at least '}${hoursText(r.longestDarknessH)}.`;
+    `Lunar day ${r.index}, ${day(r.startMs)} to ${day(r.endMs)} ${new Date(r.endMs).getUTCFullYear()}: sunlight ${pctText(r.illuminationPct)}, Earth's centre in view ${pctText(r.earthVisiblePct)}${r.earthAnyPct === undefined ? '' : `, any part of Earth's disc ${pctText(r.earthAnyPct)}`}, longest darkness ${r.darknessComplete ? '' : 'at least '}${hoursText(r.longestDarknessH)}.`;
 
   const focusRow = (i: number, announce: boolean) => {
     const o = shown;
@@ -305,16 +305,17 @@ export function mountOutlookTab(root: HTMLElement, panel: PanelStore, kit: TabKi
     highlights.replaceChildren(...o.highlights.map((h) => el('li', undefined, h)));
     tableOf(
       table,
-      ['Lunar day', 'Sunlight', 'Any Sun', "Earth's centre in view", 'Longest darkness', 'Longest Earth gap'],
+      ['Lunar day', 'Sunlight', 'Any Sun', "Earth's centre in view", "Any part of Earth's disc", 'Longest darkness', 'Longest Earth gap (centre hidden)'],
       o.rows.map((r) => [
         `${r.index}: ${formatUtc(r.startMs).replace(' UTC', '')} to ${formatUtc(r.endMs)}`,
         pctText(r.illuminationPct),
         pctText(r.sunAnyPct),
         pctText(r.earthVisiblePct),
+        pctText(r.earthAnyPct ?? NaN),
         `${r.darknessComplete ? '' : 'at least '}${hoursText(r.longestDarknessH)}`,
         `${r.earthGapComplete ? '' : 'at least '}${hoursText(r.longestEarthGapH)}`,
       ]),
-      'cmp-orow',
+      'cmp-orow cmp-orow--days',
     );
     tableSummary.textContent = `The chart as a table (${o.rows.length} lunar days)`;
     basisList.replaceChildren(...[...o.assumptions, ...o.warnings.map((w) => `Warning: ${w}`)].map((t) => el('li', undefined, t)));
