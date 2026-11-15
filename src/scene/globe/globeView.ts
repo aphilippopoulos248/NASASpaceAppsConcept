@@ -3,8 +3,10 @@
 // pin, close-up imagery, colour overlays, orbit controls and fly-to. It
 // follows the store (time, light, site, filters, overlay) and writes the camera pose back
 // (globeCenter); clicks and picks go out as actions.
-import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, Vector2, Vector3, WebGLRenderer } from 'three';
+import { AmbientLight, Box3, Camera, CanvasTexture, DirectionalLight, DoubleSide, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, PerspectiveCamera, Ray, RingGeometry, Scene, Sphere, SphereGeometry, Vector2, Vector3, WebGLRenderer } from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
 import { iceTargetLayer } from '../../science/siteScience';
@@ -38,8 +40,10 @@ import { flyDirection } from './flyTarget';
 import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 import { setTerritories, territoryFill } from './territories';
+import { ShootingStar } from './shootingStar';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
+const INTRO_DISTANCE = 6;
 /** The camera comes no closer to the terrain under the screen centre than this, Moon radii (about 10 km). */
 const MIN_CLEARANCE = 0.006;
 const MIN_DISTANCE = 1 + MIN_CLEARANCE;
@@ -53,6 +57,7 @@ export { vec3ToLatLon };
 
 export class GlobeView {
   readonly scene = new Scene();
+  private readonly introStationScene = new Scene();
   readonly camera = new PerspectiveCamera(40, 1, 0.01, 1200);
   readonly controls: OrbitControls;
   private readonly sky = new Sky();
@@ -103,7 +108,119 @@ export class GlobeView {
   /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
   private placed = { relief: NaN, version: -1, site: '', polar: false };
   private patchVersion = -1;
+  private readonly shootingStar = new ShootingStar();
+  private introPresentation: 'hidden' | 'zooming' | 'revealing' | 'flags' | 'done' = 'done';
+  private introRevealSeconds = 0;
+  private introStation: Group | null = null;
+  private introStationLoading = false;
+  private introStationDrift = 0;
+  private introBeacon: Mesh | null = null;
+  private introStationEntrance = 0;
   active = true;
+
+  /** Keep map annotations off the Moon until the visitor enters. */
+  setIntroPresentation(enabled: boolean): void {
+    this.introPresentation = enabled ? 'hidden' : 'done';
+    this.introRevealSeconds = 0;
+    this.markers?.setRevealProgress(enabled ? 0 : Infinity);
+    this.flags?.setRevealProgress(enabled ? 0 : Infinity);
+    if (enabled) {
+      this.camera.position.setLength(INTRO_DISTANCE);
+      this.loadIntroStation();
+    }
+    if (this.introStation) this.introStation.visible = enabled;
+    this.applyMissions();
+    this.applyOverlay();
+  }
+
+  /** Reveal landing symbols in sequence, then restore the supporting map layers. */
+  revealIntroMarkers(): void {
+    if (this.introPresentation !== 'hidden') return;
+    this.introPresentation = 'zooming';
+    this.introRevealSeconds = 0;
+    this.applyMissions();
+  }
+
+  private loadIntroStation(): void {
+    if (this.introStation || this.introStationLoading) return;
+    this.introStationLoading = true;
+    const draco = new DRACOLoader();
+    draco.setDecoderPath('/models/iss/draco/');
+    const loader = new GLTFLoader();
+    loader.setDRACOLoader(draco);
+    loader.load('/models/iss/iss.glb', (gltf) => {
+      draco.dispose();
+      const content = gltf.scene;
+      const panelCanvas = document.createElement('canvas');
+      panelCanvas.width = 512;
+      panelCanvas.height = 512;
+      const ctx = panelCanvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#101d31';
+        ctx.fillRect(0, 0, 512, 512);
+        for (let y = 0; y < 8; y++) for (let x = 0; x < 10; x++) {
+          ctx.fillStyle = (x + y) % 3 === 0 ? '#26466c' : '#1b3455';
+          ctx.fillRect(x * 51 + 2, y * 64 + 2, 47, 60);
+          ctx.strokeStyle = 'rgba(160, 191, 221, 0.25)';
+          ctx.strokeRect(x * 51 + 2, y * 64 + 2, 47, 60);
+        }
+      }
+      const panelTexture = new CanvasTexture(panelCanvas);
+      panelTexture.colorSpace = 'srgb';
+      content.traverse((object) => {
+        if (!(object instanceof Mesh)) return;
+        object.layers.set(1);
+        if (object.name === 'polySurfa2_9') {
+          const geometry = object.geometry;
+          geometry.computeBoundingBox();
+          const bounds = geometry.boundingBox!;
+          const position = geometry.getAttribute('position');
+          const uv = new Float32Array(position.count * 2);
+          for (let i = 0; i < position.count; i++) {
+            uv[i * 2] = (position.getZ(i) - bounds.min.z) / Math.max(0.001, bounds.max.z - bounds.min.z);
+            uv[i * 2 + 1] = (position.getY(i) - bounds.min.y) / Math.max(0.001, bounds.max.y - bounds.min.y);
+          }
+          geometry.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+          object.material = new MeshStandardMaterial({ map: panelTexture, side: DoubleSide, metalness: 0.18, roughness: 0.72, emissive: 0x071626, emissiveIntensity: 0.3 });
+        } else if (object.material instanceof MeshStandardMaterial) {
+          object.material = object.material.clone();
+          object.material.color.set('#a9b8c6');
+          object.material.metalness = 0.55;
+          object.material.roughness = 0.4;
+        }
+      });
+      const bounds = new Box3().setFromObject(content);
+      const size = bounds.getSize(new Vector3());
+      const centre = bounds.getCenter(new Vector3());
+      content.position.sub(centre);
+      const station = new Group();
+      station.add(content);
+      const beacon = new Mesh(new SphereGeometry(0.45, 12, 8), new MeshBasicMaterial({ color: 0xff3333, toneMapped: false }));
+      beacon.position.set(0, 0, 0);
+      beacon.layers.set(1);
+      station.add(beacon);
+      this.introBeacon = beacon;
+      station.scale.setScalar(1.85 / Math.max(size.x, size.y, size.z, 1));
+      station.rotation.set(-0.85, 0.35, -1.05);
+      station.position.set(-4.2, -1.45, -4);
+      const stationFill = new AmbientLight(0xdceaff, 1.6);
+      stationFill.layers.set(1);
+      station.add(stationFill);
+      const key = new DirectionalLight(0xffffff, 2.2);
+      key.layers.set(1);
+      key.position.set(-2, 3, 4);
+      station.add(key);
+      station.visible = this.introPresentation === 'hidden';
+      this.camera.add(station);
+      this.camera.layers.enable(1);
+      this.introStationScene.add(this.camera);
+      this.introStation = station;
+    }, undefined, (err) => {
+      draco.dispose();
+      this.introStationLoading = false;
+      console.warn('ISS intro model could not load', err);
+    });
+  }
 
   constructor(private readonly renderer: WebGLRenderer, private readonly canvas: HTMLCanvasElement) {
     // +X is the sub-Earth point, so this is the familiar near-side view with north up.
@@ -121,7 +238,7 @@ export class GlobeView {
       // Turned by hand: the fields and "Drop pin at centre" follow the camera again.
       globeDisplay.setLive({ viewTarget: null });
     });
-    this.scene.add(this.sky.root, createStars());
+    this.scene.add(this.sky.root, createStars(), this.shootingStar.root);
 
     // A symbol drawn over the terrain, like the landing markers; hidden while behind the Moon (see render).
     const pinMat = new MeshBasicMaterial({ color: '#ffd479', toneMapped: false, side: DoubleSide, transparent: true, depthTest: false });
@@ -200,6 +317,7 @@ export class GlobeView {
       this.applyOverlay();
     });
     this.markers = new Markers([...getLandings()]);
+    this.markers.setRevealProgress(this.introPresentation === 'done' ? Infinity : 0);
     this.scene.add(this.markers.root);
     void this.loadMissionLayers(this.markers);
     void this.loadRovers();
@@ -218,6 +336,7 @@ export class GlobeView {
   private async loadMissionLayers(markers: Markers): Promise<void> {
     const owners = await loadOwnership();
     this.flags = new FlagMarkers(markers.items, (id) => owners?.byLanding.get(id));
+    this.flags.setRevealProgress(this.introPresentation === 'done' ? Infinity : 0);
     this.scene.add(this.flags.root);
     this.applyMissions();
     this.placed.version = -1; // place them with the markers
@@ -236,11 +355,11 @@ export class GlobeView {
   /** Markers, the country territories and flags show together; flags only when also asked for. */
   private applyMissions(): void {
     const { showMissions, showFlags } = store.get();
-    if (this.markers) this.markers.root.visible = showMissions;
-    if (this.rovers) this.rovers.root.visible = showMissions;
+    if (this.markers) this.markers.root.visible = showMissions && this.introPresentation !== 'hidden';
+    if (this.rovers) this.rovers.root.visible = showMissions && this.introPresentation === 'done';
     this.applyFeatures();
-    this.flags?.setEnabled(showMissions && showFlags);
-    setTerritories(this.uniforms, showMissions ? this.visibleMarkers.map((m) => m.landing) : []);
+    this.flags?.setEnabled(showMissions && showFlags && (this.introPresentation === 'flags' || this.introPresentation === 'done'));
+    setTerritories(this.uniforms, showMissions && this.introPresentation === 'done' ? this.visibleMarkers.map((m) => m.landing) : []);
   }
 
   setGeometry(g: MoonGeometry): void {
@@ -253,7 +372,7 @@ export class GlobeView {
   private applyOverlay(): void {
     const s = store.get();
     this.applyFeatures();
-    if (this.coverage) this.coverage.root.visible = globeDisplay.get().coverage;
+    if (this.coverage) this.coverage.root.visible = this.introPresentation === 'done' && globeDisplay.get().coverage;
     this.applyIce();
     this.uniforms.uBand.value.set(s.sunElMinDeg, s.sunElMaxDeg);
   }
@@ -261,19 +380,19 @@ export class GlobeView {
   /** What the surface shader is compiled with: the overlay, the coverage squares, the territories (shown with the missions). */
   private applyFeatures(): void {
     const s = store.get();
-    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage, s.showMissions && s.showTerritories);
+    setSurfaceFeatures(this.introPresentation === 'done' ? OVERLAY_CODE[s.overlay] : 0, this.introPresentation === 'done' && globeDisplay.get().coverage, this.introPresentation === 'done' && s.showMissions && s.showTerritories);
   }
 
   /** Shows or hides the ice-target outlines; the database is read the first time they are shown. */
   private applyIce(): void {
-    const show = globeDisplay.get().iceTargets;
+    const show = this.introPresentation === 'done' && globeDisplay.get().iceTargets;
     if (this.ice) this.ice.root.visible = show;
     if (!show || this.iceRequested) return;
     this.iceRequested = true;
     iceTargetLayer().then(
       (layer) => {
         this.ice = new IceOutlines(layer);
-        this.ice.root.visible = globeDisplay.get().iceTargets;
+        this.ice.root.visible = this.introPresentation === 'done' && globeDisplay.get().iceTargets;
         this.scene.add(this.ice.root);
         this.placed.version = -1; // place them with the markers
       },
@@ -295,7 +414,7 @@ export class GlobeView {
       u.uPolarHalf.value.set(half(0), half(1), half(2));
       // The windows around the landing sites: outlines of their own, in the legend's colours (480 m, 60 m, 3 m).
       this.coverage = new CoverageOutlines(windowClasses(regions, COVERAGE_STYLE.slice(3).map((c) => c.colour)));
-      this.coverage.root.visible = globeDisplay.get().coverage;
+      this.coverage.root.visible = this.introPresentation === 'done' && globeDisplay.get().coverage;
       this.scene.add(this.coverage.root);
       this.placed.version = -1; // place them with the markers
     } catch (err) {
@@ -325,7 +444,7 @@ export class GlobeView {
     this.markers?.setFilter((l) => matchesFilter(f, l));
     this.rovers?.setFilter((l) => matchesFilter(f, l));
     // The Moon is divided among the sites shown: hiding a site hands its ground to its neighbours.
-    setTerritories(this.uniforms, this.visibleMarkers.map((m) => m.landing));
+    setTerritories(this.uniforms, this.introPresentation === 'done' ? this.visibleMarkers.map((m) => m.landing) : []);
   }
 
   private applySite(site: SiteRef | null): void {
@@ -427,6 +546,50 @@ export class GlobeView {
 
   render(dt: number, nowSec: number): void {
     const cam = this.camera;
+    if (this.introStation?.visible) {
+      this.introStationDrift += dt;
+      if (this.introBeacon) this.introBeacon.visible = this.introStationDrift % 2.8 < 0.22;
+      this.introStation.rotation.y = 0.35 + Math.sin(this.introStationDrift * 0.4) * 0.07;
+      if (this.introPresentation === 'hidden' && document.getElementById('loading')?.classList.contains('done')) {
+        this.introStationEntrance = Math.min(1, this.introStationEntrance + dt / 2.4);
+        const t = 1 - (1 - this.introStationEntrance) ** 3;
+        this.introStation.position.set(-4.2 + 2.85 * t, -1.45 + 0.8 * t + Math.sin(this.introStationDrift * 0.7) * 0.015 * t, -4);
+      }
+    }
+    if (this.introPresentation === 'zooming') {
+      this.introRevealSeconds += dt;
+      const t = Math.min(1, this.introRevealSeconds / 1.15);
+      const eased = 1 - (1 - t) ** 3;
+      cam.position.setLength(INTRO_DISTANCE + (GLOBE_DISTANCE - INTRO_DISTANCE) * eased);
+      if (this.introStation) {
+        const entry = 1 - (1 - this.introStationEntrance) ** 3;
+        this.introStation.position.set(-4.2 + 2.85 * entry - 2.5 * eased, -1.45 + 0.8 * entry - eased, -4);
+      }
+      if (t === 1) {
+        if (this.introStation) this.introStation.visible = false;
+        this.introPresentation = 'revealing';
+        this.introRevealSeconds = 0;
+        this.applyMissions();
+      }
+    } else if (this.introPresentation === 'revealing') {
+      this.introRevealSeconds += dt;
+      this.markers?.setRevealProgress(this.introRevealSeconds / 0.075);
+      if (this.introRevealSeconds > (this.markers?.count ?? 28) * 0.075 + 0.25) {
+        this.introPresentation = 'flags';
+        this.introRevealSeconds = 0;
+        this.markers?.setRevealProgress(Infinity);
+        this.applyMissions();
+      }
+    } else if (this.introPresentation === 'flags') {
+      this.introRevealSeconds += dt;
+      this.flags?.setRevealProgress(this.introRevealSeconds / 0.065);
+      if (this.introRevealSeconds > (this.flags?.count ?? 28) * 0.065 + 0.2) {
+        this.introPresentation = 'done';
+        this.flags?.setRevealProgress(Infinity);
+        this.applyMissions();
+        this.applyOverlay();
+      }
+    }
     this.stepFly(dt);
     // Scale rotate and zoom speeds with altitude, so control stays fine near the surface.
     const alt = Math.max(cam.position.length() - 1, 1e-4);
@@ -442,6 +605,7 @@ export class GlobeView {
     cam.updateMatrixWorld();
     cam.matrixWorld.extractBasis(this.right, this.up, this.camDir);
     this.sky.update(cam, this.right, this.up);
+    this.shootingStar.update(dt);
     this.updateRelief(altNow * MOON_RADIUS_KM);
     this.uniforms.uTerrFill.value = territoryFill(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
@@ -450,10 +614,17 @@ export class GlobeView {
     if (this.coverage?.root.visible) this.coverage.update(cam);
     if (this.ice?.root.visible) this.ice.update(cam);
     const pinned = store.get().site;
-    this.pin.visible = pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
+    this.pin.visible = this.introPresentation === 'done' && pinned?.kind === 'custom' && this.pin.position.dot(cam.position) > this.pin.position.lengthSq();
     if (this.pin.visible) this.pin.scale.setScalar(cam.position.distanceTo(this.pin.position) * 0.006);
     this.sitePatch?.update(altNow);
     this.renderer.render(this.scene, cam);
+    if (this.introStation?.visible) {
+      const autoClear = this.renderer.autoClear;
+      this.renderer.autoClear = false;
+      this.renderer.clearDepth();
+      this.renderer.render(this.introStationScene, cam);
+      this.renderer.autoClear = autoClear;
+    }
     this.publishCenter(altNow);
   }
 

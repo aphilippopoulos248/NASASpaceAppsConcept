@@ -6,14 +6,17 @@
     <meta name="description" content="Lunyx: pick a place and a date on the Moon, drop to the surface, and see where the Sun and Earth sit against the real skyline." />
     <title>Lunyx · Lunar landing site navigator</title>
   </head>
-  <body data-view="globe">
-    <canvas id="scene" tabindex="0" aria-label="3D Moon globe. Drag or arrow keys to turn, scroll or plus/minus to zoom, click a marker to open a site, click the ground or press Enter to drop a pin at the centre."></canvas>
+  <body data-view="globe" data-phase="intro">
+    <canvas id="scene" tabindex="-1" aria-hidden="true" aria-label="3D Moon globe. Drag or arrow keys to turn, scroll or plus/minus to zoom, click a marker to open a site, click the ground or press Enter to drop a pin at the centre."></canvas>
+
+    <!-- Intro overlay: presentation phase only (body[data-phase]). Live globe stays underneath. -->
+    <div id="region-intro" class="region-intro" aria-label="Lunyx introduction"></div>
 
     <!--
       Layout frame. Each region is a mount point handed to exactly one module by src/main.ts;
       modules build their own DOM inside it. data-views lists the views a region shows in.
     -->
-    <div class="shell" id="shell">
+    <div class="shell" id="shell" inert aria-hidden="true">
       <header class="region region-wordmark" data-views="globe"><h1 class="wordmark">LUNYX</h1></header>
       <button class="ly-btn left-toggle" id="left-toggle" type="button" aria-expanded="false" aria-controls="region-left">Filters</button>
       <aside class="region region-left" id="region-left" data-views="globe" aria-label="Filters"></aside>

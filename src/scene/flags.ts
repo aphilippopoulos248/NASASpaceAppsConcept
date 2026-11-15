@@ -219,6 +219,7 @@ export class FlagMarkers {
   readonly root = new Group();
   private readonly items: Flag[] = [];
   private enabled = false;
+  private revealProgress = Infinity;
   private readonly local = new Vector3();
   private readonly inverse = new Quaternion();
 
@@ -257,21 +258,27 @@ export class FlagMarkers {
     if (!on) for (const f of this.items) f.group.visible = false;
   }
 
+  setRevealProgress(progress: number): void { this.revealProgress = progress; }
+
+  get count(): number { return this.items.length; }
+
   /**
    * Call every frame. `sunDir` is the direction to the Sun in scene space, or null when the scene
    * is lit evenly.
    */
   update(camera: Camera, timeSec: number, sunDir: Vector3 | null): void {
     if (!this.enabled) return;
-    for (const f of this.items) {
+    for (const [i, f] of this.items.entries()) {
       const { marker, group, swivel } = f;
       // A point on the unit sphere faces a camera at c when p·c > 1; past the limb the Moon hides it anyway.
       const facing = marker.dir.dot(camera.position);
-      group.visible = marker.group.visible && facing > 0.98;
+      group.visible = i < this.revealProgress && marker.group.visible && facing > 0.98;
       if (!group.visible) continue;
       // Stand where the marker is: on the drawn surface, which moves with the relief exaggeration.
       group.position.copy(marker.group.position);
-      group.scale.setScalar(camera.position.distanceTo(group.position) * SCREEN_SIZE * 0.73);
+      const entering = Math.min(1, Math.max(0, (this.revealProgress - i) / 0.9));
+      const pop = entering >= 1 ? 1 : entering * (1 + 0.16 * Math.sin(Math.PI * entering));
+      group.scale.setScalar(camera.position.distanceTo(group.position) * SCREEN_SIZE * 0.73 * pop);
       // Turn the cloth about the pole so it faces the viewer.
       this.local.copy(camera.position).sub(group.position).applyQuaternion(this.inverse.copy(group.quaternion).invert());
       // Turned slightly off square so the ripple and the pole read in depth.

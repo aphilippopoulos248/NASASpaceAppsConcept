@@ -33,6 +33,8 @@ import { mountSurfaceHud } from './ui/surface/hud';
 import { mountKeyMetrics } from './ui/surface/metrics';
 import { mountSkylineChart } from './ui/surface/skylineChart';
 import { mountSurfacePanels } from './ui/surface/panels';
+import { mountIntro } from './ui/intro/intro';
+import { setPhase, shouldShowIntro } from './ui/intro/phase';
 
 const region = (name: string) => document.getElementById(`region-${name}`) as HTMLElement;
 
@@ -79,15 +81,42 @@ async function boot() {
   mountAssistantDrawer(region('drawer'));
   mountSurfacePanels();
 
+  const link = parseDeepLink(location.search);
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const showIntro = shouldShowIntro(link, { reducedMotion, search: location.search });
+  host.globe.setIntroPresentation(showIntro);
+  setPhase(showIntro ? 'intro' : 'app');
+  const intro = mountIntro(document.getElementById('region-intro') as HTMLElement, {
+    reducedMotion,
+    onEnter: () => {
+      host.globe.revealIntroMarkers();
+      // Keep the globe interactive once the HUD is back; scene was never restarted.
+      host.globe.controls.enabled = store.get().view === 'globe';
+    },
+  });
+  if (!showIntro) {
+    host.globe.controls.enabled = store.get().view === 'globe';
+  } else {
+    host.globe.controls.enabled = false;
+  }
+
   await host.load();
   void analysis.start();
-  const errors = await applyDeepLink(parseDeepLink(location.search), host.jumpTo);
+  const errors = await applyDeepLink(link, host.jumpTo);
   for (const e of errors) console.warn('Deep link:', e);
   syncUrl(store);
   document.getElementById('loading')!.classList.add('done');
+  if (showIntro) {
+    // Focus the Enter control once the loading veil is gone.
+    requestAnimationFrame(() => intro.enter.focus({ preventScroll: true }));
+  }
 }
 
 boot().catch((err) => {
   console.error(err);
+  setPhase('app');
+  const shell = document.getElementById('shell');
+  shell?.removeAttribute('inert');
+  shell?.setAttribute('aria-hidden', 'false');
   document.getElementById('loading')!.textContent = 'Could not load the Moon. Run "npm run fetch-textures" and reload.';
 });

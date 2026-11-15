@@ -17,6 +17,7 @@
   --fs-lg: 1.125rem;    /* 18: panel titles */
   --fs-xl: 1.5rem;      /* 24: card titles */
   --fs-display: 2rem;   /* 32: wordmark */
+  --fs-hero: clamp(2.5rem, 7vw, 4.5rem); /* intro brand */
   --lh-tight: 1.2;
   --lh-body: 1.45;
   --fw-regular: 400;
@@ -74,6 +75,7 @@
   --z-drawer: 5;
   --z-tooltip: 6;
   --z-toast: 7;
+  --z-intro: 3;
   --z-loading: 8;
 }
 
