@@ -3,7 +3,7 @@ import { analyseStack } from '../../analysis/api';
 import { fnSource, stackOf } from '../../analysis/testing';
 import type { Blockage, SiteAnalysis, SkyEvent } from '../../analysis/types';
 import type { Scenario } from '../../core/types';
-import { basisOf, clockPosition, nowRows, requirementLines, scenarioRows, splitAssumptions, windowRows, type Science } from './model';
+import { basisOf, clockPosition, nowRows, requirementLines, scenarioRows, splitAssumptions, sunBandSet, windowRows, type Science } from './model';
 
 // A smooth Moon at 0 N 0 E: Earth stays overhead, and the Sun sets about a week after full Moon
 // (14 March 2025). "Day" lies wholly in sunlight; "dusk" starts lit and ends in a night that
@@ -181,13 +181,24 @@ describe('requirements in words', () => {
   const open = { sunElMinDeg: 0, sunElMaxDeg: 90, maxEarthGapH: null, slopeLimitDeg: 10 };
 
   it('reports the band, the Earth gap and the slope limit as met', () => {
-    const lines = requirementLines('A', day, { ...open, maxEarthGapH: 12 }, 40);
+    const lines = requirementLines('A', day, { ...open, sunElMinDeg: 2, sunElMaxDeg: 80, maxEarthGapH: 12 }, 40);
     expect(lines.map((l) => l.status)).toEqual(['met', 'met', 'met']);
-    expect(lines[0].text).toMatch(/^A: the Sun's elevation stays inside the required band, 0° to 90° \(it ranges from \d+\.\d° to \d+\.\d°\)\.$/);
+    expect(lines[0].text).toMatch(/^A: the Sun's elevation stays inside the required band, 2° to 80° \(it ranges from \d+\.\d° to \d+\.\d°\)\.$/);
     expect(lines[1].text).toBe('A: the longest Earth gap in the window, none, is within the 12 h limit.');
     expect(lines[2].text).toBe('A: the slope, 0.0° over 120 m, is within the 10° slope limit.');
     // No Earth-gap requirement set: no line about it.
-    expect(requirementLines('A', day, open, 40)).toHaveLength(2);
+    expect(requirementLines('A', day, { ...open, sunElMinDeg: 2, sunElMaxDeg: 80 }, 40)).toHaveLength(2);
+  });
+
+  it('the default band (0 to 90 deg, nobody asked for it) is a fact about the Sun, never a failure', () => {
+    const [line] = requirementLines('B', dusk, open, 1);
+    expect(line.status).toBe('info');
+    expect(line.text).toMatch(/^B: no solar elevation band is set\. The Sun's elevation ranges from −\d+\.\d° to \d+\.\d° during the window, so it goes below the horizontal\.$/);
+    const [high] = requirementLines('A', day, open, 40);
+    expect(high).toMatchObject({ status: 'info' });
+    expect(high.text).toMatch(/^A: no solar elevation band is set\. The Sun's elevation ranges from \d+\.\d° to \d+\.\d° during the window\.$/);
+    expect(sunBandSet(open)).toBe(false);
+    expect(sunBandSet({ sunElMinDeg: 0, sunElMaxDeg: 60 })).toBe(true);
   });
 
   it('flags a breach of each requirement', () => {
@@ -208,8 +219,10 @@ describe('requirements in words', () => {
 
   it('says "cannot be checked" when the figure does not exist', () => {
     const blank = { ...day, slope: { ...day.slope, slopeDeg: NaN }, metrics: { ...day.metrics, minSunElDeg: NaN, maxSunElDeg: NaN, longestEarthGapH: NaN } };
-    const lines = requirementLines('A', blank, { ...open, maxEarthGapH: 24 }, NaN);
+    const lines = requirementLines('A', blank, { ...open, sunElMinDeg: 5, maxEarthGapH: 24 }, NaN);
     expect(lines.map((l) => l.status)).toEqual(['unknown', 'unknown', 'unknown']);
+    // Without a band, nothing is said about a Sun whose elevation is not known.
+    expect(requirementLines('A', blank, { ...open, maxEarthGapH: 24 }, NaN).map((l) => l.status)).toEqual(['unknown', 'unknown']);
     for (const l of lines) expect(l.text).toContain('cannot be checked');
   });
 });
