@@ -40,8 +40,8 @@ New actions: `setAssistantOpen {open}`, `clearConversation` (31 in the build at 
 
 ## Verified, and with what
 
-**With a real language model: nothing.** There is no API key on this machine. A real run is
-one command: `ANTHROPIC_API_KEY=... npm run dev` (or put the key in `.env.local`).
+**With a real language model: nothing.** There are no credentials on this machine. A real run:
+`ant auth login` (once), then `npm run dev`.
 
 With the Anthropic SDK types and a fake SDK client (`server/llm/anthropic.test.ts`):
 request shape (model, effort, adaptive thinking, no forced tool choice, betas, cache

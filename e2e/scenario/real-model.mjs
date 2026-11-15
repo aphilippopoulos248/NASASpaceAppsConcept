@@ -1,15 +1,14 @@
 // The T-6 scenario with a REAL language model: one command, run by hand, never part of a test
-// run (it costs money and needs a key). It has not been run: there is no API key on the build
-// machine.
+// run (it costs money and needs credentials). It has not been run: there are no credentials on
+// the build machine.
 //
+//   ant auth login                          # authenticate with your Claude subscription (once)
 //   npm run build
-//   LUNYX_ENV_FILE=/path/to/git-ignored.env node e2e/scenario/real-model.mjs
-//       (the file holds ANTHROPIC_API_KEY=...; or put the key in .env.local at the repository
-//        root, which is git-ignored; LUNYX_LLM_MODEL picks another model, see .env.example)
+//   node e2e/scenario/real-model.mjs
 //   E2E_GPU=1 flock /tmp/lunyx-gpu.lock node e2e/scenario/real-model.mjs   (on this machine, D-7)
 //
 // What it does: starts `vite preview` with the server's own environment (so the server finds
-// the key; the browser never sees it), opens the app with every outside request from the page
+// the credentials; the browser never sees them), opens the app with every outside request from the page
 // refused, sets the pin and the mission window of e2e/scenario/scenario.test.mjs, and sends the
 // three requests through the drawer as follow-ups. It writes the transcript (each reply, the
 // model that served it, every action with its parameters and result) to
@@ -54,7 +53,7 @@ try {
   }
   if (!status) throw new Error(`the preview server did not answer:\n${serverLog.slice(-1500)}`);
   if (!status.available || status.model?.provider === 'scripted') {
-    console.error(`No language model is available on this server: ${status.reason ?? JSON.stringify(status.model)}. Give it a key (see the header of this file). Nothing was run.`);
+    console.error(`No language model is available on this server: ${status.reason ?? JSON.stringify(status.model)}. Run \`ant auth login\` first (see the header of this file). Nothing was run.`);
     process.exitCode = 2;
   } else {
     console.log(`Model: ${status.model.label} (${status.model.provider}, ${status.model.model}); router: ${status.router}`);

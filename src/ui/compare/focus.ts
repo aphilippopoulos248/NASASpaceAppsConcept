@@ -18,6 +18,31 @@ export function focusInHiddenPanel(active: unknown, panels: Iterable<readonly [u
   return false;
 }
 
+/** Where the focus is when Escape is pressed, as far as the compare panel's rule needs it. */
+export interface EscapeFocus {
+  /** The focused element is inside the compare sheet. */
+  inside: boolean;
+  /** It is inside the assistant drawer. */
+  inDrawer: boolean;
+  /** It is a field outside the sheet that uses Escape itself (isTypingTarget). */
+  typingOutside: boolean;
+  /** The assistant drawer is open. */
+  drawerOpen: boolean;
+}
+
+/**
+ * True when Escape closes the compare panel. Escape goes to the layer that holds the focus (finding
+ * F-10, the rule agreed with the assistant drawer, src/ui/assistant/drawer.ts): focus inside the
+ * sheet closes the panel even while the drawer is open; focus in the drawer, or in a field outside
+ * the sheet, leaves the key to them; focus on the page (the body, the scene) closes the drawer when
+ * it is open and the panel otherwise.
+ */
+export function compareTakesEscape(f: EscapeFocus): boolean {
+  if (f.inside) return true;
+  if (f.inDrawer || f.typingOutside) return false;
+  return !f.drawerOpen;
+}
+
 /**
  * True when closing the panel hands focus back to its launcher: focus was in the panel, or it had
  * already fallen to the page body (nobody holds it). Focus somewhere else, such as the assistant

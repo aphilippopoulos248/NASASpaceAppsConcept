@@ -47,9 +47,15 @@ async function fetchSiteAreas(): Promise<Map<string, SiteArea>> {
   }
 }
 
+/** "about 150 km across", "about 1.6 km across", "about 140 m across" */
+function widthText(m: number): string {
+  if (m >= 100_000) return `about ${Math.round(m / 1000)} km across`;
+  return m >= 1000 ? `about ${(m / 1000).toFixed(1)} km across` : `about ${Math.round(m / 10) * 10} m across`;
+}
+
 /** "about 1.6 km across", "about 140 m across" */
 export function describeExtent(a: SiteArea): string {
-  return a.extentM >= 1000 ? `about ${(a.extentM / 1000).toFixed(1)} km across` : `about ${Math.round(a.extentM / 10) * 10} m across`;
+  return widthText(a.extentM);
 }
 
 /** Just above the site imagery patches (radius 1.0001), below the markers. */
@@ -58,27 +64,58 @@ const RADIUS = 1.00014;
 const LIFT = RADIUS - 1;
 
 /**
- * Seen from orbit, areas are drawn this many times larger (in width) than they really are, so
- * they read on the globe, unless another factor is chosen (the territory size control: areaScale
- * in src/scene/globe/displayState.ts). The data, and the size quoted in the info card, stay true.
+ * The territory setting (areaScale in src/scene/globe/displayState.ts, the setTerritoryScale action)
+ * at which each area gets the full display enlargement: seen from orbit it is then drawn
+ * MIN_ORBIT_AREA_WIDTH_M to MAX_ORBIT_AREA_WIDTH_M across (its width x 100 within those bounds), so
+ * the smallest sites are enlarged most. It is a setting, not a width multiplier: 1 is true size and
+ * the settings in between blend linearly (areaDisplayScale). The data, and the size quoted in the
+ * info card, stay true.
  */
 export const AREA_DISPLAY_SCALE = 100;
 export const MIN_ORBIT_AREA_WIDTH_M = 150_000;
 export const MAX_ORBIT_AREA_WIDTH_M = 500_000;
 
-/** Orbital display symbols stay legible even for a stationary lander, and bounded for long traverses. */
+/**
+ * How many times wider than it is an area is drawn from orbit at a territory setting: orbital display
+ * symbols stay legible even for a stationary lander, and bounded for long traverses.
+ */
 export function areaDisplayScale(area: Pick<SiteArea, 'extentM'>, factor = AREA_DISPLAY_SCALE): number {
   const extent = Math.max(1, area.extentM);
   const orbital = Math.max(1, Math.min(MAX_ORBIT_AREA_WIDTH_M, Math.max(MIN_ORBIT_AREA_WIDTH_M, extent * AREA_DISPLAY_SCALE)) / extent);
   return 1 + (orbital - 1) * Math.min(1, Math.max(0, (factor - 1) / (AREA_DISPLAY_SCALE - 1)));
 }
 
+/** "2.7", "44", "2500": a width factor as the card and the action results quote it. */
+const factorText = (k: number): string => String(k < 10 ? Math.round(k * 10) / 10 : Math.round(k));
+
 /**
- * How much larger than true the areas are drawn at a camera altitude: `orbitScale` (the chosen
- * territory size, AREA_DISPLAY_SCALE unless changed) from
- * orbit, true size close to the ground, eased in between over the same altitudes as the relief
- * exaggeration (src/scene/globe/reliefTiles.ts). Individual areas use a minimum visible width
- * and a maximum extent from orbit; this factor also gives their shared interpolation to true size.
+ * One area as drawn from orbit (a camera above FULL_EXAGGERATION_KM) at a territory setting: how many
+ * times wider than it is, how wide, and the words the site card and setTerritoryScale use. Closer
+ * in it eases to true size (areaScale).
+ */
+export function areaDisplayFacts(area: Pick<SiteArea, 'extentM'>, setting: number) {
+  const k = areaDisplayScale(area, setting);
+  const drawnM = k * Math.max(1, area.extentM);
+  const widthFactorFromOrbit = Math.round(k * 10) / 10;
+  return {
+    widthFactorFromOrbit,
+    drawnWidthFromOrbitKm: Math.round(drawnM / 100) / 10,
+    drawn: widthFactorFromOrbit <= 1
+      ? 'drawn at true size on the globe'
+      : `drawn ${factorText(k)}× larger in width from orbit, ${widthText(drawnM)}, so it can be seen; true size close to the ground`,
+  };
+}
+
+/** The site card's "Explored" row: "about 11.4 km across (drawn 44× larger in width from orbit, about 500 km across, ...)". */
+export function exploredText(area: SiteArea, setting: number): string {
+  return `${describeExtent(area)} (${areaDisplayFacts(area, setting).drawn})`;
+}
+
+/**
+ * The territory setting in effect at a camera altitude: `orbitScale` (the chosen setting,
+ * AREA_DISPLAY_SCALE unless changed) from orbit, 1 (true size) close to the ground, eased in between
+ * over the same altitudes as the relief exaggeration (src/scene/globe/reliefTiles.ts). place() turns
+ * it into each area's own enlargement, between true size and its display width from orbit.
  */
 export function areaScale(altitudeKm: number, orbitScale = AREA_DISPLAY_SCALE): number {
   const t = Math.min(1, Math.max(0, (altitudeKm - TRUE_SCALE_BELOW_KM) / (FULL_EXAGGERATION_KM - TRUE_SCALE_BELOW_KM)));
@@ -87,7 +124,7 @@ export function areaScale(altitudeKm: number, orbitScale = AREA_DISPLAY_SCALE): 
 
 /**
  * Each site's explored area drawn on the globe in its country's colour: a translucent fill with a solid
- * outline, enlarged AREA_DISPLAY_SCALE times about its centre so it reads at globe scale.
+ * outline, enlarged about its centre so it reads at globe scale (areaDisplayScale, areaScale).
  */
 /** The vertices of one drawn piece (fill or outline) by true latitude and longitude, so it can follow the relief and be enlarged about its centre. */
 interface Piece {
@@ -132,9 +169,15 @@ export class SiteAreaLayer {
       const fillGeo = new BufferGeometry();
       fillGeo.setAttribute('position', new Float32BufferAttribute(fillPoints.flatMap((p) => p.clone().multiplyScalar(RADIUS).toArray()), 3));
       fillGeo.setIndex(idx);
-      const fill = new Mesh(fillGeo, new MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: DoubleSide, toneMapped: false }));
+      // Drawn over the terrain (no depth test), like the markers. Each vertex sits LIFT above the drawn
+      // surface, but a piece between vertices is flat and spans up to tens of kilometres at the display
+      // enlargement: with the depth test, hills and crater rims standing above it would cut holes in
+      // the fill and the outline, even at true relief (Hadley-Apennine, Taurus-Littrow). An area is
+      // hidden as a whole when its site is behind the Moon (update()); the part of a large area beyond
+      // the limb is foreshortened to a sliver.
+      const fill = new Mesh(fillGeo, new MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false, side: DoubleSide, toneMapped: false }));
       const lineGeo = new BufferGeometry().setFromPoints(outlinePoints.map((p) => p.clone().multiplyScalar(RADIUS)));
-      const outline = new LineLoop(lineGeo, new LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false }));
+      const outline = new LineLoop(lineGeo, new LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false }));
 
       fill.renderOrder = outline.renderOrder = 2.5;
       const group = new Group();
@@ -183,7 +226,7 @@ export class SiteAreaLayer {
     }
   }
 
-  /** Follows the markers: hidden when a site is filtered out. */
+  /** Follows the markers: hidden when a site is filtered out or behind the Moon. */
   update(_camera: Camera): void {
     for (const { marker, group } of this.items) group.visible = marker.group.visible;
   }
