@@ -27,7 +27,7 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 | Task | Tree | When (2026-11-15) | Sizes | Steps | Value checks | Failures |
 | --- | --- | --- | --- | --- | --- | --- |
 | T-2 | app tree of 2f7e813 (= published 27b0f30) | 03:47Z | 1280x720, 1920x1080 (surface) | 47 of 47 | 244 of 248 | F-3 (two), Q-4, Q-6 |
-| T-8, release | app tree of team integration 649fc4e (published 39a4c5d + this team's last delivery); **app code = RC**: the published head 41be074 has the same app code and e2e tests | 06:26 to 06:31Z, script e6d5333 | 1280x720, 1920x1080, all five parts | 82 of 82 | 494 of 494 | none; Q-8 seen in a screenshot, then reproduced |
+| T-8, release | app tree of team integration 649fc4e (published 39a4c5d + this team's last delivery) = **RC 41be074**: app code identical to 649fc4e (diff outside *.md: empty) | 06:26 to 06:31Z, script e6d5333 | 1280x720, 1920x1080, all five parts | 82 of 82 | 494 of 494 | none; Q-8 seen in a screenshot, then reproduced |
 
 The T-8 run: GPU (GTX 1050 Ti, full settings, 60 fps). No failed request, HTTP error or
 console error at either size. Report `e2e/qa/out/rc-649fc4e-r2/report.json`. The first T-8
