@@ -40,6 +40,8 @@ export interface CoreContext {
   prepareSurface?: (site: SiteRef) => Promise<void>;
   /** The science lookups getAnalysis reads Sun/Earth "now" and the next events from. Defaults to the science core. */
   science?: ReportScience;
+  /** How the globe is being drawn (relief exaggeration, coverage outlines, polar close-up), for getState. */
+  display?: () => Record<string, unknown>;
 }
 
 const OVERLAYS: readonly OverlayMode[] = ['off', 'sun-band', 'avg-illumination', 'avg-earth-visibility'];
@@ -653,7 +655,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'getState',
       title: 'Current state',
       description:
-        'Reads what is on screen now, without waiting: view, simulated time (UTC), site, globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
+        'Reads what is on screen now, without waiting: view, simulated time (UTC), site, globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up) and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
       effect: 'query',
       params: NO_PARAMS,
       run: () => {
@@ -675,6 +677,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           showMissions: s.showMissions,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },
+          globeDisplay: ctx.display?.() ?? null,
           analysis: ctx.analysis?.summary('current') ?? null,
         };
       },
