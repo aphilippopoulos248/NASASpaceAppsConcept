@@ -3,7 +3,8 @@
 // panel's own calls or the assistant's; anything that does not have the expected shape is
 // refused here (null) rather than drawn half-way.
 import type { MissionProfile, PairComparison, ProfileOverrides, Ranking, Relaxation, SiteEvaluation } from '../../analysis/decision/types';
-import type { RankingSource } from './view';
+import type { ObjectSchema } from '../../core/actions';
+import { withFullDetail, type RankingSource } from './view';
 
 /** The shared decision setting (AppState.decisionProfileId / decisionOverrides) as the tools resolve it. */
 export interface DecisionSettings {
@@ -93,4 +94,26 @@ export function readComparison(r: unknown): PairComparison | null {
     dominance: x.dominance as PairComparison['dominance'],
     sentences: listOf(x.sentences, isText),
   };
+}
+
+/** The same request again with detail "full": what the tab runs to draw an answer given in summary. */
+export interface FullReplay {
+  name: 'findBestSites' | 'compareSites';
+  params: Record<string, unknown>;
+}
+
+/**
+ * When a successful findBestSites or compareSites answer cannot be drawn because it is a
+ * "summary" (the default for the assistant's replies, F-12), the same request with detail
+ * "full", for the tab to run and draw (the analyses are cached, so it is quick). Null when the
+ * answer can be drawn as it is, when the request already asked for "full" (never a loop), or
+ * when the tools have no `detail` parameter.
+ */
+export function fullReplay(entry: { name: string; ok: boolean; params: unknown; result?: unknown }, schemaOf: (name: string) => Pick<ObjectSchema, 'properties'> | undefined): FullReplay | null {
+  if (!entry.ok || (entry.name !== 'findBestSites' && entry.name !== 'compareSites')) return null;
+  const params: Record<string, unknown> = isObj(entry.params) ? entry.params : {};
+  if (params.detail === 'full') return null;
+  if ((entry.name === 'findBestSites' ? readRanking(entry.result) : readComparison(entry.result)) !== null) return null;
+  const full = withFullDetail(params, schemaOf(entry.name));
+  return full === params ? null : { name: entry.name, params: full };
 }

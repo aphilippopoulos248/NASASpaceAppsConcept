@@ -348,7 +348,8 @@ describe('candidates and the buttons of a row', () => {
     expect(sourceSentence(null, null, 0)).toBe('');
     expect(sourceSentence({ from: 'catalogue', considered: 28, total: 28 }, 40, 0)).toBe('Measured 28 of the 28 catalogued landings.');
     expect(sourceSentence({ from: 'catalogue', considered: 40, total: 45 }, 40, 5)).toBe('Measured 40 of the 45 catalogued landings. 5 more were over the cap of 40 and not measured.');
-    expect(sourceSentence({ from: 'sites', considered: 1 }, 12, 0)).toBe('Measured 1 site from slots A and B.');
+    expect(sourceSentence({ from: 'sites', considered: 1 }, 12, 0)).toBe('Measured the 1 site given.');
+    expect(sourceSentence({ from: 'sites', considered: 2 }, 12, 0)).toBe('Measured the 2 sites given.');
     expect(sourceSentence({ from: 'nearby', considered: 16, around: { name: 'IM-2 Athena' }, radiusM: 1000, spacingM: 250, scanned: 49, removedBySlopePrefilter: 7, withoutData: 0 }, 15, 20)).toBe(
       "Scanned 49 points around IM-2 Athena within 1000 m every 250 m (7 left out by the slope pre-filter); the best by the scan's own score were measured fully: 16, the site itself included. 20 more were over the cap of 15 and not measured.",
     );

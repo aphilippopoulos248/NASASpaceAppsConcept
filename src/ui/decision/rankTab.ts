@@ -6,8 +6,8 @@
 // Driven only through registered actions (D-3): listMissionProfiles, getDecisionSettings,
 // setDecisionSettings, findBestSites and compareSites (T-73), and selectSite, dropPin,
 // saveScenario and openCompare for the buttons in a row. What it shows is the last answer of
-// those tools in full, whoever asked (this tab or the assistant). A "summary" answer, the
-// default for the assistant's replies (F-12), is not drawn: it leaves out reasons and bases.
+// those tools, whoever asked (this tab or the assistant). A "summary" answer, the default for
+// the assistant's replies (F-12), leaves out reasons and bases: the tab asks for the same in full.
 // Every figure and sentence is the tools' own; view.ts only orders and words them.
 import type { MissionProfile, PairComparison, ProfileOverrides, Ranking } from '../../analysis/decision/types';
 import { getAction, onAction, type ActionOrigin } from '../../core/actions';
@@ -19,7 +19,7 @@ import { nearbyPointCount } from '../compare/actions';
 import { redrawKeepingFocus } from '../compare/focus';
 import { coordsText, distanceText } from '../compare/format';
 import { nextId, type TabKit } from '../compare/widgets';
-import { readComparison, readProfiles, readRanking, readRankingExtras, readSettings, type DecisionSettings } from './results';
+import { fullReplay, readComparison, readProfiles, readRanking, readRankingExtras, readSettings, type DecisionSettings, type FullReplay } from './results';
 import {
   candidatesFor,
   criteriaUi,
@@ -149,6 +149,10 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   let source: SourceKind = 'catalogue';
   let running: { what: string } | null = null;
   let comparingPair = false;
+  /** A summary answer someone else got (the assistant), waiting to be asked again in full while the tab is shown; the newest wins. */
+  let replay: (FullReplay & { origin: ActionOrigin }) | null = null;
+  /** The replay running now: its answer is drawn as the original asker's. */
+  let replaying: { params: Record<string, unknown>; origin: ActionOrigin } | null = null;
   let prompt: { p: RelaxationPrompt; overrides: ProfileOverrides; card: Card } | null = null;
 
   const showing = () => store.get().comparing && !root.hidden;
@@ -363,14 +367,15 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       settings = s;
     } else if (entry.name === 'findBestSites') {
       const r = readRanking(entry.result);
-      if (!r) return;
+      if (!r) return queueReplay(entry);
       const x = readRankingExtras(entry.result);
-      ranking = { value: r, view: rankingView(defs, r), origin: entry.origin, source: sourceSentence(x.source, x.cap, x.dropped) };
+      const origin = replaying && entry.params === replaying.params ? replaying.origin : entry.origin;
+      ranking = { value: r, view: rankingView(defs, r), origin, source: sourceSentence(x.source, x.cap, x.dropped) };
       picks = [];
       comparison = null;
     } else if (entry.name === 'compareSites') {
       const c = readComparison(entry.result);
-      if (!c) return;
+      if (!c) return queueReplay(entry);
       comparison = { value: c, view: pairView(defs, c) };
       // The pair on screen is the pair compared, when both are rows of the ranking.
       const ids = [c.a.site.id, c.b.site.id];
@@ -378,6 +383,30 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     } else return;
     if (showing()) render();
   });
+
+  /** A summary answer (F-12) is asked for again in full, now if the tab is shown, else when it is next shown. */
+  function queueReplay(entry: { name: string; ok: boolean; params: unknown; result?: unknown; origin: ActionOrigin }) {
+    const req = fullReplay(entry, (n) => getAction(n)?.params);
+    if (!req) return;
+    replay = { ...req, origin: entry.origin };
+    if (showing()) void runReplay();
+  }
+
+  async function runReplay() {
+    if (!replay || replaying) return;
+    const job = replay;
+    replay = null;
+    replaying = { params: job.params, origin: job.origin };
+    const ranks = job.name === 'findBestSites';
+    if (ranks) running = { what: "the assistant's candidates" };
+    if (showing()) render();
+    const r = await run(job.name, job.params);
+    replaying = null;
+    if (ranks) running = null;
+    if (!r.ok) kit.complain(`The ${ranks ? 'ranking' : 'comparison'} the assistant asked for could not be drawn here in full: ${r.error ?? 'no reason given'}`);
+    if (replay) void runReplay();
+    if (showing()) render();
+  }
 
   // The setting is shared with the assistant: follow it when something else changes it.
   store.subscribe(['decisionProfileId', 'decisionOverrides'], () => {
@@ -648,7 +677,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       return;
     }
     const { view: v, value } = ranking;
-    summary.textContent = `Ranked under the profile "${v.profileName}": ${v.countsText} ${v.paretoCount} on the Pareto front.${ranking.source ? ` ${ranking.source}` : ''}${ranking.origin === 'assistant' ? ' The assistant asked for this ranking.' : ''}`;
+    summary.textContent = `Ranked under the profile "${v.profileName}": ${v.countsText} ${v.paretoCount} on the Pareto front.${ranking.source ? ` ${ranking.source}` : ''}${ranking.origin === 'assistant' ? ' The assistant asked for this ranking (drawn here in full).' : ''}`;
     relaxList.replaceChildren(...v.relaxations.map((t) => el('li', undefined, t)));
     stale.textContent = settings && !sameProfile(value.profile, settings.profile) ? 'The profile above has changed since this ranking was made: rank again to use it.' : '';
     if (drawn !== value) {
@@ -911,6 +940,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   function render() {
     if (!showing()) return;
     if (!loadTried) void load();
+    if (replay && !replaying) void runReplay();
     else if (refreshDue) void refreshSettings();
     renderSettings();
     renderSource();

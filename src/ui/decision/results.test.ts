@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MissionProfile } from '../../analysis/decision/types';
-import { readComparison, readProfiles, readRanking, readRankingExtras, readSettings } from './results';
+import { fullReplay, readComparison, readProfiles, readRanking, readRankingExtras, readSettings } from './results';
 
 const PROFILE: MissionProfile = {
   id: 'polar-short',
@@ -61,6 +61,29 @@ describe('reading the decision tools results', () => {
     // compareSites with detail "summary": sides with siteId and criteria rows, without `site` and `metrics`.
     const side = { siteId: 'im-2', name: 'IM-2', feasibility: 'feasible', utility: 0.9, summary: [], criteria: [{ id: 'sunlight', verdict: 'pass', value: 99, unit: '%', threshold: 60, score: 1, reason: 'r' }] };
     expect(readComparison({ comparison: { a: side, b: { ...side, siteId: 'apollo-11' }, perCriterion: [], dominance: 'tradeoff', sentences: [] } })).toBeNull();
+  });
+
+  it('asks again in full for a summary answer (F-12), and never for one it can draw or one that asked for full', () => {
+    const detail = { type: 'string' as const, description: 'd', enum: ['summary', 'full'] };
+    const schemaOf = () => ({ properties: { detail } });
+    const fullRanking = { profile: PROFILE, relaxations: [], evaluations: [EVAL], ranked: [{ siteId: 'im-2', name: 'IM-2', rank: 1, utility: 0.8, pareto: true }], counts: { candidates: 1, feasible: 1, unknown: 0, infeasible: 0 }, explanation: [] };
+    const summaryRanking = { profile: { id: 'polar-short', name: 'Polar' }, counts: fullRanking.counts, ranked: fullRanking.ranked, sites: [{ siteId: 'im-2', criteria: [] }] };
+    const params = { candidates: { from: 'catalogue' }, limit: 5 };
+    // findBestSites: a full answer is drawn as it is; a summary is asked again with detail "full", same request otherwise.
+    expect(fullReplay({ name: 'findBestSites', ok: true, params, result: fullRanking }, schemaOf)).toBeNull();
+    expect(fullReplay({ name: 'findBestSites', ok: true, params, result: summaryRanking }, schemaOf)).toEqual({ name: 'findBestSites', params: { candidates: { from: 'catalogue' }, limit: 5, detail: 'full' } });
+    expect(fullReplay({ name: 'findBestSites', ok: true, params: { ...params, detail: 'summary' }, result: summaryRanking }, schemaOf)?.params.detail).toBe('full');
+    // compareSites: the same for both shapes.
+    const fullPair = { profile: PROFILE, comparison: { a: EVAL, b: { ...EVAL, site: { ...EVAL.site, id: 'apollo-11' } }, perCriterion: [], dominance: 'tradeoff', sentences: [] } };
+    const summaryPair = { comparison: { a: { siteId: 'im-2', criteria: [] }, b: { siteId: 'apollo-11', criteria: [] }, perCriterion: [], dominance: 'tradeoff', sentences: [] } };
+    const pair = { siteA: { landing: 'im-2' }, siteB: { landing: 'apollo-11' } };
+    expect(fullReplay({ name: 'compareSites', ok: true, params: pair, result: fullPair }, schemaOf)).toBeNull();
+    expect(fullReplay({ name: 'compareSites', ok: true, params: pair, result: summaryPair }, schemaOf)).toEqual({ name: 'compareSites', params: { ...pair, detail: 'full' } });
+    // Never a loop, never on a failure, other tools or tools without `detail`.
+    expect(fullReplay({ name: 'findBestSites', ok: true, params: { ...params, detail: 'full' }, result: summaryRanking }, schemaOf)).toBeNull();
+    expect(fullReplay({ name: 'findBestSites', ok: false, params, result: undefined }, schemaOf)).toBeNull();
+    expect(fullReplay({ name: 'evaluateSite', ok: true, params: {}, result: {} }, schemaOf)).toBeNull();
+    expect(fullReplay({ name: 'findBestSites', ok: true, params, result: summaryRanking }, () => ({ properties: {} }))).toBeNull();
   });
 
   it('reads a pair comparison given bare or under `comparison`', () => {

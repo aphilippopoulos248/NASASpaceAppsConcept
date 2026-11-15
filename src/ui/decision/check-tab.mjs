@@ -214,11 +214,23 @@ async function run(base, size) {
       await until(page, () => document.querySelector('.cmp-sheet [role="tab"][aria-selected="true"]')?.textContent === 'Rank sites');
     }
 
+    // The assistant's answers come in summary (F-12): the tab asks for the same in full and draws it.
+    const seq0 = await page.evaluate(() => window.lunyx.actions.actionLog().at(-1)?.seq ?? 0);
+    const fromAssistant = await act(page, 'findBestSites', { candidates: { from: 'sites', sites: [{ landing: 'apollo-11' }, { landing: 'im-2' }] }, limit: 5 }, 'assistant');
+    check(fromAssistant.ok && !('evaluations' in fromAssistant.result), `the assistant's findBestSites came back in summary (${fromAssistant.ok ? Object.keys(fromAssistant.result).slice(0, 4).join(', ') : fromAssistant.error})`);
+    await until(page, () => /The assistant asked for this ranking/.test(document.querySelector('.cmp-tabpanel:not([hidden]) .dec-summary')?.textContent ?? ''), undefined, LONG);
+    const pairAsked = await act(page, 'compareSites', { siteA: { landing: 'apollo-11' }, siteB: { landing: 'im-2' } }, 'assistant');
+    await until(page, () => /Apollo 11 \(A\)/.test(document.querySelector('.cmp-tabpanel:not([hidden]) .dec-comparehead')?.textContent ?? ''), undefined, LONG);
+    const replays = await page.evaluate((from) => window.lunyx.actions.actionLog().filter((e) => e.seq > from && e.origin === 'ui' && ['findBestSites', 'compareSites'].includes(e.name)).map((e) => `${e.name}:${e.params.detail}:${e.ok}`), seq0);
+    check(pairAsked.ok && replays.join() === 'findBestSites:full:true,compareSites:full:true', `the assistant's summary answers were asked again in full and drawn (${replays.join(', ')}): ${await tab(page).locator('.dec-summary').textContent()}`);
+    await scrollTo(page, '.cmp-tabpanel:not([hidden]) .dec-results');
+    await shot(page, dir, '11-assistant-ranking-in-full');
+
     // Beside the assistant drawer, the sheet is narrower.
     if ((await act(page, 'setAssistantOpen', { open: true })).ok) {
       await page.waitForTimeout(600);
       await scrollTo(page, '.cmp-tabpanel:not([hidden]) .dec-results');
-      await shot(page, dir, '11-beside-the-assistant');
+      await shot(page, dir, '12-beside-the-assistant');
       const low2 = await lowContrast(page, '.cmp-tabpanel:not([hidden])');
       check(low2.length === 0, `contrast AA beside the drawer (${low2.join('; ') || 'all pass'})`);
       await act(page, 'setAssistantOpen', { open: false });

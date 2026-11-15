@@ -628,7 +628,7 @@ export function sourceSentence(src: RankingSource | null, cap: number | null, dr
   if (!src) return '';
   const over = dropped > 0 ? ` ${dropped} more ${dropped === 1 ? 'was' : 'were'} over the cap of ${cap ?? '?'} and not measured.` : '';
   if (src.from === 'catalogue') return `Measured ${src.considered}${src.total !== undefined ? ` of the ${src.total}` : ''} catalogued landings.${over}`;
-  if (src.from === 'sites') return `Measured ${plural(src.considered, 'site')} from slots A and B.${over}`;
+  if (src.from === 'sites') return `Measured the ${plural(src.considered, 'site')} given.${over}`;
   const grid = src.radiusM !== undefined && src.spacingM !== undefined ? ` within ${plain(src.radiusM, 0)} m every ${plain(src.spacingM, 0)} m` : '';
   const out = [src.removedBySlopePrefilter ? `${src.removedBySlopePrefilter} left out by the slope pre-filter` : '', src.withoutData ? `${src.withoutData} without elevation data` : ''].filter(Boolean);
   return `Scanned ${plural(src.scanned ?? 0, 'point')} around ${src.around?.name ?? 'the site'}${grid}${out.length ? ` (${out.join(', ')})` : ''}; the best by the scan's own score were measured fully: ${src.considered}, the site itself included.${over}`;
