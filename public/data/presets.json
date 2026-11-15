@@ -1,0 +1,65 @@
+{
+  "about": "Missions to replay in Lunyx: real landing sites and time windows that play from the data bundled with the app, with no network and no credentials. Every window lies inside a bundled JPL Horizons table (public/data/horizons/index.json) and every site has bundled elevation data. Times are UTC. A test (src/data/presets.test.ts) checks this file against the catalogue, the bundled tables and the analysis.",
+  "presets": [
+    {
+      "id": "blue-ghost-landing",
+      "title": "Blue Ghost Mission 1, Mare Crisium",
+      "description": "Touchdown on 2 March 2025, 08:34 UTC, then 14 days of daylight and the eclipse of 14 March.",
+      "siteId": "blue-ghost-1",
+      "windowStartUtc": "2025-03-02T08:34Z",
+      "windowDurationH": 336,
+      "clockUtc": "2025-03-02T08:34Z",
+      "view": "surface",
+      "rateSecondsPerSecond": 43200,
+      "play": true,
+      "sources": [
+        "Site and touchdown time: the app's landing catalogue (public/data/landings.json): the lander's position measured in LROC images; touchdown 3:34 a.m. EST (NASA).",
+        "Sun and Earth: JPL Horizons (DE441), as seen from the site, no atmosphere; table bundled for 2025-03-01 to 2025-04-01.",
+        "Terrain: bundled elevation data for the site (LROC NAC model and SLDEM2015 windows, LOLA whole-Moon grid); the analysis lists the layers it used."
+      ]
+    },
+    {
+      "id": "im-2-landing",
+      "title": "IM-2 Athena, Mons Mouton",
+      "description": "Touchdown on 6 March 2025, 17:28 UTC, 5 degrees from the south pole: 14 days of low Sun, until it sets on 19 March.",
+      "siteId": "im-2",
+      "windowStartUtc": "2025-03-06T17:28Z",
+      "windowDurationH": 336,
+      "clockUtc": "2025-03-06T17:28Z",
+      "view": "surface",
+      "rateSecondsPerSecond": 43200,
+      "play": true,
+      "sources": [
+        "Site and touchdown time: the app's landing catalogue (public/data/landings.json): the lander's position measured in LROC images; the touchdown minute is not confirmed by an official source (NASA: about 11:30 a.m. CST, 17:30 UTC).",
+        "Sun and Earth: JPL Horizons (DE441), as seen from the site, no atmosphere; table bundled for 2025-03-05 to 2025-04-05.",
+        "Terrain: bundled LOLA south-polar elevation grids and the LOLA whole-Moon grid; the analysis lists the layers it used."
+      ]
+    },
+    {
+      "id": "eclipse-2025-03-14",
+      "title": "Eclipse of 14 March 2025 at the Blue Ghost site",
+      "description": "Earth passes in front of the Sun, seen from Mare Crisium: partly covered from 05:00 UTC, hidden 06:17 to 08:34, clear at 09:51.",
+      "siteId": "blue-ghost-1",
+      "windowStartUtc": "2025-03-14T04:30Z",
+      "windowDurationH": 6,
+      "clockUtc": "2025-03-14T04:52Z",
+      "view": "surface",
+      "look": { "towards": "earth", "fovDeg": 12, "elOffsetDeg": -1.5 },
+      "rateSecondsPerSecond": 600,
+      "play": true,
+      "sunBehindEarth": {
+        "partlyCoveredFromUtc": "2025-03-14T05:00Z",
+        "entirelyHiddenFromUtc": "2025-03-14T06:17Z",
+        "entirelyHiddenUntilUtc": "2025-03-14T08:34Z",
+        "clearAgainUtc": "2025-03-14T09:51Z",
+        "reported": "Reported for the lander (KUT Radio, 14 March 2025, citing Firefly Aerospace; local times read as CDT): eclipse from 05:00 to about 09:52 UTC, totality from 06:18 UTC. See docs/lunyx/validation.md."
+      },
+      "sources": [
+        "Site: the app's landing catalogue (public/data/landings.json).",
+        "Sun and Earth: JPL Horizons (DE441), as seen from the site, no atmosphere; table bundled for 2025-03-01 to 2025-04-01. The times above are computed by the app from geometric discs (docs/lunyx/validation.md).",
+        "Earth in the sky is the app's model: its phase and the face it shows are computed, its picture is NASA's cloud-free Blue Marble. The thin ring around Earth while it hides the Sun stands for sunlight passing through Earth's air: it is drawn schematically, its brightness and colour are not computed.",
+        "Terrain: bundled elevation data for the site; the analysis lists the layers it used."
+      ]
+    }
+  ]
+}
