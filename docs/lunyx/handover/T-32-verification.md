@@ -138,6 +138,12 @@ with the validator's 18:23 (same grids, other code) and with Firefly's reported 
 (about 18:15 to 18:34 UTC from two statements in its release; Firefly does not define the
 term, so this is weak support, not a test).
 
+The independent validator reached the same direction from the published time alone, before
+this check (@ephemeris-check, a9bc640, `tests/fixtures/validation/ephemeris-check/T-34-handover.md`,
+"5 and 6"): it calls the easing "a modelling choice" that "the one published time does not
+support", and asks for an eased mode in its reader so that both are reported. LOLA is the
+stronger test: it measures the ground itself, where the published time only brackets an event.
+
 ## 4. The decision this raises (for @coordinator)
 
 1. **A. Ease nothing by default** (`easeEdges` off unless asked for): the stack is the stored
@@ -163,13 +169,17 @@ change to what consumers already have.
 
 - **Surface view and analysis on the same ground.** The hand-over's "under 2 mm" is a test that
   applies the view's `blendEdge` to the *stored* grids and compares with the eased stack. It
-  holds (0.24 mm here). But the view does not draw from the stored grids: `sampleLevel` in
-  `src/scene/surface/groundSource.ts` copies the stack's exact 3 m window, which is now eased,
-  and `surface.ts` (`composeFine`) eases it again. Drawn minus analysed in the band, eased twice
-  against once: up to 1.5 to 6.7 m at single nodes (SLIM), 0.23 to 0.58 m RMS. The hand-over's
-  fix is one line in @surface's file (copy `storedGrid(stack.sources[exact])`); not made here
-  (D-1). Without it the drawn ground is still closer to the analysed one than before T-32 (at
-  most a quarter of the mismatch instead of all of it). Only needed under option C.
+  holds (0.24 mm here). But the view does not draw from the stored grids: `sampleLevel`
+  (`src/scene/surface/groundSource.ts:127`) copies the stack's exact 3 m window, which is now
+  eased, and `composeFine` (`src/scene/surface.ts:485`, `blendEdge(fine, this.coarse[0])`) eases
+  it again, so the weight is 2w - w*w instead of w. Drawn minus analysed in the band: up to 1.5
+  to 6.7 m at single nodes (SLIM the largest), 0.23 to 0.58 m RMS over the band; the T-32
+  hand-over's figures (0.2 to 0.6 m RMS, 6.7 m at SLIM) are confirmed. The fix is one line in
+  @surface's `groundSource.ts:127`: copy from `storedGrid(stack.sources[exact])` (exported by
+  `src/terrain/api.ts`). Not made here (D-4). Without it the drawn ground is still closer to the
+  analysed one than before T-32 (at most a quarter of the mismatch instead of all of it). Needed
+  under option C only: under A the stack holds the stored grids, so the copy is the stored grid
+  already.
 - **Caches.** Nothing holds stored heights under a key that easing leaves unchanged: the eased
   grid is a new `HeightSource` (the analysis' fast samplers are keyed by the object, in a
   `WeakMap`); the terrain cache of eased stacks is keyed by site and `easeEdges` and checks the
@@ -209,6 +219,42 @@ figure of section 2 holds: the largest change per site and its azimuth are the s
 +0.113 deg at 45.00 instead of +0.114 at 44.75), the Blue Ghost sunset moves +12.8 min instead
 of +13.0. 1289083 raises skylines by up to 0.033 deg (its finer near-field search), equally on
 both stacks.
+
+## 7. What moves for consumers, by option
+
+Against am/lunyx/integration (T-32 changes nothing else; the analysis' numbers on the stored grids
+are those of cc736f8 plus @analysis's 1289083 / 5ad5d1f).
+
+**Under C (e4b06ef as it is)**, for original @analysis, @surface, @globe and our @validation:
+
+- Skyline, 2 m up: changes at 10 sites (section 2): Blue Ghost -0.166 deg at azimuth 274.5
+  (11.3 % of azimuths by more than 0.01 deg), Apollo 12 -0.143 at 352.75, Luna 23 -0.141 at
+  86.25, Chang'e 3 +0.114 at 44.75, Apollo 11 -0.094, Chang'e 5 -0.075, Chang'e 6 +0.055,
+  Chang'e 4 -0.041, Luna 24 -0.034, Surveyor 7 -0.016. Nothing changes at the other 9 sites with
+  a model or at the 9 without one.
+- Events: Blue Ghost, 16 March 2025, 2 m up: first cut 18:24 -> 18:37, last limb 19:30:11 ->
+  19:43:03 UTC; 3.5 m up: 18:38 -> 18:50 and 19:44:11 -> 19:55:48. Luna 23, sunrise 16 November
+  1974, 0.9 min earlier. Every other sunrise and sunset in the 30 days after each landing:
+  within 0.05 min. On other dates the two can differ by up to 20 min at Blue Ghost (sunsets)
+  and 12 min at Luna 23 (sunrises), nowhere else.
+- Slope within 639 to 768 m of a model site's centre: 0.5 to 1.0 deg median, up to 25 deg at
+  single points. The sites' own slopes and the default nearby scan do not change.
+- Words: the terrain notes (site card, surface HUD, and the analysis warnings and provenance,
+  which copy them) replace the seam sentence with "Where a separately measured model ends, its
+  heights are eased onto the grid that continues outside it ..." and "Hand-overs left as
+  stored: ...". The eased model's `provenance.processing` gains "When loaded: within 129 m of its
+  edge ...". `stack.seams[].eased` is new (optional).
+- @surface: the one line at `groundSource.ts:127` (section 5).
+- @validation: the stored-file reference skylines differ from the app at the 10 sites by the
+  amounts above; the rule to reimplement is `ease()` in `scripts/terrain-seams-check.py`.
+
+**Under A (easing off by default)**: no number changes against integration; the stack is the
+stored grids, the same objects as now. The seam sentence's wording changes, and its figures
+move by up to 0.1 m because both grids are now read at the same points (Apollo 17, 60 m to 480 m
+window: -14.2 / +29.5 m becomes -14.1 / +29.4 m). Nothing for @surface or @validation.
+
+**Under B**: to be measured once built; by construction nothing changes inside the models, and
+skylines formed beyond an edge rise where the 60 m window lies below the model there.
 
 ## Reproduce
 
