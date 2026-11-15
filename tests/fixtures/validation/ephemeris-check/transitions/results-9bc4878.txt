@@ -1,0 +1,99 @@
+App 9bc4878: SiteAnalysis.transitions and the any-part Earth metrics against Horizons + own skylines.
+Each instant: app, reference, app minus reference, and that difference as a skyline error (dt x rate of the clearance). Tolerance 0.01 deg; 0.1 points.
+
+chandrayaan-3.surface  (-69.3741, 32.3200), 2 m, window 2023-08-23T12:33:00Z + 791 h, app ephemeris model
+  events: 2, each with its span as the contract says: yes
+  sun set, 3.14 h: first-cut (start) app 09-04 04:53:52, ref 04:53:35, +16 s = 0.0009 deg; last-limb (end) app 09-04 08:02:18, ref 08:02:23, -5 s = 0.0002 deg; centre sets app 09-04 06:25:35, ref 06:25:47, -13 s = 0.0006 deg
+  sun rise, 2.75 h: first-limb (start) app 09-19 23:56:40, ref 23:57:08, -28 s = 0.0015 deg; whole-clear (end) app 09-20 02:41:50, ref 02:42:19, -30 s = 0.0016 deg; centre rises app 09-20 01:19:20, ref 01:19:43, -23 s = 0.0012 deg
+  Earth, any part of the disc: app 100.00 %, reference 100.00 % (+0.00); longest spell wholly hidden app 0.00 h, reference 0.00 h. Centre: app 100.00 %, reference 100.00 % (1 min samples)
+
+earth-60d.im-2  (-84.7900, 29.2000), 2 m, window 2025-03-01T00:00:00Z + 1440 h, app ephemeris model
+  events: 8, each with its span as the contract says: yes
+  sun rise, 4.86 h: first-limb (start) app 03-05 22:44:08, ref 22:43:45, +24 s = 0.0011 deg; whole-clear (end) app 03-06 03:35:42, ref 03:38:08, -146 s = 0.0053 deg; centre rises app 03-06 00:40:33, ref 00:32:49, +464 s = 0.0185 deg
+  earth set, 49.09 h: first-cut (start) app 03-18 06:22:16, ref 06:25:37, -201 s = 0.0025 deg; last-limb (end) app 03-20 07:27:35, ref 07:40:58, -803 s = 0.0075 deg; centre sets app 03-19 04:05:42, ref 04:07:46, -124 s = 0.0013 deg
+  sun set, 6.58 h: first-cut (start) app 03-19 16:42:07, ref 16:43:56, -109 s = 0.0022 deg; last-limb (end) app 03-19 23:16:48, ref 23:17:13, -25 s = 0.0006 deg; centre sets app 03-19 20:03:31, ref 20:03:48, -17 s = 0.0004 deg
+  earth rise, 42.87 h: first-limb (start) app 03-24 07:59:27, ref 07:56:11, +196 s = 0.0017 deg; whole-clear (end) app 03-26 02:51:29, ref 02:53:45, -136 s = 0.0022 deg; centre rises app 03-25 08:18:59, ref 08:15:54, +185 s = 0.0024 deg
+  sun rise, 4.56 h: first-limb (start) app 04-04 19:03:40, ref 19:04:44, -63 s = 0.0016 deg; whole-clear (end) app 04-04 23:37:25, ref 23:37:30, -5 s = 0.0002 deg; centre rises app 04-04 21:25:33, ref 21:25:05, +28 s = 0.0010 deg
+  earth set, 55.17 h: first-cut (start) app 04-14 13:15:52, ref 13:11:06, +286 s = 0.0034 deg; last-limb (end) app 04-16 20:26:01, ref 20:32:33, -392 s = 0.0024 deg; centre sets app 04-15 12:47:16, ref 12:51:48, -272 s = 0.0027 deg
+  sun graze: start 04-16 07:17:53 (first-cut), end 04-17 02:25:42 (whole-clear): not compared (kind graze)
+  sun set, 9.87 h: first-cut (start) app 04-17 16:13:12, ref 16:13:26, -14 s = 0.0002 deg; last-limb (end) app 04-18 02:05:23, ref 02:06:39, -75 s = 0.0015 deg; centre sets app 04-17 20:53:03, ref 20:46:13, +410 s = 0.0042 deg
+  earth rise, 46.65 h: first-limb (start) app 04-20 12:04:55, ref 12:02:00, +175 s = 0.0014 deg; whole-clear (end) app 04-22 10:43:40, ref 10:43:43, -3 s = 0.0000 deg; centre rises app 04-21 14:48:50, ref 14:48:50, -0 s = 0.0000 deg
+  Earth, any part of the disc: app 87.21 %, reference 87.24 % (-0.03); longest spell wholly hidden app 96.53 h, reference 96.25 h. Centre: app 79.57 %, reference 79.58 % (1 min samples)
+
+earth-60d.shackleton-rim  (-89.7800, -155.7300), 2 m, window 2025-03-01T00:00:00Z + 1440 h, app ephemeris model
+  events: 7, each with its span as the contract says: yes
+  earth rise, 32.83 h: first-limb (start) app 03-02 21:58:40, ref 21:55:57, +164 s = 0.0031 deg; whole-clear (end) app 03-04 06:48:22, ref 06:49:30, -68 s = 0.0010 deg; centre rises app 03-03 13:35:14, ref 13:36:05, -51 s = 0.0009 deg
+  earth set, 35.08 h: first-cut (start) app 03-11 03:23:59, ref 03:25:26, -87 s = 0.0011 deg; last-limb (end) app 03-12 14:28:40, ref 14:29:15, -35 s = 0.0006 deg; centre sets app 03-11 21:52:44, ref 21:53:25, -41 s = 0.0006 deg
+  sun peek: start 03-22 07:42:44 (first-limb), end 03-23 07:35:05 (last-limb): not compared (kind peek)
+  earth rise, 32.66 h: first-limb (start) app 03-30 07:33:50, ref 07:31:43, +126 s = 0.0024 deg; whole-clear (end) app 03-31 16:13:40, ref 16:14:05, -25 s = 0.0004 deg; centre rises app 03-30 22:58:03, ref 22:55:14, +168 s = 0.0030 deg
+  earth set, 35.13 h: first-cut (start) app 04-07 08:57:44, ref 08:58:25, -41 s = 0.0005 deg; last-limb (end) app 04-08 20:05:42, ref 20:05:45, -3 s = 0.0000 deg; centre sets app 04-08 03:27:35, ref 03:26:20, +75 s = 0.0011 deg
+  earth rise, 33.66 h: first-limb (start) app 04-26 18:22:07, ref 18:21:39, +28 s = 0.0005 deg; whole-clear (end) app 04-28 04:01:48, ref 03:59:05, +163 s = 0.0024 deg; centre rises app 04-27 10:06:29, ref 10:03:38, +171 s = 0.0029 deg
+  Earth, any part of the disc: app 37.41 %, reference 37.41 % (-0.01); longest spell wholly hidden app 430.27 h, reference 430.26 h. Centre: app 31.85 %, reference 31.86 % (1 min samples)
+
+earth-60d.connecting-ridge  (-89.4500, -137.2000), 2 m, window 2025-03-01T00:00:00Z + 1440 h, app ephemeris model
+  events: 14, each with its span as the contract says: yes
+  earth rise, 34.40 h: start first-limb: 02-27 23:12:29 (not compared: beyond the Horizons rows); whole-clear (end) app 03-01 09:36:29, ref 09:39:00, -151 s = 0.0025 deg
+  earth set, 31.21 h: first-cut (start) app 03-14 02:56:20, ref 02:54:08, +132 s = 0.0022 deg; last-limb (end) app 03-15 10:08:40, ref 10:09:56, -76 s = 0.0011 deg; centre sets app 03-14 18:19:55, ref 18:21:52, -116 s = 0.0019 deg
+  sun graze: start 03-25 07:48:22 (first-cut), end 03-25 10:42:35 (whole-clear): not compared (kind graze)
+  earth rise, 30.74 h: first-limb (start) app 03-27 07:06:01, ref 07:05:58, +3 s = 0.0000 deg; whole-clear (end) app 03-28 13:50:33, ref 13:48:17, +136 s = 0.0026 deg; centre rises app 03-27 22:33:59, ref 22:35:01, -62 s = 0.0011 deg
+  sun set, 21.81 h: first-cut (start) app 04-07 23:47:44, ref 23:48:06, -22 s = 0.0002 deg; last-limb (end) app 04-08 21:36:20, ref 21:36:11, +9 s = 0.0001 deg; centre sets app 04-08 12:11:20, ref 12:12:27, -67 s = 0.0006 deg
+  sun peek: start 04-09 13:27:07 (first-limb), end 04-09 22:22:25 (last-limb): not compared (kind peek)
+  sun peek: start 04-10 00:08:31 (first-limb), end 04-10 01:53:50 (last-limb): not compared (kind peek)
+  earth set, 30.39 h: first-cut (start) app 04-10 08:53:59, ref 08:54:51, -52 s = 0.0009 deg; last-limb (end) app 04-11 15:17:16, ref 15:18:17, -61 s = 0.0010 deg; centre sets app 04-10 23:43:22, ref 23:39:12, +249 s = 0.0042 deg
+  sun rise, 21.42 h: first-limb (start) app 04-10 22:55:23, ref 22:53:40, +104 s = 0.0007 deg; whole-clear (end) app 04-11 20:20:23, ref 20:18:30, +114 s = 0.0008 deg; centre rises app 04-11 09:30:23, ref 09:29:06, +77 s = 0.0005 deg
+  sun set, 4.30 h: first-cut (start) app 04-12 04:29:27, ref 04:32:00, -152 s = 0.0059 deg; last-limb (end) app 04-12 08:47:25, ref 08:41:45, +341 s = 0.0055 deg; centre sets app 04-12 06:18:50, ref 06:16:59, +111 s = 0.0046 deg
+  sun rise, 14.65 h: first-limb (start) app 04-12 13:08:40, ref 13:05:29, +192 s = 0.0042 deg; whole-clear (end) app 04-13 03:47:25, ref 03:48:20, -55 s = 0.0019 deg; centre rises app 04-13 00:34:37, ref 00:35:01, -25 s = 0.0008 deg
+  sun graze: start 04-16 11:42:44 (first-cut), end 04-16 20:02:35 (whole-clear): not compared (kind graze)
+  sun set, 18.19 h: first-cut (start) app 04-22 17:15:42, ref 17:15:38, +4 s = 0.0000 deg; last-limb (end) app 04-23 11:26:57, ref 11:27:27, -30 s = 0.0003 deg; centre sets app 04-23 04:00:14, ref 04:00:54, -40 s = 0.0003 deg
+  earth rise, 31.87 h: first-limb (start) app 04-23 12:56:38, ref 12:42:43, +835 s = 0.0140 deg; whole-clear (end) app 04-24 20:48:40, ref 20:53:02, -262 s = 0.0047 deg; centre rises app 04-24 05:03:22, ref 05:00:26, +175 s = 0.0029 deg
+  sun rise, 50.66 h: first-limb (start) app 04-26 09:13:50, ref 09:21:23, -453 s = 0.0014 deg; whole-clear (end) app 04-28 11:53:12, ref 11:55:57, -165 s = 0.0015 deg; centre rises app 04-28 00:36:20, ref 00:42:45, -386 s = 0.0022 deg
+  Earth, any part of the disc: app 60.37 %, reference 60.39 % (-0.02); longest spell wholly hidden app 285.66 h, reference 285.41 h. Centre: app 56.00 %, reference 56.00 % (1 min samples)
+
+earth-60d.limb-east  (0.0000, 90.0000), 2 m, window 2025-03-01T00:00:00Z + 1440 h, app ephemeris model
+  events: 9, each with its span as the contract says: yes
+  earth rise, 31.19 h: first-limb (start) app 03-01 19:59:55, ref 19:59:35, +20 s = 0.0004 deg; whole-clear (end) app 03-03 03:11:10, ref 03:11:29, -19 s = 0.0003 deg; centre rises app 03-02 11:24:18, ref 11:24:18, +0 s = 0.0000 deg
+  sun set, 1.05 h: first-cut (start) app 03-14 12:04:37, ref 12:04:22, +15 s = 0.0020 deg; last-limb (end) app 03-14 13:07:53, ref 13:07:43, +11 s = 0.0015 deg; centre sets app 03-14 12:36:10, ref 12:36:02, +8 s = 0.0011 deg
+  earth set, 32.70 h: first-cut (start) app 03-15 17:29:37, ref 17:27:18, +139 s = 0.0020 deg; last-limb (end) app 03-17 02:11:48, ref 02:10:21, +86 s = 0.0014 deg; centre sets app 03-16 10:05:52, ref 10:03:59, +112 s = 0.0017 deg
+  sun rise, 1.05 h: first-limb (start) app 03-29 06:22:16, ref 06:21:15, +60 s = 0.0086 deg; whole-clear (end) app 03-29 07:25:23, ref 07:24:20, +63 s = 0.0089 deg; centre rises app 03-29 06:53:50, ref 06:52:47, +62 s = 0.0088 deg
+  earth rise, 25.49 h: first-limb (start) app 03-30 02:37:44, ref 02:37:31, +13 s = 0.0003 deg; whole-clear (end) app 03-31 04:06:57, ref 04:07:11, -14 s = 0.0003 deg; centre rises app 03-30 15:19:37, ref 15:19:40, -3 s = 0.0001 deg
+  earth set, 31.95 h: first-cut (start) app 04-12 13:29:37, ref 13:28:26, +71 s = 0.0011 deg; last-limb (end) app 04-13 21:26:38, ref 21:26:14, +24 s = 0.0004 deg; centre sets app 04-13 05:28:50, ref 05:28:00, +50 s = 0.0008 deg
+  sun set, 1.04 h: first-cut (start) app 04-13 00:57:44, ref 00:57:42, +2 s = 0.0003 deg; last-limb (end) app 04-13 02:00:23, ref 02:00:26, -2 s = 0.0003 deg; centre sets app 04-13 01:29:08, ref 01:29:03, +5 s = 0.0007 deg
+  earth rise, 23.76 h: first-limb (start) app 04-27 11:51:57, ref 11:51:56, +1 s = 0.0000 deg; whole-clear (end) app 04-28 11:37:35, ref 11:37:58, -23 s = 0.0006 deg; centre rises app 04-27 23:45:05, ref 23:45:22, -17 s = 0.0004 deg
+  sun rise, 1.04 h: first-limb (start) app 04-27 18:51:57, ref 18:51:54, +3 s = 0.0005 deg; whole-clear (end) app 04-27 19:54:27, ref 19:54:27, +0 s = 0.0001 deg; centre rises app 04-27 19:23:12, ref 19:23:10, +2 s = 0.0003 deg
+  Earth, any part of the disc: app 54.25 %, reference 54.24 % (+0.00); longest spell wholly hidden app 326.42 h, reference 326.43 h. Centre: app 49.24 %, reference 49.24 % (1 min samples)
+
+earth-60d.limb-west  (-35.0000, -88.0000), 2 m, window 2025-03-01T00:00:00Z + 1440 h, app ephemeris model
+  events: 9, each with its span as the contract says: yes
+  earth peek: start 02-20 07:42:50 (first-limb), end 03-06 01:54:37 (last-limb): not compared (kind peek)
+  sun rise, 1.31 h: first-limb (start) app 03-14 13:08:50, ref 13:08:34, +15 s = 0.0018 deg; whole-clear (end) app 03-14 14:27:25, ref 14:27:06, +19 s = 0.0022 deg; centre rises app 03-14 13:48:03, ref 13:47:50, +13 s = 0.0014 deg
+  earth rise, 85.81 h: first-limb (start) app 03-20 02:06:20, ref 01:59:08, +432 s = 0.0024 deg; whole-clear (end) app 03-23 15:55:05, ref 15:48:18, +406 s = 0.0024 deg; centre rises app 03-21 21:11:01, ref 21:03:50, +431 s = 0.0027 deg
+  sun set, 1.10 h: first-cut (start) app 03-28 10:00:23, ref 09:59:58, +26 s = 0.0036 deg; last-limb (end) app 03-28 11:06:29, ref 11:06:16, +13 s = 0.0018 deg; centre sets app 03-28 10:33:22, ref 10:33:11, +11 s = 0.0015 deg
+  earth set, 65.79 h: first-cut (start) app 03-30 12:42:53, ref 12:41:50, +64 s = 0.0005 deg; last-limb (end) app 04-02 06:30:14, ref 06:31:32, -78 s = 0.0007 deg; centre sets app 04-01 00:49:37, ref 00:49:10, +26 s = 0.0002 deg
+  sun rise, 1.30 h: first-limb (start) app 04-13 03:11:10, ref 03:11:08, +2 s = 0.0003 deg; whole-clear (end) app 04-13 04:28:59, ref 04:28:53, +6 s = 0.0007 deg; centre rises app 04-13 03:50:05, ref 03:50:00, +4 s = 0.0005 deg
+  earth rise, 65.93 h: first-limb (start) app 04-17 07:33:59, ref 07:34:18, -18 s = 0.0001 deg; whole-clear (end) app 04-20 01:29:46, ref 01:26:44, +182 s = 0.0015 deg; centre rises app 04-18 17:57:07, ref 17:54:15, +171 s = 0.0014 deg
+  sun set, 1.10 h: first-cut (start) app 04-26 21:58:59, ref 21:58:51, +8 s = 0.0011 deg; last-limb (end) app 04-26 23:04:55, ref 23:04:28, +28 s = 0.0039 deg; centre sets app 04-26 22:31:57, ref 22:31:39, +18 s = 0.0026 deg
+  earth set, 42.59 h: first-cut (start) app 04-28 16:54:08, ref 16:54:54, -46 s = 0.0005 deg; end last-limb: 04-30 11:29:21 (not compared: beyond the Horizons rows); centre sets app 04-29 14:31:20, ref 14:29:59, +81 s = 0.0011 deg
+  Earth, any part of the disc: app 51.58 %, reference 51.59 % (-0.01); longest spell wholly hidden app 361.06 h, reference 361.05 h. Centre: app 38.84 %, reference 38.84 % (1 min samples)
+
+blue-ghost-1.sunset-1min  (18.5620, 61.8100), 2 m, window 2025-03-16T16:00:00Z + 8 h, app ephemeris horizons
+  events: 1, each with its span as the contract says: yes
+  sun set, 1.11 h: first-cut (start) app 03-16 18:23:41, ref 18:23:40, +1 s = 0.0002 deg; last-limb (end) app 03-16 19:30:04, ref 19:30:03, +0 s = 0.0001 deg; centre sets app 03-16 18:56:49, ref 18:56:51, -2 s = 0.0003 deg
+  Earth, any part of the disc: app 100.00 %, reference 100.00 % (+0.00); longest spell wholly hidden app 0.00 h, reference 0.00 h. Centre: app 100.00 %, reference 100.00 % (1 min samples)
+
+blue-ghost-1.sunset-1min.mast0.5  (18.5620, 61.8100), 0.5 m, window 2025-03-16T16:00:00Z + 8 h, app ephemeris horizons
+  events: 1, each with its span as the contract says: yes
+  sun set, 1.11 h: first-cut (start) app 03-16 18:09:41, ref 18:09:45, -3 s = 0.0004 deg; last-limb (end) app 03-16 19:16:11, ref 19:16:07, +4 s = 0.0006 deg; centre sets app 03-16 18:42:56, ref 18:42:55, +1 s = 0.0002 deg
+  Earth, any part of the disc: app 100.00 %, reference 100.00 % (+0.00); longest spell wholly hidden app 0.00 h, reference 0.00 h. Centre: app 100.00 %, reference 100.00 % (1 min samples)
+
+blue-ghost-1.sunset-1min.mast5  (18.5620, 61.8100), 5 m, window 2025-03-16T16:00:00Z + 8 h, app ephemeris horizons
+  events: 1, each with its span as the contract says: yes
+  sun set, 1.11 h: first-cut (start) app 03-16 18:51:34, ref 18:51:31, +2 s = 0.0003 deg; last-limb (end) app 03-16 19:57:56, ref 19:57:57, -0 s = 0.0001 deg; centre sets app 03-16 19:24:41, ref 19:24:44, -2 s = 0.0003 deg
+  Earth, any part of the disc: app 100.00 %, reference 100.00 % (+0.00); longest spell wholly hidden app 0.00 h, reference 0.00 h. Centre: app 100.00 %, reference 100.00 % (1 min samples)
+
+im-2.surface  (-84.7900, 29.2000), 2 m, window 2025-03-06T17:28:00Z + 336 h, app ephemeris horizons
+  events: 2, each with its span as the contract says: yes
+  earth set, 49.11 h: first-cut (start) app 03-18 06:25:35, ref 06:25:37, -3 s = 0.0000 deg; last-limb (end) app 03-20 07:31:59, ref 07:40:58, -539 s = 0.0051 deg; centre sets app 03-19 04:09:38, ref 04:07:46, +113 s = 0.0012 deg
+  sun set, 6.58 h: first-cut (start) app 03-19 16:42:37, ref 16:43:56, -79 s = 0.0016 deg; last-limb (end) app 03-19 23:17:08, ref 23:17:13, -4 s = 0.0001 deg; centre sets app 03-19 20:03:52, ref 20:03:48, +3 s = 0.0001 deg
+  Earth, any part of the disc: app 97.04 %, reference 97.09 % (-0.04); longest spell wholly hidden app 9.93 h (open-ended), reference 9.78 h. Centre: app 88.90 %, reference 88.88 % (1 min samples)
+
+Worst over all compared instants: 0.0185 deg as a skyline error (tolerance 0.01); worst any-part Earth share: 0.04 points (tolerance 0.1).
