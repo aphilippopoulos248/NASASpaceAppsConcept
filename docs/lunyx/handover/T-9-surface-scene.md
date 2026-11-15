@@ -1,8 +1,8 @@
 # T-9 Surface scene: handover (@surface)
 
-Branch am/lunyx/agent/surface. Screenshots (`screens/t9-*.jpg`, 0.86 MB in total) were taken
-in headless Chromium at 1280x720, which renders in software; the app picks its lighter
-settings there by itself (see "Frame cost").
+Branch am/lunyx/agent/surface. Screenshots (`screens/t9-*.jpg`) were taken in headless
+Chromium at 1280x720, which renders in software; the app picks its lighter settings there
+by itself (see "Frame cost"), so they show a slightly plainer picture than a GPU does.
 
 ## What was built
 
@@ -36,10 +36,34 @@ settings there by itself (see "Frame cost").
    written to `store.look`; the scene follows `store.timeMs`, `lightMode`, `mastHeightM`
    (eye height) and the mission window, and obeys the `lookAt` command.
    `SurfaceView.setLook(az, el, fov)` is public, as @globe asked.
-6. **Reflectance and exposure** (the coordinator's point 3). The ground now uses the
+6. **Reflectance and exposure** (the coordinator's point 3). The ground uses the
    lunar-Lambert function (McEwen 1996) instead of a matte surface, exposure is set from
-   the Sun's elevation for level ground, and highlights roll off instead of clipping.
-   At 1 to 5 degrees of Sun the relief reads in every direction.
+   the Sun's elevation for level ground, highlights roll off instead of clipping, and
+   generated shading is held back under a low Sun. At 1 to 5 degrees of Sun the relief
+   reads in every direction.
+
+## Upstream main's surface look (T-27), carried over
+
+While this task rebuilt `src/scene/surface.ts`, the team reworked the old file on GitHub
+main (rocks, close-up maps, generated craters, backscatter, earthshine). The two versions
+could not be merged as text. The merge keeps the rebuilt modules, and every upstream change
+was carried into them by hand:
+
+| Upstream change | Where it is now | Carried over as |
+| --- | --- | --- |
+| Chipped rock shapes (3 small, 2 boulders), rock shader with soil tone and dust | `assets.ts` rockGeometry, `materials.ts` rockMaterial | Unchanged. Rocks also take the terrain shadow of where they sit, and none is placed within 4 m of the site. |
+| Close-up crater maps at every scale (`surface_detail_*.jpg`) | `materials.ts` farDetail | Unchanged, on every terrain level. Strength falls to 30% under a low Sun. Weak devices read one map size per pixel instead of cross-fading two. |
+| Per-pixel relief and tone on the near ground | `materials.ts` near | Unchanged; the relief is held back under a low Sun in the same way. |
+| Generated craters as geometry underfoot (3 m and 7 m cells) | `surface.ts` generatedAt, `assets.ts` craterField | Unchanged shapes. They fade out at the site itself and are kept shallow towards the poles (0.27 of full depth at IM-2), where their shadows would otherwise cover the ground. |
+| Near mesh 96 m across at 0.25 m, rebuilt over several frames after 14 m of walking | `surface.ts` updateNear | Unchanged (0.5 m on weak devices). |
+| Meshes split into pieces so off-screen ones are skipped | `surface.ts` splitForCulling | Unchanged, now on every level. |
+| Backscatter | `materials.ts` | The tight bright patch around the viewer's shadow is upstream's. The broad down-Sun brightening comes from the lunar-Lambert function instead. |
+| Highlight roll-off, shadow-map edge fade | `materials.ts` | Unchanged. |
+| Earthshine at night | `surface.ts` prepareFrame, `materials.ts` | Upstream's strength and colour, as an extra light term rather than a replacement for the Sun, so sunlit peaks and earthlit ground can be seen together. Red while Earth eclipses the Sun. |
+| Earth lit from the true Sun direction | `skyBodies.ts` | This branch's shader, which does the same and adds the phase from the Sun's real direction as seen from Earth. |
+| Fine mesh in the shadow map (3072 px, 220 m) | not carried over | Terrain shadows come from the sweep at every distance, so the shadow map only serves the rocks. |
+| Start 45 m south of the landing point, facing it | `surface.ts` load, `controller.ts` | 30 m south at sites with an orbital photo (the lander and its shadow are in the photo at the very centre); at the site itself elsewhere. The view opens facing the Sun. |
+| main.ts: automatic resolution, PCF filter, frame rate in the HUD, `window.__surface` | done by @upstream-sync in the scene host | The HUD strip shows a frame rate measured over all frames; the tuner's own figure leaves slow frames out. |
 
 ## Registered actions (src/scene/surface/actions.ts)
 
@@ -58,16 +82,16 @@ action. The HUD buttons call these through `runAction`.
 | Relief finer than the survey, same sites | Worked out from shading in that photo (derived, not measured); left out within 12 m of the site, where the photo shows the lander |
 | Sun and Earth directions, sizes, Earth's phase and facing | Computed for the site and instant |
 | Shadows | Computed from the terrain as drawn |
-| **Generated, labelled, one switch** | Rocks, texture finer than about a metre and, where no survey exists, craters and bumps within 768 m (zero at the site itself) |
-| Display aids | Sun glare, faint fill light in shadow and at night, a barely visible limb on Earth's night side, the ring of sunlit air around Earth while it hides the Sun (schematic) |
+| **Generated, labelled, one switch** | Rocks; craters up to about 6 m and finer texture near the viewer; faint crater shading on distant ground (artist-made maps, shading only); and, where no survey exists, craters and bumps within 768 m. All of it is zero at the site itself. |
+| Display aids | Sun glare, fill light in shadow and at night, earthshine strength, a barely visible limb on Earth's night side, the ring of sunlit air around Earth while it hides the Sun (schematic) |
 | Earth's picture | NASA Blue Marble without clouds |
 
 ## Verified
 
-- `npm run build` passes. `npm test`: 209 passed, 1 skipped, plus 10 science tests. 42 of
-  them are new, in `src/scene/surface/*.test.ts`: shadow length and penumbra width against
-  the analytic values in nine Sun directions, nested grids, the smooth-Moon limit, skyline
-  of a sphere and of a ridge, terrain sampling and band description, and the actions.
+- `npm run build` passes. `npm test` passes (see the task result for the counts of the last
+  run). 47 tests are in `src/scene/surface/*.test.ts`: shadow length and penumbra width
+  against the analytic values in nine Sun directions, nested grids, the smooth-Moon limit,
+  skyline of a sphere and of a ridge, terrain sampling and band description, and the actions.
 - In the app, through actions and real key / pointer events:
 
 | Screenshot | Site, UTC | Sun az / el | Earth az / el, lit |
@@ -80,32 +104,38 @@ action. The HUD buttons call these through `runAction`.
 | t9-site-marker | Apollo 11, viewer 81 m from the site | | |
 
   A second pin at 26.13 N, 3.63 E (Hadley) was checked against the production build
-  (`vite preview`): the elevation server built its 60 m window and the neighbouring Apollo 15
-  survey was picked up for the ground underfoot.
+  (`vite preview`) before the upstream merge: the elevation server built its 60 m window and
+  the neighbouring Apollo 15 survey was picked up for the ground underfoot.
 - Input: W moved the viewer, arrow keys turned and tilted, drag, wheel, one-finger drag
   and two-finger pinch changed `store.look`, Escape returned to the globe. 390 px wide
   layout checked.
+- Full settings (`?quality=high`): Apollo 11 rendered correctly with no shader errors.
+  IM-2 at full settings could not be screenshotted here: one software-rendered frame took
+  longer than the three-minute limit. It needs a look on a real GPU.
 
 ## The "yellow line"
 
 It was the landing beacon, not a rendering fault: a 600 m beam in the programme colour
 (yellow for Apollo, green for CLPS) that began 25 m above the ground, seen from 45 m away.
 It is now a site marker: a ring, a beam that starts at the ground, and the site's name,
-in the accent colour, shown only after the viewer has walked more than 25 m from the site
-(`t9-site-marker.jpg`). At the site itself nothing is drawn.
+in the accent colour, shown only when the viewer is more than 25 m from the site
+(`t9-site-marker.jpg`).
 
 ## Frame cost
 
 The old scene took about 3 s per frame in software WebGL at 1280x720; about 70% of that
 was anisotropic texture filtering. The controller detects a software renderer and uses
-lighter settings (no anisotropy, 6 m fine mesh, 1 m near mesh, no rock shadow map): about
-0.45 s per frame in the app. `?quality=high` or `?quality=low` overrides the choice.
-A shadow sweep takes 9 to 19 ms on the light settings and 25 to 59 ms on the full ones on
+lighter settings (no anisotropy, 6 m fine mesh, 0.5 m near mesh, no grain bump map, one
+close-up map size per pixel, no rock shadow map). Measured with the GPU forced to finish
+each frame: about 0.47 s per frame at Apollo 11 with the upstream look merged in.
+`?quality=high` or `?quality=low` overrides the choice.
+A shadow sweep took 9 to 19 ms on the light settings and 25 to 59 ms on the full ones on
 this (busy) machine. It runs only while the Sun moves, and is paced so that sweeping takes
 at most a quarter of the time.
 
 ## Not done, and limits
 
+- The full-settings picture at a polar site has not been seen on a GPU (see "Verified").
 - Custom pins get map imagery only from NASA Moon Trek tiles (network); offline the ground
   is plain grey. A pin inside another site's surveyed window uses that survey's heights but
   not its photo.
@@ -113,6 +143,7 @@ at most a quarter of the time.
   finds it. Sun or Earth within a few hundredths of a degree of the skyline can therefore
   look clear in the picture and be blocked in the numbers (or the reverse). The numbers
   are the analysis; the result of `getSurfaceView` says "against the terrain as drawn".
+- Earthshine casts no shadows.
 - At the full settings a time scrub re-sweeps 263,000 vertices on the main thread; it is
   throttled but not moved to a worker.
 - The viewer can walk 26 km from the site. Sun and Earth stay those of the site.

@@ -4,6 +4,7 @@
 import { runAction } from '../../core/actions';
 import { store } from '../../core/store';
 import { formatUtc } from '../../core/time';
+import { surfaceResolution } from '../../scene/autoResolution';
 import type { SurfaceController } from '../../scene/surface/controller';
 import { button, el } from '../dom';
 import './hud.css';
@@ -110,15 +111,25 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
 
   let text = '';
   let awayShown: boolean | null = null;
+  let lastFrameAt = 0, frameMs = 0;
   onFrame(() => {
-    if (!surface.active) return;
+    const now = performance.now();
+    if (!surface.active) {
+      lastFrameAt = 0;
+      return;
+    }
+    // Frame rate as it really is, slow frames included (the resolution tuner leaves those out of its own figure).
+    if (lastFrameAt) frameMs = frameMs ? frameMs + (now - lastFrameAt - frameMs) * 0.2 : now - lastFrameAt;
+    lastFrameAt = now;
+    const fps = frameMs ? 1000 / frameMs : 0;
+    const speed = fps ? ` · ${fps >= 10 ? Math.round(fps) : fps.toFixed(1)} fps${surfaceResolution.scale < 1 ? `, ${Math.round(surfaceResolution.scale * 100)}% resolution` : ''}` : '';
     const look = view.lookDirection;
     const h = Math.round(look.azDeg) % 360;
     const d = view.distanceFromSite;
     const where = d < 1 ? 'at the site' : `${metres(d)} from the site`;
     const eye = view.position.eyeHeightM;
     const zoom = Math.abs(look.fovDeg - 70) > 0.5 ? ` · field of view ${look.fovDeg < 10 ? look.fovDeg.toFixed(1) : Math.round(look.fovDeg)}°` : '';
-    const next = `Facing ${COMPASS[Math.round(h / 45) % 8]} ${h}°, ${look.elDeg >= 0 ? '+' : '−'}${Math.abs(look.elDeg).toFixed(0)}° · ${where} · eye ${eye < 10 ? eye.toFixed(1) : Math.round(eye)} m above ground${zoom}`;
+    const next = `Facing ${COMPASS[Math.round(h / 45) % 8]} ${h}°, ${look.elDeg >= 0 ? '+' : '−'}${Math.abs(look.elDeg).toFixed(0)}° · ${where} · eye ${eye < 10 ? eye.toFixed(1) : Math.round(eye)} m above ground${zoom}${speed}`;
     if (next !== text) status.textContent = text = next;
     const away = d > 1 || view.lift > 0.5;
     if (away !== awayShown) home.hidden = !(awayShown = away);

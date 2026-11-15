@@ -174,6 +174,8 @@ export class Ground {
    * its shadow there, which shading analysis mistakes for a pit and a mound.
    */
   detailCalmM = 0;
+  /** Extra height on the finest grid, metres: the generated craters a metre or more across, when they are shown. */
+  extra: ((east: number, north: number) => number) | null = null;
 
   /** The finest grid that covers a point. */
   gridAt(east: number, north: number): Grid {
@@ -204,7 +206,7 @@ export class Ground {
   /** Height above the sphere at a local east/north offset, metres. */
   heightAt(east: number, north: number): number {
     const grid = this.gridAt(east, north);
-    if (grid === this.grids[0]) return sampleSmooth(grid, east, north) + this.detailAt(east, north);
+    if (grid === this.grids[0]) return sampleSmooth(grid, east, north) + this.detailAt(east, north) + (this.extra ? this.extra(east, north) : 0);
     return sampleGrid(grid, east, north);
   }
 

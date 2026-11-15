@@ -114,7 +114,7 @@ export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, 
       name: 'setGeneratedDetail',
       title: 'Generated detail',
       description:
-        'In the surface view, shows or hides everything that is generated rather than measured: rocks, surface texture finer than about a metre and, where no survey of the ground exists, the small craters and bumps near the site. With it off only measured (or interpolated) terrain is drawn. Sun, Earth and the numbers are never affected.',
+        'In the surface view, shows or hides everything that is generated rather than measured: rocks, craters a few metres across and finer texture near the viewer, faint crater shading on distant ground and, where no survey of the ground exists, the craters and bumps within about 770 m of the site. With it off only measured (or interpolated) terrain is drawn. Sun, Earth and the numbers are never affected.',
       effect: 'command',
       params: { type: 'object', properties: { on: { type: 'boolean', description: 'Show generated detail.' } }, required: ['on'] },
       run: ({ on }) => {

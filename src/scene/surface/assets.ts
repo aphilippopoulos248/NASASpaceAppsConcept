@@ -1,10 +1,18 @@
-// Textures and shapes of the surface scene that are built in the browser: photo exposure,
-// photo-derived relief, and the GENERATED (not measured) sub-metre texture and rocks.
-import { CanvasTexture, IcosahedronGeometry, RepeatWrapping } from 'three';
+// Textures and shapes of the surface scene that are built or loaded in the browser: photo
+// exposure, photo-derived relief, and the GENERATED (not measured) detail: rocks, craters a
+// few metres across, and the close-up surface maps.
+import { BufferGeometry, CanvasTexture, Float32BufferAttribute, IcosahedronGeometry, RepeatWrapping, TextureLoader, Vector3, type Texture } from 'three';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { seededRandom, type DetailMap } from './ground';
 
-/** Brightness multiplier that brings an image's average tone to mid-grey, so dark mare and bright highlands both read well. */
-export function exposureFor(image: HTMLCanvasElement): number {
+/**
+ * Brightness multiplier that brings an image's average tone to mid-grey, so dark mare and
+ * bright highlands both read well. Null when the image cannot serve as the ground's tone:
+ * when a tenth or more of it never loaded (those parts would be drawn black), or when it is
+ * too dark, as the orbital mosaics near the poles are (mostly shadow, which would paint real
+ * ground black whatever the Sun is doing).
+ */
+export function exposureFor(image: HTMLCanvasElement): number | null {
   const probe = document.createElement('canvas');
   probe.width = probe.height = 16;
   const ctx = probe.getContext('2d', { willReadFrequently: true })!;
@@ -16,8 +24,9 @@ export function exposureFor(image: HTMLCanvasElement): number {
     sum += (px[i] / 255) ** 2.2; // approximate sRGB -> linear
     count++;
   }
-  if (!count) return 1;
-  return Math.max(0.8, Math.min(5, 0.2 / (sum / count)));
+  if (count < 0.9 * (px.length / 4)) return null;
+  const gain = 0.2 / (sum / count);
+  return gain > 5 ? null : Math.max(0.8, gain);
 }
 
 /** Reads the photo-derived relief image: grey level 128 is zero, +-127 spans `range` metres. */
@@ -61,91 +70,131 @@ export function detailNormalMap(d: DetailMap): CanvasTexture {
   return new CanvasTexture(canvas);
 }
 
-// ---------- generated detail (not real): everything finer than the orbital photos can show ----------
-export const MICRO_TILE_M = 12;
-const MICRO_PX = 1024;
-export const MAX_ROCKS = 600;
+// ---------- generated detail (not real): everything finer than the orbital data can show ----------
+// Many small rocks share a few light meshes; the rare boulders, which you can walk up to, get detailed ones.
+export const SMALL_ROCK_SHAPES = 3;
+export const SMALL_ROCKS_EACH = 260;
+export const BOULDER_SHAPES = 2;
+export const BOULDERS_EACH = 40;
+export const BOULDER_SIZE_M = 0.25;
 export const ROCK_CELL_M = 4;
 export const ROCK_REACH_M = 46;
 
-let microTexture: CanvasTexture | null = null;
-
-/** True for the shared sub-metre texture, which must not be disposed with a site. */
-export const isSharedTexture = (t: unknown): boolean => t !== null && t === microTexture;
-
-/** Tiling normal map of centimetre-to-metre craters and lumps, built once from fixed random numbers. */
-export function microNormalMap(): CanvasTexture {
-  if (microTexture) return microTexture;
-  const n = MICRO_PX, px = MICRO_TILE_M / n;
-  const rand = seededRandom('regolith');
-  const h = new Float32Array(n * n);
-  // Small craters, same D^-2 size law as the larger generated ones.
-  const count = Math.round((0.03 * MICRO_TILE_M * MICRO_TILE_M) / 0.15 ** 2);
-  for (let k = 0; k < count; k++) {
-    const d = Math.min(0.8, 0.15 / Math.sqrt(1 - rand())); // nothing wider than 0.8 m: larger craters would visibly repeat with the tile
-    const r = d / 2 / px;
-    const cx = rand() * n, cy = rand() * n;
-    const depth = d * (0.03 + 0.15 * rand() ** 2), rim = depth * 0.2;
-    const reach = Math.ceil(r * 2);
-    for (let dy = -reach; dy <= reach; dy++) {
-      for (let dx = -reach; dx <= reach; dx++) {
-        const rho = Math.hypot(dx, dy) / r;
-        if (rho >= 2) continue;
-        const x = (((Math.round(cx) + dx) % n) + n) % n, y = (((Math.round(cy) + dy) % n) + n) % n; // wraps, so the texture tiles
-        h[y * n + x] += rho < 1 ? -depth * (1 - rho * rho) + rim * rho * rho : rim * (2 - rho) ** 2;
-      }
-    }
-  }
-  // Lumpy regolith at a few scales.
-  for (let cells = 16, amp = 0.02; cells <= 256; cells *= 2, amp *= 0.55) {
-    const lattice = new Float32Array(cells * cells).map(() => rand() * 2 - 1);
-    for (let y = 0; y < n; y++) {
-      for (let x = 0; x < n; x++) {
-        const fx = (x / n) * cells, fy = (y / n) * cells;
-        const x0 = Math.floor(fx), y0 = Math.floor(fy), tx = fx - x0, ty = fy - y0;
-        const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
-        const at = (xx: number, yy: number) => lattice[(yy % cells) * cells + (xx % cells)];
-        h[y * n + x] += ((at(x0, y0) * (1 - sx) + at(x0 + 1, y0) * sx) * (1 - sy) + (at(x0, y0 + 1) * (1 - sx) + at(x0 + 1, y0 + 1) * sx) * sy) * amp;
-      }
-    }
-  }
-  const canvas = document.createElement('canvas');
-  canvas.width = canvas.height = n;
-  const ctx = canvas.getContext('2d')!;
-  const img = ctx.createImageData(n, n);
-  for (let y = 0; y < n; y++) {
-    for (let x = 0; x < n; x++) {
-      let nx = -(h[y * n + ((x + 1) % n)] - h[y * n + ((x + n - 1) % n)]) / (2 * px);
-      let ny = -(h[((y + n - 1) % n) * n + x] - h[((y + 1) % n) * n + x]) / (2 * px);
-      const len = Math.hypot(nx, ny, 1);
-      const o = (y * n + x) * 4;
-      img.data[o] = ((nx / len) * 0.5 + 0.5) * 255;
-      img.data[o + 1] = ((ny / len) * 0.5 + 0.5) * 255;
-      img.data[o + 2] = (0.5 / len + 0.5) * 255;
-      img.data[o + 3] = 255;
-    }
-  }
-  ctx.putImageData(img, 0, 0);
-  microTexture = new CanvasTexture(canvas);
-  microTexture.wrapS = microTexture.wrapT = RepeatWrapping;
-  return microTexture;
+/** Repeatable pseudo-random number in [0, 1) for a grid cell. */
+export function cellHash(ix: number, iy: number, salt: number): number {
+  let h = Math.imul(ix, 374761393) ^ Math.imul(iy, 668265263) ^ Math.imul(salt, 1274126177);
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-/** One lumpy rock shape; instances are stretched and turned for variety. */
-export function rockGeometry(): IcosahedronGeometry {
-  const geo = new IcosahedronGeometry(1, 1);
-  const rand = seededRandom('rock');
-  const pos = geo.getAttribute('position');
-  const moved = new Map<string, number>();
-  for (let i = 0; i < pos.count; i++) {
-    // Vertices are duplicated per face; move coincident ones together so the rock stays closed.
-    const key = `${pos.getX(i).toFixed(3)},${pos.getY(i).toFixed(3)},${pos.getZ(i).toFixed(3)}`;
-    if (!moved.has(key)) moved.set(key, 0.72 + rand() * 0.5);
-    const f = moved.get(key)!;
-    pos.setXYZ(i, pos.getX(i) * f, pos.getY(i) * f, pos.getZ(i) * f);
+/**
+ * Height of a field of generated craters, one candidate per grid cell. Sizes run from about
+ * a quarter to nearly a full cell; most are old and shallow, a few fresh and sharp, and no
+ * rim is a perfect circle.
+ */
+export function craterField(east: number, north: number, cell: number, salt: number): number {
+  const ix = Math.floor(east / cell), iy = Math.floor(north / cell);
+  let h = 0;
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      const cx = ix + dx, cy = iy + dy;
+      const pick = cellHash(cx, cy, salt);
+      if (pick > 0.55) continue;
+      const px = (cx + 0.5 + (cellHash(cx, cy, salt + 1) - 0.5) * 0.5) * cell;
+      const py = (cy + 0.5 + (cellHash(cx, cy, salt + 2) - 0.5) * 0.5) * cell;
+      const ox = east - px, oy = north - py;
+      const angle = Math.atan2(oy, ox), phase = pick * 40;
+      const radius = cell * (0.14 + 0.3 * cellHash(cx, cy, salt + 3)) * (1 + 0.1 * Math.sin(2 * angle + phase) + 0.06 * Math.sin(5 * angle + phase * 2.3));
+      const rho = Math.hypot(ox, oy) / radius;
+      if (rho >= 2.6) continue;
+      const fresh = cellHash(cx, cy, salt + 4) ** 2;
+      const depth = 2 * radius * (0.04 + 0.14 * fresh), rim = depth * (0.1 + 0.2 * fresh);
+      // Bowl inside, raised rim, apron of ejecta dying away outside.
+      h += rho < 1 ? -depth * (1 - rho * rho) + rim * rho * rho : rim * Math.exp(-3.2 * (rho - 1));
+    }
   }
+  return h;
+}
+
+/** A rock: a subdivided sphere pushed around by layered noise, then chipped along a few flat fracture planes. */
+export function rockGeometry(seed: number, subdivisions: number): BufferGeometry {
+  const base = new IcosahedronGeometry(1, subdivisions);
+  base.deleteAttribute('uv');
+  base.deleteAttribute('normal');
+  const geo = mergeVertices(base);
+  const rand = seededRandom(`rock${seed}`);
+  // 3D value noise on a hashed lattice.
+  const lattice = (x: number, y: number, z: number) => cellHash(x + seed * 131, y, z * 7 + 3);
+  const noise = (x: number, y: number, z: number) => {
+    const xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    const fade = (t: number) => t * t * (3 - 2 * t);
+    const u = fade(x - xi), v = fade(y - yi), w = fade(z - zi);
+    const mix = (a: number, b: number, t: number) => a + (b - a) * t;
+    return mix(
+      mix(mix(lattice(xi, yi, zi), lattice(xi + 1, yi, zi), u), mix(lattice(xi, yi + 1, zi), lattice(xi + 1, yi + 1, zi), u), v),
+      mix(mix(lattice(xi, yi, zi + 1), lattice(xi + 1, yi, zi + 1), u), mix(lattice(xi, yi + 1, zi + 1), lattice(xi + 1, yi + 1, zi + 1), u), v),
+      w,
+    );
+  };
+  // Fracture planes: anything beyond one is sliced flat, giving the angular faces of broken rock.
+  const planes = Array.from({ length: 5 + Math.floor(rand() * 4) }, () => {
+    const n = new Vector3(rand() * 2 - 1, rand() * 2 - 1, rand() * 2 - 1).normalize();
+    return { n, d: 0.62 + rand() * 0.3 };
+  });
+  const pos = geo.getAttribute('position');
+  const colors = new Float32Array(pos.count * 3);
+  const v = new Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    const big = noise(v.x * 1.4 + 5, v.y * 1.4 + 5, v.z * 1.4 + 5);
+    const ridged = 1 - Math.abs(2 * noise(v.x * 3 + 9, v.y * 3 + 9, v.z * 3 + 9) - 1);
+    const fine = noise(v.x * 8 + 2, v.y * 8 + 2, v.z * 8 + 2);
+    const grit = noise(v.x * 19 + 4, v.y * 19 + 4, v.z * 19 + 4);
+    let r = 0.78 + 0.42 * (big - 0.5) * 2 * 0.5 + 0.16 * ridged + 0.09 * (fine - 0.5) + 0.035 * (grit - 0.5);
+    for (const p of planes) {
+      const along = v.dot(p.n) * r;
+      if (along > p.d) r *= p.d / along;
+    }
+    v.multiplyScalar(r);
+    pos.setXYZ(i, v.x, v.y * 0.72, v.z);
+    // Slightly darker in hollows and lighter on exposed faces.
+    const shade = 0.72 + 0.2 * fine + 0.16 * (r - 0.78);
+    colors.set([shade, shade, shade], i * 3);
+  }
+  geo.setAttribute('color', new Float32BufferAttribute(colors, 3));
   geo.computeVertexNormals();
   return geo;
+}
+
+// Artist-made close-up surface maps (craters of roughly 0.1-2.5 m and fine texture). They are not
+// lunar measurements: they only shade the ground near the viewer, as part of the generated detail,
+// and never move the terrain. Loaded the first time the surface view is used.
+export const DETAIL_TILE_M = 12;
+export const detailMaps = { normal: { value: null as Texture | null }, tone: { value: null as Texture | null }, ready: { value: 0 } };
+/** 0 with the light on the horizon, 1 with it overhead: tone matters more as shading fades. */
+export const lightHeight = { value: 0 };
+let detailRequested = false;
+export function requestDetailMaps(anisotropy: number): void {
+  if (detailRequested) return;
+  detailRequested = true;
+  const loader = new TextureLoader();
+  const prepare = (t: Texture) => {
+    // Made seamless by scripts/make-surface-detail.mjs, so they simply repeat.
+    t.wrapS = t.wrapT = RepeatWrapping;
+    t.anisotropy = anisotropy;
+    return t;
+  };
+  Promise.all([
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_normal.jpg`),
+    loader.loadAsync(`${import.meta.env.BASE_URL}textures/surface_detail_tone.jpg`),
+  ]).then(
+    ([normal, tone]) => {
+      detailMaps.normal.value = prepare(normal);
+      detailMaps.tone.value = prepare(tone);
+      detailMaps.ready.value = 1;
+    },
+    (err) => console.warn('Close-up surface maps unavailable; using computed craters instead', err),
+  );
 }
 
 /** Tiling grey noise, used as fine surface grain that the elevation data cannot resolve. */
