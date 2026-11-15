@@ -1,18 +1,21 @@
 # Lunyx status
 
 Kept by the coordinator of the original hub project `lunyx`. Last updated 2026-11-15
-04:15 UTC, for the published commit `6d4da06`: lunyx-science's transition spans and DSN edges,
-the mission presets, the landing catalogue sources and the 50-star flag, on top of the complete
-compare panel, the teammate's GitHub `main` work, the sources and AI-use documents and the
-licence notices; with corrections proposed by the `lunyx-experience` project. Acceptance is the
-desktop website (decision D-9).
+06:50 UTC, for release candidate **RC `41be074`** (decision D-15). The published head `06f6f74`
+adds documentation only on top of it. The RC holds:
+- the navigator, with both ends of each sunrise and sunset on every screen;
+- the finer polar skyline;
+- the assistant work, browser tests and documents of the `lunyx-experience` project;
+- the validation fixtures of the `lunyx-science` project.
+Section 4 lists the checks run on the RC. Acceptance is the desktop website (decision D-9).
 "Shipped" means merged through the build gate and published on
 `origin/feature/lunyx-navigator`. Task numbers refer to the project hub board.
 
-The build is **not fully validated**. Two rounds of independent end-to-end validation have
-reported (T-26 complete; T-34 items 1 to 5); their findings are in section 4. Open with the
-`lunyx-science` project: the two-ended sunrise/sunset events (T-31 items 2 and 3) and the
-rest of the second round. Read section 4 before quoting any number from the app.
+The build is **not fully validated**:
+- the in-app assistant has never been run with a real language model (there is no key);
+- some figures have not been checked independently (section 4 says which);
+- known defects are listed in section 5.
+Two rounds of independent end-to-end validation and the `lunyx-science` validation round have reported. Read section 4 before quoting any number from the app.
 
 ## 1. Shipped
 
@@ -53,8 +56,7 @@ rest of the second round. Read section 4 before quoting any number from the app.
 
 | What | Note | Task |
 | --- | --- | --- |
-| Full assistant audit: capability inventory, UI/assistant equivalence tests, the multi-step browser scenario | With project `lunyx-experience`; every action it needs is on integration since `a958d6b` | T-16 |
-| End-to-end browser tests, screenshot review against the mockups, accessibility pass, final README | With project `lunyx-experience`. `docs/lunyx/SOURCES.md` and `docs/lunyx/AI-USE.md` are published (`0cc5553`); AI-USE.md section 8 waits for operator decisions and its section 2.1 is a draft | T-17 |
+| Operator decisions before submission | `AI-USE.md` section 8 (items whose origin could not be established) and its watermark proposals (section 5); the three unconfirmed touchdown minutes (Luna 23, Chandrayaan-3, IM-2); the project's licence; whether `docs/reference` (the team's mockups, which include third-party screenshots) is published; a language-model key for one real-model run | D-15 |
 | Historical mission trajectories; landing error ellipse | Not started. The error ellipse is struck out in the design and is lowest priority | T-24 |
 | Separate summer and winter Diviner temperature maps | Out of scope: the source is 192.7 GB of binned tables. Annual maximum and mean are shipped instead and labelled as annual | T-23 |
 | North-polar high-resolution elevation layer | Not bundled; the north pole rests on the 1.9 km grid plus on-request windows | T-4 |
@@ -63,6 +65,7 @@ rest of the second round. Read section 4 before quoting any number from the app.
 
 | Claim | Checked against | Result |
 | --- | --- | --- |
+| Release candidate `41be074` as a whole (D-15) | One full `npm test` and GPU runs on trees whose app code equals the RC's (the RC adds only `README.md` lines over `a47fe1f`; its app code equals `lunyx-experience`'s `649fc4e`); a fresh clone from GitHub at the RC | `npm test`: 946 passed, 6 skipped; science checks 10/10. GPU smoke 18/18. Browser suites on the GPU: flow 15 pass and 1 todo (Q-7, deferred), accessibility 15/15, assistant 17/17, equivalence 29 pass and 1 todo, control 134/134, scenario 11/11. Desktop release walkthrough with real controls: 41/41 steps and 247/247 checks at 1280x720, the same at 1920x1080, with no failed request or console error (`lunyx-experience` T-8). The fresh clone passed every README step: install, development server, build and preview. Offline with no key it opened Apollo 11 and IM-2 on the globe and in the surface view, and the assistant answered in its labelled deterministic mode (`lunyx-standby` T-6). Nothing here involves a real language model |
 | Sun/Earth azimuth and elevation | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035, fetched independently of the model's author | Worst difference 0.0036 deg. After 2035 the error grows (0.006 deg in 2060, 0.021 deg in 2099) because predictions of Earth's rotation differ |
 | Skyline geometry | Analytic cases (smooth sphere, ridge, bowl), Apollo 15 against published heights of Mons Hadley and Hadley Delta | Within the tolerances in `docs/lunyx/validation.md` section 3 |
 | Skyline on real terrain, observer 2 m up | An independent ray march straight from the bundled elevation files, five sites (T-26; `tests/fixtures/validation/ephemeris-check/`) | Builds up to and including `375f816` (GitHub `main`'s tip until `595fe28`; `main` has contained the fix since then) read the skyline too low at crest sites, up to 1.04 deg at a Shackleton-rim pin, with Earth visibility 2.0 points high and rise/set times up to 6 h off there. From `319fba0`: within 0.05 deg at all five sites |
@@ -90,6 +93,12 @@ rest of the second round. Read section 4 before quoting any number from the app.
   not the one that was typed. Its summary names the radius it used ("within 2.0 km"), so check that line,
   or type the radius again after changing a requirement. A fix has been written but not verified or
   integrated: `8c58f49`, kept on `am/lunyx-standby/integration` at `46ce096`.
+- **Known defect, low (Q-8, found by the RC walkthrough).** After a nearby scan started from somewhere
+  other than the tab's own button (for example by the assistant's `rankNearby`), the Nearby sites
+  tab can keep an old green status line such as "Candidate 1 is pinned and loaded as B" above the
+  new list. The list is right. A scan from the tab's own button rewrites the line. Not fixed in the RC.
+- **Cosmetic.** With the country flags switched on (they are off by default), Japan's flag can cover
+  the N of the LUNYX wordmark at 1280x720. Not fixed in the RC.
 - Earth visibility is geometric line of sight to Earth's centre (and, for DSN, to a station
   above its elevation limit). It is not a link budget.
 - Sunlight percentage is the time-average of the visible fraction of the Sun's disc. It is
