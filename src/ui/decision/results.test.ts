@@ -54,6 +54,15 @@ describe('reading the decision tools results', () => {
     expect(readRankingExtras(null)).toEqual({ source: null, cap: null, dropped: 0 });
   });
 
+  it('does not draw a "summary" answer (F-12): its profile, sites and sides lack what the tab shows', () => {
+    // findBestSites with detail "summary": profile {id, name}, `sites` instead of `evaluations`.
+    const summary = { profile: { id: 'polar-short', name: 'Polar' }, relaxations: [], counts: { candidates: 1, feasible: 1, unknown: 0, infeasible: 0 }, ranked: [{ siteId: 'im-2', name: 'IM-2', rank: 1, utility: 0.9, pareto: true }], sites: [{ siteId: 'im-2', criteria: [] }] };
+    expect(readRanking(summary)).toBeNull();
+    // compareSites with detail "summary": sides with siteId and criteria rows, without `site` and `metrics`.
+    const side = { siteId: 'im-2', name: 'IM-2', feasibility: 'feasible', utility: 0.9, summary: [], criteria: [{ id: 'sunlight', verdict: 'pass', value: 99, unit: '%', threshold: 60, score: 1, reason: 'r' }] };
+    expect(readComparison({ comparison: { a: side, b: { ...side, siteId: 'apollo-11' }, perCriterion: [], dominance: 'tradeoff', sentences: [] } })).toBeNull();
+  });
+
   it('reads a pair comparison given bare or under `comparison`', () => {
     const c = { a: EVAL, b: { ...EVAL, site: { ...EVAL.site, id: 'apollo-11' } }, perCriterion: [{ id: 'sunlight', a: 1, b: 2, better: 'b', note: 'n' }, null], dominance: 'b-dominates', sentences: ['s'] };
     expect(readComparison({ profile: PROFILE, comparison: c })).toMatchObject({ dominance: 'b-dominates', perCriterion: [{ id: 'sunlight' }], sentences: ['s'] });

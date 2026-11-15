@@ -26,6 +26,7 @@ import {
   thresholdEdit,
   togglePick,
   valueText,
+  withFullDetail,
   weightEdit,
   weightShares,
   weightsSentence,
@@ -334,6 +335,13 @@ describe('candidates and the buttons of a row', () => {
       thresholds: { sunlight: 70, slope: 15 }, removeThresholds: ['roughness'], weights: { slope: 2 }, allowSafetyRelaxation: true,
     });
     expect(overridesParam({ thresholds: { darkness: null } })).toEqual({ removeThresholds: ['darkness'] });
+  });
+
+  it('asks the tools for detail "full" only when their schema has it (F-12)', () => {
+    const withDetail = { properties: { candidates: { type: 'object' as const, properties: {} }, detail: { type: 'string' as const, description: 'd', enum: ['summary', 'full'] } } };
+    expect(withFullDetail({ limit: 10 }, withDetail)).toEqual({ limit: 10, detail: 'full' });
+    expect(withFullDetail({ limit: 10 }, { properties: {} })).toEqual({ limit: 10 });
+    expect(withFullDetail({ limit: 10 }, undefined)).toEqual({ limit: 10 });
   });
 
   it('says what a ranking measured and what the cap left out', () => {

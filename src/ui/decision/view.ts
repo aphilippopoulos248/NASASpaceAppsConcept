@@ -22,6 +22,7 @@ import {
   type SiteEvaluation,
   type Verdict,
 } from '../../analysis/decision/types';
+import type { ObjectSchema } from '../../core/actions';
 import { spanText } from '../../core/scenario';
 import type { Scenario, SiteRef } from '../../core/types';
 import { degText, hoursText, pctText } from '../compare/format';
@@ -529,6 +530,17 @@ export function savedSites(a: Scenario | null, b: Scenario | null): SiteRef[] {
   const out: SiteRef[] = [];
   for (const sc of [a, b]) if (sc && !out.some((s) => s.id === sc.site.id)) out.push(sc.site);
   return out;
+}
+
+/**
+ * The tab draws whole evaluations (every criterion with its reason and basis), so it asks
+ * findBestSites and compareSites for detail "full"; their default, "summary", is cut down for a
+ * language model's reply (F-12). Added only when the action's schema has `detail`, so the tab
+ * also works with a build of the tools from before F-12.
+ */
+export function withFullDetail<P extends Record<string, unknown>>(params: P, schema: Pick<ObjectSchema, 'properties'> | undefined): P | (P & { detail: 'full' }) {
+  const d = schema?.properties.detail;
+  return d && d.type === 'string' && d.enum?.includes('full') ? { ...params, detail: 'full' } : params;
 }
 
 export type CandidateChoice = { ok: true; candidates: Record<string, unknown>; what: string } | { ok: false; why: string };

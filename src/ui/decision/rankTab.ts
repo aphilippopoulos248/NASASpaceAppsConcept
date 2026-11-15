@@ -6,8 +6,9 @@
 // Driven only through registered actions (D-3): listMissionProfiles, getDecisionSettings,
 // setDecisionSettings, findBestSites and compareSites (T-73), and selectSite, dropPin,
 // saveScenario and openCompare for the buttons in a row. What it shows is the last answer of
-// those tools, whoever asked (this tab or the assistant), so both see the same ranking. Every
-// figure and sentence is the tools' own; view.ts only orders and words them.
+// those tools in full, whoever asked (this tab or the assistant). A "summary" answer, the
+// default for the assistant's replies (F-12), is not drawn: it leaves out reasons and bases.
+// Every figure and sentence is the tools' own; view.ts only orders and words them.
 import type { MissionProfile, PairComparison, ProfileOverrides, Ranking } from '../../analysis/decision/types';
 import { getAction, onAction, type ActionOrigin } from '../../core/actions';
 import { DECISION_CAPS, decisionRun, onDecisionRun } from '../../core/decisionActions';
@@ -40,6 +41,7 @@ import {
   thresholdEdit,
   togglePick,
   weightEdit,
+  withFullDetail,
   type Badge,
   type CriterionUi,
   type PairView,
@@ -504,7 +506,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     running = { what: choice.what };
     renderSource();
     renderProgress();
-    await act('findBestSites', { candidates: choice.candidates, limit: n }, () => '');
+    await act('findBestSites', withFullDetail({ candidates: choice.candidates, limit: n }, getAction('findBestSites')?.params), () => '');
     running = null;
     if (showing()) render();
   }
@@ -526,7 +528,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     if (!a || !b) return;
     comparingPair = true;
     renderComparison();
-    await act('compareSites', { siteA: siteArg(a.site), siteB: siteArg(b.site) }, () => '');
+    await act('compareSites', withFullDetail({ siteA: siteArg(a.site), siteB: siteArg(b.site) }, getAction('compareSites')?.params), () => '');
     comparingPair = false;
     renderComparison();
   }

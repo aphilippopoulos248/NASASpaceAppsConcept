@@ -228,9 +228,13 @@ async function run(base, size) {
     check((await unnamedControls(page)).length === 0, `no unnamed controls (${(await unnamedControls(page)).join(', ') || 'none'})`);
     const low = await lowContrast(page, '.cmp-tabpanel:not([hidden])');
     check(low.length === 0, `contrast AA in the tab (${low.join('; ') || 'all pass'})`);
-    const log = await page.evaluate((from) => window.lunyx.actions.actionLog().filter((e) => e.seq > from).map((e) => ({ name: e.name, origin: e.origin, ok: e.ok, registered: Boolean(window.lunyx.actions.getAction(e.name)), error: e.error })), startSeq);
+    const log = await page.evaluate((from) => window.lunyx.actions.actionLog().filter((e) => e.seq > from).map((e) => ({ name: e.name, origin: e.origin, ok: e.ok, registered: Boolean(window.lunyx.actions.getAction(e.name)), error: e.error, detail: e.params?.detail })), startSeq);
     const ui = log.filter((e) => e.origin === 'ui');
     check(ui.length > 0 && ui.every((e) => e.registered), `every control ran a registered action: ${[...new Set(ui.map((e) => e.name))].join(', ')}`);
+    // F-12: the tab asks for whole evaluations when the tools offer a summary.
+    const wanted = await page.evaluate(() => ['findBestSites', 'compareSites'].filter((n) => window.lunyx.actions.getAction(n)?.params.properties.detail));
+    const asked = log.filter((e) => e.origin === 'ui' && wanted.includes(e.name));
+    check(asked.every((e) => e.detail === 'full'), wanted.length ? `${wanted.join(' and ')} asked with detail "full" (${asked.length} calls)` : 'the tools have no detail parameter in this build (before F-12): none sent');
     const failed = ui.filter((e) => !e.ok);
     check(failed.length === 0, `no action from the tab failed${failed.length ? `: ${failed.map((e) => `${e.name}: ${e.error}`).join('; ')}` : ''}`);
     check(app.problems.length === 0, `no page or console errors${app.problems.length ? `: ${app.problems.join(' | ')}` : ''}`);
