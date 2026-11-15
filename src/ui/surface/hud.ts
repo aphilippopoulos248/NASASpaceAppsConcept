@@ -88,6 +88,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
 
   const syncChart = () => {
     chart.setAttribute('aria-pressed', String(hudState().chart !== 'hidden'));
+    // At its large size the chart takes the strip's place (hud.css), unless the user has moved the strip.
+    hud.classList.toggle('surface-hud--chart-expanded', hudState().chart === 'expanded');
     requestHudLayout();
   };
   onHudState(syncChart);
