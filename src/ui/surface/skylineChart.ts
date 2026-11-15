@@ -14,7 +14,7 @@ import { analysis } from '../../core/analysisStore';
 import { store } from '../../core/store';
 import { formatUtc } from '../../core/time';
 import { button, el } from '../dom';
-import { chartData, niceTicks, sampleAtTime, skylineAtAz, skylineRange, stateText, tableRows, thin, timeTicks, trackAzRange, type Body, type ChartData, type Range, type TrackSample } from './chartModel';
+import { chartData, niceTicks, passageAt, sampleAtTime, skylineAtAz, skylineRange, stateText, tableRows, thin, timeTicks, trackAzRange, type Body, type ChartData, type Passage, type Range, type TrackSample } from './chartModel';
 import { ensureHudActions } from './hudActions';
 import { hudLayoutPart, requestHudLayout } from './hudLayout';
 import { applyPhoneDefaults, hudState, onHudState, setHudState } from './hudState';
@@ -36,6 +36,9 @@ const utcParam = (ms: number) => `${new Date(ms).toISOString().slice(0, 19)}Z`;
 const wrap360 = (az: number) => ((az % 360) + 360) % 360;
 const clampEl = (v: number) => Math.max(-85, Math.min(85, v));
 const px = (v: number) => v.toFixed(1);
+/** ", setting" while a disc is passing through the skyline (D-8), else nothing. */
+const phaseWords = (p: Passage | null): string =>
+  !p ? '' : p.kind === 'set' ? ', setting' : p.kind === 'rise' ? ', rising' : p.kind === 'graze' ? ', partly hidden, not setting' : p.kind === 'peek' ? ', partly showing, not rising' : ', passing the skyline';
 
 interface Placed {
   x: number;
@@ -295,6 +298,14 @@ export function mountSkylineChart(region: HTMLElement): void {
     g.append(S('text', { x: left - 5, y: bottom + 12, class: 'skc-tick', 'text-anchor': 'end' }, 'UTC'));
     staticLayer.append(g);
 
+    // D-8: each passage of a disc through the skyline (first cut to last limb, first limb to whole
+    // disc clear) as a band in the clearance panel, at least 2 px wide so an hour-long sunset
+    // still shows in a long window.
+    for (const pass of d.passages) {
+      const x0 = x(pass.startMs), x1 = x(pass.endMs), w = Math.max(2, x1 - x0);
+      staticLayer.append(S('rect', { x: px(Math.min(x0, right - w)), y: clearance.top, width: px(w), height: px(clearance.bottom - clearance.top), class: `skc-pass skc-pass--${pass.body}` }));
+    }
+
     const stride = Math.max(1, Math.floor(Math.max(d.sun.length, d.earth.length) / Math.max(1, (right - left) * 2)));
     const line = (track: TrackSample[], p: TimePanel, get: (s: TrackSample) => number, body: Body) => {
       let path = '', pen = false;
@@ -413,7 +424,12 @@ export function mountSkylineChart(region: HTMLElement): void {
             key('skc-key--now', compact ? 'now' : 'at the simulated time'),
             key('skc-key--look', compact ? 'view' : 'where the view looks (band: its width)'),
           ]
-        : [key('skc-key--sun-line', 'Sun'), key('skc-key--earth-line', 'Earth'), key('skc-key--look', compact ? 'now' : 'the simulated time')]),
+        : [
+            key('skc-key--sun-line', 'Sun'),
+            key('skc-key--earth-line', 'Earth'),
+            ...(data?.passages.length ? [key('skc-key--pass', compact ? 'setting or rising' : 'band: the disc partly behind the skyline (setting, rising)')] : []),
+            key('skc-key--look', compact ? 'now' : 'the simulated time'),
+          ]),
     );
   }
 
@@ -665,7 +681,7 @@ export function mountSkylineChart(region: HTMLElement): void {
       hover = { x: pick.x, timeMs: pick.timeMs };
       const rows: HTMLElement[] = [];
       for (const s of [pick.sun, pick.earth]) {
-        if (s) rows.push(tipRow(`skc-key--${s.body}-line`, `${signed(s.elDeg)} · ${Number.isFinite(s.clearanceDeg) ? signed(s.clearanceDeg) : 'n/a'}`, `${s.body === 'sun' ? 'Sun' : 'Earth'}: elevation · clearance (${stateText(s)})`));
+        if (s) rows.push(tipRow(`skc-key--${s.body}-line`, `${signed(s.elDeg)} · ${Number.isFinite(s.clearanceDeg) ? signed(s.clearanceDeg) : 'n/a'}`, `${s.body === 'sun' ? 'Sun' : 'Earth'}: elevation · clearance (${stateText(s)}${phaseWords(passageAt(d, s.body, s.timeMs))})`));
       }
       showTip(e, formatUtc(pick.timeMs), rows);
       if (dragging && moved && pick.index !== lastChosen) {
