@@ -13,7 +13,7 @@
       "rateSecondsPerSecond": 43200,
       "play": true,
       "sources": [
-        "Site and touchdown time: the app's landing catalogue (public/data/landings.json).",
+        "Site and touchdown time: the app's landing catalogue (public/data/landings.json): the lander's position measured in LROC images; touchdown 3:34 a.m. EST (NASA).",
         "Sun and Earth: JPL Horizons (DE441), as seen from the site, no atmosphere; table bundled for 2025-03-01 to 2025-04-01.",
         "Terrain: bundled elevation data for the site (LROC NAC model and SLDEM2015 windows, LOLA whole-Moon grid); the analysis lists the layers it used."
       ]
@@ -30,7 +30,7 @@
       "rateSecondsPerSecond": 43200,
       "play": true,
       "sources": [
-        "Site and touchdown time: the app's landing catalogue (public/data/landings.json); the catalogue marks this position as approximate.",
+        "Site and touchdown time: the app's landing catalogue (public/data/landings.json): the lander's position measured in LROC images; the touchdown minute is not confirmed by an official source (NASA: about 11:30 a.m. CST, 17:30 UTC).",
         "Sun and Earth: JPL Horizons (DE441), as seen from the site, no atmosphere; table bundled for 2025-03-05 to 2025-04-05.",
         "Terrain: bundled LOLA south-polar elevation grids and the LOLA whole-Moon grid; the analysis lists the layers it used."
       ]
