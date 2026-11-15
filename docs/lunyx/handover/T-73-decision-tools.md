@@ -8,9 +8,11 @@ Decision D-17; design in `docs/lunyx/DECISION-ENGINE.md`, sections 2 and 3. Code
 
 The registry's schemas have no unions, so:
 
-- **A site** is an object: `{ landing: "apollo-11" }` (a landing id or name, as `findLanding`
-  reads it) or `{ lat: -85.4, lon: 31.2 }` (degrees, longitude east-positive, wrapped to
-  -180..180; it becomes a pin `pin:<lat>,<lon>`). Giving both, or neither, is refused.
+- **A site** is always an object: `{ landing: "apollo-11" }` (a landing id or name, as
+  `findLanding` reads it) or `{ lat: -85.4, lon: 31.2 }` (degrees, longitude east-positive,
+  wrapped to -180..180; it becomes a pin `pin:<lat>,<lon>`). A bare string cannot be offered
+  beside the object form, because the schema language has no unions. Giving both, or neither,
+  is refused.
 - **Overrides** are `ProfileOverrides`, except that a threshold is removed with
   `removeThresholds: ["roughness", ...]` (a JSON null cannot be validated). So the thresholds
   in the parameters are numbers only. The result's `overrides` echo has the engine's form,
@@ -36,31 +38,34 @@ evaluation result has `profile` (the resolved one), `overrides`, `relaxations` a
 | `compareSites` | query | `siteA`, `siteB`, `profileId?`, `overrides?` | `{ profile, overrides, relaxations, comparison: PairComparison, utilityNote }` |
 | `findBestSites` | query | `candidates`, `limit?` (1-50, default 5), `profileId?`, `overrides?` | below |
 
-`setDecisionSettings` details:
-- `reset: true` first goes back to the first profile without overrides.
-- A new `profileId` starts without overrides.
-- `overrides` are added to the current ones: thresholds and weights per criterion, the other
-  fields replaced.
+`setDecisionSettings` details (the coordinator's ruling, m1132):
+- `overrides` REPLACES the stored overrides, so send the whole set.
+- `profileId` alone switches the profile and clears the overrides.
+- `reset: true` clears the overrides and keeps the profile.
 - Anything `resolveProfile` refuses (a safety relaxation without the flag, say) is an error with
   the reason, and the state does not change.
 
 `findBestSites` result:
 
+The contract Ranking, trimmed to the top `limit` (the coordinator's ruling, m1132):
+
 ```jsonc
 { "profile": {…}, "overrides": {…}, "relaxations": [ { "criterion": "slope", "from": 10, "to": 15 } ],
-  "candidates": { "from": "catalogue", "considered": 28, "total": 28, "cap": 40 },
-              // sites:  { "from": "sites", "considered": 3, "cap": 12 }
-              // nearby: { "from": "nearby", "around": { id, name, lat, lon }, "radiusM", "spacingM",
-              //           "scanned", "removedBySlopePrefilter", "withoutData", "considered", "cap": 15, "prefilter": "…" }
-  "counts": { "candidates": 28, "feasible": 9, "unknown": 12, "infeasible": 7 },
-  "ranked": [ { "siteId", "name", "rank", "utility", "pareto" } ],   // the top `limit`
-  "top": [ SiteEvaluation ],                                         // the same sites in full
+  "ranked": [ { "siteId", "name", "rank", "utility", "pareto" } ],   // the top `limit` feasible
   "paretoFront": [ "siteId", … ],
-  "unknown":    [ { "siteId", "name", "reasons": [ "…" ] } ],      // the criteria that are not "pass", as sentences
-  "infeasible": [ { "siteId", "name", "reasons": [ "…" ] } ],
+  "counts": { "candidates": 28, "feasible": 9, "unknown": 12, "infeasible": 7 },
   "explanation": [ "…" ],
+  "evaluations": [ SiteEvaluation ],  // the top `limit` feasible, then every unknown, then every infeasible, in full
+  "cap": 40, "dropped": 0,            // candidates over the cap, not measured
+  "candidates": { "from": "catalogue", "considered": 28, "total": 28 },
+              // sites:  { "from": "sites", "considered": 3 }
+              // nearby: { "from": "nearby", "around": { id, name, lat, lon }, "radiusM", "spacingM",
+              //           "scanned", "removedBySlopePrefilter", "withoutData", "considered", "prefilter": "…" }
   "utilityNote": "Utility ranks feasible sites … not a probability of mission success." }
 ```
+
+Each SiteEvaluation's `criteria[]` has its verdict, reason, `measured` (value, unit, bound, basis,
+missingReason), threshold, score and weight.
 
 ## How each candidate is measured
 
@@ -83,9 +88,12 @@ evaluation result has `profile` (the resolved one), `overrides`, `relaxations` a
   landing-region terrain could not be measured: …". Such a site is `unknown`, never a crash.
 - A failure of the engine itself is refused with "The decision engine could not …: <reason>".
 
-**Progress:** `decisionProgress` (exported from `decisionActions.ts`), `{ running, action, done,
-total, label }`, with `subscribe(fn)`. The "Rank sites" tab can show it, e.g. "Measuring
-Apollo 15 (4 of 28)" or "Scanning around IM-2 Athena (40 of 120)".
+**Progress:** `decisionRun()` gives `{ running, done, total, label }`, and `onDecisionRun(fn)`
+returns an unsubscribe. Both are exported from `decisionActions.ts`; there is no AppState field.
+The "Rank sites" tab can show it, e.g. "Measuring Apollo 15 (4 of 28)" or "Scanning around
+IM-2 Athena (40 of 120)".
 
-**Caps** (`DECISION_CAPS`): catalogue 40, sites 12, nearby 15 fully measured. The nearby radius
+**Caps** (`DECISION_CAPS`): catalogue 40, sites 12, nearby 15 fully measured. `dropped` counts
+the candidates over the cap. For nearby, these are the scan's usable candidates beyond the
+best 15; the ones its slope pre-filter removed are counted in `candidates` instead. The nearby radius
 is at most 10 km and the spacing at least 50 m.

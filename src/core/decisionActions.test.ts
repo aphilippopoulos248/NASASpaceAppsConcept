@@ -23,7 +23,7 @@ import type { MeasurementInput } from '../analysis/decision/api';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis, WindowMetrics } from '../analysis/types';
 import type { Landing } from '../data/landings';
 import { getAction, listActions, registerActions, resetActions, runAction } from './actions';
-import { createDecisionActions, decisionProgress, DECISION_CAPS, roundDeep, toOverrides, type DecisionEngine } from './decisionActions';
+import { createDecisionActions, DECISION_CAPS, decisionRun, onDecisionRun, roundDeep, toOverrides, type DecisionEngine, type DecisionRun } from './decisionActions';
 import { effectiveStartMs } from './scenario';
 import { initialState, Store } from './store';
 import type { Scenario, SiteRef } from './types';
@@ -193,12 +193,12 @@ describe('decision tools (T-73)', () => {
     expect(list.ok && list.result).toMatchObject({ current: 'polar-short', profiles: [{ id: 'polar-short' }, { id: 'equatorial-sortie' }] });
     expect(list.ok && list.result.criteria).toHaveLength(6);
 
-    // Tightening: allowed. Added to what is there.
+    // Tightening: allowed. Overrides alone do not choose a profile: the first one still applies.
     let r: any = await runAction('setDecisionSettings', { overrides: { thresholds: { darkness: 12 } } });
-    // Overrides alone do not choose a profile: the first one still applies.
     expect(r).toMatchObject({ ok: true, result: { profileId: 'polar-short', isDefaultProfile: true, overrides: { thresholds: { darkness: 12 } }, profile: { thresholds: { darkness: 12, slope: 10 } }, relaxations: [] } });
+    // Overrides REPLACE the stored ones (the tab sends the whole set); a removed threshold is null.
     r = await runAction<any>('setDecisionSettings', { overrides: { weights: { sunlight: 2 }, removeThresholds: ['sunlight'] } });
-    expect(r.ok && r.result.overrides).toEqual({ thresholds: { darkness: 12, sunlight: null }, weights: { sunlight: 2 } });
+    expect(r.ok && r.result.overrides).toEqual({ thresholds: { sunlight: null }, weights: { sunlight: 2 } });
 
     // Loosening slope without the flag: refused, and nothing changes.
     const before = JSON.stringify(store.get());
@@ -211,13 +211,17 @@ describe('decision tools (T-73)', () => {
     const ev: any = await runAction('evaluateSite', { site: { landing: 'im-2' } });
     expect(ev).toMatchObject({ ok: true, result: { relaxations: [{ criterion: 'slope', from: 10, to: 15 }], utilityNote: UTILITY_NOTE } });
 
-    // Another profile starts without overrides; reset goes back to the first.
+    // profileId alone switches and clears the overrides; with overrides, those are set.
     r = await runAction<any>('setDecisionSettings', { profileId: 'equatorial-sortie' });
-    expect(r).toMatchObject({ ok: true, result: { profileId: 'equatorial-sortie', overrides: {}, relaxations: [] } });
+    expect(r).toMatchObject({ ok: true, result: { profileId: 'equatorial-sortie', isDefaultProfile: false, overrides: {}, relaxations: [] } });
     expect(store.get()).toMatchObject({ decisionProfileId: 'equatorial-sortie', decisionOverrides: {} });
+    r = await runAction<any>('setDecisionSettings', { profileId: 'equatorial-sortie', overrides: { mastHeightM: 5 } });
+    expect(r).toMatchObject({ ok: true, result: { profileId: 'equatorial-sortie', overrides: { mastHeightM: 5 }, profile: { mastHeightM: 5 } } });
     expect(await runAction('setDecisionSettings', { profileId: 'nope' })).toMatchObject({ ok: false, error: 'There is no mission profile "nope". The profiles are: polar-short, equatorial-sortie.' });
+    // reset clears the overrides and keeps the profile.
     r = await runAction<any>('setDecisionSettings', { reset: true });
-    expect(r).toMatchObject({ ok: true, result: { profileId: 'polar-short', isDefaultProfile: true, overrides: {} } });
+    expect(r).toMatchObject({ ok: true, result: { profileId: 'equatorial-sortie', isDefaultProfile: false, overrides: {} } });
+    expect(store.get()).toMatchObject({ decisionProfileId: 'equatorial-sortie', decisionOverrides: {} });
   });
 
   it('evaluateSite: the scenario from the profile window ("current" = the app\'s) and mast, the region radius and slope limit; defaults from AppState', async () => {
@@ -256,18 +260,26 @@ describe('decision tools (T-73)', () => {
         return regionFor(site, r);
       },
     });
+    const seen: DecisionRun[] = [];
+    const off = onDecisionRun((p) => seen.push({ ...p }));
     const r: any = await runAction('findBestSites', { candidates: { from: 'catalogue' } });
+    off();
     expect(r.ok).toBe(true);
     expect(calls.analyse).toHaveLength(3);
+    // Progress: one step per candidate, then done.
+    expect(seen.map((p) => p.label)).toEqual(['Measuring Apollo 11 (1 of 3)', 'Measuring IM-2 Athena (2 of 3)', 'Measuring Luna 9 (3 of 3)', '']);
+    expect(decisionRun()).toEqual({ running: false, done: 3, total: 3, label: '' });
     expect(r.result.counts).toEqual({ candidates: 3, feasible: 1, unknown: 2, infeasible: 0 });
     expect(r.result.ranked).toEqual([{ siteId: 'im-2', name: 'IM-2 Athena', rank: 1, utility: 0.7, pareto: true }]);
-    const unknown = Object.fromEntries(r.result.unknown.map((u: any) => [u.siteId, u.reasons]));
-    expect(unknown['luna-9'][0]).toBe('sunlight unknown: The analysis could not run for this site and window: no elevation data here');
-    expect(unknown['apollo-11']).toEqual([
+    // evaluations: the ranked feasible ones, then every unknown, in full.
+    expect(r.result.evaluations.map((e: any) => [e.site.id, e.feasibility])).toEqual([['im-2', 'feasible'], ['apollo-11', 'unknown'], ['luna-9', 'unknown']]);
+    const reasons = (id: string) => r.result.evaluations.find((e: any) => e.site.id === id).criteria.filter((c: any) => c.verdict !== 'pass').map((c: any) => c.reason);
+    expect(reasons('luna-9')[0]).toBe('sunlight unknown: The analysis could not run for this site and window: no elevation data here');
+    expect(reasons('apollo-11')).toEqual([
       'slope unknown: The landing-region terrain could not be measured: regionTerrainMetrics is not part of this build yet (decision engine, T-72).',
       'roughness unknown: The landing-region terrain could not be measured: regionTerrainMetrics is not part of this build yet (decision engine, T-72).',
     ]);
-    expect(decisionProgress.get()).toMatchObject({ running: false, action: 'findBestSites', done: 3, total: 3 });
+    expect(r.result.evaluations[1].criteria[4].measured).toEqual({ value: null, unit: '%', basis: 'fake', missingReason: expect.stringMatching(/^The landing-region terrain could not be measured/) });
 
     // The engine itself failing (a stub, say) is a refusal with the reason.
     resetActions();
@@ -284,15 +296,16 @@ describe('decision tools (T-73)', () => {
     const r: any = await runAction('findBestSites', { candidates: { from: 'sites', sites: [{ landing: 'luna-9' }, { landing: 'apollo-11' }, { landing: 'im-2' }, { landing: 'Apollo 11' }] }, limit: 1, overrides: { thresholds: { sunlight: 50 } } });
     expect(r.ok).toBe(true);
     // The duplicate is measured once.
-    expect(r.result.candidates).toEqual({ from: 'sites', considered: 3, cap: DECISION_CAPS.sites });
+    expect(r.result).toMatchObject({ candidates: { from: 'sites', considered: 3 }, cap: DECISION_CAPS.sites, dropped: 0 });
     expect(r.result.counts).toEqual({ candidates: 3, feasible: 2, unknown: 0, infeasible: 1 });
     expect(r.result.ranked).toEqual([{ siteId: 'apollo-11', name: 'Apollo 11', rank: 1, utility: 0.95, pareto: true }]);
-    expect(r.result.top.map((e: any) => e.site.id)).toEqual(['apollo-11']);
-    expect(r.result.infeasible).toEqual([{ siteId: 'luna-9', name: 'Luna 9', reasons: ['sunlight fail'] }]);
+    // The top `limit` feasible (one), then every infeasible one; the second feasible is only counted.
+    expect(r.result.evaluations.map((e: any) => [e.site.id, e.feasibility])).toEqual([['apollo-11', 'feasible'], ['luna-9', 'infeasible']]);
+    expect(r.result.evaluations[1].criteria.filter((c: any) => c.verdict === 'fail').map((c: any) => c.reason)).toEqual(['sunlight fail']);
     expect(r.result).toMatchObject({ profile: { id: 'custom', thresholds: { sunlight: 50 } }, overrides: { thresholds: { sunlight: 50 } }, relaxations: [], paretoFront: ['apollo-11'], explanation: ['fake explanation'], utilityNote: UTILITY_NOTE });
     // A profile given alone runs as it is, without the current overrides.
     const r2: any = await runAction('findBestSites', { candidates: { from: 'catalogue' }, profileId: 'polar-short' });
-    expect(r2.ok && r2.result).toMatchObject({ profile: { id: 'polar-short' }, overrides: {}, candidates: { from: 'catalogue', considered: 3, total: 3, cap: DECISION_CAPS.catalogue } });
+    expect(r2.ok && r2.result).toMatchObject({ profile: { id: 'polar-short' }, overrides: {}, candidates: { from: 'catalogue', considered: 3, total: 3 }, cap: DECISION_CAPS.catalogue, dropped: 0 });
   });
 
   it('findBestSites nearby: the scan with the profile\'s slope limit and weights, the best candidates measured, the pre-filter counted', async () => {
@@ -308,10 +321,12 @@ describe('decision tools (T-73)', () => {
     // No full analysis for scan candidates: their window metrics come from the scan.
     expect(calls.analyse).toHaveLength(0);
     expect(calls.region).toHaveLength(DECISION_CAPS.nearby);
-    expect(r.result.candidates).toMatchObject({ from: 'nearby', around: { id: 'im-2' }, scanned: 24, removedBySlopePrefilter: 2, withoutData: 1, considered: DECISION_CAPS.nearby, cap: DECISION_CAPS.nearby });
+    expect(r.result.candidates).toMatchObject({ from: 'nearby', around: { id: 'im-2' }, scanned: 24, removedBySlopePrefilter: 2, withoutData: 1, considered: DECISION_CAPS.nearby });
+    // 21 usable scan candidates, 15 measured: 6 over the cap.
+    expect(r.result).toMatchObject({ cap: DECISION_CAPS.nearby, dropped: 21 - DECISION_CAPS.nearby });
     expect(r.result.candidates.prefilter).toMatch(/^The scan's slope pre-filter at 10 deg/);
     expect(r.result.ranked).toHaveLength(3);
-    expect(r.result.top[0].metrics.values.sunlight.basis).toBe('Nearby scan: 1 deg skyline step, 30 min sampling.');
+    expect(r.result.evaluations[0].metrics.values.sunlight.basis).toBe('Nearby scan: 1 deg skyline step, 30 min sampling.');
     // Around another site, by name.
     await runAction('findBestSites', { candidates: { from: 'nearby', around: { landing: 'Apollo 11' }, radiusM: 500, spacingM: 250 } });
     expect(calls.nearby[1][0].site.id).toBe('apollo-11');

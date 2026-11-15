@@ -76,35 +76,32 @@ const NEARBY_MIN_SPACING_M = 50;
 // ---------------------------------------------------------------- progress
 
 /** Where a running tool is, for a status line (the "Rank sites" tab, T-74). */
-export interface DecisionProgress {
+export interface DecisionRun {
   running: boolean;
-  /** The action running, e.g. "findBestSites". */
-  action: string;
-  /** Candidates measured so far, and how many there are. */
+  /** Candidates measured so far, and how many there are (0 of 0 while a nearby scan starts). */
   done: number;
   total: number;
-  /** What is being measured now, e.g. "Analysing Apollo 15 (4 of 28)". */
+  /** What is being measured now, e.g. "Measuring Apollo 15 (4 of 28)" or "Scanning around IM-2 Athena (40 of 120)". */
   label: string;
 }
 
-class ProgressStore {
-  private value: DecisionProgress = { running: false, action: '', done: 0, total: 0, label: '' };
-  private readonly listeners = new Set<(p: DecisionProgress) => void>();
-  get(): DecisionProgress {
-    return this.value;
-  }
-  set(p: DecisionProgress): void {
-    this.value = p;
-    for (const fn of [...this.listeners]) fn(p);
-  }
-  subscribe(fn: (p: DecisionProgress) => void): () => void {
-    this.listeners.add(fn);
-    return () => this.listeners.delete(fn);
-  }
+let run: DecisionRun = { running: false, done: 0, total: 0, label: '' };
+const runListeners = new Set<(r: DecisionRun) => void>();
+const setRun = (r: DecisionRun) => {
+  run = r;
+  for (const fn of [...runListeners]) fn(r);
+};
+
+/** Progress of the decision tools now. One run at a time is reported (the latest). */
+export function decisionRun(): DecisionRun {
+  return run;
 }
 
-/** Progress of the decision tools: subscribe to show it. One run at a time is reported (the latest). */
-export const decisionProgress = new ProgressStore();
+/** Calls `fn` on every progress change; returns the unsubscribe. */
+export function onDecisionRun(fn: (r: DecisionRun) => void): () => void {
+  runListeners.add(fn);
+  return () => runListeners.delete(fn);
+}
 
 // ---------------------------------------------------------------- parameters (strict, D-3)
 
@@ -173,17 +170,6 @@ export function toOverrides(o: OverridesParam | undefined): ProfileOverrides {
   return { ...rest, ...(Object.keys(t).length && { thresholds: t }) };
 }
 
-/** Overrides on top of others: thresholds and weights per criterion, the rest replaced. */
-function mergeOverrides(a: ProfileOverrides, b: ProfileOverrides): ProfileOverrides {
-  return {
-    ...a,
-    ...b,
-    ...((a.window || b.window) && { window: { ...a.window, ...b.window } }),
-    ...((a.thresholds || b.thresholds) && { thresholds: { ...a.thresholds, ...b.thresholds } }),
-    ...((a.weights || b.weights) && { weights: { ...a.weights, ...b.weights } }),
-  };
-}
-
 // ---------------------------------------------------------------- results
 
 /** Rounds every number for a result: coordinates to 5 decimals (about 0.3 m), everything else to 3. */
@@ -197,9 +183,6 @@ export function roundDeep<T>(value: T, key = ''): T {
   if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, roundDeep(v, k)])) as T;
   return value;
 }
-
-/** The criteria that keep a site from being feasible, as their sentences. */
-const decidingReasons = (e: SiteEvaluation): string[] => e.criteria.filter((c) => c.verdict !== 'pass').map((c) => c.reason);
 
 const TIME_CRITERIA: readonly CriterionId[] = ['sunlight', 'darkness', 'earthVisibility', 'commBlackout'];
 const TERRAIN_CRITERIA: readonly CriterionId[] = ['slope', 'roughness'];
@@ -376,15 +359,15 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
   };
 
   /** Runs evaluateOne over a list, one at a time (the analysis worker takes one job at a time), reporting progress. */
-  const evaluateAll = async (action: string, profile: MissionProfile, items: { site: SiteRef; scan?: NearbyCandidate }[]): Promise<SiteEvaluation[]> => {
+  const evaluateAll = async (profile: MissionProfile, items: { site: SiteRef; scan?: NearbyCandidate }[]): Promise<SiteEvaluation[]> => {
     const out: SiteEvaluation[] = [];
     try {
       for (const [i, it] of items.entries()) {
-        decisionProgress.set({ running: true, action, done: i, total: items.length, label: `Measuring ${it.site.name} (${i + 1} of ${items.length})` });
+        setRun({ running: true, done: i, total: items.length, label: `Measuring ${it.site.name} (${i + 1} of ${items.length})` });
         out.push(await evaluateOne(profile, it.site, it.scan));
       }
     } finally {
-      decisionProgress.set({ running: false, action, done: out.length, total: items.length, label: '' });
+      setRun({ running: false, done: out.length, total: items.length, label: '' });
     }
     return out;
   };
@@ -419,27 +402,26 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       name: 'setDecisionSettings',
       title: 'Set decision settings',
       description:
-        'Chooses the mission profile and the overrides the decision tools use by default (shared with the "Rank sites" tab). `reset: true` goes back to the first profile without overrides first. A new profileId starts without overrides. Overrides are added to the current ones (thresholds and weights per criterion). A safety relaxation (loosening slope or roughness beyond the profile) is refused without allowSafetyRelaxation, and then nothing changes. The result is the settings after the change, as getDecisionSettings gives them.',
+        'Chooses the mission profile and the overrides the decision tools use by default (shared with the "Rank sites" tab). `overrides` REPLACES the stored overrides (send the whole set). `profileId` alone switches to that profile and clears the overrides. `reset: true` clears the overrides and keeps the profile. A safety relaxation (loosening or removing the slope or roughness limit beyond the profile) is refused without allowSafetyRelaxation, and then nothing changes. The result is the settings after the change, as getDecisionSettings gives them.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
           profileId: { type: 'string', description: 'Mission profile id (listMissionProfiles).' },
           overrides: OVERRIDES_SCHEMA,
-          reset: { type: 'boolean', description: 'Back to the first profile without overrides before applying the rest.' },
+          reset: { type: 'boolean', description: 'Clear the overrides (the profile stays).' },
         },
       },
       run: async ({ profileId, overrides, reset }) => {
         const list = await profiles();
         const s = state();
-        let id = reset ? '' : s.decisionProfileId;
-        let current: ProfileOverrides = reset ? {} : s.decisionOverrides;
+        let id = s.decisionProfileId;
         if (profileId !== undefined) {
           findProfile(list, profileId); // refuses an unknown id
-          if (profileId !== id) current = {};
           id = profileId;
         }
-        const next = overrides !== undefined ? mergeOverrides(current, toOverrides(overrides)) : current;
+        // Replaced when given; cleared by a profile switch or a reset; kept otherwise.
+        const next: ProfileOverrides = overrides !== undefined ? toOverrides(overrides) : profileId !== undefined || reset ? {} : s.decisionOverrides;
         const r = engineCall('apply the overrides', () => engine.resolveProfile(findProfile(list, id), next));
         if (r.refused.length) throw new ActionError(`Refused, nothing changed: ${r.refused.join(' ')}`);
         store.set({ decisionProfileId: id, decisionOverrides: next });
@@ -457,7 +439,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       run: async ({ site: sp, profileId, overrides }) => {
         const target = sp ? site(sp, 'site') : selectedSite();
         const r = await resolveFor({ profileId, overrides });
-        const [evaluation] = await evaluateAll('evaluateSite', r.profile, [{ site: target }]);
+        const [evaluation] = await evaluateAll(r.profile, [{ site: target }]);
         return { ...echo(r), evaluation: roundDeep(evaluation), utilityNote: UTILITY_NOTE };
       },
     }),
@@ -476,7 +458,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
         const a = site(siteA, 'siteA'), b = site(siteB, 'siteB');
         if (a.id === b.id) throw new ActionError('siteA and siteB are the same site.');
         const r = await resolveFor({ profileId, overrides });
-        const [ea, eb] = await evaluateAll('compareSites', r.profile, [{ site: a }, { site: b }]);
+        const [ea, eb] = await evaluateAll(r.profile, [{ site: a }, { site: b }]);
         const comparison = engineCall('compare the sites', () => engine.compareEvaluations(ea, eb));
         return { ...echo(r), comparison: roundDeep(comparison), utilityNote: UTILITY_NOTE };
       },
@@ -490,7 +472,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       description:
         'Measures and ranks candidate sites for a mission profile. Candidates: {from: "catalogue"} (every catalogued landing), {from: "sites", sites: [...]} (up to 12), or {from: "nearby", around?, radiusM, spacingM} (a grid around a site, default the selected one, from the nearby scan with its faster settings and its slope pre-filter; the best ' +
         `${DECISION_CAPS.nearby} by the scan's own score are measured fully). Only feasible sites are ranked (by utility, ties by site id), with the Pareto front; unknown and infeasible sites are listed with the criteria that decided them. ` +
-        'Returns the top `limit` (default 5), the counts, the Pareto ids, explanation sentences and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
+        'Returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
       effect: 'query',
       params: {
         type: 'object',
@@ -520,6 +502,8 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
         };
         let items: { site: SiteRef; scan?: NearbyCandidate }[] = [];
         let source: Record<string, unknown>;
+        let cap: number;
+        let dropped = 0;
         // Check the candidates before any measuring.
         if (c.from === 'catalogue') {
           only([]);
@@ -535,11 +519,14 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           const all = ctx.landings();
           const kept = all.slice(0, DECISION_CAPS.catalogue);
           items = kept.map((l) => ({ site: landingSite(l) }));
-          source = { from: 'catalogue', considered: kept.length, total: all.length, cap: DECISION_CAPS.catalogue };
+          source = { from: 'catalogue', considered: kept.length, total: all.length };
+          cap = DECISION_CAPS.catalogue;
+          dropped = all.length - kept.length;
         } else if (c.from === 'sites') {
           const seen = new Set<string>();
           items = c.sites!.map((sp, i) => site(sp, `candidates.sites[${i}]`)).filter((s) => !seen.has(s.id) && seen.add(s.id)).map((s) => ({ site: s }));
-          source = { from: 'sites', considered: items.length, cap: DECISION_CAPS.sites };
+          source = { from: 'sites', considered: items.length };
+          cap = DECISION_CAPS.sites;
         } else {
           const centre = c.around ? site(c.around, 'candidates.around') : selectedSite();
           const scenario = scenarioFor(r.profile, centre);
@@ -554,15 +541,18 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           };
           let scan: NearbyCandidate[];
           try {
-            decisionProgress.set({ running: true, action: 'findBestSites', done: 0, total: 0, label: `Scanning around ${centre.name}` });
+            setRun({ running: true, done: 0, total: 0, label: `Scanning around ${centre.name}` });
             scan = await rankNearby(scenario, options, (done, total) =>
-              decisionProgress.set({ running: true, action: 'findBestSites', done, total, label: `Scanning around ${centre.name} (${done} of ${total})` }),
+              setRun({ running: true, done, total, label: `Scanning around ${centre.name} (${done} of ${total})` }),
             );
           } catch (err) {
-            decisionProgress.set({ running: false, action: 'findBestSites', done: 0, total: 0, label: '' });
+            setRun({ running: false, done: 0, total: 0, label: '' });
             throw new ActionError(`The nearby scan around ${centre.name} could not run: ${message(err)}`);
           }
-          const kept = scan.filter((x) => !x.rejected).sort((a, b) => a.rank - b.rank).slice(0, DECISION_CAPS.nearby);
+          const usable = scan.filter((x) => !x.rejected).sort((a, b) => a.rank - b.rank);
+          const kept = usable.slice(0, DECISION_CAPS.nearby);
+          cap = DECISION_CAPS.nearby;
+          dropped = usable.length - kept.length;
           const reference = scan.find((x) => x.isReference);
           if (reference && !kept.includes(reference)) kept.push(reference);
           items = kept.map((x) => ({ site: x.site, scan: x }));
@@ -575,26 +565,28 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
             removedBySlopePrefilter: scan.filter((x) => x.rejected === 'slope').length,
             withoutData: scan.filter((x) => x.rejected === 'no-data').length,
             considered: items.length,
-            cap: DECISION_CAPS.nearby,
             prefilter: `The scan's slope pre-filter at ${options.slopeLimitDeg} deg (the profile's slope limit), on its own coarser settings: ${scan[0]?.basis ?? 'no candidates'}`,
           };
         }
-        const evaluations = await evaluateAll('findBestSites', r.profile, items);
+        const evaluations = await evaluateAll(r.profile, items);
         const ranking = engineCall('rank the sites', () => engine.rankEvaluations(evaluations, r.profile, r.relaxations));
         const top = ranking.ranked.slice(0, limit);
         const byId = new Map(ranking.evaluations.map((e) => [e.site.id, e]));
-        const listed = (f: 'unknown' | 'infeasible') =>
-          ranking.evaluations.filter((e) => e.feasibility === f).map((e) => ({ siteId: e.site.id, name: e.site.name, reasons: decidingReasons(e) }));
+        const shown = [
+          ...top.map((t) => byId.get(t.siteId)).filter((e): e is SiteEvaluation => Boolean(e)),
+          ...ranking.evaluations.filter((e) => e.feasibility === 'unknown'),
+          ...ranking.evaluations.filter((e) => e.feasibility === 'infeasible'),
+        ];
         return {
           ...echo(r),
-          candidates: source,
-          counts: ranking.counts,
           ranked: roundDeep(top),
-          top: roundDeep(top.map((t) => byId.get(t.siteId)).filter((e): e is SiteEvaluation => Boolean(e))),
           paretoFront: ranking.paretoFront,
-          unknown: listed('unknown'),
-          infeasible: listed('infeasible'),
+          counts: ranking.counts,
           explanation: ranking.explanation,
+          evaluations: roundDeep(shown),
+          cap,
+          dropped,
+          candidates: source,
           utilityNote: UTILITY_NOTE,
         };
       },
