@@ -1,8 +1,9 @@
 .region-compass { display: flex; align-items: flex-end; gap: var(--sp-2); }
-.relief-chip { display: grid; gap: 1px; padding-bottom: var(--sp-1); max-width: 216px; text-shadow: 0 1px 4px #000, 0 0 2px #000; pointer-events: none; }
+/* A dark backing keeps the label readable over bright terrain and over the colour overlays. */
+.relief-chip { display: grid; gap: 1px; padding: var(--sp-1) var(--sp-2); max-width: 232px; border-radius: var(--radius-sm); background: rgba(8, 10, 14, 0.62); pointer-events: none; }
 .relief-factor { font-size: var(--fs-sm); font-weight: var(--fw-medium); }
 .relief-note { line-height: var(--lh-tight); }
 .relief-note:empty { display: none; }
 @media (max-width: 700px) {
-  .relief-chip { max-width: 150px; }
+  .relief-chip { max-width: 168px; }
 }
