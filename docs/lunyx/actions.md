@@ -59,7 +59,7 @@ Check columns:
 | `stopCompare` | core | | compare panel close, Escape | C D |
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
-| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30) | Filters: Terrain relief, Exaggeration | C D E |
+| `setReliefExaggeration` | globe display (@globe) | `factor` (0 = off, 1 = true scale; never exaggerated) | none (assistant and actions only) | C D E |
 | `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |

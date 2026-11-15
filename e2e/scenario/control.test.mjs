@@ -97,7 +97,6 @@ function screen(page) {
         mast: labelled('Mast height')?.value,
         window: labelled('Mission window')?.value,
         delay: labelled('Arrival delay')?.value,
-        relief: labelled('Exaggeration')?.value,
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
@@ -230,10 +229,11 @@ const CASES = [
     await shows(page, (s) => s.filters.crewedPressed === 'true' && s.filters.landingCount === `${r.shown} of ${r.total} landings`, 'Crewed pressed and the landing count');
     await run(page, 'setFilters', { reset: true });
   } },
-  { name: 'setReliefExaggeration', params: { factor: 5 }, check: async (r, page) => {
-    assert.equal(r.reliefExaggeration, 5);
-    await shows(page, (s) => s.filters.relief === '5', 'relief selector');
-    await run(page, 'setReliefExaggeration', { factor: 10 });
+  { name: 'setReliefExaggeration', params: { factor: 0 }, check: async (r, page) => {
+    assert.equal(r.reliefExaggeration, 0);
+    // Heights are never exaggerated: more than true scale is refused.
+    assert.equal((await page.evaluate(() => window.lunyx.actions.runAction('setReliefExaggeration', { factor: 5 }, 'test'))).ok, false);
+    await run(page, 'setReliefExaggeration', { factor: 1 });
   } },
   { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
     assert.equal(r.coverageShown, true);
@@ -636,7 +636,7 @@ describe('control: every action through deterministic mode, by its phrase', () =
     const steps = [
       ['setAssistantOpen', { open: true }], ['stopCompare'], ['clearComparison'], ['exitSurface'], ['clearSite'], ['pause'], ['setLightMode', { mode: 'real' }],
       ['setDelay', { hours: 0 }], ['setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true }], ['setMastHeight', { metres: 2 }], ['setSunBand', { minDeg: 0, maxDeg: 90 }],
-      ['setOverlay', { mode: 'off' }], ['showMissions', { show: true }], ['setFilters', { reset: true }], ['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }],
+      ['setOverlay', { mode: 'off' }], ['showMissions', { show: true }], ['setFilters', { reset: true }], ['setReliefExaggeration', { factor: 1 }], ['showCoverage', { show: false }],
       ['showIceTargets', { show: false }], ['setLocatorZoom', { zoom: 1 }], ['showPanel', { panel: 'site-details', open: true }],
     ];
     for (const [name, params] of steps) if (await has(page, name)) await run(page, name, params ?? {});

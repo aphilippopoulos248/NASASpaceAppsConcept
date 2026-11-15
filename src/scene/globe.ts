@@ -13,6 +13,9 @@ import {
 
 const TEX = `${import.meta.env.BASE_URL}textures/`;
 
+/** How much the heights were stretched when the bundled normal maps were computed (scripts/fetch-textures.mjs). */
+const BAKED_RELIEF_EXAGGERATION = 4;
+
 /**
  * The Moon's surface material: equirectangular colour and normal maps. Resolves once the
  * 2K colour map is loaded, then swaps in the normal map and a sharper colour map. The
@@ -39,6 +42,10 @@ export async function createMoonMaterial(renderer: WebGLRenderer): Promise<MeshS
   const hiRes = capable ? '8k' : '4k';
 
   // Shading detail: the 4K normal map first, then (on capable devices) the sharper 8K one built from LOLA 64 px/degree data.
+  // The bundled normal maps were computed with the heights stretched 4 times
+  // (RELIEF_EXAGGERATION in scripts/fetch-textures.mjs). Scaling the tangent components
+  // by 1/4 undoes that exactly, so the globe is shaded with the true slopes.
+  material.normalScale.setScalar(1 / BAKED_RELIEF_EXAGGERATION);
   const setNormal = (t: Texture) => {
     t.anisotropy = anisotropy;
     const old = material.normalMap;

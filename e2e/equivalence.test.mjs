@@ -118,7 +118,7 @@ async function reset(site = null) {
       await run('setFilters', { reset: true });
       await run('setLocatorZoom', { zoom: 1 });
       await run('showPanel', { panel: 'site-details', open: true });
-      for (const [n, p] of [['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }]]) {
+      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }]]) {
         if (window.lunyx.actions.getAction(n)) await run(n, p);
       }
       if (siteId) await run('selectSite', { site: siteId, fly: false });
@@ -669,9 +669,7 @@ describe('equivalence: controls added since the 33-action build', () => {
   };
   const hudButton = (name) => page.locator('.surface-hud .sh-controls').getByRole('button', { name, exact: true });
 
-  test('Filters: relief exaggeration, coverage and ice-target outlines', SLOW, async () => {
-    const relief = await equivalent({ ui: () => filters().getByLabel('Exaggeration').selectOption('5'), expect: 'setReliefExaggeration', action: ['setReliefExaggeration', { factor: 5 }], keys: ['display'] });
-    assert.equal(relief.display.relief, 5);
+  test('Filters: coverage and ice-target outlines', SLOW, async () => {
     const cover = await equivalent({ ui: () => filters().getByLabel('Show elevation data coverage').check(), expect: 'showCoverage', action: ['showCoverage', { show: true }], keys: ['display'] });
     assert.equal(cover.display.coverage, true);
     const ice = await equivalent({ ui: () => filters().getByLabel('Show mapped ice targets').check(), expect: 'showIceTargets', action: ['showIceTargets', { show: true }], keys: ['display'] });

@@ -223,20 +223,12 @@ export function selectTiles(view: LodView, available: (t: TileId) => boolean, vi
   return rootTiles().flatMap((t) => cover(t) ?? []);
 }
 
-// ---------------------------------------------------------------- exaggeration
-
-/** Below this camera altitude relief is drawn true to scale; above `FULL_EXAGGERATION_KM` at the chosen factor. */
-export const TRUE_SCALE_BELOW_KM = 100;
-export const FULL_EXAGGERATION_KM = 1500;
+// ---------------------------------------------------------------- relief scale
 
 /**
- * The exaggeration actually drawn. Relief has to be stretched to be seen from far away
- * (10 km of relief is half a percent of the Moon's radius), but near the ground a stretched
- * landscape would misstate every slope, so the factor eases to 1 as the camera descends.
- * A chosen factor of 0 (smooth sphere) or 1 (true scale) applies at every altitude.
+ * The relief scale actually drawn: 0 (smooth sphere) to 1 (true scale). Heights are never
+ * stretched beyond their true size, whatever is asked for.
  */
-export function effectiveRelief(factor: number, altitudeKm: number): number {
-  if (!(factor > 1)) return Math.max(0, factor);
-  const t = clamp((altitudeKm - TRUE_SCALE_BELOW_KM) / (FULL_EXAGGERATION_KM - TRUE_SCALE_BELOW_KM), 0, 1);
-  return 1 + (factor - 1) * t * t * (3 - 2 * t);
+export function effectiveRelief(factor: number): number {
+  return clamp(factor, 0, 1);
 }

@@ -17,7 +17,6 @@ import { globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
-import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import { committedPoint, fieldText, pinPoint, viewPoint, type Written } from './centreFields';
@@ -336,8 +335,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const syncDisplay = () => {
     const d = globeDisplay.get(), live = globeDisplay.getLive();
     const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
-    const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
-    reliefNote.textContent = `${data}${rule}`;
+    reliefNote.textContent = live.reliefPpd ? `${data} Drawn now: ${reliefText(live.reliefNow)}.` : data;
     coverBox.checked = d.coverage;
     coverLegend.hidden = !d.coverage;
     iceBox.checked = d.iceTargets;

@@ -232,7 +232,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     compareB: null,
     comparing: false,
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
-    reliefFactor: 10,
+    reliefFactor: 1,
     coverage: false,
     iceTargets: false,
     locatorZoom: 1,
@@ -611,7 +611,6 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     const display = () => ({
       reliefExaggeration: state.reliefFactor,
       reliefDrawnNow: state.reliefFactor,
-      reliefRule: state.reliefFactor > 1 ? 'The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km.' : null,
       reliefDataSamplesPerDegree: 16,
       coverageShown: state.coverage,
       iceTargetsShown: state.iceTargets,
@@ -621,7 +620,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     const bool = (name: string, title: string, key: 'coverage' | 'iceTargets') =>
       defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
     actions.push(
-      defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
+      defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Terrain relief scale', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 1 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
       bool('showCoverage', 'Show elevation data coverage', 'coverage'),
       bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
       defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),

@@ -96,7 +96,7 @@ without downloading again.
 - **Relief (8K):** LOLA Gridded Data Record `LDEM_64.IMG` (64 px per degree, about 474 m), PDS Geosciences mirror at
   MIT (<https://imbrium.mit.edu/DATA/LOLA_GDR/CYLINDRICAL/IMG/>), turned into `moon_normal_8k.webp`. Loaded on
   desktop only.
-- **Exaggeration:** relief is shaded at 4× its true height so craters read at globe scale.
+- **Exaggeration:** the normal maps were computed with the relief at 4× its true height; the app scales them back by 1/4 (`src/scene/globe.ts`), so the globe is shaded and drawn at true scale.
 - **Credit:** NASA / GSFC / Arizona State University (LROC); NASA / GSFC (LOLA); NASA Scientific Visualization
   Studio. NASA data is generally not subject to copyright in the US.
 
