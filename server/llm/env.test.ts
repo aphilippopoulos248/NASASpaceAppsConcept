@@ -61,3 +61,12 @@ describe('redaction', () => {
     expect(redact('nothing secret', [KEY])).toBe('nothing secret');
   });
 });
+
+describe('credentials the SDK reads itself are still redacted (7dabe03 left only the sk-ant- pattern)', () => {
+  it('keeps an explicit ANTHROPIC_API_KEY and ANTHROPIC_AUTH_TOKEN among the secrets', () => {
+    const cfg = loadConfig({ processEnv: { ANTHROPIC_API_KEY: 'plain-key-CANARY-1', ANTHROPIC_AUTH_TOKEN: 'token-CANARY-2' }, root: '/nonexistent-lunyx-root' });
+    expect(cfg.secrets).toEqual(expect.arrayContaining(['plain-key-CANARY-1', 'token-CANARY-2']));
+    expect(redact('failed with plain-key-CANARY-1 and token-CANARY-2', cfg.secrets)).toBe('failed with [redacted] and [redacted]');
+    expect(loadConfig({ processEnv: {}, root: '/nonexistent-lunyx-root' }).secrets).toEqual([]);
+  });
+});

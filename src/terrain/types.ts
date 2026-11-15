@@ -125,3 +125,24 @@ export interface CoverageRegion {
   /** True when the data is not bundled: the elevation server builds it on request (needs network access). */
   onDemand?: boolean;
 }
+
+/** Slope and roughness over the landing region around a site (decision engine, D-17; implemented in src/terrain/region.ts). */
+export interface RegionTerrain {
+  /** Centre of the region. */
+  lat: number;
+  lon: number;
+  radiusM: number;
+  /** Name and spacing of the finest elevation grid that covers the whole region. */
+  demName: string;
+  gridSpacingM: number;
+  /** Number of grid samples inside the region. */
+  samples: number;
+  /** Slope criterion value (see definition in the design note), degrees; null when not measurable. */
+  slopeDeg: number | null;
+  /** Roughness / hazard proxy, metres (e.g. RMS height residual after a plane fit); null when the grid is too coarse to say anything about it. */
+  roughnessM: number | null;
+  /** Share of local slopes over the profile's slope threshold, 0..1, when measurable. Informative only. */
+  hazardFraction?: number | null;
+  /** Sentences: resolution caveats, what is invisible at this spacing. */
+  notes: string[];
+}

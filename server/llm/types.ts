@@ -23,6 +23,12 @@ export interface ProviderRequest {
 export interface LlmProvider {
   readonly info: ModelInfo;
   step(req: ProviderRequest): AsyncIterable<StepEvent>;
+  /**
+   * Null when the provider can answer, else the reason it cannot (for the Claude API: no
+   * credentials the SDK can resolve). The handler then answers no_model, as with no provider,
+   * so the browser uses its labelled deterministic mode. Optional: a provider without it is ready.
+   */
+  ready?(): Promise<string | null>;
 }
 
 /**

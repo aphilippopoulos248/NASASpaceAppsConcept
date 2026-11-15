@@ -89,7 +89,7 @@ export const defaultDeps: HandlerDeps = {
   log: (line) => console.warn(line),
 };
 
-function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | null; router: LlmRouter | null; reason?: string } {
+async function resolve(deps: HandlerDeps): Promise<{ cfg: LlmConfig; provider: LlmProvider | null; router: LlmRouter | null; reason?: string }> {
   const cfg = deps.loadConfig();
   if (cfg.provider === 'none') return { cfg, provider: null, router: null, reason: cfg.reason ?? 'No language model is configured on this server.' };
   const router = (deps.router ?? defaultRouter)(cfg);
@@ -99,11 +99,15 @@ function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | n
     const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'No Claude credentials found. Run `ant auth login` to authenticate with your Claude subscription, then restart the server.';
     return { cfg, provider: null, router: null, reason: why };
   }
+  // A provider that cannot answer (no credentials) counts as none: the browser then uses its
+  // deterministic mode from the start, instead of failing on every message.
+  const problem = provider.ready ? await provider.ready() : null;
+  if (problem) return { cfg, provider: null, router: null, reason: redact(problem, cfg.secrets) };
   return { cfg, provider, router };
 }
 
-function status(deps: HandlerDeps): AssistantStatus {
-  const r = resolve(deps);
+async function status(deps: HandlerDeps): Promise<AssistantStatus> {
+  const r = await resolve(deps);
   return r.provider ? { available: true, model: r.provider.info, router: r.cfg.router } : { available: false, model: null, router: r.cfg.router, reason: r.reason };
 }
 
@@ -112,13 +116,13 @@ const line = (e: StepEvent): string => `${JSON.stringify(e)}\n`;
 export function createAssistantHandler(deps: HandlerDeps = defaultDeps): (req: HttpRequest) => Promise<HttpResponse> {
   return async (req): Promise<HttpResponse> => {
     if (req.subpath && req.subpath !== '/') return { status: 404, json: { error: { kind: 'invalid_request', message: 'Unknown assistant endpoint.' } satisfies WireError } };
-    if (req.method === 'GET' || req.method === 'HEAD') return { status: 200, json: status(deps) };
+    if (req.method === 'GET' || req.method === 'HEAD') return { status: 200, json: await status(deps) };
     if (req.method !== 'POST') return { status: 405, headers: { allow: 'GET, POST' }, json: { error: { kind: 'invalid_request', message: 'Use GET for the status or POST for a conversation step.' } satisfies WireError } };
 
     const parsed = validateStepRequest(req.body);
     if (!parsed.ok) return { status: 400, json: { error: { kind: 'invalid_request', message: parsed.error } satisfies WireError } };
 
-    const r = resolve(deps);
+    const r = await resolve(deps);
     if (!r.provider || !r.router) return { status: 503, json: { error: { kind: 'no_model', message: r.reason ?? 'No language model is configured on this server.' } satisfies WireError } };
 
     const request: ProviderRequest = { system: SYSTEM_PROMPT, tools: parsed.value.tools, messages: parsed.value.messages, signal: req.signal };
