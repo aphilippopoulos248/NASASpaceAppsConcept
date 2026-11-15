@@ -1,8 +1,9 @@
-// Mission filters: program, country, crewed/robotic and the year range. Reads the mission
-// filter store and changes it only through the setFilters action.
+// Mission filters: country (also the colour key for the markers), program, crewed/robotic and the
+// year range. Reads the mission filter store and changes it only through the setFilters action.
 import { runAction } from '../core/actions';
 import { isDefaultFilter, landingYear, matchesFilter, MissionFilter, missionFilter, MissionType } from '../core/missionFilter';
-import { Landing, programColor } from '../data/landings';
+import { countryColor, Landing, landingColor } from '../data/landings';
+import { displayCountry } from '../data/ownership';
 import { button, el } from './dom';
 import './filters.css';
 
@@ -20,28 +21,29 @@ export function mountMissionFilters(root: HTMLElement, landings: readonly Landin
     return all.filter((k) => set.has(k));
   };
 
-  // Programs
-  root.append(el('h3', 'ly-section-title', 'Program'));
-  const progList = el('div', 'mf-programs');
-  for (const program of programs) {
-    const n = landings.filter((l) => l.program === program).length;
+  // Countries: the colour key for the markers. USSR landings are shown as Russia, its successor.
+  root.append(el('h3', 'ly-section-title', 'Country'));
+  const countryList = el('div', 'mf-programs');
+  for (const country of countries) {
+    const n = landings.filter((l) => l.country === country).length;
+    const name = displayCountry(country);
     const b = button('', 'mf-row');
     const sw = el('span', 'ly-swatch');
-    sw.style.background = programColor(program);
-    b.append(sw, el('span', 'mf-label', program), el('span', 'ly-value mf-count', String(n)));
-    b.setAttribute('aria-label', `${program}, ${n} landings`);
-    b.addEventListener('click', () => void runAction('setFilters', { programs: toggled(missionFilter.get().programs, programs, program) }));
-    sync.push((f) => b.setAttribute('aria-pressed', String(shown(f.programs, program))));
-    progList.append(b);
+    sw.style.background = countryColor(country);
+    b.append(sw, el('span', 'mf-label', name), el('span', 'ly-value mf-count', String(n)));
+    b.setAttribute('aria-label', `${name}, ${n} landing${n === 1 ? '' : 's'}`);
+    b.addEventListener('click', () => void runAction('setFilters', { countries: toggled(missionFilter.get().countries, countries, country) }));
+    sync.push((f) => b.setAttribute('aria-pressed', String(shown(f.countries, country))));
+    countryList.append(b);
   }
-  root.append(progList);
+  root.append(countryList);
 
-  // Countries
-  root.append(el('h3', 'ly-section-title', 'Country'));
+  // Programs
+  root.append(el('h3', 'ly-section-title', 'Program'));
   const chips = el('div', 'ly-chips');
-  for (const country of countries) {
-    const chip = button(country, 'ly-btn ly-btn--small', () => void runAction('setFilters', { countries: toggled(missionFilter.get().countries, countries, country) }));
-    sync.push((f) => chip.setAttribute('aria-pressed', String(shown(f.countries, country))));
+  for (const program of programs) {
+    const chip = button(program, 'ly-btn ly-btn--small', () => void runAction('setFilters', { programs: toggled(missionFilter.get().programs, programs, program) }));
+    sync.push((f) => chip.setAttribute('aria-pressed', String(shown(f.programs, program))));
     chips.append(chip);
   }
   root.append(chips);
@@ -74,7 +76,7 @@ export function mountMissionFilters(root: HTMLElement, landings: readonly Landin
     const d = new Date(`${l.date}T00:00:00Z`);
     const tick = el('span', 'mf-tick');
     tick.style.left = `${pct(d.getUTCFullYear() + d.getUTCMonth() / 12)}%`;
-    tick.style.background = programColor(l.program);
+    tick.style.background = landingColor(l);
     track.append(tick);
     ticks.push({ node: tick, landing: l });
   }
