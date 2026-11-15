@@ -64,7 +64,7 @@ the connecting ridge. For example, Earth's last limb at IM-2 on 20 March went fr
 Converted with the rates implied by the validator's own scoring, they come to about 0.003 deg of
 skyline or less. The validator's own run with its skyline read every 0.5 deg left 0.004 deg, so the
 rest is the difference between the two ray marches, not the azimuth step. Full lists:
-/tmp/lunyx-t50/worst.txt (all instants, main profile and fine skyline, at the three pins).
+`docs/lunyx/handover/T-50-worst-cases.txt` (all instants, main profile and fine skyline, at the three pins).
 
 Blue Ghost (15 days, catalogue position) moves by seconds: first cut 18:24:23 -> 18:24:14, last limb
 19:30:47 unchanged. At the old pin the first cut stays at 18:23:36 (validator 18:23:40). The
