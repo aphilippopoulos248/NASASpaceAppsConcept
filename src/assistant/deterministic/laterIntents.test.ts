@@ -45,32 +45,51 @@ describe('deterministic mode: how the globe is drawn', () => {
     state = installFakeApp(ALL_ACTIONS);
   });
 
-  it('sets the explored areas\' drawn size apart from the relief, without calling the factor a width multiple (T-64: setTerritoryScale)', async () => {
+  it('reads no territory setting as the relief (T-67 removed setTerritoryScale)', async () => {
     const e = engine();
-    const cases: [string, number][] = [
-      ['territory size x25', 25],
-      ['draw the explored areas 10 times wider', 10],
-      ['territory size exaggeration 50', 50],
-      ['territories at true size', 1],
-    ];
-    for (const [say, factor] of cases) {
-      const r = await e.reply(say);
-      expect(r.understood, say).toBe(true);
-      expect(state.territoryScale, say).toBe(factor);
-    }
-    // "Exaggeration" alone is still the relief: the territory words decide.
+    const r = await e.reply('territory size exaggeration 50');
+    expect(r.understood).toBe(false);
     expect(state.reliefFactor).toBe(10);
-    // The factor is a display setting, not a width multiple: the reply never says "N times wider".
-    const said = (await e.reply('territory size x25')).text;
-    expect(said).toBe('Territory size exaggeration set to 25, the Filters setting of that name: a display setting, not a width multiplier; only the drawing changes, not the sizes on the site card.');
-    expect(said).not.toMatch(/times wider|×25/);
-    // With a landing selected, its area as drawn, in the card's words (selectedSiteArea.text).
-    await e.reply('go to IM-2');
-    const atSite = (await e.reply('territory size x25')).text;
-    expect(atSite).toContain('At IM-2 Athena the explored area is about 40 m across (drawn 13× larger in width from orbit, about 520 m across, so it can be seen; true size close to the ground).');
-    const tooMuch = await e.reply('territory size x500');
-    expect(tooMuch.text).toContain('params.factor must be at most 100');
-    expect(state.territoryScale).toBe(25);
+  });
+
+  it('says what the territories and flags draw, from the real results (T-67: territoriesShown, territoryRule, flagsShown)', async () => {
+    const e = engine();
+    const RULE = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
+    const FLAGS = 'A flag names who the hardware belongs to, not a claim to the ground: no country owns lunar ground.';
+    expect((await e.reply('show territories')).text).toBe(`The globe is coloured by the country of the nearest landing shown. ${RULE}`);
+    expect((await e.reply('show country flags')).text).toBe(`Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia). ${FLAGS}`);
+    expect((await e.reply('show previous missions')).text).toBe('Previous landings are shown on the globe. The whole Moon is coloured by the country of the nearest landing shown: it shows who landed nearest, not ownership; no country owns lunar ground. Each marker carries the flag of the state its hardware belongs to.');
+    // The landings hidden: nothing of either is drawn, and the replies say why.
+    expect((await e.reply('hide previous missions')).text).toBe('Previous landings are hidden. The territory colouring is hidden with them.');
+    expect((await e.reply('show territories')).text).toBe(`Country territories are switched on, but nothing is drawn while previous missions are hidden (say "show previous missions" to see them). ${RULE}`);
+    expect((await e.reply('show country flags')).text).toBe(`Country flags are switched on, but no flag is drawn while previous missions are hidden (say "show previous missions" to see them). ${FLAGS}`);
+    // The filters hiding every landing: the same, for the other reason.
+    await e.reply('show previous missions');
+    // Filters that no landing passes (no catalogued landing after 2099).
+    state.filter = { ...state.filter, fromYear: 2100 };
+    expect((await e.reply('show territories')).text).toBe(`Country territories are switched on, but nothing is drawn while the mission filters hide every landing (say "reset the filters" to see them). ${RULE}`);
+    expect((await e.reply('show previous missions')).text).toBe('Previous landings are shown on the globe. The mission filters hide every landing, though: say "reset the filters" to see them.');
+    await e.reply('reset the filters');
+    expect((await e.reply('hide territories')).text).toBe('The country territories are hidden.');
+  });
+
+  it('falls back to getState on a build whose results do not say what is drawn (before @globe\'s T-67 commit)', async () => {
+    installFakeApp({ ...ALL_ACTIONS, drawnLayers: false });
+    const e = engine();
+    expect((await e.reply('show territories')).text).toBe('The globe is coloured by the country of the nearest landing shown. It shows who landed nearest, not ownership: no country owns lunar ground.');
+    await e.reply('hide previous missions');
+    expect((await e.reply('show territories')).text).toContain('nothing is drawn while previous missions are hidden');
+    expect((await e.reply('show country flags')).text).toContain('no flag is drawn while previous missions are hidden');
+  });
+
+  it('quotes a preset\'s caveat, and for the eclipse what was reported (T-67)', async () => {
+    const e = engine();
+    const list = (await e.reply('list the presets')).text;
+    expect(list).toContain('IM-2 Athena, Mons Mouton (say "replay im-2-landing")');
+    expect(list).toContain('Caveat: The touchdown minute is not confirmed by an official source');
+    const eclipse = (await e.reply('replay the eclipse')).text;
+    expect(eclipse).toContain('The times of the Sun behind Earth are computed by this app. Reported for the lander: eclipse from 05:00 to about 09:52 UTC.');
+    expect((await e.reply('replay blue-ghost-landing')).text).not.toMatch(/Caveat|Reported/);
   });
 
   it('sets the relief exaggeration from several phrasings, and says what the factor means', async () => {

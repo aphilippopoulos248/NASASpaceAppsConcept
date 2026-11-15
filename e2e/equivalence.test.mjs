@@ -85,12 +85,13 @@ function snapshot() {
       sunBand: s.sunBandDeg,
       overlay: s.overlay,
       showMissions: s.showMissions,
+      territories: s.showTerritories ?? null,
       filter: s.missionsShown.filter,
       shown: s.missionsShown.shown,
       assistantOpen: raw.assistantOpen,
       comparing: raw.comparing,
       flags: s.showFlags ?? null,
-      display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, territory: s.globeDisplay.territoryScale ?? null, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
+      display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
       slots: { A: s.compare.A, B: s.compare.B },
       compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
       panels: s.panels ?? null,
@@ -134,7 +135,7 @@ async function reset(site = null) {
       await run('setFilters', { reset: true });
       await run('setLocatorZoom', { zoom: 1 });
       await run('showPanel', { panel: 'site-details', open: true });
-      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['setTerritoryScale', { factor: 100 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }], ['resetSurfacePanels', {}]]) {
+      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['showTerritories', { show: false }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }], ['resetSurfacePanels', {}]]) {
         if (window.lunyx.actions.getAction(n)) await run(n, p);
       }
       if (siteId) await run('selectSite', { site: siteId, fly: false });
@@ -684,11 +685,29 @@ describe('equivalence: controls added since the 33-action build', () => {
     await until(page, () => document.body.dataset.view === 'surface' && window.lunyx.actions.getAction('getSurfaceView') !== undefined);
   };
   const hudButton = (name) => page.locator('.surface-hud .sh-controls').getByRole('button', { name, exact: true });
+  // Since pull request #4 the strip is one row: Track Sun and Track Earth, then the "Surface
+  // options" disclosure (Sky paths, Generated detail, Skyline chart, Return to site), whose buttons
+  // a person reaches by opening it first.
+  const optionButton = async (name) => {
+    const menu = page.locator('.surface-hud details.sh-options');
+    if (!(await menu.evaluate((d) => d.open))) await menu.locator('summary').click();
+    return hudButton(name);
+  };
 
-  // The relief has had no control of its own since T-64 (setReliefExaggeration is the assistant's alone).
-  test('Filters: territory size, coverage and ice-target outlines', SLOW, async () => {
-    const territory = await equivalent({ ui: () => filters().getByLabel('Territory size exaggeration').selectOption('25'), expect: 'setTerritoryScale', action: ['setTerritoryScale', { factor: 25 }], keys: ['display'] });
-    assert.equal(territory.display.territory, 25);
+  // The relief has had no control of its own since T-64 (setReliefExaggeration is the assistant's
+  // alone), and T-67 removed the territory size select (setTerritoryScale) with it.
+  test('Filters: "Show country territories" = showTerritories, and disabled while previous missions are hidden (T-67)', SLOW, async () => {
+    const box = () => filters().getByLabel('Show country territories');
+    const s = await equivalent({ ui: () => box().check(), expect: 'showTerritories', action: ['showTerritories', { show: true }], keys: ['territories', 'showMissions'] });
+    assert.deepEqual([s.territories, s.showMissions], [true, true]);
+    // Territories are drawn only with the landings: with them hidden the checkbox cannot be used.
+    await reset();
+    await result(page, 'showMissions', { show: false });
+    await until(page, () => [...document.querySelectorAll('.filters-panel label.ly-check')].find((l) => l.textContent.includes('Show country territories'))?.querySelector('input')?.disabled === true);
+    assert.equal(await box().isDisabled(), true);
+  });
+
+  test('Filters: coverage and ice-target outlines', SLOW, async () => {
     const cover = await equivalent({ ui: () => filters().getByLabel('Show elevation data coverage').check(), expect: 'showCoverage', action: ['showCoverage', { show: true }], keys: ['display'] });
     assert.equal(cover.display.coverage, true);
     const ice = await equivalent({ ui: () => filters().getByLabel('Show mapped ice targets').check(), expect: 'showIceTargets', action: ['showIceTargets', { show: true }], keys: ['display'] });
@@ -735,24 +754,24 @@ describe('equivalence: controls added since the 33-action build', () => {
   });
 
   // Pull request #2: the HUD's "Face Sun" / "Face Earth" became the toggles "Track Sun" / "Track Earth".
-  test('surface HUD: Track Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
+  test('surface HUD: Track Sun, and in "Surface options" Sky paths, Generated detail, Return to site, the chart button; key metrics fold', SLOW, async () => {
     const track = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Track Sun').click(), expect: 'setBodyTracking', action: ['setBodyTracking', { body: 'sun', on: true }], keys: ['surface'] });
     assert.equal(track.surface?.tracking, 'sun', JSON.stringify(track.surface));
     assert.equal(await hudButton('Track Sun').getAttribute('aria-pressed'), 'true');
-    const paths = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Sky paths').click(), expect: 'setSkyAnnotations', action: ['setSkyAnnotations', { tracks: false, labels: false }], keys: ['surface'] });
+    const paths = await equivalent({ site: 'im-2', prepare: enterSurface, ui: async () => (await optionButton('Sky paths')).click(), expect: 'setSkyAnnotations', action: ['setSkyAnnotations', { tracks: false, labels: false }], keys: ['surface'] });
     assert.deepEqual([paths.surface.tracks, paths.surface.labels], [false, false]);
-    const gen = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Generated detail').click(), expect: 'setGeneratedDetail', action: ['setGeneratedDetail', { on: false }], keys: ['surface'] });
+    const gen = await equivalent({ site: 'im-2', prepare: enterSurface, ui: async () => (await optionButton('Generated detail')).click(), expect: 'setGeneratedDetail', action: ['setGeneratedDetail', { on: false }], keys: ['surface'] });
     assert.equal(gen.surface.generated, false);
     const away = async () => {
       await enterSurface();
       await result(page, 'walkTo', { eastM: 100, northM: 50 });
-      await until(page, () => !document.querySelector('.surface-hud .sh-controls button:last-child')?.hidden);
+      await until(page, () => [...document.querySelectorAll('.surface-hud .sh-controls button')].some((b) => b.textContent.trim() === 'Return to site' && !b.hidden));
     };
-    const home = await equivalent({ site: 'im-2', prepare: away, ui: () => hudButton('Return to site').click(), expect: 'walkTo', action: ['walkTo', { eastM: 0, northM: 0 }], keys: ['surface'] });
+    const home = await equivalent({ site: 'im-2', prepare: away, ui: async () => (await optionButton('Return to site')).click(), expect: 'walkTo', action: ['walkTo', { eastM: 0, northM: 0 }], keys: ['surface'] });
     assert.deepEqual([home.surface.position.eastM, home.surface.position.northM], [0, 0]);
     const metrics = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => page.locator('.km .km-fold').click(), expect: 'showKeyMetrics', action: ['showKeyMetrics', { open: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.km .km-body')?.hidden === true) });
     assert.equal(metrics.hud.metricsOpen, false);
-    const chart = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Skyline chart').click(), expect: 'setChart', action: ['setChart', { show: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.skc')?.hidden === true) });
+    const chart = await equivalent({ site: 'im-2', prepare: enterSurface, ui: async () => (await optionButton('Skyline chart')).click(), expect: 'setChart', action: ['setChart', { show: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.skc')?.hidden === true) });
     assert.equal(chart.hud.chartShown, false);
   });
 });
