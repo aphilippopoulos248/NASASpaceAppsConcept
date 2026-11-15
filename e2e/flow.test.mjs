@@ -7,8 +7,8 @@
 // what the analysis returned (e2e/lib/read.mjs reads the panels).
 //
 // The functional tests use reduced motion (camera flights end at once). The last block runs
-// with motion, as a person sees the app, for the coordinate-entry findings Q-1 and Q-2
-// (docs/lunyx/qa-findings.md); those tests are marked todo while the defects exist.
+// with motion, as a person sees the app, for coordinate entry while the globe flies (findings
+// Q-1 and Q-2 in docs/lunyx/qa-findings.md, fixed upstream in T-43).
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
 import { ask, closeBrowser, lastSeq, log, openApp, openAssistant, result, setField, SLOW, state, until } from './lib/app.mjs';
@@ -104,6 +104,14 @@ const compareTableFilled = () =>
   });
 
 const LIMITS = { slopeLimitDeg: 8, maxEarthGapH: 48 };
+// The scan's own settings. Its slope limit is generous so that the list has alternatives whatever
+// the ground right at the pin is like (the exact typed point, 88° S 136.7° E, is on a 17° slope).
+const SCAN = { radiusM: 900, spacingM: 300, slopeLimitDeg: 30 };
+/** The requirements the app holds now (the scan's slope field changes the app's slope limit). */
+const limitsNow = async () => {
+  const s = await state(page);
+  return { slopeLimitDeg: s.slopeLimitDeg, maxEarthGapH: s.maxEarthGapH };
+};
 
 describe('flow: from a pin to a nearby alternative and a comparison, on bundled data', () => {
   let typedCentre = null;
@@ -137,12 +145,16 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.match(await card().locator('.sc-winnote').textContent(), /not a radio link/);
   });
 
-  // Finding F-3 (docs/lunyx/actions.md, docs/lunyx/qa-findings.md), owner @globe: poleward of
-  // 80.06 degrees the fly-to clamps the camera direction, so the view stops short of the latitude
-  // asked for, and a pin dropped "at the centre" is not at the typed latitude.
-  test('typing coordinates centres the view exactly on them', { ...SLOW, todo: 'F-3 (@globe): poleward of 80.06° the globe camera stops up to 0.06° (1.7 km) short of the typed latitude' }, async () => {
+  // Finding F-3 (docs/lunyx/qa-findings.md): poleward of 80.06 degrees the view used to stop short
+  // of the latitude asked for. Fixed upstream (original T-43, a59162f); kept as a regression test.
+  test('typing coordinates centres the view exactly on them', SLOW, async () => {
     assert.ok(typedCentre, 'the previous test did not run');
-    assert.ok(Math.abs(typedCentre.lat - -88) < 0.001, `typed latitude -88, the view is centred on ${typedCentre.lat.toFixed(4)}`);
+    assert.ok(Math.abs(typedCentre.lat - -88) < 1e-4 && Math.abs(typedCentre.lon - 136.7) < 1e-4, `typed -88, 136.7; the view is centred on ${typedCentre.lat.toFixed(5)}, ${typedCentre.lon.toFixed(5)}`);
+    // The fields ran setGlobeCamera; none of those reported a view centred elsewhere (centredLatDeg
+    // appears only when the latitude asked for cannot be the centre, within 0.1° of a pole).
+    const cams = await page.evaluate(() => window.lunyx.actions.actionLog().filter((e) => e.name === 'setGlobeCamera' && e.origin === 'ui').map((e) => e.result ?? null).slice(-2));
+    assert.equal(cams.length, 2, 'the latitude and the longitude field each ran setGlobeCamera');
+    assert.ok(cams.every((r) => r && r.centredLatDeg === undefined && r.target?.latDeg === -88), JSON.stringify(cams));
   });
 
   test('search criteria in the compare panel reach the app state, and the pin is saved as A', SLOW, async () => {
@@ -163,9 +175,12 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   test('nearby sites: the scan from the "Nearby sites" tab is listed as the analysis ranked it', SLOW, async () => {
     await sheet().getByRole('tab', { name: 'Nearby sites' }).click();
     const scanSettings = page.getByRole('group', { name: 'Scan settings' });
-    // A small grid keeps the test short: 600 m around the pin, every 200 m.
-    await setField(page, scanSettings.getByLabel('Radius'), 600);
-    await setField(page, scanSettings.getByLabel('Spacing'), 200);
+    // The slope limit first: committing it redraws the tab, which puts back the last scan's
+    // radius and spacing (finding Q-7, tested on its own below). A small grid keeps the test short.
+    await setField(page, scanSettings.getByLabel('Slope at most'), SCAN.slopeLimitDeg);
+    await until(page, (v) => window.lunyx.store.get().slopeLimitDeg === v, SCAN.slopeLimitDeg);
+    await setField(page, scanSettings.getByLabel('Radius'), SCAN.radiusM);
+    await setField(page, scanSettings.getByLabel('Spacing'), SCAN.spacingM);
     const from = await lastSeq(page);
     await scanSettings.getByRole('button', { name: 'Scan nearby sites' }).click();
     await until(page, () => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), undefined, 5 * 120_000);
@@ -173,13 +188,13 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.equal(scan.state, 'ready', scan.error);
     const entry = (await log(page, from)).find((e) => e.name === 'rankNearby');
     assert.ok(entry?.ok && entry.origin === 'ui', JSON.stringify(entry));
-    assert.deepEqual([scan.options.radiusM, scan.options.spacingM, scan.options.slopeLimitDeg], [600, 200, LIMITS.slopeLimitDeg]);
+    assert.deepEqual([scan.options.radiusM, scan.options.spacingM, scan.options.slopeLimitDeg], [SCAN.radiusM, SCAN.spacingM, SCAN.slopeLimitDeg]);
     await until(page, () => document.querySelector('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)'));
     const view = await readNearby(page);
     const problems = failures(nearbyRank1Against(view, scan));
     assert.equal(problems, '', problems);
     // Nothing steeper than the limit is ranked.
-    for (const r of view.rows.filter((x) => /^\d+$/.test(x.Rank ?? ''))) assert.ok(firstNumber(r.Slope) <= LIMITS.slopeLimitDeg + 0.05, `ranked ${r.Rank} has slope ${r.Slope}`);
+    for (const r of view.rows.filter((x) => /^\d+$/.test(x.Rank ?? ''))) assert.ok(firstNumber(r.Slope) <= SCAN.slopeLimitDeg + 0.05, `ranked ${r.Rank} has slope ${r.Slope}`);
   });
 
   test('"Compare as B" on rank 1: the compare table equals the two analyses, with the requirements checked', SLOW, async () => {
@@ -195,13 +210,15 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     await compareTableFilled();
     const view = await readCompare(page);
     assert.ok(view.open, 'the compare panel is open');
-    const problems = failures([...compareRowsAgainst(view, pub), ...requirementLinesAgainst(view, pub, LIMITS)]);
+    const problems = failures([...compareRowsAgainst(view, pub), ...requirementLinesAgainst(view, pub, await limitsNow())]);
     assert.equal(problems, '', problems);
     await closeComparePanel();
     assert.equal((await state(page)).comparing, false);
   });
 
   test('clicking a landing marker opens that site on the surface; the close button returns to the globe', SLOW, async () => {
+    // A panel left open by a failed earlier test would cover the globe: close it first.
+    if (!(await sheet().isHidden())) await closeComparePanel();
     // Put IM-2 under the screen centre, close enough that its marker is alone there, then click it.
     await result(page, 'setGlobeCamera', { lat: -84.79, lon: 29.2, altitudeKm: 300 });
     await cameraSettled();
@@ -302,7 +319,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.ok((await log(page, from)).some((e) => e.name === 'compareDelayedArrival' && e.origin === 'ui' && e.ok));
     await compareTableFilled();
     const view = await readCompare(page);
-    const problems = failures([...compareRowsAgainst(view, pub), ...requirementLinesAgainst(view, pub, LIMITS)]);
+    const problems = failures([...compareRowsAgainst(view, pub), ...requirementLinesAgainst(view, pub, await limitsNow())]);
     assert.equal(problems, '', problems);
     await closeComparePanel();
   });
@@ -354,7 +371,37 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   });
 });
 
-// Typing coordinates with motion on, as a person sees the app (findings Q-1 and Q-2, owner @globe).
+// Finding Q-7 (docs/lunyx/qa-findings.md), owner @analysis: in "Nearby sites", committing the
+// slope limit (or any requirement) redraws the tab and puts back the last scan's radius and
+// spacing over what was typed, so the scan runs with the old grid.
+describe('flow: the nearby scan settings keep what was typed', () => {
+  let other, op;
+  before(async () => {
+    other = await openApp(srv.deterministic);
+    op = other.page;
+  }, SLOW);
+  after(async () => {
+    await other?.close();
+  });
+
+  test('a typed radius survives a change of the slope limit before the scan', { ...SLOW, todo: 'Q-7 (@analysis): the slope limit redraws the tab and resets Radius and Spacing to the last scan' }, async () => {
+    const f = op.locator('.filters-panel');
+    await setField(op, f.getByLabel('Latitude', { exact: true }), -89.45);
+    await setField(op, f.getByLabel('Longitude', { exact: true }), -137.2);
+    await f.getByRole('button', { name: 'Drop pin at centre' }).click();
+    await until(op, () => window.lunyx.store.get().site?.kind === 'custom');
+    await op.locator('.cmp-launcher').click();
+    await op.locator('.cmp-sheet').getByRole('tab', { name: 'Nearby sites' }).click();
+    const settings = op.getByRole('group', { name: 'Scan settings' });
+    await setField(op, settings.getByLabel('Radius'), 900);
+    await setField(op, settings.getByLabel('Slope at most'), 25);
+    await until(op, () => window.lunyx.store.get().slopeLimitDeg === 25);
+    assert.equal(await settings.getByLabel('Radius').inputValue(), '900', 'the typed radius was replaced');
+  });
+});
+
+// Typing coordinates with motion on, as a person sees the app. Findings Q-1 and Q-2 were fixed
+// upstream (original T-43, dbc6c59); these stay as regression tests.
 describe('flow: typing the centre of view while the globe flies (motion on)', () => {
   let moving, mp;
   before(async () => {
@@ -372,7 +419,7 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await cameraSettled(mp);
   };
 
-  test('latitude, Tab, longitude, Enter centres the view on the typed point', { ...SLOW, todo: 'Q-1 (@globe): on Tab the latitude field is refilled with the in-flight centre and the longitude commit sends that latitude' }, async () => {
+  test('latitude, Tab, longitude, Enter centres the view on the typed point', SLOW, async () => {
     await startAt();
     await field('Latitude').click();
     await field('Latitude').fill('-84.79');
@@ -380,10 +427,10 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await field('Longitude').fill('29.2');
     await field('Longitude').press('Enter');
     const c = await cameraSettled(mp);
-    assert.ok(Math.abs(c.lat - -84.79) < 0.1 && Math.abs(c.lon - 29.2) < 0.1, `typed -84.79, 29.2; the view went to ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`);
+    assert.ok(Math.abs(c.lat - -84.79) < 0.001 && Math.abs(c.lon - 29.2) < 0.001, `typed -84.79, 29.2; the view went to ${c.lat.toFixed(4)}, ${c.lon.toFixed(4)}`);
   });
 
-  test('"Drop pin at centre" right after typing pins the typed point', { ...SLOW, todo: 'Q-2 (@globe): the button pins the in-flight centre of the camera, not the typed coordinates' }, async () => {
+  test('"Drop pin at centre" right after typing pins the typed point', SLOW, async () => {
     await startAt();
     await field('Latitude').click();
     await field('Latitude').fill('-84.79');
@@ -392,6 +439,6 @@ describe('flow: typing the centre of view while the globe flies (motion on)', ()
     await mp.locator('.filters-panel').getByRole('button', { name: 'Drop pin at centre' }).click();
     await until(mp, () => window.lunyx.store.get().site?.kind === 'custom');
     const site = (await state(mp)).site;
-    assert.ok(Math.abs(site.lat - -84.79) < 0.1 && Math.abs(site.lon - 29.2) < 0.1, `typed -84.79, 29.2; the pin is at ${site.lat}, ${site.lon}`);
+    assert.ok(Math.abs(site.lat - -84.79) < 1e-5 && Math.abs(site.lon - 29.2) < 1e-5, `typed -84.79, 29.2; the pin is at ${site.lat}, ${site.lon}`);
   });
 });

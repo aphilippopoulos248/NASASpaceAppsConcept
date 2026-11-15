@@ -12,13 +12,14 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 
 | # | Finding | Owner | Seen on | Status |
 | --- | --- | --- | --- | --- |
-| Q-1 | Filters > Centre of view, typed in the natural order (latitude, Tab, longitude, Enter): the latitude field is refilled with the centre of the still-flying camera when it loses focus, and the longitude commit sends that in-flight latitude, not the typed one. Typed 84.79° S, 29.2° E: the view ends at 57.43° S (830 km off) when typed quickly, 81.63° S (96 km) at 80 ms per key, 83.37° S (43 km) at 150 ms per key, and 84.67° S (3.6 km, F-3 twice) when the typist waits for the flight. | @globe | f928038, 2f7e813 | open, new; e2e todo test in `e2e/flow.test.mjs` |
-| Q-2 | Typing both coordinates and pressing "Drop pin at centre" straight away pins wherever the camera is at the moment of the click, mid-flight, with the old longitude: typed 84.79° S, 29.2° E, pinned 55.92681° S, 0.06° W (879 km off) and 83.02705° S, 0.06° W (97 km off). | @globe | f928038, 2f7e813 | open, new; e2e todo test |
-| F-3 | (legacy, reported 2026-11-14) Poleward of 80.06° the fly-to clamps the camera direction, so the view stops short of the typed latitude and "Drop pin at centre" pins off the typed point, even when each field is committed with Enter and each flight is awaited: IM-2's 84.79° S, 29.2° E gives a pin at 84.67269° S (3.56 km off: the clamp once on the latitude, once more when the longitude commit re-sends the shifted latitude shown in the field); 89.45° S, 137.2° W gives 89.4315° S (0.56 km). The same at both poles; exact at 80° and below. | @globe | f928038, 2f7e813 | open; e2e todo test |
-| Q-4 | "Compare as B" in a ranked row of "Nearby sites" switches the panel to "A and B", which hides the button that had the focus: the focus falls to the page (`document.body`), so a keyboard user loses their place, and the next Escape closes the panel without giving the focus back to the launcher. Seen with the mouse (walkthrough) and with the keyboard only (`e2e/a11y.test.mjs`). | @analysis (`src/ui/compare/`) | 2f7e813 | open, new; e2e todo test |
-| Q-5 | The default solar elevation band (0° to 90°) means "no band" in the compare panel since c331052 ("No requirement: no solar elevation band is set"), but the surface Key metrics still raise "Requirement not met … outside the required band (0° to 90°)" whenever the window includes a night (Apollo 11, 29.5-day window), and `getAnalysis` reports `requirements.sunElevationBand.metForWholeWindow: false`, which the assistant words as "The Sun leaves the required elevation band (0.0° to 90.0°) during the window". One app state, two answers. | @surface (`src/ui/surface/metricsModel.ts` `flags`), the owner of `src/core/analysisReport.ts` (`checkRequirements`); the assistant follows `getAnalysis` | 2f7e813 | open, new |
+| Q-1 | Filters > Centre of view, typed in the natural order (latitude, Tab, longitude, Enter): the latitude field is refilled with the centre of the still-flying camera when it loses focus, and the longitude commit sends that in-flight latitude, not the typed one. Typed 84.79° S, 29.2° E: the view ends at 57.43° S (830 km off) when typed quickly, 81.63° S (96 km) at 80 ms per key, 83.37° S (43 km) at 150 ms per key, and 84.67° S (3.6 km, F-3 twice) when the typist waits for the flight. | @globe | f928038, 2f7e813 | **fixed** upstream (original T-43, dbc6c59); exact on c366a06 (table below); regression test in `e2e/flow.test.mjs` |
+| Q-2 | Typing both coordinates and pressing "Drop pin at centre" straight away pins wherever the camera is at the moment of the click, mid-flight, with the old longitude: typed 84.79° S, 29.2° E, pinned 55.92681° S, 0.06° W (879 km off) and 83.02705° S, 0.06° W (97 km off). | @globe | f928038, 2f7e813 | **fixed** upstream (T-43, dbc6c59); exact on c366a06; regression test |
+| F-3 | (legacy, reported 2026-11-14) Poleward of 80.06° the fly-to clamps the camera direction, so the view stops short of the typed latitude and "Drop pin at centre" pins off the typed point, even when each field is committed with Enter and each flight is awaited: IM-2's 84.79° S, 29.2° E gives a pin at 84.67269° S (3.56 km off: the clamp once on the latitude, once more when the longitude commit re-sends the shifted latitude shown in the field); 89.45° S, 137.2° W gives 89.4315° S (0.56 km). The same at both poles; exact at 80° and below. | @globe | f928038, 2f7e813 | **fixed** upstream (T-43, a59162f: exact flights poleward of 80°); exact on c366a06; regression test |
+| Q-4 | "Compare as B" in a ranked row of "Nearby sites" switches the panel to "A and B", which hides the button that had the focus: the focus falls to the page (`document.body`), so a keyboard user loses their place, and the next Escape closes the panel without giving the focus back to the launcher. Seen with the mouse (walkthrough) and with the keyboard only (`e2e/a11y.test.mjs`). | @analysis (`src/ui/compare/`) | 2f7e813, c366a06 | open: original T-46; e2e todo test |
+| Q-5 | The default solar elevation band (0° to 90°) means "no band" in the compare panel since c331052 ("No requirement: no solar elevation band is set"), but the surface Key metrics still raise "Requirement not met … outside the required band (0° to 90°)" whenever the window includes a night (Apollo 11, 29.5-day window), and `getAnalysis` reports `requirements.sunElevationBand.metForWholeWindow: false`, which the assistant words as "The Sun leaves the required elevation band (0.0° to 90.0°) during the window". One app state, two answers. | @surface (`src/ui/surface/metricsModel.ts` `flags`), the owner of `src/core/analysisReport.ts` (`checkRequirements`); the assistant follows `getAnalysis` | 2f7e813 | open upstream (batch 7: Key metrics, getAnalysis); our @assistant guards the assistant's wording (T-1) |
 | Q-6 | (adds to the original T-40, not a new defect) The polar elevation layers fail too, not only the whole-Moon grid: `lola_south_875s_40m.lxg`, `lola_south_85s_80m.lxg` and `lola_south_80s_160m.lxg` each failed with `net::ERR_CACHE_WRITE_FAILURE`: two of the three in each of four walkthrough page loads, one in the reproduction's (none in the e2e runs, whose requests go through Playwright's request interception). Then the site card names a coarser grid than the analysis beside it used (card "160 m grid", elevation 1,946 m; analysis 40 m layer, 1,948 m), or still says "Loading…" when the analysis is ready, and when the analysis's own copy fails it uses the 1.9 km grid for that distance range (skyline 0.01° different between two loads of the same pin). | owner of T-40 (@surface) | 2f7e813 | for T-40 |
-| Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | open, new, low |
+| Q-7 | Compare > "Nearby sites": committing "Slope at most" (or any requirement) redraws the tab, which puts the last scan's Radius and Spacing back over what was typed; the scan then runs with the old grid. Typed Radius 900 m, then Slope at most 30°: the field reads 2000 again and the scan covers 2 km (its summary says so). Cause: `panel.ts` redraws the tab on every requirement change and `nearbyTab.ts` `render()` refills the fields from the panel state, which only a scan updates. | @analysis (`src/ui/compare/`) | c366a06 | open, new; e2e todo test |
+| Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | **fixed** upstream (T-43, dbc6c59: no turn after the first flight); 0° on c366a06 |
 
 ## Walkthrough record
 
@@ -94,11 +95,43 @@ A and B: "No requirement: no solar elevation band is set" (`27b0f30/1280x720/28-
 Ask the assistant "what is the illumination?": "The Sun leaves the required elevation band
 (0.0° to 90.0°) during the window".
 
+### Q-7
+
+`npm run e2e -- flow`, test "a typed radius survives a change of the slope limit before the scan"
+(todo). By hand: drop a pin, open Compare, "Nearby sites", type 900 in Radius and press Tab, type
+30 in "Slope at most" and press Tab: Radius reads 2000 again; "Scan nearby sites" scans within 2 km.
+
 ### Q-6
 
 Visible in the console of any walkthrough or e2e run (`e2e/qa/out/*/report.json`,
 `failedRequests`). The walkthrough's pin-card step now compares the card's "Elevation data"
 line with the finest grid in the analysis's provenance.
+
+### After the fix (original T-43)
+
+`e2e/qa/repro-centre.mjs` again on the app tree of the published am/lunyx/integration c366a06
+(globe, scene and core code identical to it; the run's commit da0c2fc adds test files),
+2026-11-15 04:32Z, the same GPU, load 9.8. Before: the run of 03:31Z above.
+
+| Case | Before | After | Off by, after |
+| --- | --- | --- | --- |
+| Q-1 lat, Tab, lon, Enter (0 ms/key, 0 ms pause) | -57.43, 29.2 (829.6 km) | -84.79, 29.2 | 0.000 km |
+| Q-1 lat, Tab, lon, Enter (80 ms/key, 200 ms pause) | -81.6329, 29.2 (95.7 km) | -84.79, 29.2 | 0.000 km |
+| Q-1 lat, Tab, lon, Enter (150 ms/key, 500 ms pause) | -83.3743, 29.2 (42.9 km) | -84.79, 29.2 | 0.000 km |
+| Q-1 lat, Tab, lon, Enter (250 ms/key, 1200 ms pause) | -84.6727, 29.2 (3.6 km) | -84.79, 29.2 | 0.000 km |
+| Q-1 lat, Tab, lon, Enter (250 ms/key, 4000 ms pause) | -84.6727, 29.2 (3.6 km) | -84.79, 29.2 | 0.000 km |
+| Q-2 pin right after typing (0 ms/key) | -55.92681, -0.06 (878.9 km) | -84.79, 29.2 | 0 km |
+| Q-2 pin right after typing (120 ms/key) | -83.02705, -0.06 (96.7 km) | -84.79, 29.2 | 0 km |
+| F-3 careful path, typed -84.79, 29.2 | pin -84.67269, 29.2 (3.56 km) | pin -84.79, 29.2 | 0 km |
+| F-3 careful path, typed -89.45, -137.2 | pin -89.4315, -137.2 (0.56 km) | pin -89.45, -137.2 | 0 km |
+| F-3 careful path, typed -70, 10 | pin -70, 10 (0 km) | pin -70, 10 | 0 km |
+| F-3 setGlobeCamera -84.79, then the longitude committed again | -84.7328 → -84.6727 → -84.6727 → -84.6727 | -84.79 → -84.79 → -84.79 → -84.79 | 0.0000° |
+| F-3 setGlobeCamera -89.45, then the longitude committed again | -89.4417 → -89.4315 → -89.4315 → -89.4315 | -89.45 → -89.45 → -89.45 → -89.45 | 0.0000° |
+| F-3 setGlobeCamera -88, then the longitude committed again | -87.9708 → -87.9404 → -87.9404 → -87.9404 | -88 → -88 → -88 → -88 | 0.0000° |
+| F-3 setGlobeCamera -80.5, then the longitude committed again | -80.4878 → -80.4781 → -80.4781 → -80.4781 | -80.5 → -80.5 → -80.5 → -80.5 | 0.0000° |
+| F-3 setGlobeCamera -79.9, then the longitude committed again | -79.9 → -79.9 → -79.9 → -79.9 | -79.9 → -79.9 → -79.9 → -79.9 | 0.0000° |
+| F-3 setGlobeCamera 84.79, then the longitude committed again | 84.7328 → 84.6727 → 84.6727 → 84.6727 | 84.79 → 84.79 → 84.79 → 84.79 | 0.0000° |
+| Q-3 first 1° hop after load: longitude error once at rest | -0.0128° (drift after arrival -0.0115°) | 0° (drift 0°) | 0° |
 
 ### By hand
 

@@ -13,6 +13,9 @@
 //              renderer); the shots pair with the software-rendered ones in docs/lunyx/handover.
 //   assistant  the drawer in deterministic mode: requests whose numbers are checked against
 //              the analysis and the panels.
+//   scenario   (T-8 item 3) the T-6 request in three follow-ups through the drawer, with the
+//              panels open: reply, Nearby list, compare table, Key metrics and the explanation
+//              against the actions' results and the analysis.
 //   extras     (T-8) a mission preset played to its end, a zoomed Earth, the window table with
 //              its CSV and JSON downloads against the analysis, the outlook, the Country filter,
 //              country flags, ownership rows and the explored area on the card.
@@ -32,7 +35,8 @@ import { execSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ask } from '../lib/app.mjs';
-import { compareRowsAgainst, firstNumber, requirementLinesAgainst } from '../lib/read.mjs';
+import { compareRowsAgainst, firstNumber, keyMetricsAgainst, requirementLinesAgainst } from '../lib/read.mjs';
+import { PIN as SCENARIO_PIN, STEPS as SCENARIO_STEPS, WINDOW as SCENARIO_WINDOW } from '../scenario/setup.mjs';
 import { ROOT, servers } from '../lib/servers.mjs';
 import { analysisSettled, fps, GL, globeSettled, launch, makeStepper, mouseDrag, numbers, openPage, parseDurationH, PROFILES, rendering, shot, sleep, surfaceReady } from './lib.mjs';
 
@@ -209,6 +213,8 @@ const fmtUtc = (ms) => `${new Date(ms).toISOString().slice(0, 10)} ${new Date(ms
 const close = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
 const durTol = (h) => (h >= 24 ? 0.051 : h < 0.05 ? 0.05 : 0.051);
 /** "18.2 h", "379.8 h (15.8 d)", "none", "18.2 h or more" -> hours. */
+/** As the assistant writes hours: "none" below 0.05 h, else one decimal and "h". */
+const hoursText = (h) => (h < 0.05 ? 'none' : `${h.toFixed(1)} h`);
 const hoursOf = (text) => (/^none\b/.test(text ?? '') ? 0 : firstNumber(text ?? ''));
 
 /** One body on the card, "2.5° elevation, azimuth 66°; 1.2° above the skyline", as numbers. */
@@ -871,8 +877,11 @@ async function partExtras(app, step) {
     const s0 = await appState(page);
     const start = Date.parse(preset.windowStartUtc), end = start + preset.windowDurationH * HOUR;
     check('Preset site, window start and length', `${s0.site.id} ${new Date(s0.windowStartMs).toISOString()} ${s0.windowDurationH} h`, `${preset.siteId} ${new Date(start).toISOString()} ${preset.windowDurationH} h`, s0.site.id === preset.siteId && s0.windowStartMs === start && s0.windowDurationH === preset.windowDurationH);
-    check('Preset plays at its rate', `${s0.playing} ${s0.rate}`, `true ${preset.rateSecondsPerSecond}`, s0.playing === true && s0.rate === preset.rateSecondsPerSecond);
     await analysisSettled(page);
+    // The preset starts playing once its site analysis is ready.
+    await page.waitForFunction(() => window.lunyx.store.get().playing, null, { timeout: 60_000 }).catch(() => {});
+    const s0b = await appState(page);
+    check('Preset plays at its rate', `${s0b.playing || s0b.timeMs > start} ${s0b.rate}`, `true ${preset.rateSecondsPerSecond}`, (s0b.playing || s0b.timeMs > start) && s0b.rate === preset.rateSecondsPerSecond);
     const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
     const a = await getAnalysis(page);
     note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
@@ -895,6 +904,11 @@ async function partExtras(app, step) {
     const v = await surfaceView(page);
     note(`Field of view ${v.look.fovDeg}°, Earth ${v.sky.earth.litPct} % lit, diameter ${v.sky.earth.angularDiameterDeg}°.`);
     check('Zoomed in by keyboard', v.look.fovDeg, '<= 8.5', v.look.fovDeg <= 8.5);
+    // Q-5: with the default solar band (0° to 90°) nothing is required, so Key metrics raises no band flag.
+    const st5 = await appState(page);
+    const km5 = await readKeyMetrics(page);
+    const bandFlags = (km5?.flags ?? []).filter((f) => /required band/i.test(f));
+    if (st5.sunElMinDeg === 0 && st5.sunElMaxDeg === 90) check('Q-5: no band flag in Key metrics with the default band', bandFlags.join(' | ') || 'none', 'none', bandFlags.length === 0, { finding: 'Q-5' });
     check('Still facing Earth', `${v.look.azDeg} / ${v.look.elDeg}`, `${v.sky.earth.azDeg} / ${v.sky.earth.elDeg}`, close(v.look.azDeg, v.sky.earth.azDeg, 0.5) && close(v.look.elDeg, v.sky.earth.elDeg, 0.5));
   }, { shot: 'im2-surface-earth-zoomed' });
 
@@ -906,16 +920,19 @@ async function partExtras(app, step) {
     await page.getByRole('button', { name: 'The scenario on screen' }).click();
     await page.waitForFunction(() => document.querySelector('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)'), null, { timeout: 60_000 });
     const shown = await page.evaluate(() => [...document.querySelectorAll('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)')].length);
-    const a = await getAnalysis(page);
+    const a = await page.evaluate(() => {
+      const st = window.lunyx.analysis.get('current');
+      return st.state === 'ready' ? JSON.parse(JSON.stringify({ metrics: st.value.metrics, slope: { slopeDeg: st.value.slope.slopeDeg } })) : null;
+    });
     const [dlJson] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as JSON' }).click()]);
     const json = JSON.parse(readFileSync(await dlJson.path(), 'utf8'));
     const sc = json.scenarios?.[0];
     const m = sc?.metrics ?? {};
     note(`JSON: ${dlJson.suggestedFilename()}, ${sc?.spells?.length} spells, ${sc?.events?.length} events.`);
-    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.001));
-    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.001));
-    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.001));
-    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.001));
+    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.0006));
+    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.0006));
+    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.0006));
+    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.0006));
     check('JSON spells = rows in the table on screen', sc?.spells?.length, shown, sc?.spells?.length === shown);
     check('JSON says whether a solar band was set', sc?.requirements?.sunElevationBandSet, 'a boolean', typeof sc?.requirements?.sunElevationBandSet === 'boolean');
     const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
@@ -947,12 +964,14 @@ async function partExtras(app, step) {
     await backToGlobe(page);
     const missions = page.locator('.fp-missions');
     if (!(await missions.evaluate((d) => d.open))) await missions.locator('summary').click();
-    const before = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).length);
+    const listed = () => page.evaluate(() => [...(document.querySelector('.lp select')?.options ?? [])].filter((o) => o.value).map((o) => o.value));
+    const before = await listed();
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await sleep(500);
-    const after = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).map((m) => m.landing.id));
-    note(`Markers shown: ${before} before, ${after.length} after the India toggle (${after.join(', ')}).`);
-    check('The Country toggle changes the markers shown', `${before} -> ${after.length}`, 'a change', after.length !== before);
+    const after = await listed();
+    const india = await page.getByRole('button', { name: /^India, \d+ landings?$/ }).getAttribute('aria-pressed');
+    note(`"Go to a landing site" lists ${before.length} landings before and ${after.length} after the India toggle (India pressed: ${india}).`);
+    check('The Country toggle changes the landings shown', `${before.length} -> ${after.length}`, 'a change', after.length !== before.length);
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await page.getByLabel('Show country flags').check();
     await page.waitForFunction(() => window.lunyx.store.get().showFlags === true, null, { timeout: 10_000 });
@@ -960,10 +979,99 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says how much larger it is drawn', card?.facts.Explored, '"drawn N× larger on the globe"', /drawn \d+(\.\d+)?× larger on the globe/.test(card?.facts.Explored ?? ''));
+    check('Explored area says how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?× larger/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
+}
+
+// ------------------------------------------------------------------ part 5: the T-6 scenario with the panels open (T-8 item 3)
+
+async function partScenario(app, step) {
+  const { page } = app;
+  const replyOf = async (text) => {
+    const from = await page.evaluate(() => window.lunyx.actions.actionLog().at(-1)?.seq ?? 0);
+    const reply = await ask(page, text);
+    const entries = await page.evaluate((f) => window.lunyx.actions.actionLog().filter((e) => e.seq > f && e.origin === 'assistant').map(({ name, ok, result }) => ({ name, ok, result: result === undefined ? null : JSON.parse(JSON.stringify(result)) })), from);
+    app.report.replies.push({ profile: app.profile, text, reply: { text: reply.text, label: reply.shownLabel, actions: entries.map((e) => `${e.name}:${e.ok ? 'ok' : 'failed'}`) } });
+    return { reply, entries, of: (name) => entries.find((e) => e.name === name && e.ok)?.result ?? null };
+  };
+  let pick = null;
+
+  await step(`Scenario set-up through the controls: arrival ${SCENARIO_WINDOW.startUtc}, window ${SCENARIO_WINDOW.durationH} h, pin at ${SCENARIO_PIN.lat}, ${SCENARIO_PIN.lon}`, 'control', async ({ check }) => {
+    await backToGlobe(page);
+    await closeCompare(page);
+    const date = page.getByLabel('Arrival date and time (UTC)');
+    await date.fill(SCENARIO_WINDOW.startUtc.replace('Z', ''));
+    await date.press('Enter');
+    await page.getByLabel('Mission window', { exact: true }).selectOption(String(SCENARIO_WINDOW.durationH));
+    await typeCentre(page, String(SCENARIO_PIN.lat), String(SCENARIO_PIN.lon));
+    await page.getByRole('button', { name: 'Drop pin at centre' }).click();
+    await page.waitForFunction(() => window.lunyx.store.get().site?.kind === 'custom', null, { timeout: 15_000 });
+    const st = await appState(page);
+    check('Pin, arrival and window as set', `${st.site.lat}, ${st.site.lon}; ${new Date(st.windowStartMs).toISOString().slice(0, 16)}Z; ${st.windowDurationH} h`, `${SCENARIO_PIN.lat}, ${SCENARIO_PIN.lon}; ${SCENARIO_WINDOW.startUtc}; ${SCENARIO_WINDOW.durationH} h`, close(st.site.lat, SCENARIO_PIN.lat, 1e-5) && close(st.site.lon, SCENARIO_PIN.lon, 1e-5) && st.windowStartMs === Date.parse(SCENARIO_WINDOW.startUtc) && st.windowDurationH === SCENARIO_WINDOW.durationH);
+    await analysisSettled(page, 'current', 300_000);
+    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await page.locator('#assistant-button').click();
+  }, { timeout: 360_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[0]}": the reply, the Nearby list and the scan agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[0]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 500)}`);
+    const scan = r.of('rankNearby');
+    check('rankNearby ran', Boolean(scan), true, Boolean(scan));
+    if (!scan) return;
+    const ref = scan.reference;
+    pick = scan.candidates.find((c) => c.slopeDeg < ref.slopeDeg && c.longestDarknessH < ref.longestDarknessH) ?? null;
+    check('A flatter candidate with a shorter blackout exists', pick?.name ?? 'none', 'a candidate', Boolean(pick));
+    if (!pick) return;
+    check('The reply names it with its slope and darkness', r.reply.text.match(/slope [\d.]+°[^.]*?longest darkness (none|[\d.]+ h)/)?.[0], `${pick.name}: slope ${pick.slopeDeg.toFixed(1)}°, darkness ${pick.longestDarknessH.toFixed(1)} h`, r.reply.text.includes(pick.name) && r.reply.text.includes(`slope ${pick.slopeDeg.toFixed(1)}°`) && r.reply.text.includes(`longest darkness ${hoursText(pick.longestDarknessH)}`));
+    await page.waitForFunction(() => document.querySelector('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)'), null, { timeout: 60_000 });
+    const row = await page.evaluate((id) => {
+      const rows = [...document.querySelectorAll('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)')];
+      const tr = rows.find((x) => x.textContent.includes(id.split(':')[1]?.split(',')[0] ?? '§'));
+      return tr ? Object.fromEntries([...tr.children].map((c) => [c.dataset.label, c.textContent.trim().replace(/\s+/g, ' ')])) : null;
+    }, pick.id);
+    const listRow = row ?? (await page.evaluate((rank) => {
+      const tr = [...document.querySelectorAll('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)')].find((x) => x.firstElementChild?.textContent.trim() === String(rank));
+      return tr ? Object.fromEntries([...tr.children].map((c) => [c.dataset.label, c.textContent.trim().replace(/\s+/g, ' ')])) : null;
+    }, pick.rank));
+    check('The Nearby list shows the same candidate figures', listRow ? `${listRow.Slope}, ${listRow.Sunlight}, ${listRow['Longest darkness']}` : 'not listed', `${pick.slopeDeg}°, ${pick.illuminationPct} %, ${pick.longestDarknessH} h`, Boolean(listRow) && close(firstNumber(listRow.Slope), pick.slopeDeg, 0.051) && close(firstNumber(listRow.Sunlight), pick.illuminationPct, 0.051) && close(hoursOf(listRow['Longest darkness']), pick.longestDarknessH, 0.051));
+  }, { shot: 'scenario-1-nearby', timeout: 600_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[1]}": the reply, the compare table and the analyses agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[1]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 600)}`);
+    const pub = await comparisonSettled(page);
+    check('Comparison ready', pub.state, 'ready', pub.state === 'ready');
+    if (pub.state !== 'ready') return;
+    const st = await appState(page);
+    check('B is the candidate of step 1, A the pin, same dates', `${st.compareB?.site.id} / ${st.compareA?.site.kind} / ${st.compareA?.startMs === st.compareB?.startMs}`, `${pick?.id} / custom / true`, st.compareB?.site.id === pick?.id && st.compareA?.site.kind === 'custom' && st.compareA?.startMs === st.compareB?.startMs);
+    await sleep(500);
+    const view = await readCompare(page);
+    checkCompareTable(check, view, pub);
+    for (const [tag, x] of [['A', pub.a], ['B', pub.b]]) {
+      const line = r.reply.text.split('\n').find((l) => l.startsWith(`${tag}: `)) ?? '';
+      check(`Reply ${tag}: illumination = analysis`, line.match(/illumination [\d.]+ %/)?.[0], x.metrics.illuminationPct, line.includes(`illumination ${x.metrics.illuminationPct.toFixed(1)} %`));
+      check(`Reply ${tag}: Earth's centre in view = analysis`, line.match(/Earth's centre in view [\d.]+ %/)?.[0], x.metrics.earthVisiblePct, line.includes(`Earth's centre in view ${x.metrics.earthVisiblePct.toFixed(1)} %`));
+    }
+  }, { shot: 'scenario-2-compare', timeout: 600_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[2]}": the clock, Key metrics, the explanation and the reply agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[2]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 600)}`);
+    const jump = r.of('jumpToEvent'), ridge = r.of('explainBlockage');
+    check('jumpToEvent and explainBlockage ran', `${Boolean(jump)} ${Boolean(ridge)}`, 'true true', Boolean(jump && ridge));
+    if (!jump || !ridge) return;
+    await surfaceReady(page).catch(() => {});
+    const st = await appState(page);
+    check('Clock at the Earthset', new Date(st.timeMs).toISOString().slice(0, 16), jump.timeUtc?.slice(0, 16), new Date(st.timeMs).toISOString().slice(0, 16) === jump.timeUtc?.slice(0, 16));
+    const shown = await page.evaluate(() => document.querySelector('.skc-explain-text')?.textContent.trim() ?? null);
+    check('Explanation on screen = explainBlockage', shown?.slice(0, 160), ridge.explanation?.slice(0, 160), shown === ridge.explanation);
+    check('Reply quotes the ridge distance', r.reply.text.match(/[\d.]+ (km|m) away/)?.[0], ridge.ridgeDistanceM, r.reply.text.includes(ridge.ridgeDistanceM >= 1000 ? `${(ridge.ridgeDistanceM / 1000).toFixed(1)} km` : `${ridge.ridgeDistanceM} m`) || r.reply.text.includes(ridge.explanation ?? '§'));
+    await page.waitForTimeout(400);
+    const [km, a] = [await readKeyMetrics(page), await getAnalysis(page)];
+    for (const c of keyMetricsAgainst(km, a).filter((x) => /Earth/.test(x.what))) check(c.what, c.shown, c.expected, c.pass);
+  }, { shot: 'scenario-3-earthset', timeout: 600_000 });
 }
 
 async function closeCompare(page) {
@@ -1031,6 +1139,15 @@ try {
       if (mine.has('surface')) await partSurface(app, step);
       if (mine.has('assistant')) await partAssistant(app, step);
       if (mine.has('extras')) await partExtras(app, step);
+      if (mine.has('scenario')) await partScenario(app, step);
+      await step('Elevation downloads (T-40, Q-6): every .lxg file arrived, nothing "could not be loaded"', 'control', async ({ check, note }) => {
+        const failed = app.diag.failed.filter((f) => /\.lxg\b/.test(f.url));
+        const said = await app.page.evaluate(() => (document.body.innerText.match(/[^.\n]*could not be loaded[^.\n]*/gi) ?? []).slice(0, 5));
+        const logged = app.diag.console.filter((c) => /could not be loaded/i.test(c.text));
+        check('No elevation file failed to download', failed.map((f) => `${f.url.split('/').pop()} ${f.error}`).join(', ') || 'none', 'none', failed.length === 0, { finding: 'Q-6' });
+        check('Nothing on screen says "could not be loaded"', said.join(' | ') || 'none', 'none', said.length === 0, { finding: 'Q-6' });
+        if (logged.length) note(`Console: ${logged.map((c) => c.text).join(' | ').slice(0, 400)}`);
+      });
     } catch (err) {
       log(`walk aborted: ${err?.stack ?? err}`);
       pr.aborted = String(err?.message ?? err);
