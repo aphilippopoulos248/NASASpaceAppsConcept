@@ -1,0 +1,314 @@
+{
+ "build": "af1b499",
+ "sites": {
+  "surveyor-3": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.091290674703487e-05,
+   "inBandMaxM": 6.091290674703487e-05,
+   "outsideMaxM": 5.609081199509092e-09,
+   "storedMinusOwnStoredMaxM": 1.475018507335335e-07,
+   "inUseMinusOwnStoredMaxM": 1.475018507335335e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "surveyor-7": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 3.817059734956274e-06,
+   "inBandMaxM": 3.817059734956274e-06,
+   "outsideMaxM": 5.45909983884485e-10,
+   "storedMinusOwnStoredMaxM": 2.4760339556451072e-08,
+   "inUseMinusOwnStoredMaxM": 2.4760339556451072e-08,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_SURVEYOR7_E413S3485.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-11": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.10332062933594e-05,
+   "inBandMaxM": 6.10332062933594e-05,
+   "outsideMaxM": 8.380993676837534e-09,
+   "storedMinusOwnStoredMaxM": 2.1862638277525548e-07,
+   "inUseMinusOwnStoredMaxM": 2.1862638277525548e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO11_E008N0234.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-12": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.105298780312296e-05,
+   "inBandMaxM": 6.105298780312296e-05,
+   "outsideMaxM": 6.142499842098914e-09,
+   "storedMinusOwnStoredMaxM": 1.9442268239799887e-07,
+   "inUseMinusOwnStoredMaxM": 1.9442268239799887e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "luna-16": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.0001219954647240229,
+   "inBandMaxM": 0.0001219954647240229,
+   "outsideMaxM": 1.6916601452976465e-08,
+   "storedMinusOwnStoredMaxM": 4.832550075661857e-07,
+   "inUseMinusOwnStoredMaxM": 4.832550075661857e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_LUNA16_E005S0563.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-14": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.0899512163814506e-05,
+   "inBandMaxM": 6.0899512163814506e-05,
+   "outsideMaxM": 3.6759502108907327e-09,
+   "storedMinusOwnStoredMaxM": 1.0161988939216826e-07,
+   "inUseMinusOwnStoredMaxM": 1.0161988939216826e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO14_E034S3425.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-15": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.0778959095841856e-05,
+   "inBandMaxM": 6.0778959095841856e-05,
+   "outsideMaxM": 7.0276655605994165e-09,
+   "storedMinusOwnStoredMaxM": 1.9819094632111955e-07,
+   "inUseMinusOwnStoredMaxM": 1.9819094632111955e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "luna-20": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.118449982750462e-05,
+   "inBandMaxM": 6.118449982750462e-05,
+   "outsideMaxM": 9.932136890711263e-09,
+   "storedMinusOwnStoredMaxM": 3.087295681325486e-07,
+   "inUseMinusOwnStoredMaxM": 3.087295681325486e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_LUNA20_E037N0566.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-16": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 1.8504964387489053e-06,
+   "inBandMaxM": 1.8504964387489053e-06,
+   "outsideMaxM": 9.059419880941277e-11,
+   "storedMinusOwnStoredMaxM": 3.691084771162423e-09,
+   "inUseMinusOwnStoredMaxM": 3.691084771162423e-09,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO16_E091S0155.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "apollo-17": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012192672375022084,
+   "inBandMaxM": 0.00012192672375022084,
+   "outsideMaxM": 1.2665168469538912e-08,
+   "storedMinusOwnStoredMaxM": 4.282542249711696e-07,
+   "inUseMinusOwnStoredMaxM": 4.282542249711696e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG (5.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "luna-21": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012219557129355962,
+   "inBandMaxM": 0.00012219557129355962,
+   "outsideMaxM": 1.159924067906104e-08,
+   "storedMinusOwnStoredMaxM": 4.598955456458498e-07,
+   "inUseMinusOwnStoredMaxM": 4.598955456458498e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_LUNOKHOD2_1_E258N0306.IMG (5.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "luna-23": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.000122205563911848,
+   "inBandMaxM": 0.000122205563911848,
+   "outsideMaxM": 2.0289007807150483e-08,
+   "storedMinusOwnStoredMaxM": 5.420079105533659e-07,
+   "inUseMinusOwnStoredMaxM": 5.420079105533659e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "luna-24": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012208281395942322,
+   "inBandMaxM": 0.00012208281395942322,
+   "outsideMaxM": 1.6288595361402258e-08,
+   "storedMinusOwnStoredMaxM": 6.088707777962554e-07,
+   "inUseMinusOwnStoredMaxM": 6.088707777962554e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "change-3": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012142052128183423,
+   "inBandMaxM": 0.00012142052128183423,
+   "outsideMaxM": 2.7274836611468345e-08,
+   "storedMinusOwnStoredMaxM": 7.163280315580778e-07,
+   "inUseMinusOwnStoredMaxM": 7.163280315580778e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_CHANGE3_E444N3406.IMG (5.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "change-4": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.0002443298199068522,
+   "inBandMaxM": 0.0002443298199068522,
+   "outsideMaxM": 6.51116351946257e-08,
+   "storedMinusOwnStoredMaxM": 2.4203109205700457e-06,
+   "inUseMinusOwnStoredMaxM": 2.4203109205700457e-06,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_CHANGE4_E458S1775.IMG (5.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "change-5": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012155894091847586,
+   "inBandMaxM": 0.00012155894091847586,
+   "outsideMaxM": 2.1500454749912024e-08,
+   "storedMinusOwnStoredMaxM": 6.134596333140507e-07,
+   "inUseMinusOwnStoredMaxM": 6.134596333140507e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_CHANGE501_E430N3081.IMG (3.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "slim": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 6.057096538825135e-05,
+   "inBandMaxM": 6.057096538825135e-05,
+   "outsideMaxM": 2.9494913178496063e-09,
+   "storedMinusOwnStoredMaxM": 1.163983824881143e-07,
+   "inUseMinusOwnStoredMaxM": 1.163983824881143e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_THEOPHILUS_E133S0253.IMG (3.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "change-6": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.0002439563586449367,
+   "inBandMaxM": 0.0002439563586449367,
+   "outsideMaxM": 6.304162525339052e-08,
+   "storedMinusOwnStoredMaxM": 2.17725846596295e-06,
+   "inUseMinusOwnStoredMaxM": 2.17725846596295e-06,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_CHANGE6_E421S2060.IMG (4.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  },
+  "blue-ghost-1": {
+   "points": 1808,
+   "interface": "inUse = stored (D-10), eased opt-in",
+   "easedMinusOwnEasedMaxM": 0.00012195675526527339,
+   "inBandMaxM": 0.00012195675526527339,
+   "outsideMaxM": 1.717171471682377e-08,
+   "storedMinusOwnStoredMaxM": 5.676965884049423e-07,
+   "inUseMinusOwnStoredMaxM": 5.676965884049423e-07,
+   "sourcesSeen": [
+    "LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG (4.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window"
+   ],
+   "fineWhereExpected": 1544,
+   "bandPoints": 1544,
+   "nan": 0
+  }
+ },
+ "worst": {
+  "easedVsEased": 0.0002443298199068522,
+  "storedVsStored": 2.4203109205700457e-06,
+  "inUseVsStored": 2.4203109205700457e-06
+ }
+}

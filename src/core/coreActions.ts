@@ -23,6 +23,8 @@ export const GLOBE_ALTITUDE_KM = 2.4 * MOON_RADIUS_KM;
 export const SITE_ALTITUDE_KM = 0.024 * MOON_RADIUS_KM;
 export const MIN_ALTITUDE_KM = 10;
 export const MAX_ALTITUDE_KM = 8 * MOON_RADIUS_KM;
+/** The globe view centres at most this close to a pole, degrees of latitude: exactly on a pole it cannot be turned. */
+export const MAX_VIEW_LAT_DEG = 89.9;
 
 export const RATE_PRESETS = [
   { secondsPerSecond: 60, label: '1 min/s' },
@@ -487,7 +489,15 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       run: ({ lat, lon, altitudeKm }) => {
         if (state().view !== 'globe') store.set({ view: 'globe' });
         flyTo(lat, wrapLon(lon), altitudeKm);
-        return { view: 'globe', target: { latDeg: lat, lonDegEast: wrapLon(lon), altitudeKm: altitudeKm ?? null } };
+        const centredLat = Math.max(-MAX_VIEW_LAT_DEG, Math.min(MAX_VIEW_LAT_DEG, lat));
+        return {
+          view: 'globe',
+          target: { latDeg: lat, lonDegEast: wrapLon(lon), altitudeKm: altitudeKm ?? null },
+          ...(centredLat !== lat && {
+            centredLatDeg: centredLat,
+            note: `The view centres ${MAX_VIEW_LAT_DEG} degrees from the equator at most: exactly on a pole the globe cannot be turned. A pin can still go on the pole itself (dropPin).`,
+          }),
+        };
       },
     }),
     defineAction<{ azDeg: number; elDeg?: number; fovDeg?: number }, unknown>({

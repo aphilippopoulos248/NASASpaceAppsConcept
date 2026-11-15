@@ -8,6 +8,7 @@ import { sampleStack } from './horizon';
 import { createNearbyScan, rankNearbyWith, type NearbyProgress } from './nearby';
 import { outlookWith } from './outlook';
 import { findBundledTable, horizonsEphemeris, tabulatedEphemeris, type Ephemeris, type HorizonsTable } from './sky';
+import { withTransitions } from './transitions';
 import type { NearbyCandidate, NearbyOptions, Outlook, OutlookOptions, SiteAnalysis } from './types';
 import { analyseWith } from './window';
 
@@ -23,7 +24,9 @@ export function siteEphemeris(scenario: Scenario, stack: TerrainStack, table: Ho
 }
 
 export function runAnalysis(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null): SiteAnalysis {
-  return analyseWith(scenario, stack, siteEphemeris(scenario, stack, table));
+  const eph = siteEphemeris(scenario, stack, table);
+  // Both ends of every rise and set (D-8), from the same ephemeris and skyline.
+  return withTransitions(analyseWith(scenario, stack, eph), eph);
 }
 
 export function runNearby(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null, options: NearbyOptions, onProgress?: NearbyProgress): NearbyCandidate[] {

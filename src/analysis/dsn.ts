@@ -23,8 +23,8 @@
 import type { LatLon, Scenario } from '../core/types';
 import { linkEpoch, linkGeometry, siteFrame, stationFrame, type LinkGeometry } from '../astro/groundStation';
 import { skylineAt } from './horizon';
-import { intervalsOf, longest, totalHours } from './intervals';
-import type { ContactSummary, DsnOpportunities, GroundStation, HorizonProfile, SiteAnalysis, StationInstant, StationOpportunities } from './types';
+import { EVENT_PRECISION_MS, intervalsOf, longest, totalHours, type Spans } from './intervals';
+import type { ContactSummary, DsnOpportunities, GroundStation, HorizonProfile, Interval, SiteAnalysis, StationInstant, StationOpportunities } from './types';
 
 const dms = (d: number, m: number, s: number) => Math.sign(d || 1) * (Math.abs(d) + m / 60 + s / 3600);
 const east180 = (lon: number) => (lon > 180 ? lon - 360 : lon);
@@ -53,7 +53,7 @@ export const DSN_ASSUMPTIONS: readonly string[] = [
   'Stations: the 70 m antennas DSS-14 (Goldstone), DSS-43 (Canberra) and DSS-63 (Madrid). Coordinates from the DSN Telecommunications Link Design Handbook, 810-005, Module 301 Rev. N (15 April 2022), Tables 2 and 5 (ITRF93 epoch 2003.0; WGS 84).',
   'Elevation limits: 6.0 deg for receiving (the handbook\'s generic receive limit; the antennas\' mechanical limit is about 6 deg) and, for transmitting, 10.4 deg at DSS-14 and 10.2 deg at DSS-43 and DSS-63 (the limits of the handbook\'s 70 m transmit coverage chart). The stations\' own azimuth-dependent horizon masks are not applied: for instance the handbook keeps DSS-63 above 20.2 deg towards high ground to its north-west when transmitting, and high-power transmitters have higher limits.',
   'At the site the direction to the station itself is tested against the skyline (the stations are up to 0.95 deg from the centre of Earth\'s disc).',
-  'Positions are geometric and airless (no tropospheric refraction); Earth\'s rotation uses UT1 = UTC without polar motion. Checked against JPL Horizons, the site as seen from each station: elevation within 0.0013 deg over 1154 instants (1971, 2025, 2034). Rise and set times through the elevation limits are refined to 10 s, so they are within about 5 s (an independent check of 84 such crossings on three other dates found 5.3 s at most); UT1 - UTC (at most 0.9 s) adds about a second.',
+  'Positions are geometric and airless (no tropospheric refraction); Earth\'s rotation uses UT1 = UTC (the two differ by at most 0.9 s) without polar motion. Checked against JPL Horizons, the site as seen from each station: elevation within 0.0013 deg over 1154 instants (1971, 2025, 2034), and within 0.0010 deg in an independent check on three other dates. The edges of each opportunity, where a station reaches its elevation limit or goes behind the lunar skyline, are placed by bisection to 0.25 s; an edge set by the skyline rests on the elevation data there.',
 ];
 
 /** The line between each station and the site at one instant. */
@@ -63,6 +63,43 @@ export function dsnGeometryAt(site: LatLon, siteHeightM: number, timeMs: number,
   return stations.map((station) => ({ ...linkGeometry(epoch, sf, stationFrame(station)), station }));
 }
 
+/**
+ * Opportunity edges are placed to within this much of the instant the geometry crosses a station's
+ * limit or the site's skyline. (The window's rise and set times are refined to EVENT_PRECISION_MS, 10 s:
+ * at a station's horizon the site moves about 0.04 deg in that time, far more than the 0.001 deg the
+ * geometry is checked to.)
+ */
+export const DSN_EDGE_PRECISION_MS = 250;
+
+/**
+ * The spans of intervalsOf() with every crossing moved onto the instant its indicator changes sign, to
+ * within `precisionMs`, and the spans rebuilt on the new times. intervalsOf() stops refining at
+ * EVENT_PRECISION_MS and returns the middle of its last bracket, so the sign change lies within half of
+ * that of each crossing: the bisection continues inside that bracket. A crossing whose bracket does not
+ * show the sign change (two changes within a few seconds) is left where it was.
+ */
+export function refineEdges(spans: Spans, g: (t: number) => number, precisionMs = DSN_EDGE_PRECISION_MS): Spans {
+  if (!(precisionMs < EVENT_PRECISION_MS / 2) || spans.crossings.length === 0) return spans;
+  const half = EVENT_PRECISION_MS / 2;
+  const moved = new Map<number, number>();
+  const crossings = spans.crossings.map((c) => {
+    let a = c.t - half, b = c.t + half;
+    // Rising (up): not on at a, on at b. Setting: the other way round.
+    if ((g(a) > 0) === c.up || (g(b) > 0) !== c.up) return c;
+    while (b - a > 2 * precisionMs) {
+      const m = (a + b) / 2;
+      if ((g(m) > 0) === c.up) b = m;
+      else a = m;
+    }
+    const t = (a + b) / 2;
+    moved.set(c.t, t);
+    return { t, up: c.up };
+  });
+  const at = (t: number) => moved.get(t) ?? t;
+  const remap = (iv: Interval): Interval => ({ ...iv, startMs: iv.openStart ? iv.startMs : at(iv.startMs), endMs: iv.openEnd ? iv.endMs : at(iv.endMs) });
+  return { on: spans.on.map(remap), off: spans.off.map(remap), crossings };
+}
+
 function summarise(spans: { on: ContactSummary['intervals']; off: ContactSummary['intervals'] }, windowH: number): ContactSummary {
   const gap = longest(spans.off);
   return { intervals: spans.on, gapIntervals: spans.off, pct: windowH > 0 ? (100 * totalHours(spans.on)) / windowH : NaN, longestGapH: gap.h, gapOpenEnded: gap.open };
@@ -70,10 +107,12 @@ function summarise(spans: { on: ContactSummary['intervals']; off: ContactSummary
 
 /**
  * Opportunities over the scenario's window, sampled like its series (and at the window's end
- * when that falls between samples), with rise and set times refined to 10 s.
+ * when that falls between samples), with every edge placed to within `edgePrecisionMs`
+ * (DSN_EDGE_PRECISION_MS; 10 s or more leaves the edges where the window's own search puts them).
  * `horizon` is the site's skyline profile; the observer is at its site height plus mast.
  */
-export function dsnOpportunities(scenario: Scenario, horizon: HorizonProfile, stations: readonly GroundStation[] = DSN_STATIONS): DsnOpportunities {
+export function dsnOpportunities(scenario: Scenario, horizon: HorizonProfile, stations: readonly GroundStation[] = DSN_STATIONS, options: { edgePrecisionMs?: number } = {}): DsnOpportunities {
+  const precision = options.edgePrecisionMs ?? DSN_EDGE_PRECISION_MS;
   const stepMs = Math.max(1, scenario.stepMin) * 60_000;
   const startMs = scenario.startMs;
   const endMs = startMs + scenario.durationH * 3_600_000;
@@ -113,15 +152,23 @@ export function dsnOpportunities(scenario: Scenario, horizon: HorizonProfile, st
   };
   const spansFor = (mask: (s: GroundStation) => number) => stations.map((s, k) => {
     const m = mask(s);
-    return intervalsOf((i) => el[k][i] > m && clr[k][i] > 0, indicator(k, m), timeAt, count, startMs, endMs);
+    const ind = indicator(k, m);
+    return refineEdges(intervalsOf((i) => el[k][i] > m && clr[k][i] > 0, ind, timeAt, count, startMs, endMs), ind, precision);
   });
   const anyOf = (mask: (s: GroundStation) => number) => {
-    const inds = stations.map((s, k) => indicator(k, mask(s)));
-    return intervalsOf(
-      (i) => stations.some((s, k) => el[k][i] > mask(s) && clr[k][i] > 0),
-      (t) => Math.max(...inds.map((f) => f(t))),
-      timeAt, count, startMs, endMs,
-    );
+    const masks = stations.map(mask);
+    /** Positive while at least one station has the line of sight; one Earth and Moon orientation serves all stations. */
+    const any = (t: number) => {
+      const epoch = linkEpoch(t);
+      let best = -Infinity;
+      for (let k = 0; k < stations.length; k++) {
+        linkGeometry(epoch, sf, frames[k], g);
+        const v = Math.min(g.stationElDeg - masks[k], g.siteElDeg - skylineAt(horizon, g.siteAzDeg));
+        if (v > best) best = v;
+      }
+      return best;
+    };
+    return refineEdges(intervalsOf((i) => stations.some((_s, k) => el[k][i] > masks[k] && clr[k][i] > 0), any, timeAt, count, startMs, endMs), any, precision);
   };
 
   const rx = spansFor((s) => s.receiveMaskDeg);
