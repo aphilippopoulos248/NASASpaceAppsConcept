@@ -3,6 +3,7 @@
 // back for labels: the exaggeration drawn right now, which elevation data is loaded, whether
 // the polar close-up is showing. Presentation state, so it lives beside the scene.
 import { ActionError, defineAction, registerActions } from '../../core/actions';
+import { imageryText, type ImageryState } from '../sitePatch';
 import type { AverageState } from './averageMaps';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
 
@@ -30,13 +31,15 @@ export interface GlobeLive {
   polar: null | { resolutionM: number; shadows: boolean; note: string };
   /** The multi-year average maps behind the avg-* overlays: off, loading, missing (with the reason) or ready (with their legend). */
   averages: AverageState;
+  /** Close-up imagery around the selected site (fetched from NASA Moon Trek): null when no site has any (none selected, or poleward of 80 degrees). */
+  closeUp: null | { state: ImageryState; credits: string[] };
 }
 
 type Listener = () => void;
 
 class DisplayStore {
   private display: GlobeDisplay = { reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false };
-  private live: GlobeLive = { reliefNow: 0, reliefPpd: 0, reliefProblem: null, polar: null, averages: { state: 'off' } };
+  private live: GlobeLive = { reliefNow: 0, reliefPpd: 0, reliefProblem: null, polar: null, averages: { state: 'off' }, closeUp: null };
   private readonly listeners = new Set<Listener>();
 
   get(): Readonly<GlobeDisplay> {
@@ -60,6 +63,7 @@ class DisplayStore {
     const same =
       Math.abs(next.reliefNow - this.live.reliefNow) < 0.05 && next.reliefPpd === this.live.reliefPpd && next.reliefProblem === this.live.reliefProblem &&
       next.averages === this.live.averages &&
+      (next.closeUp === this.live.closeUp || (!!next.closeUp && !!this.live.closeUp && next.closeUp.state === this.live.closeUp.state && next.closeUp.credits.join() === this.live.closeUp.credits.join())) &&
       (next.polar === this.live.polar || (!!next.polar && !!this.live.polar && next.polar.resolutionM === this.live.polar.resolutionM && next.polar.shadows === this.live.polar.shadows && next.polar.note === this.live.polar.note));
     if (same) return;
     this.live = next;
@@ -97,6 +101,8 @@ export function displaySummary() {
     coverageShown: d.coverage,
     iceTargetsShown: d.iceTargets,
     polarCloseUp: l.polar ? { elevationGridM: l.polar.resolutionM, sunShadows: l.polar.shadows, note: l.polar.note } : null,
+    /** Photographic close-up around the selected site, the only thing fetched from outside the app: null when the site has none. */
+    closeUpImagery: l.closeUp ? { state: l.closeUp.state, layersShown: l.closeUp.credits, text: imageryText(l.closeUp.state, l.closeUp.credits) } : null,
     averageMaps:
       l.averages.state === 'ready'
         ? { state: 'ready', label: l.averages.legend.label, unit: l.averages.legend.unit, meaning: l.averages.legend.meaning, extent: l.averages.legend.extent, source: l.averages.legend.source }

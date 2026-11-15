@@ -38,6 +38,7 @@
 .sc-links a { text-decoration: none; }
 .sc-links a:hover { text-decoration: underline; }
 .sc-credit { margin-top: var(--sp-2); }
+.sc-credit--missing { color: var(--warn); }
 .sc-nav { display: flex; align-items: center; justify-content: space-between; margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 
 .sc-foot { padding: var(--sp-2) var(--sp-3) var(--sp-3); border-top: 1px solid var(--border); }

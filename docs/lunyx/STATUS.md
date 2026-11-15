@@ -1,9 +1,9 @@
 # Lunyx status
 
 Kept by the coordinator of the original hub project `lunyx`. Last updated 2026-11-15
-03:30 UTC, for the published commit `9a5fa1c` (the complete compare panel, the teammate's
-GitHub `main` work, the sources and AI-use documents, licence notices in the site), with
-corrections proposed by the `lunyx-experience` project. Acceptance is the desktop website
+03:45 UTC, for the published commit `0ec8caa` (mission presets, landing catalogue sources, on top of
+the complete compare panel, the teammate's GitHub `main` work, the sources and AI-use documents and
+the licence notices), with corrections proposed by the `lunyx-experience` project. Acceptance is the desktop website
 (decision D-9).
 "Shipped" means merged through the build gate and published on
 `origin/feature/lunyx-navigator`. Task numbers refer to the project hub board.
@@ -31,6 +31,8 @@ rest of the second round. Read section 4 before quoting any number from the app.
 | Comparison | Compare panel: scenarios A and B side by side with B minus A in numbers and sentences, requirements flagged in words, one control for "B = A arriving N hours later" and one for "B = A with another mast", shared clock, named comparisons that reload exactly | T-7, T-25, T-11 (slice 1) |
 | Mission-window table and seasonal outlook | Compare panel: the sunlit, dark, Earth-visible and Earth-gap intervals with UTC start, end and duration (spells cut by the window edge followed to their real end, and said so), CSV and JSON export; a chart of sunlight and Earth's centre in view per lunar day across a year, with the best and worst arrival and the cost of a slip | T-11 (slices 3 and 4), T-29 |
 | Country flags, hardware ownership, explored areas (teammate's GitHub `main` work) | Flags on the landing markers, markers coloured by country, "Belongs to" and "Owner" on the site card from the GCAT catalogue (with its source), each site's explored area on the globe (drawn enlarged so it reads at globe scale, and said so) | T-36 |
+| Mission presets | "Missions to replay" at the top of Filters, `loadPreset` / `listPresets` and `?preset=` links: Blue Ghost Mission 1 and IM-2 from touchdown for 14 days, and the 14 March 2025 eclipse at the Blue Ghost site in the surface view; all three on the JPL Horizons tables bundled with the app and playable with the network off | T-22 |
+| Landing catalogue sources | Every row of `public/data/landings.json` has a source for its position and its touchdown time: 26 positions from the LROC catalogue of anthropogenic objects (Wagner et al. 2017), Luna 9 and 13 from NSSDCA and marked approximate; three touchdown minutes kept but flagged `unsourced` | T-38 |
 | Licence notices | `/licences/THIRD-PARTY-NOTICES.txt` ships with the site, generated from the installed packages (three.js, astronomy-engine, the two OFL fonts, Vite and Rolldown); a test fails when it is stale | T-37 |
 | Nearby alternatives | "Nearby sites" tab: radius, spacing and slope-limit fields, progress, the ranked list (distance, bearing, slope, sunlight, longest darkness, Earth's centre in view, longest gap, score); any row can be pinned or loaded as B | T-8, T-11 (slice 2) |
 | Seasonal outlook | Metrics per lunar day across a year, best and worst arrival in the span, cost of a slip of 1 to 28 days (science core) | T-29 |
@@ -45,17 +47,14 @@ rest of the second round. Read section 4 before quoting any number from the app.
 | --- | --- | --- |
 | Two-ended sunrise/sunset events, Earth visibility by any part of the disc | Being built in `lunyx-science` | T-31 |
 | DSN opportunity edges placed by bisection to 0.25 s, assumptions sentence without a timing claim | Done in `lunyx-science` (their integration `1fafa13`), not yet delivered here | T-34 |
-| Mission presets: the two bundled Horizons windows and the 14 March 2025 eclipse in one step | In progress | T-22 |
 
 ## 3. Not built
 
 | What | Note | Task |
 | --- | --- | --- |
 | Labelled start and end of each sunset/sunrise (decision D-8) | The app's "sunset" is the last limb; the first cut of the disc, about an hour earlier at Blue Ghost and much longer at the poles, is not shown yet | T-31, T-33 |
-| Eclipse replay preset (14 March 2025, Blue Ghost) | The eclipse is in the computed series; no preset or dedicated view | T-22 |
 | Full assistant audit: capability inventory, UI/assistant equivalence tests, the multi-step browser scenario | With project `lunyx-experience`; every action it needs is on integration since `a958d6b` | T-16 |
 | End-to-end browser tests, screenshot review against the mockups, accessibility pass, final README | With project `lunyx-experience`. `docs/lunyx/SOURCES.md` and `docs/lunyx/AI-USE.md` are published (`0cc5553`); AI-USE.md section 8 waits for operator decisions and its section 2.1 is a draft | T-17 |
-| A source for every row of the landing catalogue | In progress | T-38 |
 | Historical mission trajectories; landing error ellipse | Not started. The error ellipse is struck out in the design and is lowest priority | T-24 |
 | Separate summer and winter Diviner temperature maps | Out of scope: the source is 192.7 GB of binned tables. Annual maximum and mean are shipped instead and labelled as annual | T-23 |
 | North-polar high-resolution elevation layer | Not bundled; the north pole rests on the 1.9 km grid plus on-request windows | T-4 |
@@ -78,7 +77,7 @@ rest of the second round. Read section 4 before quoting any number from the app.
 | Seasonal outlook | The validator's own skyline and SPICE, a year at IM-2 and a Shackleton-rim pin (T-34) | Within 0.11 points per lunar day, except one row at the rim pin (0.57 points), traced to the skyline before `3899cb9`; re-run pending. The in-app model over a year: Sun within 0.0038 deg, Earth within 0.0030 deg of SPICE |
 | Longest darkness and Earth gap followed past the window edge | Same, at IM-2, Chandrayaan-3 and Apollo 11 | Ends within 3.1 min |
 | DSN station geometry, second party | Horizons on dates the author did not use | Elevations within 0.001 deg. Limit crossings within 5.3 s, not the 0.3 s quoted by the author; terrain-set edges within 1.5 min |
-| Landing positions and touchdown times (`public/data/landings.json`) | | **Not checked**: no source per row (only Apollo 11 was checked, by the teammate). T-38 is adding them |
+| Landing positions and touchdown times (`public/data/landings.json`) | Positions against the LROC catalogue bundled in `public/data/sources/lroc-anthropogenic-objects.csv` (checked by `lunyx-experience` @submission); times against NSSDCA, Siddiqi (NASA SP-2018-4041) and agency releases (T-38) | The 26 LROC positions equal the catalogue to 0.00005 deg. Luna 9 and 13: not found in LRO images, NSSDCA positions, approximate. Three touchdown minutes are not confirmed by an official source (Luna 23, Chandrayaan-3, IM-2). The validation figures in this section were computed at the positions before T-38 (IM-2 moved 22 m, Blue Ghost 8 m, Chang'e 4 417 m) |
 | Slope | Recomputed at the 28 sites and 10 scan candidates | Identical to 0.0000 deg. But the 120 m measure on a 60 m grid cannot see lander-scale slope: Surveyor 3 is published at 14 deg (app: 12.5 deg at 10 m on the 3 m model, 3.7 deg at 120 m); Apollo 14 at 7 deg (7.2 deg against 1.3 deg) |
 | Surface view picture | | Checked by eye in software-rendered headless Chromium only. Full visual settings at a polar site have not been seen on a real GPU |
 | Assistant with a real language model; Jev router with the real service | | **Never run**: no API keys on the build machine. Verified only with a scripted stand-in model and in deterministic mode |
