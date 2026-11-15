@@ -276,8 +276,9 @@ describe('equivalence: time and mission parameters', () => {
     });
     assert.deepEqual(logged.map((e) => [e.origin, e.params, e.result.label]), [['ui', { type: 'sunset', instant: 'start' }, 'Sun starts setting'], ['ui', { type: 'sunset', instant: 'event' }, 'Sun fully set']]);
     const [start, end] = logged.map((e) => e.result);
-    assert.equal(start.span.end.timeUtc, end.timeUtc, 'both clicks went through the same passage');
-    assert.equal(s.timeMs, Date.parse(end.timeUtc), 'the clock at the sunset');
+    // Result times are to the minute (isoUtc); the clock keeps the second.
+    assert.ok(Math.abs(Date.parse(start.span.end.timeUtc) - Date.parse(end.timeUtc)) <= 60_000, `both clicks went through the same passage: ${JSON.stringify(start.span)} vs ${end.timeUtc}`);
+    assert.equal(`${new Date(s.timeMs).toISOString().slice(0, 16)}Z`, end.timeUtc, 'the clock at the sunset');
     assert.equal(s.playing, false);
   });
 

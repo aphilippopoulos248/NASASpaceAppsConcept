@@ -282,7 +282,9 @@ const CASES = [
     const card = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.site-card .sc-window dt')].filter((dt) => !dt.hidden).map((dt) => [dt.textContent.trim(), dt.nextElementSibling.textContent.trim()])));
     const first = (t) => Number(/-?\d+(?:\.\d+)?/.exec(t.replace('−', '-'))[0]);
     near(first(card.Sunlight), r.metrics.illuminationPct, 0.051, 'card sunlight vs getAnalysis');
-    near(first(card['Earth in view']), r.metrics.earthVisiblePct, 0.051, 'card Earth in view vs getAnalysis');
+    // Earth by two definitions since T-47, each its own row.
+    near(first(card["Earth's centre in view"]), r.metrics.earthVisiblePct, 0.051, "card Earth's centre in view vs getAnalysis");
+    near(first(card['Any part of Earth in view']), r.metrics.earthAnyPct, 0.051, 'card any part of Earth in view vs getAnalysis');
     near(first(card.Slope), r.slope.slopeDeg, 0.051, 'card slope vs getAnalysis');
     assert.ok(s.card);
   } },
@@ -327,7 +329,8 @@ const CASES = [
     // D-8 (T-47): the sunset is the last limb of a passage that began with the first cut; the result gives both ends.
     assert.equal(r.label, 'Sun fully set');
     assert.equal(r.span?.kind, 'set', JSON.stringify(r.span));
-    assert.equal(r.span.end.timeUtc, r.timeUtc, 'the sunset is the end of its passage');
+    // Result times are to the minute; the event and its passage's end agree to the second (they may straddle a minute).
+    assert.ok(Math.abs(Date.parse(r.span.end.timeUtc) - Date.parse(r.timeUtc)) <= 60_000, `the sunset is the end of its passage: ${r.span.end.timeUtc} vs ${r.timeUtc}`);
     assert.equal(r.span.start.label, 'Sun starts setting');
     assert.ok(r.span.start.timeUtc < r.timeUtc, JSON.stringify(r.span));
     assert.match(r.span.summary, /^starts setting .+, fully set .+ UTC$/);
@@ -412,9 +415,9 @@ const CASES = [
   { name: 'selectCandidate', params: { rank: 1 }, check: async (r, page) => {
     assert.equal(r.site.id, page.__nearby.candidates[0].id);
     assert.equal((await store(page)).site.id, r.site.id);
-    // A pin or a candidate is "Pinned location" on the card, with its coordinates (formatCoords: 3 decimals).
+    // The card names the candidate as the result does (F-6, fixed in dbc6c59), with its coordinates (formatCoords: 3 decimals).
     const where = `${Math.abs(r.site.latDeg).toFixed(3)}° ${r.site.latDeg >= 0 ? 'N' : 'S'}, ${Math.abs(r.site.lonDegEast).toFixed(3)}° ${r.site.lonDegEast >= 0 ? 'E' : 'W'}`;
-    await shows(page, (s) => s.card?.title === 'Pinned location' && s.card.where.startsWith(where), `the card shows the chosen candidate at ${where}`);
+    await shows(page, (s) => s.card?.title === r.site.name && s.card.where.startsWith(where), `the card shows the chosen candidate "${r.site.name}" at ${where}`);
   } },
   { name: 'stopCompare', check: async (r, page) => {
     assert.equal((await store(page)).comparing, false);

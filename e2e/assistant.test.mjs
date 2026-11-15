@@ -121,6 +121,9 @@ describe('assistant: deterministic mode (server without a model)', () => {
   });
 
   test('a rise or set is given with both ends of its passage, from the result (D-8, T-47)', SLOW, async (t) => {
+    // The later tests expect the site the earlier ones selected: it is put back at the end.
+    const before = (await state(page)).site?.id;
+    t.after(() => (before ? result(page, 'selectSite', { site: before, fly: false }) : undefined));
     // Blue Ghost on 16 March 2025 at noon: the Sun sets that evening.
     await result(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
     await result(page, 'setMissionWindow', { startUtc: '2025-03-16T06:00Z', durationH: 24, moveClock: true });

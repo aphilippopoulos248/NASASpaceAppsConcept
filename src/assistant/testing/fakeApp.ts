@@ -99,8 +99,8 @@ const MIN = 60_000;
 /**
  * The passage of each event's disc through the skyline (option eventSpans, as T-47's SpanReport):
  * a sunset is the last limb of a set that began with the first cut, a sunrise the first limb of a
- * rise, Earthset and Earthrise the centre crossing inside Earth's passage. GRAZE is a passage
- * with no event: the Sun partly hidden, never fully set.
+ * rise, Earthset and Earthrise the centre crossing inside Earth's passage. The entry without an
+ * event is a graze: the Sun partly hidden, never fully set.
  */
 export const PASSAGES = [
   { event: 'sunrise', body: 'sun', kind: 'rise', startMs: T0 + 5 * 3_600_000, endMs: T0 + 5 * 3_600_000 + 40 * MIN, centreMs: [] as number[], startAz: 91.2, endAz: 91.5 },
