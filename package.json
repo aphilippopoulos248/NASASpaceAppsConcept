@@ -25,7 +25,8 @@
     "build-diviner": "node --experimental-strip-types --no-warnings scripts/build-diviner.mjs",
     "build-shadowcam-index": "node --experimental-strip-types --no-warnings scripts/build-shadowcam-index.mjs",
     "fetch-gcat": "node scripts/fetch-gcat-landers.mjs",
-    "fetch-site-areas": "node scripts/fetch-site-areas.mjs"
+    "fetch-site-areas": "node scripts/fetch-site-areas.mjs",
+    "build-licences": "node scripts/build-licences.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
