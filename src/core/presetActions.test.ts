@@ -62,7 +62,7 @@ describe('listPresets', () => {
     expect(r.result.presets.map((p: any) => p.id)).toEqual(['blue-ghost-landing', 'im-2-landing', 'eclipse-2025-03-14']);
     expect(r.result.presets[0]).toMatchObject({
       title: 'Blue Ghost Mission 1, Mare Crisium',
-      site: { id: 'blue-ghost-1', name: 'Blue Ghost Mission 1', latDeg: 18.562, lonDegEast: 61.81 },
+      site: { id: 'blue-ghost-1', name: 'Blue Ghost Mission 1', latDeg: 18.5622, lonDegEast: 61.8102 },
       missionWindow: { startUtc: '2025-03-02T08:34Z', durationH: 336, endUtc: '2025-03-16T08:34Z' },
       clockStartsUtc: '2025-03-02T08:34Z',
       view: 'surface',
@@ -107,7 +107,7 @@ describe('loadPreset', () => {
     // What is on screen.
     const s = store.get();
     expect(s).toMatchObject({ view: 'surface', windowStartMs: utc('2025-03-14T04:30Z'), windowDurationH: 6, delayH: 0, timeMs: utc('2025-03-14T04:52Z'), rate: 600, playing: true, lightMode: 'real', comparing: false });
-    expect(s.site).toEqual({ id: 'blue-ghost-1', name: 'Blue Ghost Mission 1', kind: 'landing', lat: 18.562, lon: 61.81 });
+    expect(s.site).toEqual({ id: 'blue-ghost-1', name: 'Blue Ghost Mission 1', kind: 'landing', lat: 18.5622, lon: 61.8102 });
     // The surface was prepared and shown before the look direction was set.
     expect(order).toEqual(['prepare blue-ghost-1', 'shown surface']);
     // Facing Earth, west-south-west and about 29 degrees up, aimed 1.5 degrees under its centre,
@@ -123,7 +123,7 @@ describe('loadPreset', () => {
     expect(r.result).toMatchObject({
       preset: { id: 'eclipse-2025-03-14' },
       view: 'surface',
-      site: { id: 'blue-ghost-1', latDeg: 18.562, lonDegEast: 61.81 },
+      site: { id: 'blue-ghost-1', latDeg: 18.5622, lonDegEast: 61.8102 },
       timeUtc: '2025-03-14T04:52Z',
       playing: true,
       rateSimSecondsPerSecond: 600,
