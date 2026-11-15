@@ -20,7 +20,7 @@ import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
-import { loadSiteAreas, SiteAreaLayer } from '../siteAreas';
+import { areaScale, loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
@@ -31,6 +31,8 @@ import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { effectiveRelief } from './reliefTiles';
+import { flyDirection } from './flyTarget';
+import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
@@ -41,13 +43,9 @@ const MIN_DISTANCE = 1 + MIN_CLEARANCE;
 const Z = new Vector3(0, 0, 1);
 const MOON = new Sphere(new Vector3(), 1);
 
-/** Scene direction to selenographic lat/lon (inverse of latLonToVec3). */
 const round5 = (x: number) => Math.round(x * 1e5) / 1e5;
 
-export function vec3ToLatLon(v: Vector3): { lat: number; lon: number } {
-  const n = v.clone().normalize();
-  return { lat: (Math.asin(Math.max(-1, Math.min(1, n.y))) * 180) / Math.PI, lon: wrapLon((Math.atan2(-n.z, n.x) * 180) / Math.PI) };
-}
+export { vec3ToLatLon };
 
 export class GlobeView {
   readonly scene = new Scene();
@@ -85,6 +83,8 @@ export class GlobeView {
   private sunMoonFixed: [number, number, number] = [1, 0, 0];
   /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
   private placed = { relief: NaN, version: -1, site: '', polar: false };
+  /** Enlargement the explored areas were last placed at (it follows the camera altitude). */
+  private placedAreaScale = NaN;
   private patchVersion = -1;
   active = true;
 
@@ -330,11 +330,10 @@ export class GlobeView {
   }
 
   private flyTo(dir: Vector3, dist?: number): void {
-    const d = dir.clone().normalize();
-    // Keep the poles from ending up dead-centre, where orbiting gets twitchy.
-    d.y = Math.max(-0.985, Math.min(0.985, d.y));
+    // Exactly over the point asked for; only right over a pole it stops 0.1 degree short (flyTarget.ts).
+    const d = flyDirection(dir, this.camera.position);
     const waiting = this.fly?.done ?? [];
-    this.fly = { dir: d.normalize(), dist: dist ?? this.camera.position.length(), done: waiting };
+    this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting };
     this.controls.autoRotate = false;
   }
 
@@ -429,10 +428,16 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
-      this.areas?.place((lat, lon) => this.surfaceRadius(lat, lon));
+      this.placedAreaScale = NaN; // placed again below
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
+    }
+    // The explored areas are enlarged from orbit and true to size near the ground.
+    const areaK = areaScale(altitudeKm);
+    if (this.areas && !(Math.abs(areaK - this.placedAreaScale) < 0.01 * areaK)) {
+      this.placedAreaScale = areaK;
+      this.areas.place((lat, lon) => this.surfaceRadius(lat, lon), areaK);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {
       this.patchVersion = relief.dataVersion;
