@@ -121,7 +121,7 @@ Retired here, worktrees kept:
 - @ephemeris-check: independent validation is now done by lunyx-science.
 - @ice-targets: its paths are assigned task by task, e.g. @surface in `src/terrain/reader.ts` for T-40 and @analysis in `src/ui/science/**` for T-46.
 
-One task-specific grant is open: @globe works in @analysis's `src/analysis/horizon.ts` and the event-instant code for T-50 (finer skyline at transitions). @analysis knows.
+Closed task-specific grant: @globe worked in @analysis's `src/analysis/` (`fineSkyline.ts`, `horizon.ts`, `window.ts`, `types.ts`) for T-50, the finer skyline at transitions. Those files are @analysis's again.
 
 `src/analysis/types.ts` and `src/terrain/types.ts` are contracts: their owner may add
 fields; removing or renaming one needs a note in the hub first, because other workers

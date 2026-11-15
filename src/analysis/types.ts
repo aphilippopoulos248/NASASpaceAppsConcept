@@ -64,6 +64,23 @@ export interface HorizonProfile {
   /** Per azimuth: index into `layers` of the data that forms the skyline there. */
   skylineLayer: Uint8Array;
   warnings: string[];
+  /**
+   * The skyline read at a finer azimuth step where the Sun's or Earth's disc comes near it in the
+   * analysed window (src/analysis/fineSkyline.ts). Where a segment covers an azimuth, skylineAt()
+   * reads it instead of the main profile, so a notch or a peak narrower than `azStepDeg` under a disc
+   * is seen when it rises or sets. Absent or empty: the main profile everywhere.
+   */
+  fine?: FineSkyline[];
+}
+
+/** One stretch of skyline at a fine azimuth step: sample k is at azimuth (k0 + k) / perDeg degrees (taken modulo 360). */
+export interface FineSkyline {
+  /** Index of the first sample on the fine grid: its azimuth is k0 / perDeg degrees, 0 <= k0 < 360 * perDeg. */
+  k0: number;
+  /** Samples per degree (20 = every 0.05 deg). */
+  perDeg: number;
+  /** Skyline elevation above the local horizontal, degrees, as in HorizonProfile.elevDeg. */
+  elevDeg: Float32Array;
 }
 
 /** Sun and Earth over a mission window, sampled at a fixed step. */
