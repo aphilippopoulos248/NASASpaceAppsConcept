@@ -14,6 +14,7 @@ import { bindWorkingPair, createCompareActions } from './actions';
 import { compareTakesEscape, focusInHiddenPanel, returnFocusOnClose } from './focus';
 import { mountNearbyTab } from './nearbyTab';
 import { mountOutlookTab } from './outlookTab';
+import { mountRankTab } from '../decision/rankTab';
 import { mountWindowsTab } from './windowsTab';
 import { COMPARE_TABS, createPanelStore, TAB_TITLE, type CompareTab } from './state';
 import { createCompareStorage } from './storage';
@@ -121,6 +122,8 @@ export function mountComparePanel(region: HTMLElement): void {
   const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
   const windows = mountWindowsTab(tabPanels.get('windows')!, panel, createTabKit());
   const outlookTab = mountOutlookTab(tabPanels.get('outlook')!, panel, createTabKit());
+  // Decision engine (D-17, T-74): the tab follows the stores and the decision tools itself.
+  const rankTab = mountRankTab(tabPanels.get('rank')!, createTabKit());
 
   // ---------- rendering ----------
   const renderLauncher = () => {
@@ -161,6 +164,7 @@ export function mountComparePanel(region: HTMLElement): void {
     } else if (tab === 'nearby') nearby.render();
     else if (tab === 'windows') windows.render();
     else if (tab === 'outlook') outlookTab.render();
+    else if (tab === 'rank') rankTab.render();
   };
   const showing = (tab: CompareTab) => isOpen() && panel.get().tab === tab;
 

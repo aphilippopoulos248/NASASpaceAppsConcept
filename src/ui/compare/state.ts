@@ -5,10 +5,10 @@
 import type { Outlook } from '../../analysis/types';
 import type { Scenario } from '../../core/types';
 
-export type CompareTab = 'compare' | 'nearby' | 'windows' | 'outlook';
+export type CompareTab = 'compare' | 'nearby' | 'windows' | 'outlook' | 'rank';
 /** The tabs of the panel, in order. */
-export const COMPARE_TABS: readonly CompareTab[] = ['compare', 'nearby', 'windows', 'outlook'];
-export const TAB_TITLE: Record<CompareTab, string> = { compare: 'A and B', nearby: 'Nearby sites', windows: 'Window table', outlook: 'Outlook' };
+export const COMPARE_TABS: readonly CompareTab[] = ['compare', 'nearby', 'windows', 'outlook', 'rank'];
+export const TAB_TITLE: Record<CompareTab, string> = { compare: 'A and B', nearby: 'Nearby sites', windows: 'Window table', outlook: 'Outlook', rank: 'Rank sites' };
 
 /** The seasonal outlook last asked for, and where it stands. */
 export type OutlookStatus =
