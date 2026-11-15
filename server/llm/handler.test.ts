@@ -2,7 +2,7 @@
 // streamed step from the scripted model, the router guard, and that no credential can
 // appear in anything the handler sends.
 import { afterEach, describe, expect, it } from 'vitest';
-import type { AssistantStatus, StepEvent, StepRequest, WireTool } from '../../src/assistant/protocol';
+import { LIMITS, type AssistantStatus, type StepEvent, type StepRequest, type WireTool } from '../../src/assistant/protocol';
 import { loadConfig, type LlmConfig } from './env';
 import { createAssistantHandler, type HandlerDeps, type HttpRequest, type HttpResponse } from './handler';
 import { directRouter, registerRouter } from './router';
@@ -189,7 +189,7 @@ describe('request validation', () => {
       [{ role: 'user', text: 'hi' }, { role: 'tool', results: [{ id: 'a', name: 'getState', ok: true, content: '{}' }] }],
       [{ role: 'user', text: '   ' }],
       [{ role: 'user', text: 'x'.repeat(9000) }],
-      [{ role: 'user', text: 'hi' }, call, { role: 'tool', results: [{ id: 'a', name: 'getState', ok: true, content: 'x'.repeat(30_000) }] }],
+      [{ role: 'user', text: 'hi' }, call, { role: 'tool', results: [{ id: 'a', name: 'getState', ok: true, content: 'x'.repeat(LIMITS.maxToolResultChars + 501) }] }],
     ];
     for (const messages of bad) expect(ok(messages).ok, JSON.stringify(messages).slice(0, 80)).toBe(false);
     expect(validateStepRequest({ messages: [{ role: 'user', text: 'hi' }], tools: [tools[0], tools[0]] })).toMatchObject({ ok: false, error: expect.stringContaining('listed twice') });

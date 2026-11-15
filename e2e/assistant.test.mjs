@@ -72,7 +72,28 @@ describe('assistant: deterministic mode (server without a model)', () => {
     const entries = (await log(page, from)).filter((e) => e.origin === 'assistant');
     assert.deepEqual(entries.map((e) => [e.name, e.ok]), [['selectSite', true]]);
     assert.deepEqual(reply.shownActions, ['Select landing site']);
-    assert.match(reply.shownText, /Selected IM-2 Athena \(latitude -84\.7900°, longitude 29\.2000° \(east-positive\)/);
+    // The coordinates are the catalogue's, as the action returned them (the catalogue's positions were corrected upstream).
+    const site = reply.actions[0].result.site;
+    assert.ok(reply.shownText.includes(`Selected IM-2 Athena (latitude ${site.latDeg.toFixed(4)}°, longitude ${site.lonDegEast.toFixed(4)}° (east-positive)`), reply.shownText);
+  });
+
+  test("the card's owner and explored area, and the real clock, are read from getState (T-44)", SLOW, async () => {
+    await ask(page, 'go to IM-2');
+    const st = await result(page, 'getState');
+    const o = st.site.ownership, area = st.site.exploredArea;
+    assert.ok(o && area, `IM-2 has no records in this build: ${JSON.stringify({ o, area })}`);
+    const owner = await ask(page, 'who owns this site?');
+    assert.ok(owner.text.startsWith(`IM-2 Athena belongs to ${o.state}`) && owner.text.includes(`owner: ${o.owner}`), owner.text);
+    assert.ok(owner.text.includes(`Source: ${o.source}.`), owner.text);
+    const explored = await ask(page, 'how big is the explored area?');
+    assert.ok(explored.text.includes(`The explored area at IM-2 Athena: ${area.description}`), explored.text);
+    const clock = await ask(page, 'what is the real time?');
+    const real = (await result(page, 'getState')).wallClockUtc;
+    // The reply and this reading may straddle a minute.
+    assert.match(clock.text, /^The real date and time on this computer is \d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC\./);
+    const said = Date.parse(`${clock.text.slice(43, 59).replace(' ', 'T')}Z`);
+    assert.ok(Math.abs(Date.parse(real) - said) < 120_000, `${clock.text} vs ${real}`);
+    for (const r of [owner, explored, clock]) assert.ok(r.actions.every((x) => x.name === 'getState'), JSON.stringify(r.actions.map((x) => x.name)));
   });
 
   test('numbers in a reply are the numbers the app computed', SLOW, async () => {
@@ -85,11 +106,46 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.ok(reply.text.includes(`longest darkness ${f1(a.metrics.longestDarknessH)} h`), reply.text);
     assert.ok(reply.text.includes(`Earth's centre in view ${f1(a.metrics.earthVisiblePct)} %`), reply.text);
     assert.ok(reply.text.includes(`longest Earth-centre gap ${f1(a.metrics.longestEarthGapH)} h`), reply.text);
+    // Earth by any part of its disc (T-47), named apart from Earth's centre.
+    assert.ok(reply.text.includes(`any part of Earth's disc in view ${f1(a.metrics.earthAnyPct)} %, longest spell with Earth's whole disc hidden ${f1(a.metrics.longestEarthAnyGapH)} h`), reply.text);
     assert.ok(reply.text.includes(`slope ${f1(a.slope.slopeDeg)}°`), reply.text);
+    // Finding Q-5: the default 0° to 90° band is no requirement (T-46: `required: false` and a note); the reply says the core's note.
+    const band = a.requirements.sunElevationBand;
+    assert.deepEqual([band.required, band.minDeg, band.maxDeg, band.metForWholeWindow], [false, 0, 90, null]);
+    assert.ok(!reply.text.includes('leaves the required elevation band'), reply.text);
+    assert.ok(reply.text.includes(`${band.note} The Sun's elevation ranges from ${f1(band.windowMinSunElDeg)}° to ${f1(band.windowMaxSunElDeg)}° during the window`), reply.text);
     assert.match(reply.text, /not a guarantee of a working radio link/);
     assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
     // The question changed nothing: only queries ran.
     assert.ok(reply.actions.every((x) => x.name === 'getAnalysis' || x.name === 'getState'), JSON.stringify(reply.actions.map((x) => x.name)));
+  });
+
+  test('a rise or set is given with both ends of its passage, from the result (D-8, T-47)', SLOW, async (t) => {
+    // The later tests expect the site the earlier ones selected: it is put back at the end.
+    const before = (await state(page)).site?.id;
+    t.after(() => (before ? result(page, 'selectSite', { site: before, fly: false }) : undefined));
+    // Blue Ghost on 16 March 2025 at noon: the Sun sets that evening.
+    await result(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
+    await result(page, 'setMissionWindow', { startUtc: '2025-03-16T06:00Z', durationH: 24, moveClock: true });
+    await result(page, 'setTime', { utc: '2025-03-16T12:00Z' });
+    const hm = (iso) => iso.slice(11, 16);
+    const day = (iso) => iso.slice(0, 10);
+    const passage = (span) => `The Sun starts setting ${day(span.start.timeUtc)} ${hm(span.start.timeUtc)} and is fully set ${day(span.end.timeUtc) === day(span.start.timeUtc) ? '' : `${day(span.end.timeUtc)} `}${hm(span.end.timeUtc)} UTC.`;
+    const start = await ask(page, 'jump to the start of the next sunset');
+    const j = start.actions.find((x) => x.name === 'jumpToEvent');
+    assert.deepEqual(j?.params, { type: 'sunset', which: 'next', instant: 'start' });
+    const r = j.result;
+    assert.equal(r.label, 'Sun starts setting');
+    assert.ok(start.text.includes(`Moved the clock to the start of the next sunset: Sun starts setting ${day(r.timeUtc)} ${hm(r.timeUtc)} UTC (${r.instant})`), start.text);
+    assert.ok(start.text.includes(passage(r.span)), `${passage(r.span)} not in: ${start.text}`);
+    const when = await ask(page, 'when is the next sunset?');
+    const a = await result(page, 'getAnalysis');
+    const e = a.nextEvents.sunset;
+    assert.equal(e.span.start.timeUtc, r.span.start.timeUtc, 'the same passage');
+    assert.ok(when.text.includes(`The next sunset: Sun fully set ${day(e.timeUtc)} ${hm(e.timeUtc)} UTC`), when.text);
+    assert.ok(when.text.includes(passage(e.span)), when.text);
+    t.diagnostic(`reply 1: ${start.text}`);
+    t.diagnostic(`reply 2: ${when.text}`);
   });
 
   test('it says what it did not understand and changes nothing', SLOW, async () => {
