@@ -187,18 +187,38 @@ async function run(base, size) {
     const before = await page.evaluate(() => window.lunyx.actions.actionLog().at(-1)?.seq ?? 0);
     await tab(page).getByRole('button', { name: 'Rank sites' }).click();
     const t1 = Date.now();
-    await until(page, (from) => window.lunyx.actions.actionLog().some((e) => e.seq > from && e.name === 'findBestSites') && document.querySelector('.cmp-tabpanel:not([hidden]) .cmp-progress').hidden, before, LONG);
+    await until(page, (from) => window.lunyx.actions.actionLog().some((e) => e.seq > from && e.name === 'findBestSites'), before, LONG);
+    const took = ((Date.now() - t1) / 1000).toFixed(1);
+    await until(page, () => document.querySelector('.cmp-tabpanel:not([hidden]) .cmp-progress').hidden, undefined, LONG);
     const nearby = await tab(page).locator('.dec-summary').textContent();
-    const err = await tab(page).locator('.cmp-status.is-error').textContent().catch(() => '');
-    check(!err, `nearby ranking around IM-2 in ${((Date.now() - t1) / 1000).toFixed(1)} s: ${nearby}${err ? ` / error: ${err}` : ''}`);
+    const errors = tab(page).locator('.cmp-status.is-error');
+    const err = (await errors.count()) ? await errors.textContent() : '';
+    check(!err, `nearby ranking around IM-2 in ${took} s: ${nearby}${err ? ` / error: ${err}` : ''}`);
     await scrollTo(page, '.cmp-tabpanel:not([hidden]) .dec-results');
     await shot(page, dir, '09-nearby');
+
+    // The buttons of a row run the existing actions: Pin (dropPin) or Open (selectSite), then As A / As B (saveScenario).
+    const rowsNow = tab(page).locator('.dec-table--ranked tbody tr');
+    if ((await rowsNow.count()) >= 2) {
+      const [id1, id2] = [await rowsNow.nth(0).getAttribute('data-site'), await rowsNow.nth(1).getAttribute('data-site')];
+      await rowsNow.nth(0).getByRole('button', { name: /^(Open|Pin) / }).click();
+      await until(page, (id) => window.lunyx.store.get().site?.id === id, id1);
+      check(true, `"Open"/"Pin" made row 1 the site on screen (${id1})`);
+      await rowsNow.nth(0).getByRole('button', { name: /as scenario A$/ }).click();
+      await until(page, (id) => window.lunyx.store.get().compareA?.site.id === id, id1);
+      await rowsNow.nth(1).getByRole('button', { name: /as scenario B$/ }).click();
+      await until(page, (id) => window.lunyx.store.get().compareB?.site.id === id && document.querySelector('.cmp-sheet [role="tab"][aria-selected="true"]')?.textContent === 'A and B', id2);
+      check(true, `"As A" and "As B" filled the slots (${id1}, ${id2}) and opened the A and B tab`);
+      await shot(page, dir, '10-as-a-and-b');
+      await page.locator('.cmp-sheet').getByRole('tab', { name: 'Rank sites' }).click();
+      await until(page, () => document.querySelector('.cmp-sheet [role="tab"][aria-selected="true"]')?.textContent === 'Rank sites');
+    }
 
     // Beside the assistant drawer, the sheet is narrower.
     if ((await act(page, 'setAssistantOpen', { open: true })).ok) {
       await page.waitForTimeout(600);
       await scrollTo(page, '.cmp-tabpanel:not([hidden]) .dec-results');
-      await shot(page, dir, '10-beside-the-assistant');
+      await shot(page, dir, '11-beside-the-assistant');
       const low2 = await lowContrast(page, '.cmp-tabpanel:not([hidden])');
       check(low2.length === 0, `contrast AA beside the drawer (${low2.join('; ') || 'all pass'})`);
       await act(page, 'setAssistantOpen', { open: false });

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MissionProfile } from '../../analysis/decision/types';
-import { readComparison, readProfiles, readRanking, readSettings } from './results';
+import { readComparison, readProfiles, readRanking, readRankingExtras, readSettings } from './results';
 
 const PROFILE: MissionProfile = {
   id: 'polar-short',
@@ -25,10 +25,11 @@ describe('reading the decision tools results', () => {
   });
 
   it('reads the setting, with defaults for what is left out', () => {
-    expect(readSettings({ profileId: '', overrides: { thresholds: { slope: 8 } }, profile: PROFILE, relaxations: [{ criterion: 'slope', from: 10, to: 15 }, 'bad'] })).toEqual({
-      profileId: '', overrides: { thresholds: { slope: 8 } }, profile: PROFILE, relaxations: [{ criterion: 'slope', from: 10, to: 15 }],
+    // getDecisionSettings as T-73 gives it: the first preset's id with isDefaultProfile when AppState says ''.
+    expect(readSettings({ profileId: 'polar-short', isDefaultProfile: true, overrides: { thresholds: { slope: 8 } }, profile: PROFILE, relaxations: [{ criterion: 'slope', from: 10, to: 15 }, 'bad'], refused: ['No.'] })).toEqual({
+      profileId: 'polar-short', isDefault: true, refused: ['No.'], overrides: { thresholds: { slope: 8 } }, profile: PROFILE, relaxations: [{ criterion: 'slope', from: 10, to: 15 }],
     });
-    expect(readSettings({ profile: PROFILE })).toEqual({ profileId: 'polar-short', overrides: {}, profile: PROFILE, relaxations: [] });
+    expect(readSettings({ profile: PROFILE })).toEqual({ profileId: 'polar-short', isDefault: false, refused: [], overrides: {}, profile: PROFILE, relaxations: [] });
     expect(readSettings({ profileId: 'x' })).toBeNull();
   });
 
@@ -45,6 +46,12 @@ describe('reading the decision tools results', () => {
     expect(wrapped.paretoFront).toEqual(['im-2', 'x']);
     expect(readRanking({ ranking: { ranked: [] } })).toBeNull();
     expect(readRanking(null)).toBeNull();
+  });
+
+  it('reads where the candidates came from, the cap and what it dropped', () => {
+    expect(readRankingExtras({ cap: 40, dropped: 0, candidates: { from: 'catalogue', considered: 28, total: 28 } })).toEqual({ source: { from: 'catalogue', considered: 28, total: 28 }, cap: 40, dropped: 0 });
+    expect(readRankingExtras({ candidates: { from: 'elsewhere', considered: 1 } })).toEqual({ source: null, cap: null, dropped: 0 });
+    expect(readRankingExtras(null)).toEqual({ source: null, cap: null, dropped: 0 });
   });
 
   it('reads a pair comparison given bare or under `comparison`', () => {

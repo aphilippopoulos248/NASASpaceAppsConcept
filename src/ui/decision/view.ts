@@ -35,8 +35,8 @@ export type CriterionUi = Pick<CriterionDef, 'id' | 'label' | 'unit' | 'sense' |
 const FALLBACK: readonly CriterionUi[] = [
   { id: 'sunlight', label: 'Sunlight', unit: '%', sense: 'higher-is-better', safety: false },
   { id: 'darkness', label: 'Longest darkness', unit: 'h', sense: 'lower-is-better', safety: false },
-  { id: 'earthVisibility', label: 'Earth in view', unit: '%', sense: 'higher-is-better', safety: false },
-  { id: 'commBlackout', label: 'Longest Earth gap', unit: 'h', sense: 'lower-is-better', safety: false },
+  { id: 'earthVisibility', label: 'Earth line of sight', unit: '%', sense: 'higher-is-better', safety: false },
+  { id: 'commBlackout', label: 'Longest blackout', unit: 'h', sense: 'lower-is-better', safety: false },
   { id: 'slope', label: 'Slope', unit: 'deg', sense: 'lower-is-better', safety: true },
   { id: 'roughness', label: 'Roughness', unit: 'm', sense: 'lower-is-better', safety: true },
 ];
@@ -56,6 +56,9 @@ export function criteriaUi(defs: () => readonly CriterionDef[] = criterionDefs):
 }
 
 const defOf = (defs: readonly CriterionUi[], id: CriterionId) => defs.find((d) => d.id === id) ?? FALLBACK.find((f) => f.id === id)!;
+
+/** The criterion inside a sentence: "slope", "longest darkness", but "Earth line of sight" (as the engine writes it). */
+export const noun = (def: Pick<CriterionUi, 'label'>) => (/^Earth\b/.test(def.label) ? def.label : def.label.charAt(0).toLowerCase() + def.label.slice(1));
 
 // ---------- numbers in words ----------
 
@@ -129,7 +132,7 @@ export function effectiveThreshold(base: MissionProfile, overrides: ProfileOverr
 
 export function relaxationPrompt(def: CriterionUi, base: number | null, next: number | null): RelaxationPrompt | null {
   if (!def.safety || thresholdChange(def, base, next) !== 'looser') return null;
-  const name = def.label.toLowerCase();
+  const name = noun(def);
   const was = base === null ? 'no limit' : `${direction(def)} ${limitText(base, def.unit)}`;
   const text =
     next === null
@@ -241,8 +244,8 @@ export function relaxationSentences(defs: readonly CriterionUi[], relaxations: r
     const def = defOf(defs, r.criterion);
     const from = r.from === null ? 'no limit' : `${direction(def)} ${limitText(r.from, def.unit)}`;
     return r.to === null
-      ? `Safety limit removed: ${def.label.toLowerCase()} (the profile asks for ${from}).`
-      : `Safety limit relaxed: ${def.label.toLowerCase()} ${direction(def)} ${limitText(r.to, def.unit)} instead of ${from}.`;
+      ? `Safety limit removed: ${noun(def)} (the profile asks for ${from}).`
+      : `Safety limit relaxed: ${noun(def)} ${direction(def)} ${limitText(r.to, def.unit)} instead of ${from}.`;
   });
 }
 
@@ -262,6 +265,8 @@ export interface Badge {
   reason: string;
   /** "Score 0.62, weight 25 %": what the criterion adds to the utility, for a feasible site. */
   scoreText: string | null;
+  /** The profile sets a threshold for it, so it can decide feasibility (T-77: one without a threshold never does). */
+  thresholded: boolean;
 }
 
 const MARK: Record<Verdict, string> = { pass: '✓', fail: '✗', unknown: '?' };
@@ -277,6 +282,7 @@ export function badgeOf(defs: readonly CriterionUi[], c: CriterionResult): Badge
     value: measuredText(c.measured, true),
     reason: `${c.reason}${missing}`,
     scoreText: c.score === null ? null : `Score ${c.score.toFixed(2)}, weight ${pct0(c.weight)}`,
+    thresholded: c.threshold !== null,
   };
 }
 
@@ -293,7 +299,10 @@ export interface SiteRow {
   pareto: boolean;
   /** One per criterion, in the fixed order; empty when the tools sent no evaluation for the row. */
   badges: Badge[];
-  /** Why it is not ranked: the reasons of the failing criteria (infeasible) or of the unknown ones (unknown). */
+  /**
+   * Why it is not ranked: the reasons of the failing criteria (infeasible), or of the unknown
+   * criteria that have a threshold (unknown; T-77: only those decide feasibility).
+   */
   deciding: string[];
 }
 
@@ -301,6 +310,8 @@ function rowOf(defs: readonly CriterionUi[], e: SiteEvaluation, section: Section
   const byId = new Map(e.criteria.map((c) => [c.id, c]));
   const badges = CRITERIA.filter((id) => byId.has(id)).map((id) => badgeOf(defs, byId.get(id)!));
   const decidingVerdict: Verdict | null = section === 'infeasible' ? 'fail' : section === 'unknown' ? 'unknown' : null;
+  const decidingBadges = decidingVerdict ? badges.filter((b) => b.verdict === decidingVerdict) : [];
+  const thresholded = decidingBadges.filter((b) => b.thresholded);
   return {
     id: e.site.id,
     name: ranked?.name ?? e.site.name,
@@ -311,7 +322,7 @@ function rowOf(defs: readonly CriterionUi[], e: SiteEvaluation, section: Section
     utilityText: section === 'ranked' ? utilityText(ranked?.utility ?? e.utility) : '—',
     pareto: ranked?.pareto ?? false,
     badges,
-    deciding: decidingVerdict ? badges.filter((b) => b.verdict === decidingVerdict).map((b) => b.reason) : [],
+    deciding: (thresholded.length ? thresholded : decidingBadges).map((b) => b.reason),
   };
 }
 
@@ -319,7 +330,7 @@ const byName = (a: SiteRow, b: SiteRow) => a.name.localeCompare(b.name, 'en') ||
 
 /**
  * The three sections in the order the tab lists them. Ranked: by the engine's rank (then utility,
- * then id). Unknown: fewest unknown criteria first. Infeasible: fewest failing criteria first
+ * then id). Unknown: fewest deciding unknowns first. Infeasible: fewest failing criteria first
  * (the near misses), then fewest unknown. Ties by name.
  */
 export function sortRows(rows: readonly SiteRow[]): { ranked: SiteRow[]; unknown: SiteRow[]; infeasible: SiteRow[] } {
@@ -327,7 +338,7 @@ export function sortRows(rows: readonly SiteRow[]): { ranked: SiteRow[]; unknown
   const ranked = rows
     .filter((r) => r.section === 'ranked')
     .sort((a, b) => (a.rank ?? Infinity) - (b.rank ?? Infinity) || (b.utility ?? -Infinity) - (a.utility ?? -Infinity) || a.id.localeCompare(b.id, 'en'));
-  const unknown = rows.filter((r) => r.section === 'unknown').sort((a, b) => n(a, 'unknown') - n(b, 'unknown') || byName(a, b));
+  const unknown = rows.filter((r) => r.section === 'unknown').sort((a, b) => a.deciding.length - b.deciding.length || n(a, 'unknown') - n(b, 'unknown') || byName(a, b));
   const infeasible = rows.filter((r) => r.section === 'infeasible').sort((a, b) => n(a, 'fail') - n(b, 'fail') || n(a, 'unknown') - n(b, 'unknown') || byName(a, b));
   return { ranked, unknown, infeasible };
 }
@@ -368,7 +379,7 @@ export function countsSentence(c: Ranking['counts']): string {
 /** The weights a result used, as shares: what the engine applied to a feasible site, else the profile's weights normalised. */
 export function weightsSentence(defs: readonly CriterionUi[], profile: MissionProfile, applied?: readonly CriterionResult[]): string {
   const shares = applied?.length ? Object.fromEntries(applied.map((c) => [c.id, c.weight])) as Record<CriterionId, number> : weightShares(profile.weights);
-  return `Weights used: ${defs.map((d) => `${d.label.toLowerCase()} ${pct0(shares[d.id] ?? 0)}`).join(', ')}.`;
+  return `Weights used: ${defs.map((d) => `${noun(d)} ${pct0(shares[d.id] ?? 0)}`).join(', ')}.`;
 }
 
 export function rankingView(defs: readonly CriterionUi[], r: Ranking): RankingView {
@@ -492,9 +503,25 @@ export function pairView(defs: readonly CriterionUi[], c: PairComparison): PairV
 
 export type SourceKind = 'catalogue' | 'nearby' | 'sites';
 
-/** A site as the decision tools take it: a landing by id, anything else by its coordinates. */
-export function siteArg(site: Pick<SiteRef, 'id' | 'kind' | 'lat' | 'lon'>): string | { lat: number; lon: number } {
-  return site.kind === 'landing' ? site.id : { lat: site.lat, lon: site.lon };
+/** A site as the decision tools take it (always an object: the schemas have no unions): a landing by id, anything else by its coordinates. */
+export function siteArg(site: Pick<SiteRef, 'id' | 'kind' | 'lat' | 'lon'>): { landing: string } | { lat: number; lon: number } {
+  return site.kind === 'landing' ? { landing: site.id } : { lat: site.lat, lon: site.lon };
+}
+
+/**
+ * Overrides as the tools' parameters take them: thresholds are numbers only, and a removed one
+ * (null in ProfileOverrides) goes in `removeThresholds`, in the fixed criterion order.
+ */
+export function overridesParam(o: ProfileOverrides): Record<string, unknown> {
+  const { thresholds, ...rest } = o;
+  const out: Record<string, unknown> = { ...rest };
+  if (thresholds) {
+    const kept = Object.fromEntries(CRITERIA.filter((id) => typeof thresholds[id] === 'number').map((id) => [id, thresholds[id]]));
+    const removed = CRITERIA.filter((id) => thresholds[id] === null);
+    if (Object.keys(kept).length) out.thresholds = kept;
+    if (removed.length) out.removeThresholds = removed;
+  }
+  return out;
 }
 
 /** The sites in comparison slots A and B, once each. */
@@ -563,10 +590,36 @@ export function sameProfile(a: MissionProfile, b: MissionProfile): boolean {
   );
 }
 
-/** "Measured 12 of 28 candidates…" while a ranking runs. */
-export function progressText(p: { done: number; total: number } | null, what: string): string {
-  if (!p || !(p.total > 0)) return `Measuring ${what}…`;
-  return `Measured ${Math.min(p.done, p.total)} of ${p.total} candidates…`;
+/** What a running tool is doing, in its own words ("Measuring Apollo 15 (4 of 28)"), or a count, or what was asked for. */
+export function progressText(p: { running: boolean; done: number; total: number; label: string } | null, what: string): string {
+  if (p?.running && p.label) return `${p.label}…`;
+  if (p?.running && p.total > 0) return `Measured ${Math.min(p.done, p.total)} of ${p.total} candidates…`;
+  return `Measuring ${what}…`;
+}
+
+/** Where a ranking's candidates came from, as findBestSites reports it (its `candidates`, `cap` and `dropped`). */
+export interface RankingSource {
+  from: 'catalogue' | 'sites' | 'nearby';
+  considered: number;
+  total?: number;
+  around?: { name: string };
+  radiusM?: number;
+  spacingM?: number;
+  scanned?: number;
+  removedBySlopePrefilter?: number;
+  withoutData?: number;
+  prefilter?: string;
+}
+
+/** One sentence: what was measured, and what the cap left out. */
+export function sourceSentence(src: RankingSource | null, cap: number | null, dropped: number): string {
+  if (!src) return '';
+  const over = dropped > 0 ? ` ${dropped} more ${dropped === 1 ? 'was' : 'were'} over the cap of ${cap ?? '?'} and not measured.` : '';
+  if (src.from === 'catalogue') return `Measured ${src.considered}${src.total !== undefined ? ` of the ${src.total}` : ''} catalogued landings.${over}`;
+  if (src.from === 'sites') return `Measured ${plural(src.considered, 'site')} from slots A and B.${over}`;
+  const grid = src.radiusM !== undefined && src.spacingM !== undefined ? ` within ${plain(src.radiusM, 0)} m every ${plain(src.spacingM, 0)} m` : '';
+  const out = [src.removedBySlopePrefilter ? `${src.removedBySlopePrefilter} left out by the slope pre-filter` : '', src.withoutData ? `${src.withoutData} without elevation data` : ''].filter(Boolean);
+  return `Scanned ${plural(src.scanned ?? 0, 'point')} around ${src.around?.name ?? 'the site'}${grid}${out.length ? ` (${out.join(', ')})` : ''}; the best by the scan's own score were measured fully: ${src.considered}, the site itself included.${over}`;
 }
 
 /** The profile's mission settings in a line: window, mast and landing radius. */

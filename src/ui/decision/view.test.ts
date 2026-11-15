@@ -7,7 +7,9 @@ import {
   criteriaUi,
   dominanceSentence,
   measuredText,
+  noun,
   openStep,
+  overridesParam,
   pairView,
   progressText,
   rankingView,
@@ -19,6 +21,7 @@ import {
   slotConditionsNote,
   slotSteps,
   sortRows,
+  sourceSentence,
   thresholdChange,
   thresholdEdit,
   togglePick,
@@ -227,16 +230,17 @@ describe('the ranking as the tab lists it', () => {
     expect(v.countsText).toBe('9 candidates: 5 feasible, 2 unknown, 2 infeasible.');
     expect(v.notListed).toBe(3);
     expect(v.paretoCount).toBe(2);
-    expect(v.weightsText).toBe('Weights used: sunlight 17 %, longest darkness 17 %, earth in view 17 %, longest earth gap 17 %, slope 17 %, roughness 17 %.');
+    expect(v.weightsText).toBe('Weights used: sunlight 17 %, longest darkness 17 %, Earth line of sight 17 %, longest blackout 17 %, slope 17 %, roughness 17 %.');
     expect(v.explanation).toEqual(['IM-2 Athena beats Chandrayaan-3 mainly on sunlight.']);
     expect(v.note).toBe(UTILITY_NOTE);
     expect(v.basis).toEqual([
-      { labels: ['Sunlight', 'Longest darkness', 'Earth in view', 'Longest Earth gap'], text: 'Skyline every 1 deg, 336 h window' },
+      { labels: ['Sunlight', 'Longest darkness', 'Earth line of sight', 'Longest blackout'], text: 'Skyline every 1 deg, 336 h window' },
       { labels: ['Slope', 'Roughness'], text: 'LOLA 60 m grid over 100 m' },
     ]);
     expect(v.provenance).toEqual(['Ephemeris: JPL Horizons.']);
     // Without an evaluation to read the applied weights from: the profile's weights, normalised.
-    expect(weightsSentence(DEFS, PROFILE)).toBe('Weights used: sunlight 30 %, longest darkness 20 %, earth in view 20 %, longest earth gap 10 %, slope 10 %, roughness 10 %.');
+    expect(weightsSentence(DEFS, PROFILE)).toBe('Weights used: sunlight 30 %, longest darkness 20 %, Earth line of sight 20 %, longest blackout 10 %, slope 10 %, roughness 10 %.');
+    expect(DEFS.map(noun)).toEqual(['sunlight', 'longest darkness', 'Earth line of sight', 'longest blackout', 'slope', 'roughness']);
   });
 
   it('lists the relaxations a ranking used and still draws a ranked site the tools sent without its evaluation', () => {
@@ -246,10 +250,22 @@ describe('the ranking as the tab lists it', () => {
     expect(r.ranked[2]).toMatchObject({ badges: [], utilityText: '0.50' });
   });
 
+  it('keeps a feasible site with an unknown badge ranked, and gives an unknown site only its thresholded unknowns as reasons (T-77)', () => {
+    // Earth line of sight has no threshold in PROFILE: unknown there never blocks feasibility.
+    const feasible = { ...evaluation('lro', 'Feasible with a gap', { earthVisibility: [null, 'unknown'] }, 0.6), feasibility: 'feasible' as const };
+    const undecided = evaluation('und', 'Undecided', { earthVisibility: [null, 'unknown'], slope: [null, 'unknown'] });
+    const r = rankingView(DEFS, { ...RANKING, evaluations: [feasible, undecided], ranked: [{ siteId: 'lro', name: 'Feasible with a gap', rank: 1, utility: 0.6, pareto: true }], counts: { candidates: 2, feasible: 1, unknown: 1, infeasible: 0 } });
+    expect(r.ranked.map((x) => x.id)).toEqual(['lro']);
+    expect(r.ranked[0].badges.find((b) => b.id === 'earthVisibility')).toMatchObject({ verdict: 'unknown', mark: '?', thresholded: false });
+    expect(r.ranked[0].deciding).toEqual([]);
+    expect(r.unknown.map((x) => x.id)).toEqual(['und']);
+    expect(r.unknown[0].deciding).toEqual(['slope reason (unknown). No slope data here.']);
+  });
+
   it('sorts ties by name and keeps the engine rank before utility', () => {
     const row = (id: string, name: string, section: SiteRow['section'], rank: number | null, fails = 0): SiteRow => ({
       id, name, site: site(id, name), section, rank, utility: rank === null ? null : 1 / rank, utilityText: '', pareto: false, deciding: [],
-      badges: Array.from({ length: fails }, () => ({ id: 'slope' as const, label: 'Slope', verdict: 'fail' as const, mark: '✗', value: '', reason: '', scoreText: null })),
+      badges: Array.from({ length: fails }, () => ({ id: 'slope' as const, label: 'Slope', verdict: 'fail' as const, mark: '✗', value: '', reason: '', scoreText: null, thresholded: true })),
     });
     const s = sortRows([row('b', 'Bravo', 'infeasible', null, 1), row('a', 'Alpha', 'infeasible', null, 1), row('c', 'Charlie', 'infeasible', null, 0), row('r2', 'R2', 'ranked', 2), row('r1', 'R1', 'ranked', 1)]);
     expect(s.ranked.map((r) => r.id)).toEqual(['r1', 'r2']);
@@ -304,12 +320,30 @@ describe('candidates and the buttons of a row', () => {
     expect(candidatesFor('catalogue', none, { radiusM: null, spacingM: null })).toMatchObject({ ok: true, candidates: { from: 'catalogue' } });
     expect(candidatesFor('nearby', none, { radiusM: 2000, spacingM: 300 })).toMatchObject({ ok: false });
     expect(candidatesFor('nearby', { ...none, site: im2 }, { radiusM: null, spacingM: 300 })).toMatchObject({ ok: false, why: 'Give the radius and the spacing as numbers.' });
-    expect(candidatesFor('nearby', { ...none, site: im2 }, { radiusM: 2000, spacingM: 300 })).toMatchObject({ ok: true, candidates: { from: 'nearby', around: 'im-2', radiusM: 2000, spacingM: 300 } });
+    expect(candidatesFor('nearby', { ...none, site: im2 }, { radiusM: 2000, spacingM: 300 })).toMatchObject({ ok: true, candidates: { from: 'nearby', around: { landing: 'im-2' }, radiusM: 2000, spacingM: 300 } });
     expect(candidatesFor('nearby', { ...none, site: pin }, { radiusM: 2000, spacingM: 300 })).toMatchObject({ ok: true, candidates: { around: { lat: -84.7, lon: 29.1 } } });
     expect(candidatesFor('sites', none, { radiusM: null, spacingM: null })).toMatchObject({ ok: false });
     // The same site in both slots (another arrival, say) is ranked once.
     expect(savedSites(scenario(im2), scenario(im2)).map((s) => s.id)).toEqual(['im-2']);
-    expect(candidatesFor('sites', { site: null, compareA: scenario(im2), compareB: scenario(pin) }, { radiusM: null, spacingM: null })).toMatchObject({ ok: true, candidates: { from: 'sites', sites: ['im-2', { lat: -84.7, lon: 29.1 }] } });
+    expect(candidatesFor('sites', { site: null, compareA: scenario(im2), compareB: scenario(pin) }, { radiusM: null, spacingM: null })).toMatchObject({ ok: true, candidates: { from: 'sites', sites: [{ landing: 'im-2' }, { lat: -84.7, lon: 29.1 }] } });
+  });
+
+  it('sends overrides in the tools\' parameter form: numbers only, removed thresholds by name', () => {
+    expect(overridesParam({})).toEqual({});
+    expect(overridesParam({ thresholds: { slope: 15, roughness: null, sunlight: 70 }, weights: { slope: 2 }, allowSafetyRelaxation: true })).toEqual({
+      thresholds: { sunlight: 70, slope: 15 }, removeThresholds: ['roughness'], weights: { slope: 2 }, allowSafetyRelaxation: true,
+    });
+    expect(overridesParam({ thresholds: { darkness: null } })).toEqual({ removeThresholds: ['darkness'] });
+  });
+
+  it('says what a ranking measured and what the cap left out', () => {
+    expect(sourceSentence(null, null, 0)).toBe('');
+    expect(sourceSentence({ from: 'catalogue', considered: 28, total: 28 }, 40, 0)).toBe('Measured 28 of the 28 catalogued landings.');
+    expect(sourceSentence({ from: 'catalogue', considered: 40, total: 45 }, 40, 5)).toBe('Measured 40 of the 45 catalogued landings. 5 more were over the cap of 40 and not measured.');
+    expect(sourceSentence({ from: 'sites', considered: 1 }, 12, 0)).toBe('Measured 1 site from slots A and B.');
+    expect(sourceSentence({ from: 'nearby', considered: 16, around: { name: 'IM-2 Athena' }, radiusM: 1000, spacingM: 250, scanned: 49, removedBySlopePrefilter: 7, withoutData: 0 }, 15, 20)).toBe(
+      "Scanned 49 points around IM-2 Athena within 1000 m every 250 m (7 left out by the slope pre-filter); the best by the scan's own score were measured fully: 16, the site itself included. 20 more were over the cap of 15 and not measured.",
+    );
   });
 
   it('opens a landing with selectSite and pins any other point with dropPin; As A / As B save the slot after that', () => {
@@ -334,6 +368,8 @@ describe('candidates and the buttons of a row', () => {
     expect(sameProfile(PROFILE, { ...PROFILE, weights: { ...PROFILE.weights, slope: 2 } })).toBe(false);
     expect(sameProfile(PROFILE, { ...PROFILE, mastHeightM: 3 })).toBe(false);
     expect(progressText(null, 'the catalogued landings')).toBe('Measuring the catalogued landings…');
-    expect(progressText({ done: 12, total: 28 }, 'x')).toBe('Measured 12 of 28 candidates…');
+    expect(progressText({ running: true, done: 3, total: 28, label: 'Measuring Apollo 15 (4 of 28)' }, 'x')).toBe('Measuring Apollo 15 (4 of 28)…');
+    expect(progressText({ running: true, done: 12, total: 28, label: '' }, 'x')).toBe('Measured 12 of 28 candidates…');
+    expect(progressText({ running: false, done: 28, total: 28, label: '' }, 'the sites')).toBe('Measuring the sites…');
   });
 });

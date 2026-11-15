@@ -3,11 +3,16 @@
 // panel's own calls or the assistant's; anything that does not have the expected shape is
 // refused here (null) rather than drawn half-way.
 import type { MissionProfile, PairComparison, ProfileOverrides, Ranking, Relaxation, SiteEvaluation } from '../../analysis/decision/types';
+import type { RankingSource } from './view';
 
 /** The shared decision setting (AppState.decisionProfileId / decisionOverrides) as the tools resolve it. */
 export interface DecisionSettings {
-  /** The preset in use; '' means the first preset. */
+  /** The preset in use (the tools give the first preset's id when AppState says ''). */
   profileId: string;
+  /** No preset was chosen: the first one applies (AppState.decisionProfileId is ''). */
+  isDefault: boolean;
+  /** Overrides in the store that the profile refuses (the tools say why). */
+  refused: string[];
   overrides: ProfileOverrides;
   /** The profile with the overrides applied. */
   profile: MissionProfile;
@@ -40,6 +45,8 @@ export function readSettings(r: unknown): DecisionSettings | null {
   if (!isObj(r) || !isProfile(r.profile)) return null;
   return {
     profileId: typeof r.profileId === 'string' ? r.profileId : r.profile.id,
+    isDefault: r.isDefaultProfile === true || r.profileId === '',
+    refused: listOf(r.refused, isText),
     overrides: isObj(r.overrides) ? (r.overrides as ProfileOverrides) : {},
     profile: r.profile,
     relaxations: listOf(r.relaxations, isRelaxation),
@@ -64,6 +71,14 @@ export function readRanking(r: unknown): Ranking | null {
     counts: { candidates: num(c.candidates), feasible: num(c.feasible), unknown: num(c.unknown), infeasible: num(c.infeasible) },
     explanation: listOf(x.explanation, isText),
   };
+}
+
+/** What findBestSites adds to the Ranking: where the candidates came from, the cap and how many it left out. */
+export function readRankingExtras(r: unknown): { source: RankingSource | null; cap: number | null; dropped: number } {
+  if (!isObj(r)) return { source: null, cap: null, dropped: 0 };
+  const c = r.candidates;
+  const source = isObj(c) && (c.from === 'catalogue' || c.from === 'sites' || c.from === 'nearby') && typeof c.considered === 'number' ? (c as unknown as RankingSource) : null;
+  return { source, cap: typeof r.cap === 'number' ? r.cap : null, dropped: typeof r.dropped === 'number' ? r.dropped : 0 };
 }
 
 /** compareSites: the pair comparison, given bare or under `comparison`. */

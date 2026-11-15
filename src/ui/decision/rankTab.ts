@@ -10,6 +10,7 @@
 // figure and sentence is the tools' own; view.ts only orders and words them.
 import type { MissionProfile, PairComparison, ProfileOverrides, Ranking } from '../../analysis/decision/types';
 import { getAction, onAction, type ActionOrigin } from '../../core/actions';
+import { DECISION_CAPS, decisionRun, onDecisionRun } from '../../core/decisionActions';
 import { store } from '../../core/store';
 import type { SiteRef } from '../../core/types';
 import { el } from '../dom';
@@ -17,13 +18,15 @@ import { nearbyPointCount } from '../compare/actions';
 import { redrawKeepingFocus } from '../compare/focus';
 import { coordsText, distanceText } from '../compare/format';
 import { nextId, type TabKit } from '../compare/widgets';
-import { readProfiles, readRanking, readSettings, readComparison, type DecisionSettings } from './results';
+import { readComparison, readProfiles, readRanking, readRankingExtras, readSettings, type DecisionSettings } from './results';
 import {
   candidatesFor,
   criteriaUi,
   direction,
   limitShort,
+  noun,
   openStep,
+  overridesParam,
   pairView,
   profileSettingsText,
   progressText,
@@ -33,6 +36,7 @@ import {
   siteArg,
   slotConditionsNote,
   slotSteps,
+  sourceSentence,
   thresholdEdit,
   togglePick,
   weightEdit,
@@ -137,7 +141,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   /** The profiles and the setting are read once, when the tab is first shown; later answers arrive through onAction. */
   let loadTried = false;
   let refreshDue = false;
-  let ranking: { value: Ranking; view: RankingView; origin: ActionOrigin } | null = null;
+  let ranking: { value: Ranking; view: RankingView; origin: ActionOrigin; source: string } | null = null;
   let comparison: { value: PairComparison; view: PairView } | null = null;
   let picks: string[] = [];
   let source: SourceKind = 'catalogue';
@@ -261,8 +265,8 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     fieldset.append(label);
     radios.set(kind, { input, text });
   }
-  const radius = field('Radius', 'm', [], { min: 50, max: 50_000, step: '100', value: 2000 });
-  const spacing = field('Spacing', 'm', [], { min: 10, max: 10_000, step: '10', value: 300 });
+  const radius = field('Radius', 'm', [], { min: 100, max: 10_000, step: '100', value: 2000 });
+  const spacing = field('Spacing', 'm', [], { min: 50, max: 10_000, step: '10', value: 300 });
   const nearbyFields = el('div', 'dec-nearby');
   nearbyFields.setAttribute('role', 'group');
   nearbyFields.setAttribute('aria-label', 'Grid around the site on screen');
@@ -301,7 +305,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   const legendLine = el('p', 'ly-note');
   const weightsLine = el('p', 'ly-note');
   const utilityNote = el('p', 'ly-note dec-utilitynote');
-  const whyTitle = el('h3', 'ly-section-title', 'Why this order');
+  const whyTitle = el('h3', 'ly-section-title', 'The ranking in words');
   const whyList = el('ul', 'cmp-highlights');
 
   const compareTitle = el('h3', 'ly-section-title', 'Two sites compared');
@@ -358,7 +362,8 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     } else if (entry.name === 'findBestSites') {
       const r = readRanking(entry.result);
       if (!r) return;
-      ranking = { value: r, view: rankingView(defs, r), origin: entry.origin };
+      const x = readRankingExtras(entry.result);
+      ranking = { value: r, view: rankingView(defs, r), origin: entry.origin, source: sourceSentence(x.source, x.cap, x.dropped) };
       picks = [];
       comparison = null;
     } else if (entry.name === 'compareSites') {
@@ -382,13 +387,18 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     renderSource();
     markSiteOnScreen();
   });
+  // Progress of any run of the tools (this tab's or the assistant's).
+  onDecisionRun(() => {
+    if (showing()) renderProgress();
+  });
 
   async function refreshSettings() {
     if (!refreshDue || !showing() || !available()) return;
     refreshDue = false;
     const s = store.get();
     // Already in hand (setDecisionSettings answers with the setting itself).
-    if (settings && settings.profileId === s.decisionProfileId && sortedJson(settings.overrides) === sortedJson(s.decisionOverrides)) return;
+    const sameId = s.decisionProfileId === '' ? settings?.isDefault : settings?.profileId === s.decisionProfileId;
+    if (settings && sameId && sortedJson(settings.overrides) === sortedJson(s.decisionOverrides)) return;
     await run('getDecisionSettings', {});
   }
 
@@ -408,7 +418,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   };
 
   async function chooseProfile(id: string) {
-    const r = await run('setDecisionSettings', { profileId: id, overrides: {} });
+    const r = await run('setDecisionSettings', { profileId: id });
     if (r.ok) saySettings(`Profile: ${settings?.profile.name ?? id}, with its own thresholds and weights.`, false);
     else {
       select.value = baseOf(settings)?.id ?? '';
@@ -418,15 +428,20 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
   }
 
   async function resetOverrides() {
-    const r = await run('setDecisionSettings', { overrides: {} });
+    const r = await run('setDecisionSettings', { reset: true });
     saySettings(r.ok ? "The profile's own thresholds and weights are in force again." : (r.error ?? 'The change was refused.'), !r.ok);
     renderSettings();
   }
 
-  async function applyOverrides(overrides: ProfileOverrides, f: Field) {
-    const r = await run('setDecisionSettings', { overrides });
+  /** Sends the whole set of overrides (they replace the stored ones) and says what is in force now, or why not. */
+  async function applyOverrides(overrides: ProfileOverrides, f: Field, def: CriterionUi, what: 'threshold' | 'weight') {
+    const r = await run('setDecisionSettings', { overrides: overridesParam(overrides) });
     f.mark(r.ok, r.error);
-    saySettings(r.ok ? '' : (r.error ?? 'The change was refused.'), !r.ok);
+    if (!r.ok) saySettings(r.error ?? 'The change was refused.', true);
+    else if (settings) {
+      const now = what === 'threshold' ? limitShort(def, settings.profile.thresholds[def.id]) : `weight ${settings.profile.weights[def.id]}`;
+      saySettings(`${def.label}: ${now}.${ranking ? ' Rank again to use it.' : ''}`, false);
+    }
     renderSettings();
   }
 
@@ -443,7 +458,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       return;
     }
     if (prompt?.card === card) prompt = null;
-    await applyOverrides(out.overrides, card.threshold);
+    await applyOverrides(out.overrides, card.threshold, card.def, 'threshold');
   }
 
   async function editWeight(card: Card) {
@@ -452,12 +467,12 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     if (!settings || !base) return;
     if (v === null || v === undefined || v < 0) {
       card.weight.mark(false, 'Give a weight of 0 or more.');
-      saySettings(`Give the ${card.def.label.toLowerCase()} weight as a number of 0 or more.`, true);
+      saySettings(`Give the ${noun(card.def)} weight as a number of 0 or more.`, true);
       return;
     }
     const out = weightEdit(base, settings.overrides, card.def.id, v);
     if (out.kind === 'none') return card.weight.mark(true);
-    await applyOverrides(out.overrides, card.weight);
+    await applyOverrides(out.overrides, card.weight, card.def, 'weight');
   }
 
   async function confirmRelaxation() {
@@ -466,7 +481,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     prompt = null;
     renderPrompt();
     card.threshold.input.focus();
-    await applyOverrides(overrides, card.threshold);
+    await applyOverrides(overrides, card.threshold, card.def, 'threshold');
   }
 
   function cancelRelaxation() {
@@ -523,8 +538,8 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     const other = slot === 'A' ? store.get().compareB : store.get().compareA;
     const note = ranking ? slotConditionsNote(ranking.value.profile, store.get()) : null;
     const saved = await act(saveStep.name, saveStep.params, () => `${r.name} is scenario ${slot}.${other ? '' : ` Choose another site as ${slot === 'A' ? 'B' : 'A'} to compare them.`}${note ? ` ${note}` : ''}`);
-    // The pair is complete: show it, as "Compare as B" does in the nearby list.
-    if (saved.ok && other) await run('openCompare', { tab: 'compare' });
+    // The pair is complete: show it, as "Compare as B" does in the nearby list, from the top of the panel.
+    if (saved.ok && other && (await run('openCompare', { tab: 'compare' })).ok) root.closest('.cmp-body')?.scrollTo({ top: 0 });
   }
 
   // ---------- drawing ----------
@@ -547,8 +562,9 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       reset.disabled = true;
       return;
     }
-    if (settingsState.textContent === 'Reading the mission profiles…') saySettings('', false);
     const s = settings!;
+    if (s.refused.length) saySettings(`The stored changes are refused by this profile: ${s.refused.join(' ')}`, true);
+    else if (settingsState.textContent === 'Reading the mission profiles…') saySettings('', false);
     const base = baseOf(s);
     const ids = profiles!.map((p) => `${p.id}\t${p.name}`).join('\n');
     if (select.dataset.ids !== ids) {
@@ -600,20 +616,24 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     let note = choice.ok ? `Ranks ${choice.what} under the profile above: each one is measured over the profile's window, then checked against every threshold.` : choice.why;
     if (choice.ok && source === 'nearby' && r !== null && sp !== null) {
       const n = nearbyPointCount(r, sp);
-      note = `Ranks the points of a ${sp} m grid within ${distanceText(r)} of ${s.site!.name} (${n.toLocaleString('en-US')} points, the site itself included; steep ones are left out first, as in the nearby scan). The tool measures at most its own cap of candidates and says how many it left out.`;
+      note = `Scans a ${sp} m grid within ${distanceText(r)} of ${s.site!.name} (${n.toLocaleString('en-US')} points, the site itself included) with the nearby scan's faster settings and the profile's slope limit as a pre-filter; the best ${DECISION_CAPS.nearby} by the scan's own score, and the site itself, are then measured fully.`;
     }
-    if (choice.ok && source === 'catalogue') note = "Ranks every catalogued landing under the profile above: each one is measured over the profile's window, then checked against every threshold.";
+    if (choice.ok && source === 'catalogue') note = `Ranks the catalogued landings (at most ${DECISION_CAPS.catalogue}) under the profile above: each one is measured over the profile's window, then checked against every threshold. This takes a while: one full analysis per site.`;
+    if (choice.ok && source === 'sites') note = `Ranks ${choice.what} under the profile above (at most ${DECISION_CAPS.sites} sites).`;
     sourceNote.textContent = note;
     runButton.disabled = !available() || running !== null || !choice.ok || settings === null;
     runButton.textContent = running ? 'Ranking…' : 'Rank sites';
   }
 
   function renderProgress() {
-    progress.hidden = running === null;
-    if (!running) return;
-    // The tools report no count yet: the bar runs without one.
-    bar.removeAttribute('value');
-    progressWords.textContent = progressText(null, running.what);
+    const p = decisionRun();
+    progress.hidden = running === null && !p.running;
+    if (progress.hidden) return;
+    if (p.running && p.total > 0) {
+      bar.max = p.total;
+      bar.value = Math.min(p.done, p.total);
+    } else bar.removeAttribute('value');
+    progressWords.textContent = progressText(p, running?.what ?? 'the candidates');
   }
 
   /** The tables are drawn again only for a new ranking; picks and the site on screen are updated in place. */
@@ -626,7 +646,7 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       return;
     }
     const { view: v, value } = ranking;
-    summary.textContent = `Ranked under the profile "${v.profileName}": ${v.countsText} ${v.paretoCount} on the Pareto front.${ranking.origin === 'assistant' ? ' The assistant asked for this ranking.' : ''}`;
+    summary.textContent = `Ranked under the profile "${v.profileName}": ${v.countsText} ${v.paretoCount} on the Pareto front.${ranking.source ? ` ${ranking.source}` : ''}${ranking.origin === 'assistant' ? ' The assistant asked for this ranking.' : ''}`;
     relaxList.replaceChildren(...v.relaxations.map((t) => el('li', undefined, t)));
     stale.textContent = settings && !sameProfile(value.profile, settings.profile) ? 'The profile above has changed since this ranking was made: rank again to use it.' : '';
     if (drawn !== value) {
@@ -644,7 +664,8 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
       }
     }
     notListed.textContent = v.notListed ? `${v.notListed} more feasible site${v.notListed === 1 ? ' is' : 's are'} ranked but not listed: raise "List the best" to see ${v.notListed === 1 ? 'it' : 'them'}.` : '';
-    legendLine.textContent = `◆ marks the Pareto front: no other feasible site is at least as good on every criterion and better on one. ✓ pass, ✗ fail, ? unknown: hover over or focus a badge (arrow keys move between them) for its reason. ${EARTH_NOTE}`;
+    const saysEarth = v.explanation.some((t) => /link budget/i.test(t));
+    legendLine.textContent = `◆ marks the Pareto front: no other feasible site is at least as good on every criterion and better on one. ✓ pass, ✗ fail, ? unknown (a value that could not be measured; it decides feasibility only where the profile sets a threshold): hover over or focus a badge (arrow keys move between them) for its reason.${saysEarth ? '' : ` ${EARTH_NOTE}`}`;
     weightsLine.textContent = v.weightsText;
     utilityNote.textContent = v.note;
     whyTitle.hidden = v.explanation.length === 0;
@@ -783,7 +804,8 @@ export function mountRankTab(root: HTMLElement, kit: TabKit): RankTab {
     s.setAttribute('aria-describedby', reason.id);
     const mark = el('span', 'dec-mark', b.mark);
     mark.setAttribute('aria-hidden', 'true');
-    s.append(mark, el('span', 'dec-val', b.value), hidden(` ${b.label}: ${b.verdict}`));
+    // No break inside a value ("≥ 236.3 h"): a narrow column moves the mark above it instead.
+    s.append(mark, el('span', 'dec-val', b.value.replace(/ /g, '\u00a0')), hidden(` ${b.label}: ${b.verdict}`));
     s.addEventListener('mouseenter', () => showTip(s, b));
     s.addEventListener('mouseleave', () => document.activeElement !== s && hideTip());
     s.addEventListener('focus', () => showTip(s, b));

@@ -138,9 +138,16 @@
 /* ---------- a narrower sheet (the assistant drawer beside it) ---------- */
 @container cmp-body (max-width: 1080px) {
   .dec-reqs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dec-col-pick { width: 2.25rem; }
+  .dec-col-rank { width: 2rem; }
+  .dec-col-utility { width: 3.25rem; }
+  .dec-col-pareto { width: 3.25rem; }
   .dec-col-choose { width: 6.5rem; }
-  .dec-col-site { width: 19%; }
-  .dec-col-why { width: 22%; }
+  .dec-col-site { width: 18%; }
+  .dec-col-why { width: 20%; }
   .dec-table { font-size: var(--fs-xs); }
-  .dec-table th, .dec-table td { padding-inline: var(--sp-1); }
+  .dec-table th, .dec-table td, .dec-table td.dec-c-crit { padding-inline: var(--sp-1); }
+  /* A value is never cut: the mark goes above it when the column is too narrow for both. */
+  .dec-badge { flex-wrap: wrap; gap: 0 4px; padding-inline: 4px; white-space: normal; }
+  .dec-badge .dec-val { overflow: visible; }
 }
