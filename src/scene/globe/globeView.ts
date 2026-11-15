@@ -6,7 +6,7 @@ import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
-import { iceTargetLayer } from '../../core/siteScience';
+import { iceTargetLayer } from '../../science/siteScience';
 import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
