@@ -11,9 +11,9 @@ Branch am/lunyx/agent/surface. Builds on lunyx-science's passages (T-45: `SkyEve
   12 d 23 h"; during the passage "Sun fully set in 3 h 15 min, setting now". The second line
   is the science core's own summary with both ends, e.g. "starts setting 2025-03-19 16:36,
   fully set 23:06 UTC"; for Earth also its centre crossing ("starts setting ..., centre sets
-  ..., fully set ... UTC"). The hint is `transitionText()`, and says where the button goes:
-  `jumpToEvent` moves the clock to the event's own instant ("Sun fully set" for a sunset), as
-  before. A set or rise that begins before the window ends but finishes after it comes from
+  ..., fully set ... UTC"). The hint is `transitionText()`, and says where the button goes: to the instant the countdown names,
+  through `jumpToEvent { type, instant }` (@globe's T-47): "start" while a setting is ahead,
+  "end" while it is under way, "event" for Earth's centre crossing. A set or rise that begins before the window ends but finishes after it comes from
   `nextTransitions()`, with "(after the analysed window)" on the end that lies outside. An end
   that was not found is never given a time (the core's wording says so).
 - **Earth figures**: "Earth in sight: centre 69.1 % · any part of the disc 79.8 %" and

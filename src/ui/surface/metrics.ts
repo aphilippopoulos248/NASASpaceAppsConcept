@@ -70,9 +70,11 @@ export function mountKeyMetrics(region: HTMLElement): void {
   // Countdowns: each is a button that jumps the clock to the event.
   const countTitle = el('h3', 'ly-section-title', 'Next events · over the terrain skyline');
   const countList = el('ul', 'km-count');
+  const jumpOf: Record<string, 'event' | 'start' | 'end'> = {};
   const counts = (['sunset', 'sunrise', 'earthset', 'earthrise'] as const).map((type) => {
     const li = el('li');
-    const go = button('', 'km-count-btn', () => void runAction('jumpToEvent', { type }));
+    // Goes to the instant the countdown names (the start of a setting, the end, or Earth's centre crossing).
+    const go = button('', 'km-count-btn', () => void runAction('jumpToEvent', { type, instant: jumpOf[type] }));
     const label = el('span', 'km-count-label'), when = el('span', 'ly-value km-count-in'), at = el('span', 'ly-note km-count-at');
     go.append(label, when, at);
     li.append(go);
@@ -166,6 +168,7 @@ export function mountKeyMetrics(region: HTMLElement): void {
       row.when.textContent = c.text;
       // Second line: both ends of the passage, each named (D-8).
       row.at.textContent = c.span;
+      jumpOf[c.type] = c.jump;
       row.go.disabled = c.timeMs === null;
       row.go.classList.toggle('km-count-btn--none', !c.span);
       row.go.title = c.detail;

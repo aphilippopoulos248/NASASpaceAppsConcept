@@ -28,6 +28,8 @@ export interface Countdown {
   instant: string;
   /** Both ends of the passage (D-8), e.g. "starts setting 2025-03-19 22:15, fully set 23:17 UTC"; empty when there is none to show. */
   span: string;
+  /** Which instant the button moves the clock to (jumpToEvent's `instant`): the one the countdown names. */
+  jump: 'event' | 'start' | 'end';
   /** Null when no such event lies ahead inside the analysed window. */
   timeMs: number | null;
   inHours: number | null;
@@ -150,13 +152,13 @@ export function rowPassage(type: SkyEvent['type'], tr: SkyTransition | null, end
   return kind === (setting ? 'set' : 'rise') ? tr : null;
 }
 
-/** The instants of a passage in time order, each with its D-8 label; ends that were not found carry no time and are left out. */
-export function passageInstants(tr: SkyTransition): { label: string; timeMs: number; inWindow: boolean }[] {
+/** The instants of a passage in time order, each with its D-8 label and which end it is (`centre` for Earth's centre crossing); ends that were not found carry no time and are left out. */
+export function passageInstants(tr: SkyTransition): { label: string; timeMs: number; inWindow: boolean; part: 'start' | 'centre' | 'end' }[] {
   const words = TRANSITION_WORDS[tr.body];
-  const out: { label: string; timeMs: number; inWindow: boolean }[] = [];
-  if (tr.start.edge !== 'unresolved') out.push({ label: words[tr.start.edge].label, timeMs: tr.start.timeMs, inWindow: tr.start.inWindow });
-  if (tr.body === 'earth') for (const c of tr.centre) out.push({ label: `Earth's centre ${c.up ? 'rises' : 'sets'}`, timeMs: c.timeMs, inWindow: c.inWindow });
-  if (tr.end.edge !== 'unresolved') out.push({ label: words[tr.end.edge].label, timeMs: tr.end.timeMs, inWindow: tr.end.inWindow });
+  const out: { label: string; timeMs: number; inWindow: boolean; part: 'start' | 'centre' | 'end' }[] = [];
+  if (tr.start.edge !== 'unresolved') out.push({ label: words[tr.start.edge].label, timeMs: tr.start.timeMs, inWindow: tr.start.inWindow, part: 'start' });
+  if (tr.body === 'earth') for (const c of tr.centre) out.push({ label: `Earth's centre ${c.up ? 'rises' : 'sets'}`, timeMs: c.timeMs, inWindow: c.inWindow, part: 'centre' });
+  if (tr.end.edge !== 'unresolved') out.push({ label: words[tr.end.edge].label, timeMs: tr.end.timeMs, inWindow: tr.end.inWindow, part: 'end' });
   return out;
 }
 
@@ -169,14 +171,25 @@ function countdowns(a: SiteAnalysis, timeMs: number): Countdown[] {
     const body = type === 'sunset' || type === 'sunrise' ? 'sun' : 'earth';
     // The event's own passage; failing that, one under way (or starting) before the window ends whose event lies beyond it.
     const tr = e?.span ?? rowPassage(type, passing[body], endMs);
-    const base = { type, label: EVENT_LABELS[type], instant: EVENT_INSTANT[type], timeMs: e?.timeMs ?? null, inHours: e ? (e.timeMs - timeMs) / 3_600_000 : null };
+    const base = { type, label: EVENT_LABELS[type], instant: EVENT_INSTANT[type], timeMs: e?.timeMs ?? null, inHours: e ? (e.timeMs - timeMs) / 3_600_000 : null, jump: 'event' as Countdown['jump'] };
     if (tr) {
       const ahead = passageInstants(tr).find((x) => x.timeMs > timeMs);
       const under = tr.start.timeMs <= timeMs && timeMs < tr.end.timeMs;
       const text = ahead
         ? `${ahead.label} in ${formatDuration((ahead.timeMs - timeMs) / 3_600_000)}${ahead.inWindow ? '' : ' (after the analysed window)'}${under ? `, ${type === 'sunset' || type === 'earthset' ? 'setting' : 'rising'} now` : ''}`
         : 'under way past the analysed window';
-      return { ...base, text, span: transitionSummary(tr), detail: `${transitionText(tr)}${e ? ` Clicking moves the clock to "${EVENT_INSTANT[type]}" (${formatUtc(e.timeMs)}).` : ''}` };
+      // The button goes to the instant the countdown names (Earth's centre crossing is the event itself).
+      const jump: Countdown['jump'] = !ahead || ahead.part === 'centre' ? 'event' : ahead.part;
+      const target = ahead && e ? ahead : null;
+      return {
+        ...base,
+        jump,
+        timeMs: target ? target.timeMs : base.timeMs,
+        inHours: target ? (target.timeMs - timeMs) / 3_600_000 : base.inHours,
+        text,
+        span: transitionSummary(tr),
+        detail: `${transitionText(tr)}${target ? ` Clicking moves the clock to "${target.label}" (${formatUtc(target.timeMs)}).` : ''}`,
+      };
     }
     if (e) {
       // An event without its passage (an analysis made before passages existed): the instant alone, named.
