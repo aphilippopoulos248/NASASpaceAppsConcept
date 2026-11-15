@@ -904,6 +904,11 @@ async function partExtras(app, step) {
     const v = await surfaceView(page);
     note(`Field of view ${v.look.fovDeg}°, Earth ${v.sky.earth.litPct} % lit, diameter ${v.sky.earth.angularDiameterDeg}°.`);
     check('Zoomed in by keyboard', v.look.fovDeg, '<= 8.5', v.look.fovDeg <= 8.5);
+    // Q-5: with the default solar band (0° to 90°) nothing is required, so Key metrics raises no band flag.
+    const st5 = await appState(page);
+    const km5 = await readKeyMetrics(page);
+    const bandFlags = (km5?.flags ?? []).filter((f) => /required band/i.test(f));
+    if (st5.sunElMinDeg === 0 && st5.sunElMaxDeg === 90) check('Q-5: no band flag in Key metrics with the default band', bandFlags.join(' | ') || 'none', 'none', bandFlags.length === 0, { finding: 'Q-5' });
     check('Still facing Earth', `${v.look.azDeg} / ${v.look.elDeg}`, `${v.sky.earth.azDeg} / ${v.sky.earth.elDeg}`, close(v.look.azDeg, v.sky.earth.azDeg, 0.5) && close(v.look.elDeg, v.sky.earth.elDeg, 0.5));
   }, { shot: 'im2-surface-earth-zoomed' });
 

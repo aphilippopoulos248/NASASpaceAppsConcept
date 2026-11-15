@@ -274,10 +274,9 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
   });
 
-  // Finding Q-4 (docs/lunyx/qa-findings.md), owner @analysis: "Compare as B" switches the panel to
-  // its "A and B" tab, which hides the button that had the focus, so the focus falls to the page;
-  // the next Escape then closes the panel without giving the focus back to the launcher.
-  test('after "Compare as B" the focus stays in the compare dialog, and Escape returns it to the launcher', { ...SLOW, todo: 'Q-4 (@analysis): the focus falls out of the dialog when "Compare as B" switches the tab' }, async () => {
+  // Finding Q-4 (docs/lunyx/qa-findings.md): "Compare as B" used to drop the focus out of the dialog.
+  // Fixed upstream (original T-46); kept as a regression test.
+  test('after "Compare as B" the focus stays in the compare dialog, and Escape returns it to the launcher', SLOW, async () => {
     await tabTo(page, /cmp-launcher/);
     await page.keyboard.press('Enter');
     await until(page, () => !document.querySelector('.cmp-sheet').hidden && document.querySelector('.cmp-sheet').contains(document.activeElement));
@@ -352,9 +351,9 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     assert.ok(!labels.some((l) => l.includes('Close the assistant') || l.includes('Message to the assistant')), 'the closed drawer is in the tab order');
   });
 
-  // Finding A-5 (docs/lunyx/accessibility.md): the site-science section has two disclosures both
-  // named "Source and limits" (long-term averages and Diviner temperatures).
-  test('controls in one round of Tab have distinct names', { ...SLOW, todo: 'A-5 (site science, T-30): two disclosures are both named "Source and limits"' }, async () => {
+  // Finding A-5 (docs/lunyx/accessibility.md): two disclosures used to share the name "Source and
+  // limits". Fixed upstream (original T-46); kept as a regression test.
+  test('controls in one round of Tab have distinct names', SLOW, async () => {
     const stops = await tabStops(page);
     const byName = new Map();
     for (const st of stops) byName.set(st.name, (byName.get(st.name) ?? 0) + 1);
