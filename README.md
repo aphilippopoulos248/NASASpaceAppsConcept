@@ -316,18 +316,21 @@ centre.
   drawings made by the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
-- **Open defects** (being fixed by the original team at the time of writing):
-  - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
-    met" for any window with a night, while the compare panel treats that band as no
-    requirement (T-46);
+- **Defects fixed upstream, not yet re-checked** (fixed by the original team at the time of
+  writing; the desktop walkthrough re-checks them on the release candidate, T-8):
   - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
     south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
     coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
-    download at a time, retried), and the walkthrough's re-check is still to come;
-  - two keyboard and screen-reader gaps (T-46): after "Compare as B" in the nearby list the
-    focus falls out of the compare panel, and the site-science section has two disclosures with
-    the same name, "Source and limits"; the others are listed in
-    [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
+    download at a time, retried);
+  - with the default solar band (0° to 90°) the surface view's key metrics said "Requirement not
+    met" for any window with a night, while the compare panel treated that band as no
+    requirement. Fixed upstream in `11f60b4` (T-46: no band is required at the default, by one
+    rule in every panel and in `getAnalysis`);
+  - two keyboard and screen-reader gaps: after "Compare as B" in the nearby list the focus fell
+    out of the compare panel, and the site-science section had two disclosures with the same
+    name, "Source and limits". Fixed upstream in `11f60b4` (T-46).
+- **Keyboard and screen-reader gaps** still open are listed in
+  [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 
 ## The demo for the submission
 
