@@ -102,6 +102,10 @@ rest of the second round. Read section 4 before quoting any number from the app.
   minutes off, up to 14 min for one Earthrise's first limb, where a notch in the skyline narrower than
   the analysis's 0.5 deg azimuth step lies under the disc. Away from the poles the Sun crosses the
   skyline quickly and instants agree within seconds (being refined in T-50).
+- The surface view eases each 3 m site model into its 60 m window at their seam, 768 m from the site,
+  while the analysis uses the grids as stored. Where that seam forms the skyline, the drawn skyline can
+  sit up to 0.17 deg below the analysed one (Blue Ghost, azimuth 274.5 deg). Removing it was studied and
+  not built (lunyx-science's option-B study); the numbers come from the analysis, not the picture.
 - The stars behind the globe are random points, not a star catalogue (the surface view draws
   none). They are decoration and should not be read as the real sky (T-42).
 - Generated surface detail (rocks, sub-metre texture, small craters where no survey exists)
