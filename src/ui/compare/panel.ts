@@ -231,7 +231,7 @@ export function mountComparePanel(region: HTMLElement): void {
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.key !== 'Escape' || !isOpen() || e.defaultPrevented) return;
+      if (e.key !== 'Escape' || !isOpen() || e.defaultPrevented || store.get().assistantOpen) return;
       const target = e.target instanceof Element ? e.target : null;
       const inside = target !== null && sheet.contains(target);
       // Another layer with its own Escape (the assistant drawer), or a field outside the sheet, keeps the key.
