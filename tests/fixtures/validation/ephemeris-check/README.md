@@ -338,6 +338,22 @@ current build's early Earthrises at the rim and west-limb pins (12 to 23 min) ar
 Reading the skyline every 0.5 deg instead of every 0.1 deg changes none of these percentages by
 more than 0.01 points.
 
+## Round 2 (T-34): outlook, spells in full, DSN geometry, slope
+
+Run against integration cc736f8. Details, numbers and what is pending: `T-34-handover.md`.
+
+| Check | Script | Result |
+| --- | --- | --- |
+| 5. Seasonal outlook, IM-2 and the Shackleton rim pin, 12 lunar days of 2027 | `check5_outlook.py` | rows within 0.11 points, except any-Sun row 9 at the rim pin (+0.57, from that build's skyline, 0.05 deg low there); arrival scores within 0.20 points; best and worst arrivals at the same instants; the in-app model costs at most 0.094 points over the year |
+| 6. Longest darkness and Earth gap in full, IM-2, Chandrayaan-3, Apollo 11 | `check6_full_spans.py` | inside the window within 0.03 h; in full within 0.08 h, ends within 3.1 min |
+| 7. DSN geometry, three stations, 2023, 2025 and 2031 | `check7_dsn.py` | station coordinates equal to Horizons' DSN sites; elevations within 0.001 deg; 84 edges set by the station limits within 5.3 s (the app claims 0.3 s), 4 set by lunar terrain within 1.5 min |
+| 8. Slope, 28 sites and 10 scan candidates | `check8_slope.py` | identical to 0.0000 deg; Surveyor 3 12.5 deg (published 14), Apollo 14 7.2 deg (published seven), both at 10 m on a 3 m model; at 120 m on the 60 m window they read 3.7 and 1.3 deg |
+
+New helpers: `lib/spice_sky.py` (SPICE Sun and Earth at a site), `fetch_horizons_pairs.mjs`
+(Horizons tables between a DSN station and a lunar site). `app_dump.mjs` now also dumps
+`analysis.dsn`, `dsnAt()`, `outlook()` and `rankNearby()` when a scenario asks for them;
+`app_skyat.mjs --series` writes the model's directions on a regular grid.
+
 ## Files and how to re-run
 
 ```

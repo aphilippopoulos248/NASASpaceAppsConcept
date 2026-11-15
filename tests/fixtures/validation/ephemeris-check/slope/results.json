@@ -1,0 +1,480 @@
+{
+ "app": "cc736f8",
+ "sites": {
+  "luna-9": {
+   "baselineM": 120,
+   "appSlopeDeg": 7.082355285962,
+   "ownSlopeDeg": 7.082355284027174,
+   "appAspectDeg": 149.38417386796834,
+   "ownAspectDeg": 149.3841738516161,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 7.082355284027174,
+    "aspectDeg": 149.3841738516161
+   }
+  },
+  "surveyor-1": {
+   "baselineM": 120,
+   "appSlopeDeg": 2.450354611329771,
+   "ownSlopeDeg": 2.4503546087553154,
+   "appAspectDeg": 251.11381081911765,
+   "ownAspectDeg": 251.1138108920611,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.4503546087553154,
+    "aspectDeg": 251.1138108920611
+   }
+  },
+  "luna-13": {
+   "baselineM": 120,
+   "appSlopeDeg": 1.4080858096277278,
+   "ownSlopeDeg": 1.4080858121612188,
+   "appAspectDeg": 334.8814974081536,
+   "ownAspectDeg": 334.8814973711112,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.4080858121612188,
+    "aspectDeg": 334.8814973711112
+   }
+  },
+  "surveyor-3": {
+   "baselineM": 10,
+   "appSlopeDeg": 12.512572837075693,
+   "ownSlopeDeg": 12.512572806260755,
+   "appAspectDeg": 248.59639900984166,
+   "ownAspectDeg": 248.59639937705475,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 3.7348650391984126,
+    "aspectDeg": 223.7123637384497
+   }
+  },
+  "surveyor-5": {
+   "baselineM": 120,
+   "appSlopeDeg": 1.8195737200375472,
+   "ownSlopeDeg": 1.8195737331744315,
+   "appAspectDeg": 127.78433649778947,
+   "ownAspectDeg": 127.78433688071337,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.8195737331744315,
+    "aspectDeg": 127.78433688071337
+   }
+  },
+  "surveyor-6": {
+   "baselineM": 120,
+   "appSlopeDeg": 1.4414620798110622,
+   "ownSlopeDeg": 1.4414620816503183,
+   "appAspectDeg": 139.1812241903284,
+   "ownAspectDeg": 139.18122427209713,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.4414620816503183,
+    "aspectDeg": 139.18122427209713
+   }
+  },
+  "surveyor-7": {
+   "baselineM": 10,
+   "appSlopeDeg": 5.763719813052171,
+   "ownSlopeDeg": 5.763719813178458,
+   "appAspectDeg": 44.321206241658174,
+   "ownAspectDeg": 44.32120624235947,
+   "appLayer": "LROC NAC DTM NAC_DTM_SURVEYOR7_E413S3485.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_SURVEYOR7_E413S3485.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 4.63757834360202,
+    "aspectDeg": 21.538693936955386
+   }
+  },
+  "apollo-11": {
+   "baselineM": 10,
+   "appSlopeDeg": 2.48098349385631,
+   "ownSlopeDeg": 2.480983495475292,
+   "appAspectDeg": 10.889004399370515,
+   "ownAspectDeg": 10.889004481347818,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO11_E008N0234.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO11_E008N0234.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.67322490125753,
+    "aspectDeg": 81.01995353224474
+   }
+  },
+  "apollo-12": {
+   "baselineM": 10,
+   "appSlopeDeg": 3.2200787787287224,
+   "ownSlopeDeg": 3.2200787820560284,
+   "appAspectDeg": 167.2057546527795,
+   "ownAspectDeg": 167.20575444997408,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 3.3622114324025927,
+    "aspectDeg": 177.86585618238902
+   }
+  },
+  "luna-16": {
+   "baselineM": 10,
+   "appSlopeDeg": 1.0087360150148645,
+   "ownSlopeDeg": 1.00873601476431,
+   "appAspectDeg": 252.27315160370298,
+   "ownAspectDeg": 252.27315161544422,
+   "appLayer": "LROC NAC DTM NAC_DTM_LUNA16_E005S0563.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_LUNA16_E005S0563.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 0.2820474436875541,
+    "aspectDeg": 207.86772570436744
+   }
+  },
+  "luna-17": {
+   "baselineM": 120,
+   "appSlopeDeg": 2.258065219826365,
+   "ownSlopeDeg": 2.258065214712732,
+   "appAspectDeg": 114.82669053021645,
+   "ownAspectDeg": 114.82669029359224,
+   "appLayer": "SLDEM2015 512 ppd, 60 m site window, 60 m",
+   "ownLayer": "SLDEM2015 512 ppd, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.258065214712732,
+    "aspectDeg": 114.82669029359224
+   }
+  },
+  "apollo-14": {
+   "baselineM": 10,
+   "appSlopeDeg": 7.233963148183133,
+   "ownSlopeDeg": 7.233963084522009,
+   "appAspectDeg": 2.346956170305161,
+   "ownAspectDeg": 2.3469561899387323,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO14_E034S3425.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO14_E034S3425.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.3001987850542838,
+    "aspectDeg": 112.73371164477174
+   }
+  },
+  "apollo-15": {
+   "baselineM": 10,
+   "appSlopeDeg": 1.6220815035400677,
+   "ownSlopeDeg": 1.622081517409613,
+   "appAspectDeg": 340.36420484633715,
+   "ownAspectDeg": 340.36420505411814,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.4198930554511127,
+    "aspectDeg": 59.194592222480715
+   }
+  },
+  "luna-20": {
+   "baselineM": 10,
+   "appSlopeDeg": 6.309642468482492,
+   "ownSlopeDeg": 6.309642468094309,
+   "appAspectDeg": 102.71466195444486,
+   "ownAspectDeg": 102.71466194809153,
+   "appLayer": "LROC NAC DTM NAC_DTM_LUNA20_E037N0566.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_LUNA20_E037N0566.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 6.663078943253612,
+    "aspectDeg": 111.95610097645854
+   }
+  },
+  "apollo-16": {
+   "baselineM": 10,
+   "appSlopeDeg": 1.39456428115506,
+   "ownSlopeDeg": 1.3945642815093424,
+   "appAspectDeg": 51.88162684213461,
+   "ownAspectDeg": 51.88162683749997,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO16_E091S0155.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO16_E091S0155.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.8420207614694375,
+    "aspectDeg": 159.89091671893277
+   }
+  },
+  "apollo-17": {
+   "baselineM": 10,
+   "appSlopeDeg": 2.727589445927657,
+   "ownSlopeDeg": 2.727589446331526,
+   "appAspectDeg": 133.95032162261444,
+   "ownAspectDeg": 133.9503216287962,
+   "appLayer": "LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG (5.0 m), 3 m site window, 5 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG (5.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.0697626868457335,
+    "aspectDeg": 119.88557333186432
+   }
+  },
+  "luna-21": {
+   "baselineM": 10,
+   "appSlopeDeg": 3.0152272962610067,
+   "ownSlopeDeg": 3.015227512972796,
+   "appAspectDeg": 293.57880217678195,
+   "ownAspectDeg": 293.5788037939381,
+   "appLayer": "LROC NAC DTM NAC_DTM_LUNOKHOD2_1_E258N0306.IMG (5.0 m), 3 m site window, 5 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_LUNOKHOD2_1_E258N0306.IMG (5.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 3.074835140157887,
+    "aspectDeg": 310.83698155463685
+   }
+  },
+  "luna-23": {
+   "baselineM": 10,
+   "appSlopeDeg": 3.2699759649049676,
+   "ownSlopeDeg": 3.2699759501310273,
+   "appAspectDeg": 187.78603701833825,
+   "ownAspectDeg": 187.78603506175637,
+   "appLayer": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.1577018835987043,
+    "aspectDeg": 36.67415608149015
+   }
+  },
+  "luna-24": {
+   "baselineM": 10,
+   "appSlopeDeg": 3.19140860149834,
+   "ownSlopeDeg": 3.1914083531025303,
+   "appAspectDeg": 341.7695536002461,
+   "ownAspectDeg": 341.7695542659971,
+   "appLayer": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 0.9855653055764539,
+    "aspectDeg": 97.83718790355553
+   }
+  },
+  "change-3": {
+   "baselineM": 10,
+   "appSlopeDeg": 2.662177065383715,
+   "ownSlopeDeg": 2.662177068509076,
+   "appAspectDeg": 87.678441059039,
+   "ownAspectDeg": 87.6784393210263,
+   "appLayer": "LROC NAC DTM NAC_DTM_CHANGE3_E444N3406.IMG (5.0 m), 3 m site window, 5 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_CHANGE3_E444N3406.IMG (5.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 3.764878951238252,
+    "aspectDeg": 200.25154247012736
+   }
+  },
+  "change-4": {
+   "baselineM": 10,
+   "appSlopeDeg": 0.2570163496169391,
+   "ownSlopeDeg": 0.25701603179635374,
+   "appAspectDeg": 119.11738401066184,
+   "ownAspectDeg": 119.11742347349397,
+   "appLayer": "LROC NAC DTM NAC_DTM_CHANGE4_E458S1775.IMG (5.0 m), 3 m site window, 5 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_CHANGE4_E458S1775.IMG (5.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.6992238667933857,
+    "aspectDeg": 203.47307981098163
+   }
+  },
+  "change-5": {
+   "baselineM": 10,
+   "appSlopeDeg": 3.906568866468264,
+   "ownSlopeDeg": 3.9065688127358595,
+   "appAspectDeg": 329.20461004604294,
+   "ownAspectDeg": 329.20460690990046,
+   "appLayer": "LROC NAC DTM NAC_DTM_CHANGE501_E430N3081.IMG (3.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_CHANGE501_E430N3081.IMG (3.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.329765409814145,
+    "aspectDeg": 340.39525864256365
+   }
+  },
+  "chandrayaan-3": {
+   "baselineM": 120,
+   "appSlopeDeg": 1.3020598536756969,
+   "ownSlopeDeg": 1.3020598527156415,
+   "appAspectDeg": 58.09369332495237,
+   "ownAspectDeg": 58.09369339372841,
+   "appLayer": "LOLA LDEM_60S_60M, 60 m site window, 60 m",
+   "ownLayer": "LOLA ldem_60s_60m, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.3020598527156415,
+    "aspectDeg": 58.09369339372841
+   }
+  },
+  "slim": {
+   "baselineM": 10,
+   "appSlopeDeg": 7.991198312938613,
+   "ownSlopeDeg": 7.991198258831902,
+   "appAspectDeg": 184.87192742109178,
+   "ownAspectDeg": 184.8719274540189,
+   "appLayer": "LROC NAC DTM NAC_DTM_THEOPHILUS_E133S0253.IMG (3.0 m), 3 m site window, 3 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_THEOPHILUS_E133S0253.IMG (3.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 7.657365490462385,
+    "aspectDeg": 178.74048249316158
+   }
+  },
+  "im-1": {
+   "baselineM": 120,
+   "appSlopeDeg": 11.309025665670845,
+   "ownSlopeDeg": 11.309025671301365,
+   "appAspectDeg": 296.15352598700764,
+   "ownAspectDeg": 296.15352605088583,
+   "appLayer": "LOLA LDEM_60S_60M, 60 m site window, 60 m",
+   "ownLayer": "LOLA ldem_60s_60m, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 11.309025671301365,
+    "aspectDeg": 296.15352605088583
+   }
+  },
+  "change-6": {
+   "baselineM": 10,
+   "appSlopeDeg": 2.8479558024261724,
+   "ownSlopeDeg": 2.847955802438931,
+   "appAspectDeg": 112.178133678311,
+   "ownAspectDeg": 112.17813368112465,
+   "appLayer": "LROC NAC DTM NAC_DTM_CHANGE6_E421S2060.IMG (4.0 m), 3 m site window, 4 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_CHANGE6_E421S2060.IMG (4.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 1.6553945392097975,
+    "aspectDeg": 211.79018264829725
+   }
+  },
+  "blue-ghost-1": {
+   "baselineM": 10,
+   "appSlopeDeg": 1.223913670941278,
+   "ownSlopeDeg": 1.223913861656724,
+   "appAspectDeg": 148.31591955835492,
+   "ownAspectDeg": 148.3159250744683,
+   "appLayer": "LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG (4.0 m), 3 m site window, 4 m",
+   "ownLayer": "LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG (4.0 m), 3 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.5923501245315546,
+    "aspectDeg": 201.57160415861725
+   }
+  },
+  "im-2": {
+   "baselineM": 120,
+   "appSlopeDeg": 2.0641868437972724,
+   "ownSlopeDeg": 2.0641868154156056,
+   "appAspectDeg": 1.748896698897294,
+   "ownAspectDeg": 1.7488966903924572,
+   "appLayer": "LOLA LDEM_80S_20M, 60 m site window, 60 m",
+   "ownLayer": "LOLA ldem_80s_20m, 60 m site window",
+   "own120mOn60mWindow": {
+    "slopeDeg": 2.0641868154156056,
+    "aspectDeg": 1.7488966903924572
+   }
+  }
+ },
+ "nearby": [
+  {
+   "rank": 1,
+   "eastM": -300,
+   "northM": -600,
+   "positionErrorM": 0.025889277458190918,
+   "appSlopeDeg": 2.326541050921024,
+   "ownSlopeDeg": 2.326541050922607,
+   "appHeightM": 5347.253417812554,
+   "ownHeightM": 5347.253417968812
+  },
+  {
+   "rank": 2,
+   "eastM": -600,
+   "northM": -600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 2.576971789280251,
+   "ownSlopeDeg": 2.576971789285375,
+   "appHeightM": 5339.889648301781,
+   "ownHeightM": 5339.889648437533
+  },
+  {
+   "rank": 3,
+   "eastM": -900,
+   "northM": -600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 2.348959351263192,
+   "ownSlopeDeg": 2.3489593512581233,
+   "appHeightM": 5331.118652277839,
+   "ownHeightM": 5331.11865234376
+  },
+  {
+   "rank": 4,
+   "eastM": -900,
+   "northM": -900,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 1.6549163396927231,
+   "ownSlopeDeg": 1.6549163396930178,
+   "appHeightM": 5334.041015410634,
+   "ownHeightM": 5334.041015625006
+  },
+  {
+   "rank": 5,
+   "eastM": 0,
+   "northM": -600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 3.0909562989730643,
+   "ownSlopeDeg": 3.090956271922609,
+   "appHeightM": 5353.670898380972,
+   "ownHeightM": 5353.670898437463
+  },
+  {
+   "rank": 6,
+   "eastM": -300,
+   "northM": -900,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 2.456589132129535,
+   "ownSlopeDeg": 2.4565891321300315,
+   "appHeightM": 5350.163085883936,
+   "ownHeightM": 5350.163085937467
+  },
+  {
+   "rank": 7,
+   "eastM": -1200,
+   "northM": -900,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 2.5070659313003816,
+   "ownSlopeDeg": 2.5070659313024524,
+   "appHeightM": 5322.257324093198,
+   "ownHeightM": 5322.257324218775
+  },
+  {
+   "rank": 8,
+   "eastM": -300,
+   "northM": 600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 3.1880385090233956,
+   "ownSlopeDeg": 3.188038509023649,
+   "appHeightM": 5300.277343734936,
+   "ownHeightM": 5300.277343749994
+  },
+  {
+   "rank": 9,
+   "eastM": -1200,
+   "northM": -600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 1.3939455879431786,
+   "ownSlopeDeg": 1.3939455879419038,
+   "appHeightM": 5323.8110350558545,
+   "ownHeightM": 5323.811035156238
+  },
+  {
+   "rank": 10,
+   "eastM": -600,
+   "northM": 600,
+   "positionErrorM": 0.0,
+   "appSlopeDeg": 3.5876954617117245,
+   "ownSlopeDeg": 3.5876954617128387,
+   "appHeightM": 5293.096191373304,
+   "ownHeightM": 5293.096191406253
+  }
+ ],
+ "worstSlopeDiffDeg": 3.1782058534934876e-07,
+ "worstAspectDiffWeightedDeg": 2.136643590528967e-07,
+ "nearbyWorst": {
+  "slope": 2.7050455209121083e-08,
+  "pos": 0.025889277458190918,
+  "height": 2.1437244868138805e-07
+ },
+ "nearbyRejectedForSlope": 6,
+ "nearbyInconsistent": 0
+}
