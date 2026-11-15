@@ -57,7 +57,8 @@ function layout(): void {
   queued = false;
   const metrics = parts.get('metrics'), chart = parts.get('chart'), strip = parts.get('strip');
   if (!metrics) return;
-  const m = metrics.getBoundingClientRect();
+  const moved = (el: HTMLElement | undefined) => Boolean(el?.classList.contains('sp-positioned'));
+  const m = (moved(metrics) ? metrics.parentElement! : metrics).getBoundingClientRect();
   // Not on screen (globe view): nothing to lay out.
   if (m.width === 0) return;
   const box = (el: Element | null | undefined) => {
@@ -66,7 +67,7 @@ function layout(): void {
   };
   const region = chart?.parentElement?.getBoundingClientRect();
   const stripRegion = strip?.parentElement?.getBoundingClientRect();
-  const c = box(chart), s = box(strip);
+  const c = moved(chart) ? null : box(chart), s = moved(strip) ? null : box(strip);
   const below = SHELL_BELOW.map((id) => box(document.getElementById(id))).filter((r): r is DOMRect => r !== null);
   const limits = hudLimits({
     viewportH: window.innerHeight,
@@ -80,12 +81,12 @@ function layout(): void {
     const value = `${px}px`;
     if (el.style[prop] !== value) el.style[prop] = value;
   };
-  set(metrics, 'maxHeight', limits.metricsMaxH);
-  if (chart) {
+  if (!moved(metrics)) set(metrics, 'maxHeight', limits.metricsMaxH);
+  if (chart && !moved(chart)) {
     set(chart, 'maxHeight', limits.chartMaxH);
     set(chart, 'marginBottom', limits.chartLift);
   }
-  if (strip) set(strip, 'marginBottom', limits.stripLift);
+  if (strip && !moved(strip)) set(strip, 'marginBottom', limits.stripLift);
 }
 
 /** Lays the HUD out again on the next frame. Call after anything that shows, hides or resizes a part. */

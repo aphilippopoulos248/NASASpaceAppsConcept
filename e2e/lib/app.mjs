@@ -48,13 +48,13 @@ export async function launchChromium(mode = process.env.E2E_GL || 'auto') {
   const want = String(mode).toLowerCase();
   if (!['auto', 'gpu', 'swiftshader'].includes(want)) throw new Error(`E2E_GL=${mode}: use auto, gpu or swiftshader`);
   if (want !== 'swiftshader') {
-    const b = await chromium.launch({ args: GL_ARGS.gpu });
+    const b = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL || undefined, args: GL_ARGS.gpu });
     const renderer = await rendererOf(b).catch(() => null);
     if (!isSoftwareRenderer(renderer)) return { browser: b, mode: 'gpu', renderer };
     await b.close();
     if (want === 'gpu') throw new Error(`E2E_GL=gpu, but Chromium gets no GPU here (renderer: ${renderer ?? 'no WebGL'}). Use E2E_GL=auto or swiftshader.`);
   }
-  const b = await chromium.launch({ args: GL_ARGS.swiftshader });
+  const b = await chromium.launch({ channel: process.env.E2E_BROWSER_CHANNEL || undefined, args: GL_ARGS.swiftshader });
   return { browser: b, mode: 'swiftshader', renderer: await rendererOf(b).catch(() => null) };
 }
 
