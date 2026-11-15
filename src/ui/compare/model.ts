@@ -4,6 +4,7 @@
 import { blockageAt as realBlockageAt, nextEvents as realNextEvents } from '../../analysis/api';
 import type { Blockage, FullSpan, SiteAnalysis, SkyEvent } from '../../analysis/types';
 import { checkRequirements } from '../../core/analysisReport';
+import { EVENT_INFO } from '../../core/skyEvents';
 import { spanText } from '../../core/scenario';
 import { formatDuration } from '../../core/time';
 import { MOON_RADIUS_M, type AppState, type Scenario } from '../../core/types';
@@ -156,13 +157,11 @@ function bodyNowText(k: Blockage): string {
   return k.clearanceDeg > 0 ? `${where}, ${degText(k.clearanceDeg)} above the skyline${covered}` : `${where}, ${degText(-k.clearanceDeg)} below the skyline (centre hidden)${covered}`;
 }
 
-// Which instant each event is (decision D-8): the same words as the time scrubber's buttons.
-const EVENT_LABEL: Record<SkyEvent['type'], string> = { sunset: 'Sun fully set', sunrise: 'Sun starts rising', earthset: 'Earth\'s centre sets', earthrise: 'Earth\'s centre rises' };
-const EVENT_HINT: Record<SkyEvent['type'], string> = {
-  sunset: 'The next time the last part of the Sun\'s disc goes behind the terrain skyline, after the shared clock: darkness begins. Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.',
-  sunrise: 'The next time the first part of the Sun\'s disc appears above the terrain skyline, after the shared clock. The whole disc is clear later; that instant is not listed here yet.',
-  earthset: 'The next time Earth\'s centre goes behind the terrain skyline, after the shared clock.',
-  earthrise: 'The next time Earth\'s centre comes above the terrain skyline, after the shared clock.',
+// Which instant each event is (decision D-8): the app's shared wording (src/core/skyEvents.ts).
+const EVENT_HINT = (type: SkyEvent['type']): string => {
+  const info = EVENT_INFO[type];
+  const other = info.body === 'sun' ? (info.rising ? ' The whole disc is clear later; that instant is not listed here yet.' : ' Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.') : '';
+  return `${info.label}: the next time ${info.instant}, after the shared clock.${other}`;
 };
 const EVENT_ORDER: readonly SkyEvent['type'][] = ['sunset', 'sunrise', 'earthset', 'earthrise'];
 
@@ -195,8 +194,8 @@ export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: 
       delta = Math.abs(dh) < 1 / 60 ? 'same time' : `${formatDuration(dh)} ${dh > 0 ? 'later' : 'earlier'}`;
     }
     rows.push({
-      key: type, label: EVENT_LABEL[type],
-      hint: EVENT_HINT[type],
+      key: type, label: EVENT_INFO[type].label,
+      hint: EVENT_HINT(type),
       a: a ? when(ea) : EMPTY, b: b ? when(eb) : EMPTY, delta, tone: 'none',
     });
   }
@@ -205,7 +204,8 @@ export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: 
 
 export interface RequirementLine {
   slot: 'A' | 'B';
-  status: 'met' | 'breached' | 'unknown';
+  /** 'info': a fact about the window where no requirement is set (the solar band left at its default). */
+  status: 'met' | 'breached' | 'unknown' | 'info';
   text: string;
 }
 
@@ -224,9 +224,14 @@ export function requirementLines(slot: 'A' | 'B', a: SiteAnalysis, s: Requiremen
 
   const band = r.sunElevationBand;
   const bandText = `${degText(band.minDeg, 0)} to ${degText(band.maxDeg, 0)}`;
-  if (band.metForWholeWindow === null) lines.push({ slot, status: 'unknown', text: `${who}: the Sun's elevation is not available, so the required band (${bandText}) cannot be checked.` });
-  else if (band.metForWholeWindow) lines.push({ slot, status: 'met', text: `${who}: the Sun's elevation stays inside the required band, ${bandText} (it ranges from ${degText(m.minSunElDeg)} to ${degText(m.maxSunElDeg)}).` });
-  else lines.push({ slot, status: 'breached', text: `${who}: the Sun's elevation leaves the required band, ${bandText}, during the window (it ranges from ${degText(m.minSunElDeg)} to ${degText(m.maxSunElDeg)}).` });
+  const range = `${degText(m.minSunElDeg)} to ${degText(m.maxSunElDeg)}`;
+  if (!sunBandSet(s)) {
+    // The Filters default (0 to 90 deg) is not something the user asked for: say what the Sun does, not that a band fails.
+    if (Number.isFinite(m.minSunElDeg) && Number.isFinite(m.maxSunElDeg))
+      lines.push({ slot, status: 'info', text: `${who}: no solar elevation band is set. The Sun's elevation ranges from ${range} during the window${m.minSunElDeg < 0 ? ', so it goes below the horizontal' : ''}.` });
+  } else if (band.metForWholeWindow === null) lines.push({ slot, status: 'unknown', text: `${who}: the Sun's elevation is not available, so the required band (${bandText}) cannot be checked.` });
+  else if (band.metForWholeWindow) lines.push({ slot, status: 'met', text: `${who}: the Sun's elevation stays inside the required band, ${bandText} (it ranges from ${range}).` });
+  else lines.push({ slot, status: 'breached', text: `${who}: the Sun's elevation leaves the required band, ${bandText}, during the window (it ranges from ${range}).` });
 
   if (r.maxEarthGap) {
     const limit = `${r.maxEarthGap.limitH} h`;
@@ -244,6 +249,12 @@ export function requirementLines(slot: 'A' | 'B', a: SiteAnalysis, s: Requiremen
   else lines.push({ slot, status: 'met', text: `${who}: the slope, ${degText(slope)} over ${Math.round(a.slope.baselineM)} m, is within the ${s.slopeLimitDeg}° slope limit.` });
   return lines;
 }
+
+/** The solar elevation band of the Filters panel when nobody has changed it (src/core/store.ts initialState). */
+export const DEFAULT_SUN_BAND = { minDeg: 0, maxDeg: 90 } as const;
+
+/** True when the user has set a solar elevation band (anything but the default 0 to 90 deg). */
+export const sunBandSet = (s: Pick<AppState, 'sunElMinDeg' | 'sunElMaxDeg'>) => s.sunElMinDeg !== DEFAULT_SUN_BAND.minDeg || s.sunElMaxDeg !== DEFAULT_SUN_BAND.maxDeg;
 
 export interface Basis {
   coords: string;

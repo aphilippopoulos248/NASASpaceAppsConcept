@@ -79,6 +79,8 @@ export interface TabKit {
   run(name: string, params: unknown): Promise<Outcome>;
   /** Writes a problem into the status line. */
   complain(text: string): void;
+  /** Empties the status line unless one of this tab's own actions is still running (its outcome is on the way). */
+  clearIfIdle(): void;
   numberField: typeof numberField;
   button: typeof button;
 }
@@ -90,16 +92,23 @@ export function createTabKit(): TabKit {
     status.textContent = text;
     status.classList.toggle('is-error', isError);
   };
+  let pending = 0;
   return {
     status,
     async act(name, params, done) {
       say('', false);
-      const r = await runAction<any>(name, params);
-      say(r.ok ? (typeof done === 'string' ? done : done(r.result)) : r.error, !r.ok);
-      return r;
+      pending++;
+      try {
+        const r = await runAction<any>(name, params);
+        say(r.ok ? (typeof done === 'string' ? done : done(r.result)) : r.error, !r.ok);
+        return r;
+      } finally {
+        pending--;
+      }
     },
     run: (name, params) => runAction(name, params),
     complain: (text) => say(text, true),
+    clearIfIdle: () => pending === 0 && say('', false),
     numberField,
     button,
   };
