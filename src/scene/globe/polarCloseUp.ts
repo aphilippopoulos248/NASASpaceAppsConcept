@@ -20,6 +20,7 @@ const GONE_ABOVE_KM = 1400;
 const FULL_BELOW_KM = 900;
 /** Latitude where the close-up is fully opaque, and where it has faded into the photographic globe. */
 const SOLID_LAT = -81;
+const DEG = Math.PI / 180;
 const EDGE_LAT = -80.1;
 /** Samples per side of the fine window, and mesh cells per side of each piece. */
 const WINDOW = 1024;
@@ -106,7 +107,14 @@ export class PolarCloseUp {
     const wanted = view.altitudeKm < GONE_ABOVE_KM * 1.15 && (view.centre.lat < -55 || (view.site?.lat ?? 0) < EDGE_LAT);
     if (wanted && !this.layers && !this.loading) void this.load();
     const t = Math.min(1, Math.max(0, (GONE_ABOVE_KM - view.altitudeKm) / (GONE_ABOVE_KM - FULL_BELOW_KM)));
-    this.opacity = this.wide ? t * t * (3 - 2 * t) : 0;
+    // Only while the polar region can be in view: the horizon, seen from this altitude, must reach
+    // the close-up's edge (faded over 10 degrees). Otherwise, once its data was loaded, it stayed
+    // "on screen" wherever the camera went low, and the relief chip, the card and getState said
+    // so above Apollo 17.
+    const horizonDeg = Math.acos(1 / (1 + (view.altitudeKm * 1000) / MOON_RADIUS_M)) / DEG;
+    const toEdgeDeg = 90 + view.centre.lat - (90 + EDGE_LAT);
+    const inView = Math.min(1, Math.max(0, (horizonDeg + 5 - toEdgeDeg) / 10));
+    this.opacity = this.wide ? t * t * (3 - 2 * t) * inView * inView * (3 - 2 * inView) : 0;
     this.root.visible = this.opacity > 0.001;
     // The photographic tiles are left out under the solid part of the close-up, so they cannot poke through it.
     this.shared.uCapHole.value = this.opacity >= 0.999 ? sinDeg(SOLID_LAT - 0.2) : -2;

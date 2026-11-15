@@ -8,11 +8,15 @@
 }
 .ts-play { grid-row: 1 / span 2; font-size: var(--fs-sm); }
 .ts-slider { display: grid; min-width: 0; }
-.ts-track { position: relative; padding-top: 14px; }
+.ts-track { position: relative; padding-top: 14px; padding-bottom: 5px; }
 .ts-range { width: 100%; margin: 0; accent-color: var(--accent); }
 .time-scrubber.outside .ts-range { accent-color: var(--text-muted); }
 .ts-marks { position: absolute; left: 8px; right: 8px; top: 0; height: 14px; pointer-events: none; }
 .ts-mark { position: absolute; transform: translateX(-50%); font-size: var(--fs-xs); line-height: 1; white-space: nowrap; pointer-events: auto; }
+.ts-bands { position: absolute; left: 8px; right: 8px; bottom: 0; height: 4px; pointer-events: none; }
+.ts-band { position: absolute; top: 0; height: 100%; border-radius: 2px; }
+.ts-eclipse { background: color-mix(in srgb, var(--sun) 38%, transparent); }
+.ts-totality { background: var(--sun); }
 .ts-sun { color: var(--sun); }
 .ts-earth { color: var(--earth); }
 .ts-scale { display: flex; justify-content: space-between; gap: var(--sp-2); font-size: var(--fs-xs); color: var(--text-muted); white-space: nowrap; }

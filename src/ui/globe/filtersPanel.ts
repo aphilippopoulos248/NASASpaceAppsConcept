@@ -11,6 +11,7 @@ import { store } from '../../core/store';
 import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
+import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
 import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
@@ -18,6 +19,8 @@ import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
+import { mountLandingPicker } from './landingPicker';
+import { mountPresetList } from './presetList';
 import './filtersPanel.css';
 
 let uid = 0;
@@ -55,8 +58,7 @@ function numberField(label: string, unit: string, opts: { min?: number; max?: nu
     const v = Number(input.value);
     if (input.value.trim() === '' || !Number.isFinite(v)) return;
     const r = await onCommit(v);
-    input.setAttribute('aria-invalid', String(!r.ok));
-    input.title = r.ok ? '' : (r.error ?? '');
+    showFieldOutcome(input, r);
   });
   return { wrap, input, label: lab };
 }
@@ -68,6 +70,9 @@ const set = (input: HTMLInputElement, value: string) => {
 export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
+
+  // ---- Missions to replay: a real site, date and window in one step ----
+  mountPresetList(panel);
 
   // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
@@ -81,7 +86,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   date.addEventListener('change', async () => {
     if (!date.value) return;
     const r = await runAction('setMissionWindow', { startUtc: `${date.value}Z`, moveClock: true });
-    date.setAttribute('aria-invalid', String(!r.ok));
+    showFieldOutcome(date, r);
   });
   const dateNote = el('p', 'ly-note fp-datenote');
   const dateField = el('div', 'ly-field');
@@ -217,6 +222,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const body = el('div', 'fp-mission-body');
   missions.append(body);
   panel.append(show, flags, missions);
+  // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
+  mountLandingPicker(panel);
 
   // ---- Show optimal landing area ----
   const opt = el('label', 'ly-check');
