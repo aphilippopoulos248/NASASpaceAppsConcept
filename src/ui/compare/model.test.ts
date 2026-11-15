@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest';
 import { analyseStack } from '../../analysis/api';
 import { fnSource, stackOf } from '../../analysis/testing';
-import type { Blockage, SiteAnalysis, SkyEvent } from '../../analysis/types';
+import type { Blockage, SiteAnalysis, SkyEvent, SkyTransition } from '../../analysis/types';
 import type { Scenario } from '../../core/types';
 import { basisOf, clockPosition, nowRows, requirementLines, scenarioRows, splitAssumptions, windowRows, type Science } from './model';
 
@@ -139,6 +139,22 @@ describe('scenario rows: what defines each side', () => {
   });
 });
 
+describe('Earth by its centre and by any part of its disc (D-8)', () => {
+  it('names both figures, side by side, and leaves the any-part rows out where no analysis has them', () => {
+    const rows = windowRows(day, dusk);
+    const keys = rows.map((r) => r.key);
+    expect(keys.indexOf('earthAny')).toBe(keys.indexOf('earth') + 1);
+    expect(row(rows, 'earth').label).toBe("Earth's centre in view");
+    expect(row(rows, 'earthAny')).toMatchObject({ label: "Any part of Earth's disc in view", a: '100.0 %', b: '100.0 %', delta: '0.0 points' });
+    expect(row(rows, 'earthAny').hint).toMatch(/PGDA product 69/);
+    expect(row(rows, 'gap').label).toBe('Longest Earth gap (centre hidden)');
+    expect(row(rows, 'gapAny')).toMatchObject({ label: 'Longest Earth gap (whole disc hidden)', a: 'none', b: 'none' });
+    const older = (x: SiteAnalysis): SiteAnalysis => ({ ...x, metrics: { ...x.metrics, earthAnyPct: undefined, longestEarthAnyGapH: undefined } });
+    expect(windowRows(older(day), older(dusk)).some((r) => r.key === 'earthAny' || r.key === 'gapAny')).toBe(false);
+    expect(row(windowRows(day, older(dusk)), 'earthAny')).toMatchObject({ a: '100.0 %', b: 'not available', delta: '' });
+  });
+});
+
 describe('rows at the shared clock', () => {
   it('reads both sides at the same instant from the science core', () => {
     const t = Date.parse('2025-03-21T00:00:00Z'); // inside "dusk", after "day" has ended
@@ -151,7 +167,10 @@ describe('rows at the shared clock', () => {
     expect(rows.find((r) => r.key === 'earthNow')!.a).toMatch(/^8\d\.\d° elevation, 8\d\.\d° above the skyline$/);
     const sunset = rows.find((r) => r.key === 'sunset')!;
     expect(sunset.a).toBe('none after the clock in this window');
-    expect(sunset.b).toMatch(/^2025-03-21 \d\d:\d\d UTC \(in \d+ h \d\d min\)$/);
+    // Both ends of the sunset (D-8), and the countdown to the instant named.
+    expect(sunset.label).toBe('Sunset');
+    expect(sunset.b).toMatch(/^starts setting 2025-03-21 21:44, fully set 22:47 UTC \(fully set in 22 h 48 min\)$/);
+    expect(sunset.hint).toMatch(/^Sunset: from the moment the terrain skyline starts to cut into the Sun's disc \("Sun starts setting"\) to the moment the last part of the Sun's disc goes behind the terrain skyline \("Sun fully set"\)\./);
     expect(sunset.delta).toBe('');
     // Earth never sets here: the row stays and says so; sunrise and Earthrise are left out.
     expect(rows.find((r) => r.key === 'earthset')).toMatchObject({ a: 'none after the clock in this window', b: 'none after the clock in this window' });
@@ -171,9 +190,29 @@ describe('rows at the shared clock', () => {
     const by = (key: string) => rows.find((r) => r.key === key)!;
     expect(by('sunNow')).toMatchObject({ a: '1.2° elevation, 0.8° below the skyline (centre hidden)', b: '3.0° elevation, 1.0° above the skyline; Earth covers 42 % of it', delta: '+1.8° clearance' });
     expect(by('earthNow')).toMatchObject({ a: '5.0° elevation; no skyline (no elevation data)', b: 'not available', delta: '' });
-    expect(by('sunset')).toMatchObject({ a: '2025-03-10 06:00 UTC (in 6 h 00 min)', b: '2025-03-11 07:30 UTC (in 1 d 07 h)', delta: '1 d 01 h later' });
-    expect(by('earthrise')).toMatchObject({ a: '2025-03-10 08:00 UTC (in 8 h 00 min)', b: 'none after the clock in this window', delta: '' });
+    // Events without their passage (older results) still name their instant.
+    expect(by('sunset')).toMatchObject({ a: 'Sun fully set 2025-03-10 06:00 UTC (fully set in 6 h 00 min)', b: 'Sun fully set 2025-03-11 07:30 UTC (fully set in 1 d 07 h)', delta: 'fully set 1 d 01 h later' });
+    expect(by('earthrise')).toMatchObject({ label: 'Earthrise', a: "Earth's centre rises 2025-03-10 08:00 UTC (centre rises in 8 h 00 min)", b: 'none after the clock in this window', delta: '' });
     expect(rows.some((r) => r.key === 'sunrise')).toBe(false);
+  });
+
+  it('shows a set under way at the end of the window with both ends, the one beyond the window marked', () => {
+    const t = Date.parse('2025-03-22T23:00:00Z'); // one hour before "dusk" ends
+    const none = { sunrise: null, sunset: null, earthrise: null, earthset: null };
+    const H = 3_600_000;
+    const set: SkyTransition = {
+      body: 'sun', kind: 'set', hours: 3, centre: [], minVisibleFraction: 0.4, maxVisibleFraction: 1, limitDays: 60,
+      start: { timeMs: t - H, azDeg: 270, inWindow: true, edge: 'first-cut' },
+      end: { timeMs: t + 2 * H, azDeg: 270, inWindow: false, edge: 'last-limb' },
+    };
+    const science: Science = { blockageAt: () => ({ bodyElDeg: NaN }) as Blockage, nextEvents: () => none, nextTransitions: (a) => (a === dusk ? { sun: set, earth: null } : { sun: null, earth: null }) };
+    const sunset = nowRows(day, dusk, t, science).find((r) => r.key === 'sunset')!;
+    expect(sunset).toMatchObject({ a: 'none after the clock in this window', b: 'starts setting 2025-03-22 22:00, fully set 2025-03-23 01:00 (after the analysed window) UTC', delta: '' });
+    // A rise is not offered as the next sunset.
+    const rise: SkyTransition = { ...set, kind: 'rise', start: { ...set.start, edge: 'first-limb' }, end: { ...set.end, edge: 'whole-clear' } };
+    const other = nowRows(day, dusk, t, { ...science, nextTransitions: () => ({ sun: rise, earth: null }) });
+    expect(other.find((r) => r.key === 'sunset')!.b).toBe('none after the clock in this window');
+    expect(other.find((r) => r.key === 'sunrise')!.b).toBe('starts rising 2025-03-22 22:00, fully risen 2025-03-23 01:00 (after the analysed window) UTC');
   });
 });
 
