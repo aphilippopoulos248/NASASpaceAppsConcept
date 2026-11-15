@@ -434,7 +434,7 @@ describe('equivalence: site selection and views', () => {
     assert.ok(Math.abs(s.siteLat - HOME.lat) > 0.5 || Math.abs(s.siteLon - HOME.lon) > 0.5, 'the pin should not be at the centre of view');
   });
 
-  test('clicking a landing marker = selectSite { site, surface: true }', SLOW, async () => {
+  test('clicking a landing marker shows details; double-clicking enters surface view', SLOW, async () => {
     const apollo = { lat: 0.67416, lon: 23.47314, altitudeKm: 300 };
     const overMarker = async () => {
       await result(page, 'setGlobeCamera', apollo);
@@ -444,15 +444,18 @@ describe('equivalence: site selection and views', () => {
       prepare: overMarker,
       ui: async () => {
         await page.mouse.click(640, 360);
-        await until(page, () => window.lunyx.store.get().site !== null && document.body.dataset.view === 'surface');
+        await until(page, () => window.lunyx.store.get().site !== null);
+        assert.equal(await page.locator('.site-card .sc-body').isVisible(), true);
       },
       expect: 'selectSite',
-      action: ['selectSite', { site: 'apollo-11', surface: true }],
+      action: ['selectSite', { site: 'apollo-11', fly: false }],
       keys: ['view', 'siteId', 'siteKind', 'timeUtc', 'window'],
-      wait: () => until(page, () => document.body.dataset.view === 'surface'),
     });
     assert.equal(s.siteId, 'apollo-11');
-    assert.equal(s.view, 'surface');
+    assert.equal(s.view, 'globe');
+    await page.mouse.dblclick(640, 360);
+    await until(page, () => document.body.dataset.view === 'surface');
+    assert.equal((await page.evaluate(() => window.lunyx.store.get())).site.id, 'apollo-11');
   });
 
   test('site card buttons: surface, landing time, whole Moon, earlier / later, fold, close, Escape', SLOW, async () => {
@@ -487,11 +490,12 @@ describe('equivalence: site selection and views', () => {
       site: 'apollo-11',
       ui: () => card().getByRole('button', { name: /Later/ }).click(),
       expect: 'selectSite',
-      action: (ui) => [['selectSite', { site: ui.siteId, surface: true }]],
+      action: (ui) => [['selectSite', { site: ui.siteId }]],
       keys: ['view', 'siteId'],
-      wait: () => until(page, () => document.body.dataset.view === 'surface'),
+      wait: cameraSettled,
     });
     assert.notEqual(later.siteId, 'apollo-11');
+    assert.equal(later.view, 'globe');
 
     await equivalent({ site: 'apollo-11', ui: () => card().getByRole('button', { name: 'Fold the site details away' }).click(), expect: 'showPanel', action: ['showPanel', { panel: 'site-details', open: false }] });
     assert.equal(await page.locator('.site-card .sc-body').isHidden(), true);
