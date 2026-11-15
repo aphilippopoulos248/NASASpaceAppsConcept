@@ -22,7 +22,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 5320.7685546875,
      "groundDiffM": 0.0,
@@ -39,8 +39,8 @@
      "appMaxRangeM": 188580,
      "runs": []
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 5320.7685546875,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.0022848727862306295,
@@ -76,7 +76,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": -1927.097412109375,
      "groundDiffM": 0.0,
@@ -93,8 +93,8 @@
      "appMaxRangeM": 203564,
      "runs": []
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": -1927.097412109375,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.0034358540720749176,
@@ -132,7 +132,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 529.109619140625,
      "groundDiffM": 0.0,
@@ -149,8 +149,8 @@
      "appMaxRangeM": 173031,
      "runs": []
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 529.109619140625,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.014395580942070385,
@@ -186,7 +186,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1730.3912127832746,
      "groundDiffM": 0.0,
@@ -288,8 +288,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1730.3912127832746,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.050454132556751574,
@@ -325,7 +325,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1955.872711592073,
      "groundDiffM": 0.0,
@@ -371,8 +371,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1955.872711592073,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.011671380540088538,
@@ -408,7 +408,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1730.3912127832746,
      "groundDiffM": 0.0,
@@ -510,8 +510,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1730.3912127832746,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.026539671097069117,
@@ -547,7 +547,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1955.872711592073,
      "groundDiffM": 0.0,
@@ -607,8 +607,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1955.872711592073,
      "groundDiffM": 0.0,
      "maxAbsDeg": 1.0931301104281848,
@@ -673,7 +673,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1946.5726105829085,
      "groundDiffM": -2.2737367544323206e-13,
@@ -705,8 +705,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1946.5726105829085,
      "groundDiffM": -2.2737367544323206e-13,
      "maxAbsDeg": 0.25888048274147457,
@@ -799,7 +799,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 1735.7970482598041,
      "groundDiffM": 2.2737367544323206e-13,
@@ -887,8 +887,8 @@
       }
      ]
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 1735.7970482598041,
      "groundDiffM": 2.2737367544323206e-13,
      "maxAbsDeg": 1.2252045112342005,
@@ -955,7 +955,7 @@
     "LOLA whole-Moon grid, 16 px/deg"
    ],
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "appGroundM": 5320.7685546875,
      "groundDiffM": 0.0,
@@ -972,8 +972,8 @@
      "appMaxRangeM": 185182,
      "runs": []
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "appGroundM": 5320.7685546875,
      "groundDiffM": 0.0,
      "maxAbsDeg": 0.0023977178026168833,

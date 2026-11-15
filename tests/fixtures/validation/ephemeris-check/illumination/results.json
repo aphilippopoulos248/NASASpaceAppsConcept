@@ -49,7 +49,7 @@
       "earthAnyPct": 92.46036370327211
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 46.32426676234636,
        "illuminationPct": 44.672083708837526,
@@ -60,8 +60,8 @@
        "longestDarknessH": 414.87890625,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 46.31428335679326,
        "illuminationPct": 44.661935471007915,
        "earthVisiblePct": 80.79973092002773,
@@ -87,7 +87,7 @@
       "earthAnyPct": 93.32576895948971
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 46.694512869225484,
        "illuminationPct": 44.97534062442562,
@@ -98,8 +98,8 @@
        "longestDarknessH": 413.32421875,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 46.68478581701872,
        "illuminationPct": 44.96750590413601,
        "earthVisiblePct": 81.11606975149346,
@@ -154,7 +154,7 @@
       "earthAnyPct": 0.0
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 0,
        "illuminationPct": 0,
@@ -165,8 +165,8 @@
        "longestDarknessH": 163044,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 0,
        "illuminationPct": 0,
        "earthVisiblePct": 0,
@@ -192,7 +192,7 @@
       "earthAnyPct": 0.0
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 0,
        "illuminationPct": 0,
@@ -203,8 +203,8 @@
        "longestDarknessH": 163044,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 0,
        "illuminationPct": 0,
        "earthVisiblePct": 0,
@@ -259,7 +259,7 @@
       "earthAnyPct": 25.232297831886903
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 1.6618896298698511,
        "illuminationPct": 0.8719369542067485,
@@ -270,8 +270,8 @@
        "longestDarknessH": 6358.552734375,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 1.370865092398371,
        "illuminationPct": 0.7436445395580171,
        "earthVisiblePct": 18.116578433199013,
@@ -297,7 +297,7 @@
       "earthAnyPct": 35.98945076512619
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 13.848351518608474,
        "illuminationPct": 10.767921453491635,
@@ -308,8 +308,8 @@
        "longestDarknessH": 4221.46484375,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 13.072779625438532,
        "illuminationPct": 9.918552608271456,
        "earthVisiblePct": 30.803653485600513,
@@ -388,7 +388,7 @@
       "earthAnyPct": 39.48787144653317
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 58.703475820752374,
        "illuminationPct": 53.52596150457951,
@@ -399,8 +399,8 @@
        "longestDarknessH": 346.83203125,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 48.92667489297368,
        "illuminationPct": 44.24197806186742,
        "earthVisiblePct": 34.633699458620065,
@@ -426,7 +426,7 @@
       "earthAnyPct": 58.24956300407863
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 88.00372953389882,
        "illuminationPct": 83.11021052291514,
@@ -437,8 +437,8 @@
        "longestDarknessH": 144.8671875,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 87.61915039996872,
        "illuminationPct": 82.72984768698339,
        "earthVisiblePct": 53.57738459403597,
@@ -517,7 +517,7 @@
       "earthAnyPct": 57.66444846514766
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 64.74999535209821,
        "illuminationPct": 57.49021617107206,
@@ -528,8 +528,8 @@
        "longestDarknessH": 404.3203125,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 50.63222964353181,
        "illuminationPct": 44.511406620790915,
        "earthVisiblePct": 53.04920685712139,
@@ -555,7 +555,7 @@
       "earthAnyPct": 58.16492379404459
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 89.0810221282292,
        "illuminationPct": 84.20702674803974,
@@ -566,8 +566,8 @@
        "longestDarknessH": 132.73828125,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 88.99938077489819,
        "illuminationPct": 84.10832571335327,
        "earthVisiblePct": 53.49395355893194,
@@ -646,7 +646,7 @@
       "earthAnyPct": 53.827470943604524
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 70.27282512695959,
        "illuminationPct": 63.508725279971166,
@@ -657,8 +657,8 @@
        "longestDarknessH": 347.919921875,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 40.279197304485294,
        "illuminationPct": 35.41815383816664,
        "earthVisiblePct": 49.355388729422735,
@@ -684,7 +684,7 @@
       "earthAnyPct": 56.79842988132111
      },
      "apps": {
-      "integration": {
+      "before": {
        "commit": "375f816",
        "sunAnyPct": 87.00824001113196,
        "illuminationPct": 82.18929616888693,
@@ -695,8 +695,8 @@
        "longestDarknessH": 189.75,
        "ephemeris": "model"
       },
-      "analysis": {
-       "commit": "ecc9793",
+      "now": {
+       "commit": "4f007f1",
        "sunAnyPct": 86.8126879285653,
        "illuminationPct": 81.96793833771775,
        "earthVisiblePct": 52.14530376002797,

@@ -11,8 +11,9 @@ const args = process.argv.slice(2);
 const opt = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
 const ROOT = resolve(opt('--root') ?? join(HERE, '../../../..'));
 const rows = JSON.parse(await readFile(resolve(opt('--in')), 'utf8'));
-let commit = null;
-try { commit = (await readFile(join(ROOT, 'COMMIT'), 'utf8')).trim(); } catch { /* a git checkout */ }
+// --commit LABEL names the build under test (e.g. the integration commit when this checkout has later commits of its own).
+let commit = opt('--commit');
+if (!commit) { try { commit = (await readFile(join(ROOT, 'COMMIT'), 'utf8')).trim(); } catch { /* a git checkout */ } }
 if (!commit) { try { commit = execFileSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { commit = 'unknown'; } }
 const { createServer } = await import('vite');
 const vite = await createServer({ root: ROOT, configFile: false, server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom', logLevel: 'error', optimizeDeps: { noDiscovery: true } });

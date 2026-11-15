@@ -36,7 +36,7 @@ report = {}
 
 def load_apps(prefix):
     apps = {}
-    for name in ('integration', 'analysis'):
+    for name in ('before', 'now'):
         p = os.path.join(DIR, '%s-%s.json' % (prefix, name))
         if os.path.exists(p):
             with open(p) as fh:
@@ -84,7 +84,7 @@ smooth = sg.Skyline(np.zeros(8), 45.0)
 ev = sun_events(hz['sun'], smooth, t0, t1)
 out('   Smooth sphere, no terrain (Horizons only): first contact with the horizontal %s, half %s, last limb %s UTC' % (hm(ev['cut'][0][0]), hm(ev['half'][0][0]), hm(ev['limb'][0][0])))
 out('')
-out('   eye height | independent (Horizons + own skyline)            | app %s                     | app %s' % (commit.get('integration', '-'), commit.get('analysis', '-')))
+out('   eye height | independent (Horizons + own skyline)            | app %s                     | app %s' % (commit.get('before', '-'), commit.get('now', '-')))
 out('              | skyline cuts   half hidden   last limb           | cuts     half     last limb | cuts     half     last limb')
 report['blueGhostSunset'] = {'published': 'night began around 18:15-18:35 UTC', 'rows': []}
 arc_az = np.arange(255.0, 285.0001, 0.05)
@@ -98,7 +98,7 @@ for mast, sid in ((0.5, 'blue-ghost-1.sunset-1min.mast0.5'), (2.0, 'blue-ghost-1
     row = {'mastM': mast, 'reference': {'cut': sg.to_iso(ref[0]), 'half': sg.to_iso(ref[1]), 'lastLimb': sg.to_iso(ref[2]), 'sunAzAtLastLimb': az_set,
                                         'skylineThereDeg': float(arc['elev_deg'][j]), 'formedAtM': float(arc['dist_m'][j]), 'heightM': float(arc['height_m'][j]), 'groundM': arc['ground_m']}, 'apps': {}}
     cols = []
-    for name in ('integration', 'analysis'):
+    for name in ('before', 'now'):
         r = by_id.get(name, {}).get(sid)
         if not r:
             cols.append('-')
@@ -150,7 +150,7 @@ out('   Independent (Horizons, geometric discs): Earth\'s limb first touches the
     % (hms(c['C1'])[6:], hms(c['C2'])[6:], hms(c['C3'])[6:], (c['C3'] - c['C2']) / 60, hms(c['C4'])[6:]))
 report['blueGhostEclipse'] = {'published': {'start': '05:00', 'totalityStart': '06:18', 'sunAboutToEmerge': '08:30', 'end': '09:52', 'assumedZone': 'CDT (UTC-5)'},
                               'reference': {k: sg.to_iso(v) for k, v in c.items()}, 'apps': {}}
-for name in ('integration', 'analysis'):
+for name in ('before', 'now'):
     r = by_id.get(name, {}).get('blue-ghost-1.eclipse-1min')
     if r:
         a = app_eclipse(r)
@@ -177,7 +177,7 @@ out('   Published: "the Sun would set at Shivshakti point on September 4" (Inter
 out('   September 22, 2023"; ISRO page, 4 Sept: "Awaiting their awakening around September 22, 2023". Dates only.')
 out('   Independent (2 m): skyline starts to cut the Sun %s, last limb gone %s; first limb back %s, whole disc clear %s UTC' % (hm(cut3), hms(sunset3), hms(sunrise3), hm(full3)))
 report['chandrayaan3'] = {'published': {'sunset': '2023-09-04', 'nextSunrise': '2023-09-22'}, 'reference': {'cut': sg.to_iso(cut3), 'sunset': sg.to_iso(sunset3), 'sunrise': sg.to_iso(sunrise3), 'wholeDiscClear': sg.to_iso(full3)}, 'apps': {}}
-for name in ('integration', 'analysis'):
+for name in ('before', 'now'):
     r = by_id.get(name, {}).get('chandrayaan-3.surface')
     if r:
         e = {x['type']: x['timeMs'] / 1000.0 for x in r['events']}
@@ -186,7 +186,7 @@ for name in ('integration', 'analysis'):
 for stamp in ('2023-09-21T18:30:00Z', '2023-09-22T18:30:00Z'):
     az, el, _ = hz3['sun'].at(np.array([sg.to_unix(stamp)]))
     out('   Sun at %s (= %s 00:00 IST): %.1f deg above the horizontal, %.1f deg above the skyline' % (stamp[:16], '22 Sept' if stamp.startswith('2023-09-21') else '23 Sept', el[0], el[0] - sky3.at(az)[0]))
-out('   So the sunset date agrees (4 Sept, both UTC and IST). The first sunlight computed here falls on 19 Sept 23:56 UTC = 20 Sept 05:26 IST, two days')
+out('   So the sunset date agrees (4 Sept, both UTC and IST). The first sunlight computed here falls at %s UTC = %s IST, two days' % (hm(sunrise3), hm(sunrise3 + 19800)))
 out('   before the date ISRO gave for "the next sunrise"; through 22 Sept IST the Sun climbs from about 8 to 12 deg. ISRO\'s date may mean usable power rather than first light: not resolved here.')
 r3 = report['chandrayaan3']
 
@@ -200,7 +200,7 @@ sunset15 = next(t for t, k in ev15['limb'] if k == 'set')
 c15 = contacts(hz15, sg.to_unix('1971-08-06T15:00:00Z'), sg.to_unix('1971-08-07T00:00:00Z'))
 out('   Independent (2 m): last limb gone %s UTC; eclipse of 6 August 1971 at the site: %s, total %s .. %s, ends %s' % (hms(sunset15), hms(c15['C1'])[6:], hms(c15['C2'])[6:], hms(c15['C3'])[6:], hms(c15['C4'])[6:]))
 report['apollo15'] = {'reference': {'sunset': sg.to_iso(sunset15), 'eclipse': {k: sg.to_iso(v) for k, v in c15.items()}}, 'apps': {}}
-for name in ('integration', 'analysis'):
+for name in ('before', 'now'):
     r = by_id.get(name, {}).get('apollo-15.surface')
     if r:
         e = {x['type']: x['timeMs'] / 1000.0 for x in r['events']}
@@ -213,7 +213,7 @@ for name in ('integration', 'analysis'):
 out('')
 out('F. The two flagship windows with the app reading its bundled Horizons tables (as in the browser; sections A-D ran its model)')
 bundled = {}
-for name in ('integration', 'analysis'):
+for name in ('before', 'now'):
     p = os.path.join(DIR, 'app-%s-bundled.json' % name)
     if os.path.exists(p):
         with open(p) as fh:

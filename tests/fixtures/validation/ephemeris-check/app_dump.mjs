@@ -23,8 +23,9 @@ const SLIM = args.includes('--slim');
 const BUNDLE = args.includes('--bundle');
 const scenarios = JSON.parse(await readFile(resolve(opt('--scenarios')), 'utf8'));
 
-let commit = null;
-try { commit = (await readFile(join(ROOT, 'COMMIT'), 'utf8')).trim(); } catch { /* a git checkout */ }
+// --commit LABEL names the build under test (e.g. the integration commit when this checkout has later commits of its own).
+let commit = opt('--commit');
+if (!commit) { try { commit = (await readFile(join(ROOT, 'COMMIT'), 'utf8')).trim(); } catch { /* a git checkout */ } }
 if (!commit) { try { commit = execFileSync('git', ['-C', ROOT, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).trim(); } catch { commit = 'unknown'; } }
 
 const { createServer } = await import('vite');

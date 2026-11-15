@@ -38,7 +38,7 @@
     ]
    },
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "ephemeris": "model",
      "earthVisiblePct": 79.57374855324073,
@@ -75,8 +75,8 @@
      "worstEventDiffMin": 2.6444520115852357,
      "horizonsEarthOnAppSkylinePct": 79.58246109398702
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "ephemeris": "model",
      "earthVisiblePct": 79.56615306712963,
      "diffPct": -0.011160762180324468,
@@ -155,7 +155,7 @@
     ]
    },
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "ephemeris": "model",
      "earthVisiblePct": 33.902180989583336,
@@ -198,8 +198,8 @@
      "worstEventDiffMin": 359.3082471370697,
      "horizonsEarthOnAppSkylinePct": 33.906117733554154
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "ephemeris": "model",
      "earthVisiblePct": 31.90547236689814,
      "diffPct": 0.048025715994974405,
@@ -280,7 +280,7 @@
     ]
    },
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "ephemeris": "model",
      "earthVisiblePct": 56.00965711805556,
@@ -317,8 +317,8 @@
      "worstEventDiffMin": 8.846628936131795,
      "horizonsEarthOnAppSkylinePct": 56.01291852298618
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "ephemeris": "model",
      "earthVisiblePct": 56.00242332175926,
      "diffPct": 0.0005796479130211196,
@@ -397,7 +397,7 @@
     ]
    },
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "ephemeris": "model",
      "earthVisiblePct": 49.25302010995371,
@@ -440,8 +440,8 @@
      "worstEventDiffMin": 3.4258746186892193,
      "horizonsEarthOnAppSkylinePct": 49.249678936747856
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "ephemeris": "model",
      "earthVisiblePct": 49.243616174768526,
      "diffPct": 0.004408739599185196,
@@ -526,7 +526,7 @@
     ]
    },
    "apps": {
-    "app-integration": {
+    "app-before": {
      "commit": "375f816",
      "ephemeris": "model",
      "earthVisiblePct": 40.05579065393519,
@@ -569,8 +569,8 @@
      "worstEventDiffMin": 460.77662185827893,
      "horizonsEarthOnAppSkylinePct": 40.07269416389366
     },
-    "app-analysis": {
-     "commit": "ecc9793",
+    "app-now": {
+     "commit": "4f007f1",
      "ephemeris": "model",
      "earthVisiblePct": 38.895851417824076,
      "diffPct": 0.05118196368861305,

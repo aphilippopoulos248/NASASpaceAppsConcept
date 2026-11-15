@@ -4,7 +4,7 @@ A. Blue Ghost Mission 1, sunset of 16 March 2025 (site 18.562 N 61.81 E)
    the release does not say whether "sunset" is first contact, last limb or loss of power.
    Smooth sphere, no terrain (Horizons only): first contact with the horizontal 03-16 19:37, half 03-16 20:10, last limb 03-16 20:44 UTC
 
-   eye height | independent (Horizons + own skyline)            | app 375f816                     | app ecc9793
+   eye height | independent (Horizons + own skyline)            | app 375f816                     | app 4f007f1
               | skyline cuts   half hidden   last limb           | cuts     half     last limb | cuts     half     last limb
      0.5 m    | 18:09  18:42  19:16:07 (16 Mar)    | 18:11  18:44  19:16:26 (+0.3 min) | 18:11  18:44  19:16:19 (+0.2 min)
      2.0 m    | 18:23  18:56  19:30:03 (16 Mar)    | 18:25  18:58  19:30:19 (+0.3 min) | 18:25  18:58  19:30:11 (+0.1 min)
@@ -17,7 +17,7 @@ B. The 14 March 2025 eclipse seen from the Blue Ghost site (Earth in front of th
    "Totality lasted just over 2 hours, beginning at 1:18 a.m." = 06:18; image "around 3:30 a.m." = 08:30 "as the sun prepared to emerge from totality".
    Independent (Horizons, geometric discs): Earth's limb first touches the Sun 05:00:43, Sun wholly covered 06:17:24 .. 08:34:25 (137 min), last contact 09:51:10 UTC
    App 375f816: first sample with the Sun partly covered 05:01, wholly covered 06:18 .. 08:34 (dark interval 06:17:19 .. 08:34:19), last partly covered sample 09:51
-   App ecc9793: first sample with the Sun partly covered 05:01, wholly covered 06:18 .. 08:34 (dark interval 06:17:19 .. 08:34:19), last partly covered sample 09:51
+   App 4f007f1: first sample with the Sun partly covered 05:01, wholly covered 06:18 .. 08:34 (dark interval 06:17:19 .. 08:34:19), last partly covered sample 09:51
    Published minus independent: start -0.7 min, totality start +0.6 min, end +0.8 min; the "around 3:30" image is 4 min before the Sun re-emerges.
    Earth's atmosphere is ignored on all sides here: discs are geometric (Horizons uses Earth's equatorial radius).
 
@@ -26,29 +26,29 @@ C. Chandrayaan-3 (69.3741 S 32.32 E): end of the lunar day and the next sunrise,
    September 22, 2023"; ISRO page, 4 Sept: "Awaiting their awakening around September 22, 2023". Dates only.
    Independent (2 m): skyline starts to cut the Sun 09-04 04:53, last limb gone 09-04 08:02:23; first limb back 09-19 23:57:08, whole disc clear 09-20 02:42 UTC
    App 375f816: sunset 09-04 08:09:01 (+6.6 min), sunrise 09-19 23:56:31 (-0.6 min)
-   App ecc9793: sunset 09-04 08:02:08 (-0.2 min), sunrise 09-19 23:56:40 (-0.5 min)
+   App 4f007f1: sunset 09-04 08:02:08 (-0.2 min), sunrise 09-19 23:56:40 (-0.5 min)
    Sun at 2023-09-21T18:30 (= 22 Sept 00:00 IST): 8.2 deg above the horizontal, 6.8 deg above the skyline
    Sun at 2023-09-22T18:30 (= 23 Sept 00:00 IST): 11.9 deg above the horizontal, 10.7 deg above the skyline
-   So the sunset date agrees (4 Sept, both UTC and IST). The first sunlight computed here falls on 19 Sept 23:56 UTC = 20 Sept 05:26 IST, two days
+   So the sunset date agrees (4 Sept, both UTC and IST). The first sunlight computed here falls at 09-19 23:57 UTC = 09-20 05:27 IST, two days
    before the date ISRO gave for "the next sunrise"; through 22 Sept IST the Sun climbs from about 8 to 12 deg. ISRO's date may mean usable power rather than first light: not resolved here.
 
 D. Apollo 15 (26.13239 N 3.6333 E): no published sunset time was found; independent recomputation only
    Independent (2 m): last limb gone 08-13 11:36:55 UTC; eclipse of 6 August 1971 at the site: 17:30:32, total 18:26:23 .. 21:03:21, ends 21:59:08
    App 375f816: sunset 08-13 11:37:01 (+0.1 min); Sun wholly covered 18:26:23 .. 21:03:25 (+0 s, +4 s)
-   App ecc9793: sunset 08-13 11:36:42 (-0.2 min); Sun wholly covered 18:26:23 .. 21:03:25 (+0 s, +4 s)
+   App 4f007f1: sunset 08-13 11:36:42 (-0.2 min); Sun wholly covered 18:26:23 .. 21:03:25 (+0 s, +4 s)
 
 F. The two flagship windows with the app reading its bundled Horizons tables (as in the browser; sections A-D ran its model)
    Independent: Blue Ghost last limb 19:30:03, Sun wholly covered 06:17:24 .. 08:34:25; IM-2 Sun wholly covered 05:33:04 .. 08:18:52, Earthset 03-19 04:07:45, sunset 03-19 23:17:13
    App 375f816 (horizons): Blue Ghost last limb 19:30:11 (+8 s), covered 06:17:26 .. 08:34:26 (+2 s, +1 s); IM-2 covered 05:33:05 .. 08:18:52 (+0 s, -0 s), Earthset 03-19 04:11:31 (+3.8 min), sunset 03-19 23:17:27 (+0.2 min)
-   App ecc9793 (horizons): Blue Ghost last limb 19:30:04 (+1 s), covered 06:17:26 .. 08:34:26 (+2 s, +1 s); IM-2 covered 05:33:05 .. 08:18:52 (+0 s, -0 s), Earthset 03-19 04:09:38 (+1.9 min), sunset 03-19 23:17:08 (-0.1 min)
+   App 4f007f1 (horizons): Blue Ghost last limb 19:30:04 (+1 s), covered 06:17:26 .. 08:34:26 (+2 s, +1 s); IM-2 covered 05:33:05 .. 08:18:52 (+0 s, -0 s), Earthset 03-19 04:09:38 (+1.9 min), sunset 03-19 23:17:08 (-0.1 min)
    At IM-2 Earth sinks by about 0.05 deg per hour and the Sun by less, so one minute there is under 0.001 deg.
 
 E. Apollo 11-17: Sun and Earth altitude/azimuth at 43 documented instants (Apollo Lunar Surface Journal table by J. Scotti, values to 0.01 deg)
    worst difference over the 43 instants, deg (altitude / azimuth arc):
      app 375f816 skyAt minus published:            Sun 0.065 / 0.400   Earth 0.261 / 0.046
      app 375f816 skyAt minus SPICE at the site:     Sun 0.0021 / 0.0033 Earth 0.0019 / 0.0034
-     app ecc9793 skyAt minus published:            Sun 0.065 / 0.400   Earth 0.261 / 0.046
-     app ecc9793 skyAt minus SPICE at the site:     Sun 0.0021 / 0.0033 Earth 0.0019 / 0.0034
+     app 4f007f1 skyAt minus published:            Sun 0.065 / 0.400   Earth 0.261 / 0.046
+     app 4f007f1 skyAt minus SPICE at the site:     Sun 0.0021 / 0.0033 Earth 0.0019 / 0.0034
      SPICE at the site minus published:               Sun 0.066 / 0.403   Earth 0.261 / 0.044
      SPICE from the Moon's centre minus published:    Sun 0.067 / 0.403   Earth 0.075 / 0.044   (the table's own method)
    The table is built from sub-Earth and sub-solar points, i.e. from the Moon's centre, so its Earth altitudes lack the site parallax.

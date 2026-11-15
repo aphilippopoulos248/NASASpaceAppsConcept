@@ -8,13 +8,17 @@ files and from outside sources, with code that shares nothing with `src/analysis
 
 Owner: @ephemeris-check. Two builds were tested side by side:
 
-- **integrated**: `am/lunyx/integration` at 375f816 (what is published);
-- **analysis head**: `am/lunyx/agent/analysis` at ecc9793, read-only snapshot, not merged. It
-  contains @analysis's skyline fix (1828486).
+- **before**: `am/lunyx/integration` at 375f816, the integrated build when this task started;
+- **now**: `am/lunyx/integration` at 4f007f1. It contains @analysis's skyline fix (1828486),
+  which was merged while this task was running (a7b4e70).
+
+The fix was first tested from a read-only snapshot of `am/lunyx/agent/analysis` at ecc9793,
+before it was merged. The current integration has the same `src/analysis` and `src/astro` and
+returned identical numbers in all 38 runs, so only the two builds above are kept.
 
 ## Summary
 
-| Check | Integrated 375f816 | Analysis head ecc9793 |
+| Check | Before (375f816) | Now (4f007f1) |
 | --- | --- | --- |
 | 0. Bundled elevation grids against the PDS originals | equal within rounding (30 080 samples) | same data |
 | 1. Skyline, observer 2 m up, 5 sites, 720 azimuths each | **reads low**: up to 1.04 deg (Shackleton rim pin), 0.27 deg (connecting ridge); 0.04-0.07 deg at IM-2, Apollo 15, Chandrayaan-3 | within 0.05 deg everywhere (0.002-0.014 deg at four sites) |
@@ -39,15 +43,14 @@ Owner: @ephemeris-check. Two builds were tested side by side:
 
 **What does not agree**
 
-- **The integrated skyline is too low wherever the skyline is formed within a few grid cells
-  of the observer** (check 1). On a polar rim crest this is most of the Sun's 1.5 deg range,
-  so the integrated build reports sunlight and Earth contact that its own elevation data rules
-  out (checks 3 and 4). The fix exists on @analysis's branch and removes it for an observer 2 m
-  up; it is not merged.
-- **With the observer on the ground (0 m), the fixed build is still up to 1.2 deg low on convex
-  ground**, because the slope at the observer's own feet is the skyline there and its first
-  sample is 12 m out. Over 18.6 years that is +4.7 points of sunlight at the connecting ridge
-  pin. It disappears with a 2 m mast.
+- **Before the fix, the skyline was too low wherever it is formed within a few grid cells of
+  the observer** (check 1). On a polar rim crest that is most of the Sun's 1.5 deg range, so
+  that build reported sunlight and Earth contact that its own elevation data rules out (checks
+  3 and 4). @analysis's fix removes it for an observer 2 m up, and it is now integrated.
+- **Still open: with the observer on the ground (0 m), the current build is up to 1.2 deg low
+  on convex ground**, because the slope at the observer's own feet is the skyline there and its
+  first sample is 12 m out. Over 18.6 years that is +4.7 points of sunlight at the connecting
+  ridge pin. It disappears with a 2 m mast.
 - Chandrayaan-3: ISRO wrote "the next sunrise expected on September 22, 2023". First sunlight
   over the skyline, by my computation and by the app, is 19 September 23:57 UTC (20 September
   05:27 IST), two days earlier. By 22 September the Sun stands 8 deg up. Not resolved; ISRO's
@@ -110,7 +113,7 @@ to 0.85 km west of the lander) is in both layers.
 App minus reference at the app's own 720 azimuths, observer 2 m above ground. Site heights
 agree to 0.00 m at all five sites.
 
-| Site | Integrated: worst | azimuths over 0.1 deg | Analysis head: worst | azimuths over 0.02 deg |
+| Site | Before: worst | azimuths over 0.1 deg | Now: worst | azimuths over 0.02 deg |
 | --- | --- | --- | --- | --- |
 | IM-2 (-84.79, 29.2) | -0.036 deg | 0 | +0.002 | 0 |
 | Apollo 15 | -0.068 | 0 | -0.003 | 0 |
@@ -118,8 +121,8 @@ agree to 0.00 m at all five sites.
 | Shackleton rim pin (-89.78, -155.73) | **-1.040** | **381 of 720** | -0.051 | 72 |
 | Connecting ridge pin (-89.45, -137.2) | **-0.272** | 19 | -0.012 | 0 |
 
-Every difference above 0.1 deg has the same cause. The integrated march samples the terrain
-every 0.7 grid cell (28 m on the 40 m layer) and keeps the largest sample. Where the skyline is
+Every difference above 0.1 deg has the same cause. The march before the fix sampled the terrain
+every 0.7 grid cell (28 m on the 40 m layer) and kept the largest sample. Where the skyline is
 formed by ground one to three cells away, the true maximum lies between samples:
 
 | Shackleton rim pin, azimuths | Worst | Reference skyline | App |
@@ -133,9 +136,10 @@ formed by ground one to three cells away, the true maximum lies between samples:
 | Connecting ridge pin, 161.0-169.0 (17) | -0.27 | -0.78 deg from 65 m | -1.05 deg at 56 m |
 | Connecting ridge pin, 256.0-256.5 (2) | -0.12 | -2.40 deg from a rise 128 m away | -2.52 deg from terrain 61.7 km away (the near rise was stepped over) |
 
-The integrated result is never higher than the reference by more than 0.002 deg. The analysis
-head searches finely around its candidate maxima and removes the effect; what is left at the
-Shackleton rim pin is 0.05 deg (again low, 72 azimuths over 0.02 deg, worst at azimuth 261.5).
+The result before the fix is never higher than the reference by more than 0.002 deg. The
+current build searches finely around its candidate maxima and removes the effect; what is left
+at the Shackleton rim pin is 0.05 deg (again low, 72 azimuths over 0.02 deg, worst at azimuth
+261.5).
 
 Why 0.1 deg is the right threshold: it is a fifth of the Sun's diameter, about 12 minutes of
 sunrise time at low latitude, and 3 % of the Sun's whole elevation range at the pole. Below
@@ -148,7 +152,7 @@ degree.
 **Observer on the ground (0 m).** PGDA's maps describe the ground itself, so check 3 needs this
 case, and the app accepts it.
 
-| Site | Integrated: worst | azimuths over 0.1 deg | Analysis head: worst | azimuths over 0.1 deg |
+| Site | Before: worst | azimuths over 0.1 deg | Now: worst | azimuths over 0.1 deg |
 | --- | --- | --- | --- | --- |
 | IM-2 | -0.038 deg | 0 | -0.002 | 0 |
 | Shackleton rim pin | -0.868 | 433 | -0.027 | 0 |
@@ -157,11 +161,12 @@ case, and the app accepts it.
 | Rim top (-89.7843, -155.9041) | **-5.015** | 468 | **-1.225** | 261 |
 
 With no mast, the skyline towards rising ground is the slope of the ground at the observer's
-feet: the reference finds its maximum "0 m away" over hundreds of azimuths. The analysis head's
-first sample is 12 m out and the integrated build's 28 m, so on ground that curves away (a
-crest, a shoulder) both miss it. Example, rim top at azimuth 243.5: reference 3.23 deg at the
-observer's feet, analysis head 2.00 deg from 12 m, integrated -1.72 deg from 28 m. Where the
-ground is not convex at the pin (IM-2, the rim pin) the analysis head is right.
+feet: the reference finds its maximum "0 m away" over hundreds of azimuths. The current build's
+first sample is 12 m out and the earlier build's was 28 m, so on ground that curves away (a
+crest, a shoulder) both miss it. Example, rim top: at azimuth 243.5 the reference is 3.23 deg
+at the observer's feet and the current build 2.00 deg from 12 m; at 250.5 the reference is
+3.29 deg from 10 m and the earlier build gave -1.72 deg from 28 m. Where the ground is not
+convex at the pin (IM-2, the rim pin) the current build is right.
 
 ## Check 2: real events (`events/`)
 
@@ -170,7 +175,7 @@ Full output: `events/results.txt`.
 
 **Blue Ghost Mission 1, sunset of 16 March 2025** (UTC)
 
-| Eye height | Independent: skyline cuts the Sun | half hidden | last limb | App, last limb (integrated / analysis head) |
+| Eye height | Independent: skyline cuts the Sun | half hidden | last limb | App, last limb (before / now) |
 | --- | --- | --- | --- | --- |
 | 0.5 m | 18:09 | 18:42 | 19:16:07 | 19:16:26 / 19:16:19 |
 | 2 m | 18:23 | 18:56 | 19:30:03 | 19:30:19 / 19:30:11 |
@@ -201,10 +206,10 @@ force. Read as CST everything would be one hour late.
 | --- | --- | --- |
 | Published | "on September 4" (secondary source) | "expected on September 22, 2023" (ISRO) |
 | Independent, 2 m | 4 Sept 08:02:23 | 19 Sept 23:57:08 |
-| App integrated | 08:09:01 (+6.6 min) | 23:56:31 |
-| App analysis head | 08:02:08 | 23:56:40 |
+| App before | 08:09:01 (+6.6 min) | 23:56:31 |
+| App now | 08:02:08 | 23:56:40 |
 
-The Sun there gains 0.18 deg per hour, so the integrated build's 6.6 minutes are 0.02 deg of
+The Sun there gains 0.18 deg per hour, so the earlier build's 6.6 minutes are 0.02 deg of
 skyline. At 22 September 00:00 IST the Sun is 8.2 deg above the horizontal, 6.8 above the
 skyline.
 
@@ -233,8 +238,8 @@ model. With `app_dump.mjs --bundle` the app reads the tables (`source: "horizons
 | | Blue Ghost last limb | Blue Ghost Sun covered | IM-2 Sun covered (14 March) | IM-2 Earthset | IM-2 sunset |
 | --- | --- | --- | --- | --- | --- |
 | Independent | 19:30:03 | 06:17:24-08:34:25 | 05:33:04-08:18:52 | 19 Mar 04:07:45 | 19 Mar 23:17:13 |
-| Integrated | +8 s | +2 s, +1 s | 0 s, 0 s | +3.8 min | +0.2 min |
-| Analysis head | +1 s | +2 s, +1 s | 0 s, 0 s | +1.9 min | -0.1 min |
+| Before | +8 s | +2 s, +1 s | 0 s, 0 s | +3.8 min | +0.2 min |
+| Now | +1 s | +2 s, +1 s | 0 s, 0 s | +1.9 min | -0.1 min |
 
 At IM-2 Earth sinks by 0.05 deg per hour, so 3.8 minutes is 0.003 deg.
 
@@ -253,7 +258,7 @@ instants with any part of the disc above the skyline, which is PGDA's definition
   Lunyx bundles (40 m near the pole).
 - **App**: `analyse()` over the same instants.
 
-| Point | PGDA pixel (its 8 neighbours) | Own, 0 m | Own, 2 m | Integrated 0 m / 2 m | Analysis head 0 m / 2 m |
+| Point | PGDA pixel (its 8 neighbours) | Own, 0 m | Own, 2 m | Before 0 m / 2 m | Now 0 m / 2 m |
 | --- | --- | --- | --- | --- | --- |
 | IM-2 | 46.55 % (42.6-46.7) | 46.35 | 46.71 | 46.32 / 46.69 | 46.31 / 46.68 |
 | Shackleton floor (IAU centre) | 0 (0-0) | 0 | 0 | 0 / 0 | 0 / 0 |
@@ -262,10 +267,10 @@ instants with any part of the disc above the skyline, which is PGDA's definition
 | Ridge top: PGDA's brightest pixel | 88.44 (39.8-86.3) | 48.98 | 89.01 | **64.75** / 89.08 | 50.63 / 89.00 |
 | Rim top: brightest on Shackleton's rim | 85.46 (43.2-80.2) | 39.52 | 86.83 | **70.27** / 87.01 | 40.28 / 86.81 |
 
-**App against own, same elevation data.** Two metres up, the analysis head is within 0.03
-points at every point (disc-averaged sunlight within 0.05) and the integrated build within 0.79
-(rim pin). On the ground the integrated build is 14.5, 15.8 and 30.8 points too bright on the
-three crest points and the analysis head 4.7, 1.7 and 0.8: this is the 0 m skyline of check 1.
+**App against own, same elevation data.** Two metres up, the current build is within 0.03
+points at every point (disc-averaged sunlight within 0.05); the earlier build was within 0.79
+(rim pin). On the ground the earlier build was 14.5, 15.8 and 30.8 points too bright on the
+three crest points and the current one is 4.7, 1.7 and 0.8: this is the 0 m skyline of check 1.
 A tolerance of 0.5 points is fair here: 0.01 deg of skyline moves the any-Sun share at the pole
 by a few tenths of a point, and 163 045 samples leave no sampling noise.
 
@@ -287,7 +292,7 @@ by a few tenths of a point, and 163 045 samples leave no sampling noise.
 
 **Earth.** PGDA's Earth map counts any part of Earth's disc; the app counts Earth's centre.
 
-| Point, 2 m | PGDA, any part | Own, any part | Own, centre | App, centre (integrated / analysis head) |
+| Point, 2 m | PGDA, any part | Own, any part | Own, centre | App, centre (before / now) |
 | --- | --- | --- | --- | --- |
 | IM-2 | 92.26 % | 93.34 | 81.12 | 81.13 / 81.12 |
 | Connecting ridge pin | 57.94 | 58.25 | 53.60 | 53.58 / 53.58 |
@@ -295,21 +300,21 @@ by a few tenths of a point, and 163 045 samples leave no sampling noise.
 | Rim top | 56.68 | 56.80 | 52.15 | 52.15 / 52.15 |
 | Shackleton rim pin | 29.31 (neighbours 15.7-55.0) | 35.99 | 30.77 | **32.83** / 30.80 |
 
-So the app's Earth figure is right for its own definition (except the integrated build at the
-rim pin, +2.1 points, as in check 4), and the definition accounts for the whole gap to PGDA:
+So the app's Earth figure is right for its own definition (the earlier build was +2.1 points
+at the rim pin, as in check 4), and the definition accounts for the whole gap to PGDA:
 counting any part of the disc reproduces PGDA within 1.1 points at the four smooth points. The
 app's "Earth visible" is 4 to 5 points lower than PGDA's at the pole, and 11 lower at IM-2, by
 definition.
 
 Not independently recomputed: the longest darkness. The two builds differ there (rim pin, 2 m:
-4221 h integrated, 4896 h analysis head).
+4221 h before, 4896 h now).
 
 ## Check 4: Earth visibility (`earth/`)
 
 Sixty days from 2025-03-01, observer 2 m up. Earth counts as visible when its centre is above
 the skyline (the app's definition). Reference: Horizons Earth against the 0.1 deg skyline.
 
-| Site | Reference | Integrated | worst rise/set difference | Analysis head | worst |
+| Site | Reference | Before | worst rise/set difference | Now | worst |
 | --- | --- | --- | --- | --- | --- |
 | IM-2 | 79.58 % | 79.57 | 2.6 min | 79.57 | 4.5 min |
 | Shackleton rim pin | 31.86 % | **33.90** | **359 min** | 31.91 | 13.8 min |
@@ -319,13 +324,13 @@ the skyline (the app's definition). Reference: Horizons Earth against the 0.1 de
 
 The number of risings and settings is the same in every case. Feeding Horizons' Earth through
 the app's own skyline reproduces the app's percentage to 0.02 points at every site: the whole
-difference is the skyline. At the rim pin the integrated build sees Earth rise six hours early
-and set six hours late, five times in sixty days. The west-limb pin has only the 1.9 km
+difference is the skyline. At the rim pin the earlier build saw Earth rise six hours early and
+set six hours late, five times in sixty days. The west-limb pin has only the 1.9 km
 whole-Moon grid; the same stepping over maxima costs 1.2 points there.
 
 Tolerance: Earth's elevation changes by at most 0.08 deg per hour at these sites, so 0.01 deg of
 skyline or ephemeris is 8 to 12 minutes. Fifteen minutes and 0.1 points is agreement; the
-analysis head's early Earthrises at the rim and west-limb pins (12 to 23 min) are its remaining
+current build's early Earthrises at the rim and west-limb pins (12 to 23 min) are its remaining
 0.02-0.05 deg.
 
 Reading the skyline every 0.5 deg instead of every 0.1 deg changes none of these percentages by
@@ -351,16 +356,18 @@ build: dump it, then run the checks.
 
 ```
 V=tests/fixtures/validation/ephemeris-check
-for c in skyline earth events; do node $V/app_dump.mjs --scenarios $V/$c/scenarios.json --out $V/$c/app-integration.json; done
-node $V/app_dump.mjs --bundle --scenarios $V/events/scenarios-bundled.json --out $V/events/app-integration-bundled.json
-node $V/app_dump.mjs --slim --scenarios $V/illumination/scenarios.json --out $V/illumination/app-integration.json   # 12 runs of 18.6 years, about 30 s each
-node $V/app_skyat.mjs --in $V/events/alsj_rows.json --out $V/events/alsj-app-integration.json
+for c in skyline earth events; do node $V/app_dump.mjs --scenarios $V/$c/scenarios.json --out $V/$c/app-now.json; done
+node $V/app_dump.mjs --bundle --scenarios $V/events/scenarios-bundled.json --out $V/events/app-now-bundled.json
+node $V/app_dump.mjs --slim --scenarios $V/illumination/scenarios.json --out $V/illumination/app-now.json   # 12 runs of 18.6 years, 30 to 90 s each
+node $V/app_skyat.mjs --in $V/events/alsj_rows.json --out $V/events/alsj-app-now.json
 python3 -I $V/check1_skyline.py --write && python3 -I $V/check2_events.py --write && python3 -I $V/check4_earth.py --write
 python3 -I $V/check3_illumination.py --neighbours --write
 ```
 
-`--root DIR` on the two Node scripts tests another checkout (that is how the analysis head was
-run, from a snapshot under `scripts/.cache/`). The `app-analysis.json` files are that snapshot.
+The checks read `app-before*.json` (375f816, kept as the record of the defect) and
+`app-now*.json`; overwrite the latter to test a newer build. `--root DIR` on the two Node
+scripts tests another checkout without merging it, and `--commit LABEL` names the build in the
+output.
 
 Not committed (git-ignored, under `scripts/.cache/ephemeris-check/`): numpy and spiceypy
 (`python3 -m pip install --target scripts/.cache/ephemeris-check/pylib numpy spiceypy`), the five

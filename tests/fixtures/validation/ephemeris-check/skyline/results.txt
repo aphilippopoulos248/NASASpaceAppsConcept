@@ -1,100 +1,100 @@
 im-2  (-84.79000, 29.20000), mast 2 m
-  reference: ground 5320.77 m; skyline -1.471 .. 4.067 deg; formed 373 m .. 29.7 km away; reference converged to 0.00176 deg; 17653 samples per ray, 73 s
+  reference: ground 5320.77 m; skyline -1.471 .. 4.067 deg; formed 373 m .. 29.7 km away; reference converged to 0.00176 deg; 17653 samples per ray, 68 s
   layers forming it: LOLA ldem_80s_20m, 60 m site window (237 az); LOLA south pole, 85S square at 80 m (417 az); LOLA south pole, 80S square at 160 m (66 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 5320.77 m (+0.00); app - reference: max |d| 0.0355 deg at az 208.0 (-0.0355); mean -0.0030, rms 0.0062; app lowest -0.0355, highest +0.0003; |d| > 0.02: 19, > 0.05: 0, > 0.1: 0 of 720
-  app app-analysis (ecc9793): ground 5320.77 m (+0.00); app - reference: max |d| 0.0023 deg at az 5.5 (+0.0023); mean -0.0000, rms 0.0002; app lowest -0.0015, highest +0.0023; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+  app app-before (375f816): ground 5320.77 m (+0.00); app - reference: max |d| 0.0355 deg at az 208.0 (-0.0355); mean -0.0030, rms 0.0062; app lowest -0.0355, highest +0.0003; |d| > 0.02: 19, > 0.05: 0, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 5320.77 m (+0.00); app - reference: max |d| 0.0023 deg at az 5.5 (+0.0023); mean -0.0000, rms 0.0002; app lowest -0.0015, highest +0.0023; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
 
 apollo-15  (26.13239, 3.63330), mast 2 m
-  reference: ground -1927.10 m; skyline 0.230 .. 13.470 deg; formed 214 m .. 43.3 km away; reference converged to 0.00163 deg; 17653 samples per ray, 73 s
+  reference: ground -1927.10 m; skyline 0.230 .. 13.470 deg; formed 214 m .. 43.3 km away; reference converged to 0.00163 deg; 17653 samples per ray, 53 s
   layers forming it: LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), 3 m site window (148 az); SLDEM2015 512 ppd, 60 m site window (27 az); SLDEM2015 512 ppd, 480 m site window (537 az); LOLA whole-Moon grid, 16 px/deg (8 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground -1927.10 m (+0.00); app - reference: max |d| 0.0683 deg at az 103.5 (-0.0683); mean -0.0098, rms 0.0158; app lowest -0.0683, highest +0.0012; |d| > 0.02: 123, > 0.05: 15, > 0.1: 0 of 720
-  app app-analysis (ecc9793): ground -1927.10 m (+0.00); app - reference: max |d| 0.0034 deg at az 309.0 (-0.0034); mean -0.0001, rms 0.0005; app lowest -0.0034, highest +0.0014; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+  app app-before (375f816): ground -1927.10 m (+0.00); app - reference: max |d| 0.0683 deg at az 103.5 (-0.0683); mean -0.0098, rms 0.0158; app lowest -0.0683, highest +0.0012; |d| > 0.02: 123, > 0.05: 15, > 0.1: 0 of 720
+  app app-now (4f007f1): ground -1927.10 m (+0.00); app - reference: max |d| 0.0034 deg at az 309.0 (-0.0034); mean -0.0001, rms 0.0005; app lowest -0.0034, highest +0.0014; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
 
 chandrayaan-3  (-69.37410, 32.32000), mast 2 m
-  reference: ground 529.11 m; skyline 0.510 .. 2.441 deg; formed 120 m .. 50.7 km away; reference converged to 0.00350 deg; 17653 samples per ray, 87 s
+  reference: ground 529.11 m; skyline 0.510 .. 2.441 deg; formed 120 m .. 50.7 km away; reference converged to 0.00350 deg; 17653 samples per ray, 75 s
   layers forming it: LOLA ldem_60s_60m, 60 m site window (163 az); LOLA ldem_60s_60m, 480 m site window (431 az); LOLA whole-Moon grid, 16 px/deg (126 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 529.11 m (+0.00); app - reference: max |d| 0.0725 deg at az 160.0 (-0.0725); mean -0.0085, rms 0.0135; app lowest -0.0725, highest +0.0013; |d| > 0.02: 87, > 0.05: 7, > 0.1: 0 of 720
-  app app-analysis (ecc9793): ground 529.11 m (+0.00); app - reference: max |d| 0.0144 deg at az 289.0 (-0.0144); mean -0.0003, rms 0.0009; app lowest -0.0144, highest +0.0027; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+  app app-before (375f816): ground 529.11 m (+0.00); app - reference: max |d| 0.0725 deg at az 160.0 (-0.0725); mean -0.0085, rms 0.0135; app lowest -0.0725, highest +0.0013; |d| > 0.02: 87, > 0.05: 7, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 529.11 m (+0.00); app - reference: max |d| 0.0144 deg at az 289.0 (-0.0144); mean -0.0003, rms 0.0009; app lowest -0.0144, highest +0.0027; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
 
 shackleton-rim  (-89.78000, -155.73000), mast 2 m
-  reference: ground 1730.39 m; skyline 0.054 .. 5.715 deg; formed 42 m .. 0.1 km away; reference converged to 0.00457 deg; 17653 samples per ray, 43 s
+  reference: ground 1730.39 m; skyline 0.054 .. 5.715 deg; formed 42 m .. 0.1 km away; reference converged to 0.00457 deg; 17653 samples per ray, 39 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (720 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 1730.39 m (+0.00); app - reference: max |d| 1.0397 deg at az 269.5 (-1.0397); mean -0.2662, rms 0.4089; app lowest -1.0397, highest +0.0000; |d| > 0.02: 599, > 0.05: 487, > 0.1: 381 of 720
+  app app-before (375f816): ground 1730.39 m (+0.00); app - reference: max |d| 1.0397 deg at az 269.5 (-1.0397); mean -0.2662, rms 0.4089; app lowest -1.0397, highest +0.0000; |d| > 0.02: 599, > 0.05: 487, > 0.1: 381 of 720
       az  21.5.. 36.5 ( 31): worst -0.479 at 28.5 | reference 1.518 deg from 98 m away, 1735.0 m high [LOLA south pole, 87.5S square at 40 m] | app 1.039 deg from 112 m, 1734.4 m
       az  81.5.. 82.0 (  2): worst -0.106 at 81.5 | reference 1.488 deg from 81 m away, 1734.5 m high [LOLA south pole, 87.5S square at 40 m] | app 1.381 deg from 84 m, 1734.4 m
       az 114.0..174.0 (121): worst -0.851 at 124.5 | reference 3.255 deg from 72 m away, 1736.5 m high [LOLA south pole, 87.5S square at 40 m] | app 2.405 deg from 84 m, 1735.9 m
       az 212.5..285.5 (147): worst -1.040 at 269.5 | reference 5.715 deg from 46 m away, 1737.0 m high [LOLA south pole, 87.5S square at 40 m] | app 4.675 deg from 56 m, 1737.0 m
       az 301.0..324.0 ( 47): worst -0.204 at 316.0 | reference 2.541 deg from 62 m away, 1735.2 m high [LOLA south pole, 87.5S square at 40 m] | app 2.337 deg from 56 m, 1734.7 m
       az 334.0..350.0 ( 33): worst -0.167 at 344.5 | reference 1.373 deg from 100 m away, 1734.8 m high [LOLA south pole, 87.5S square at 40 m] | app 1.206 deg from 84 m, 1734.2 m
-  app app-analysis (ecc9793): ground 1730.39 m (+0.00); app - reference: max |d| 0.0505 deg at az 261.5 (-0.0505); mean -0.0064, rms 0.0115; app lowest -0.0505, highest +0.0033; |d| > 0.02: 72, > 0.05: 1, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 1730.39 m (+0.00); app - reference: max |d| 0.0505 deg at az 261.5 (-0.0505); mean -0.0064, rms 0.0115; app lowest -0.0505, highest +0.0033; |d| > 0.02: 72, > 0.05: 1, > 0.1: 0 of 720
 
 connecting-ridge  (-89.45000, -137.20000), mast 2 m
-  reference: ground 1955.87 m; skyline -2.800 .. 0.097 deg; formed 49 m .. 198.3 km away; reference converged to 0.00114 deg; 17653 samples per ray, 45 s
+  reference: ground 1955.87 m; skyline -2.800 .. 0.097 deg; formed 49 m .. 198.3 km away; reference converged to 0.00114 deg; 17653 samples per ray, 43 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (625 az); LOLA south pole, 85S square at 80 m (84 az); LOLA south pole, 80S square at 160 m (11 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 1955.87 m (+0.00); app - reference: max |d| 0.2724 deg at az 166.0 (-0.2724); mean -0.0185, rms 0.0403; app lowest -0.2724, highest +0.0011; |d| > 0.02: 190, > 0.05: 87, > 0.1: 19 of 720
+  app app-before (375f816): ground 1955.87 m (+0.00); app - reference: max |d| 0.2724 deg at az 166.0 (-0.2724); mean -0.0185, rms 0.0403; app lowest -0.2724, highest +0.0011; |d| > 0.02: 190, > 0.05: 87, > 0.1: 19 of 720
       az 161.0..169.0 ( 17): worst -0.272 at 166.0 | reference -0.777 deg from 65 m away, 1957.0 m high [LOLA south pole, 87.5S square at 40 m] | app -1.049 deg from 56 m, 1956.8 m
       az 256.0..256.5 (  2): worst -0.122 at 256.5 | reference -2.399 deg from 128 m away, 1952.5 m high [LOLA south pole, 87.5S square at 40 m] | app -2.521 deg from 61656 m, 337.7 m
-  app app-analysis (ecc9793): ground 1955.87 m (+0.00); app - reference: max |d| 0.0117 deg at az 221.5 (-0.0117); mean -0.0005, rms 0.0014; app lowest -0.0117, highest +0.0014; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 1955.87 m (+0.00); app - reference: max |d| 0.0117 deg at az 221.5 (-0.0117); mean -0.0005, rms 0.0014; app lowest -0.0117, highest +0.0014; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
 
 shackleton-rim@0m  (-89.78000, -155.73000), mast 0 m
-  reference: ground 1730.39 m; skyline 1.189 .. 8.187 deg; formed 15 m .. 0.1 km away; reference converged to 0.00208 deg; 17653 samples per ray, 46 s
+  reference: ground 1730.39 m; skyline 1.189 .. 8.187 deg; formed 15 m .. 0.1 km away; reference converged to 0.00208 deg; 17653 samples per ray, 51 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (720 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 1730.39 m (+0.00); app - reference: max |d| 0.8675 deg at az 269.5 (-0.8675); mean -0.2044, rms 0.2824; app lowest -0.8675, highest -0.0000; |d| > 0.02: 645, > 0.05: 578, > 0.1: 433 of 720
+  app app-before (375f816): ground 1730.39 m (+0.00); app - reference: max |d| 0.8675 deg at az 269.5 (-0.8675); mean -0.2044, rms 0.2824; app lowest -0.8675, highest -0.0000; |d| > 0.02: 645, > 0.05: 578, > 0.1: 433 of 720
       az  23.0.. 40.5 ( 36): worst -0.503 at 29.0 | reference 2.696 deg from 97 m away, 1735.0 m high [LOLA south pole, 87.5S square at 40 m] | app 2.193 deg from 84 m, 1733.6 m
       az  57.5.. 84.0 ( 54): worst -0.185 at 71.5 | reference 2.376 deg from 78 m away, 1733.6 m high [LOLA south pole, 87.5S square at 40 m] | app 2.191 deg from 84 m, 1733.6 m
       az  97.5..162.5 (131): worst -0.604 at 124.0 | reference 4.814 deg from 72 m away, 1736.5 m high [LOLA south pole, 87.5S square at 40 m] | app 4.210 deg from 56 m, 1734.5 m
       az 176.5..225.0 ( 98): worst -0.424 at 188.5 | reference 4.659 deg from 40 m away, 1733.6 m high [LOLA south pole, 87.5S square at 40 m] | app 4.236 deg from 28 m, 1732.5 m
       az 244.0..286.5 ( 86): worst -0.867 at 269.5 | reference 8.167 deg from 46 m away, 1737.0 m high [LOLA south pole, 87.5S square at 40 m] | app 7.300 deg from 28 m, 1734.0 m
       az 338.5..352.0 ( 28): worst -0.155 at 346.0 | reference 2.686 deg from 59 m away, 1733.2 m high [LOLA south pole, 87.5S square at 40 m] | app 2.531 deg from 84 m, 1734.1 m
-  app app-analysis (ecc9793): ground 1730.39 m (+0.00); app - reference: max |d| 0.0265 deg at az 267.5 (-0.0265); mean -0.0036, rms 0.0069; app lowest -0.0265, highest +0.0011; |d| > 0.02: 30, > 0.05: 0, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 1730.39 m (+0.00); app - reference: max |d| 0.0265 deg at az 267.5 (-0.0265); mean -0.0036, rms 0.0069; app lowest -0.0265, highest +0.0011; |d| > 0.02: 30, > 0.05: 0, > 0.1: 0 of 720
 
 connecting-ridge@0m  (-89.45000, -137.20000), mast 0 m
-  reference: ground 1955.87 m; skyline -2.037 .. 2.543 deg; formed 0 m .. 0.4 km away; reference converged to 0.00089 deg; 17653 samples per ray, 54 s
+  reference: ground 1955.87 m; skyline -2.037 .. 2.543 deg; formed 0 m .. 0.4 km away; reference converged to 0.00089 deg; 17653 samples per ray, 52 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (720 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000009 deg
-  app app-integration (375f816): ground 1955.87 m (+0.00); app - reference: max |d| 2.5362 deg at az 66.0 (-2.5362); mean -0.7463, rms 1.1546; app lowest -2.5362, highest -0.0000; |d| > 0.02: 582, > 0.05: 477, > 0.1: 429 of 720
+  app app-before (375f816): ground 1955.87 m (+0.00); app - reference: max |d| 2.5362 deg at az 66.0 (-2.5362); mean -0.7463, rms 1.1546; app lowest -2.5362, highest -0.0000; |d| > 0.02: 582, > 0.05: 477, > 0.1: 429 of 720
       az  28.5..186.5 (317): worst -2.536 at 66.0 | reference 0.689 deg from 0 m away, 1955.9 m high [LOLA south pole, 87.5S square at 40 m] | app -1.847 deg from 28 m, 1955.0 m
       az 198.0..201.0 (  7): worst -0.117 at 199.0 | reference 1.779 deg from 36 m away, 1957.0 m high [LOLA south pole, 87.5S square at 40 m] | app 1.661 deg from 28 m, 1956.7 m
       az 233.0..285.0 (105): worst -0.380 at 252.0 | reference -0.933 deg from 0 m away, 1955.9 m high [LOLA south pole, 87.5S square at 40 m] | app -1.313 deg from 28 m, 1955.2 m
-  app app-analysis (ecc9793): ground 1955.87 m (+0.00); app - reference: max |d| 1.0931 deg at az 55.5 (-1.0931); mean -0.1922, rms 0.3817; app lowest -1.0931, highest +0.0009; |d| > 0.02: 326, > 0.05: 308, > 0.1: 278 of 720
+  app app-now (4f007f1): ground 1955.87 m (+0.00); app - reference: max |d| 1.0931 deg at az 55.5 (-1.0931); mean -0.1922, rms 0.3817; app lowest -1.0931, highest +0.0009; |d| > 0.02: 326, > 0.05: 308, > 0.1: 278 of 720
       az  29.5..123.5 (189): worst -1.093 at 55.5 | reference 0.250 deg from 0 m away, 1955.9 m high [LOLA south pole, 87.5S square at 40 m] | app -0.843 deg from 12 m, 1955.7 m
       az 241.0..285.0 ( 89): worst -0.217 at 272.0 | reference -1.650 deg from 0 m away, 1955.9 m high [LOLA south pole, 87.5S square at 40 m] | app -1.867 deg from 12 m, 1955.5 m
 
 ridge-top@0m  (-89.47490, -137.44310), mast 0 m
-  reference: ground 1946.57 m; skyline -2.530 .. 3.416 deg; formed 0 m .. 176.5 km away; reference converged to 0.00120 deg; 17653 samples per ray, 52 s
+  reference: ground 1946.57 m; skyline -2.530 .. 3.416 deg; formed 0 m .. 176.5 km away; reference converged to 0.00120 deg; 17653 samples per ray, 48 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (621 az); LOLA south pole, 85S square at 80 m (94 az); LOLA south pole, 80S square at 160 m (5 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000008 deg
-  app app-integration (375f816): ground 1946.57 m (-0.00); app - reference: max |d| 1.6164 deg at az 313.0 (-1.6164); mean -0.7175, rms 0.9432; app lowest -1.6164, highest +0.0014; |d| > 0.02: 493, > 0.05: 488, > 0.1: 475 of 720
+  app app-before (375f816): ground 1946.57 m (-0.00); app - reference: max |d| 1.6164 deg at az 313.0 (-1.6164); mean -0.7175, rms 0.9432; app lowest -1.6164, highest +0.0014; |d| > 0.02: 493, > 0.05: 488, > 0.1: 475 of 720
       az 248.5..125.5 (475): worst -1.616 at 313.0 | reference 1.737 deg from 0 m away, 1946.6 m high [LOLA south pole, 87.5S square at 40 m] | app 0.120 deg from 28 m, 1946.6 m
-  app app-analysis (ecc9793): ground 1946.57 m (-0.00); app - reference: max |d| 0.2589 deg at az 313.0 (-0.2589); mean -0.0739, rms 0.1079; app lowest -0.2589, highest +0.0017; |d| > 0.02: 406, > 0.05: 380, > 0.1: 265 of 720
+  app app-now (4f007f1): ground 1946.57 m (-0.00); app - reference: max |d| 0.2589 deg at az 313.0 (-0.2589); mean -0.0739, rms 0.1079; app lowest -0.2589, highest +0.0017; |d| > 0.02: 406, > 0.05: 380, > 0.1: 265 of 720
       az  31.0.. 72.5 ( 84): worst -0.206 at 55.0 | reference 2.382 deg from 0 m away, 1946.6 m high [LOLA south pole, 87.5S square at 40 m] | app 2.176 deg from 12 m, 1947.0 m
       az  81.0..104.0 ( 47): worst -0.109 at 92.5 | reference 0.500 deg from 0 m away, 1946.6 m high [LOLA south pole, 87.5S square at 40 m] | app 0.392 deg from 12 m, 1946.7 m
       az 261.0..284.0 ( 47): worst -0.109 at 272.5 | reference -0.502 deg from 0 m away, 1946.6 m high [LOLA south pole, 87.5S square at 40 m] | app -0.611 deg from 12 m, 1946.4 m
       az 293.5..336.5 ( 87): worst -0.259 at 313.0 | reference 1.737 deg from 0 m away, 1946.6 m high [LOLA south pole, 87.5S square at 40 m] | app 1.478 deg from 12 m, 1946.9 m
 
 rim-top@0m  (-89.78430, -155.90410), mast 0 m
-  reference: ground 1735.80 m; skyline -1.733 .. 3.323 deg; formed 0 m .. 49.2 km away; reference converged to 0.00114 deg; 17653 samples per ray, 33 s
+  reference: ground 1735.80 m; skyline -1.733 .. 3.323 deg; formed 0 m .. 49.2 km away; reference converged to 0.00114 deg; 17653 samples per ray, 61 s
   layers forming it: LOLA south pole, 87.5S square at 40 m (720 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000023 deg
-  app app-integration (375f816): ground 1735.80 m (+0.00); app - reference: max |d| 5.0152 deg at az 250.5 (-5.0152); mean -1.4133, rms 2.3166; app lowest -5.0152, highest +0.0001; |d| > 0.02: 597, > 0.05: 541, > 0.1: 468 of 720
+  app app-before (375f816): ground 1735.80 m (+0.00); app - reference: max |d| 5.0152 deg at az 250.5 (-5.0152); mean -1.4133, rms 2.3166; app lowest -5.0152, highest +0.0001; |d| > 0.02: 597, > 0.05: 541, > 0.1: 468 of 720
       az  37.5.. 38.5 (  3): worst -0.119 at 38.5 | reference 0.275 deg from 107 m away, 1736.3 m high [LOLA south pole, 87.5S square at 40 m] | app 0.157 deg from 84 m, 1736.0 m
       az  55.5.. 93.5 ( 77): worst -0.380 at 79.0 | reference -0.601 deg from 72 m away, 1735.0 m high [LOLA south pole, 87.5S square at 40 m] | app -0.980 deg from 84 m, 1734.4 m
       az 103.5..128.0 ( 50): worst -0.244 at 113.5 | reference -1.703 deg from 42 m away, 1734.6 m high [LOLA south pole, 87.5S square at 40 m] | app -1.946 deg from 28 m, 1734.8 m
       az 162.0..328.5 (334): worst -5.015 at 250.5 | reference 3.292 deg from 10 m away, 1736.4 m high [LOLA south pole, 87.5S square at 40 m] | app -1.724 deg from 28 m, 1735.0 m
       az 349.0..350.5 (  4): worst -0.132 at 349.0 | reference 0.486 deg from 132 m away, 1736.9 m high [LOLA south pole, 87.5S square at 40 m] | app 0.354 deg from 140 m, 1736.7 m
-  app app-analysis (ecc9793): ground 1735.80 m (+0.00); app - reference: max |d| 1.2252 deg at az 243.5 (-1.2252); mean -0.1918, rms 0.3989; app lowest -1.2252, highest +0.0008; |d| > 0.02: 307, > 0.05: 288, > 0.1: 261 of 720
+  app app-now (4f007f1): ground 1735.80 m (+0.00); app - reference: max |d| 1.2252 deg at az 243.5 (-1.2252); mean -0.1918, rms 0.3989; app lowest -1.2252, highest +0.0008; |d| > 0.02: 307, > 0.05: 288, > 0.1: 261 of 720
       az 170.0..276.5 (214): worst -1.225 at 243.5 | reference 3.228 deg from 0 m away, 1735.8 m high [LOLA south pole, 87.5S square at 40 m] | app 2.003 deg from 12 m, 1736.2 m
       az 305.5..328.5 ( 47): worst -0.180 at 326.5 | reference 0.924 deg from 9 m away, 1735.9 m high [LOLA south pole, 87.5S square at 40 m] | app 0.744 deg from 12 m, 1736.0 m
 
 im-2@0m  (-84.79000, 29.20000), mast 0 m
-  reference: ground 5320.77 m; skyline -1.355 .. 4.074 deg; formed 77 m .. 29.7 km away; reference converged to 0.00176 deg; 17653 samples per ray, 31 s
+  reference: ground 5320.77 m; skyline -1.355 .. 4.074 deg; formed 77 m .. 29.7 km away; reference converged to 0.00176 deg; 17653 samples per ray, 73 s
   layers forming it: LOLA ldem_80s_20m, 60 m site window (266 az); LOLA south pole, 85S square at 80 m (400 az); LOLA south pole, 80S square at 160 m (54 az)
   azimuth of the skyline-forming sample differs from the nominal azimuth by at most 0.000000 deg
-  app app-integration (375f816): ground 5320.77 m (+0.00); app - reference: max |d| 0.0379 deg at az 235.5 (-0.0379); mean -0.0037, rms 0.0072; app lowest -0.0379, highest +0.0003; |d| > 0.02: 24, > 0.05: 0, > 0.1: 0 of 720
-  app app-analysis (ecc9793): ground 5320.77 m (+0.00); app - reference: max |d| 0.0024 deg at az 230.0 (-0.0024); mean -0.0001, rms 0.0003; app lowest -0.0024, highest +0.0023; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720
+  app app-before (375f816): ground 5320.77 m (+0.00); app - reference: max |d| 0.0379 deg at az 235.5 (-0.0379); mean -0.0037, rms 0.0072; app lowest -0.0379, highest +0.0003; |d| > 0.02: 24, > 0.05: 0, > 0.1: 0 of 720
+  app app-now (4f007f1): ground 5320.77 m (+0.00); app - reference: max |d| 0.0024 deg at az 230.0 (-0.0024); mean -0.0001, rms 0.0003; app lowest -0.0024, highest +0.0023; |d| > 0.02: 0, > 0.05: 0, > 0.1: 0 of 720

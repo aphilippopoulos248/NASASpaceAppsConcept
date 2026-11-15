@@ -4,7 +4,7 @@
 Reference: lib/skyline.py over lib/lunyx_dem.py, straight from the bundled elevation
 files. Under test: analyse().horizon as dumped by app_dump.mjs (skyline/app-*.json).
 
-    node tests/fixtures/validation/ephemeris-check/app_dump.mjs --scenarios tests/fixtures/validation/ephemeris-check/skyline/scenarios.json --out tests/fixtures/validation/ephemeris-check/skyline/app-integration.json
+    node tests/fixtures/validation/ephemeris-check/app_dump.mjs --scenarios tests/fixtures/validation/ephemeris-check/skyline/scenarios.json --out tests/fixtures/validation/ephemeris-check/skyline/app-now.json
     python3 -I tests/fixtures/validation/ephemeris-check/check1_skyline.py [--write]
 
 Differences are app minus reference, in degrees, at the app's own 720 azimuths.
@@ -23,7 +23,7 @@ import skyline as sk  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--write', action='store_true', help='store reference skylines and results in skyline/')
-ap.add_argument('--apps', nargs='*', default=['app-integration.json', 'app-analysis.json'])
+ap.add_argument('--apps', nargs='*', default=['app-before.json', 'app-now.json'])
 args = ap.parse_args()
 DIR = os.path.join(common.BASE, 'skyline')
 LIMIT = 0.1  # deg: differences above this are listed and explained (task T-26)

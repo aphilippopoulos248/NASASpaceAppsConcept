@@ -15,13 +15,13 @@
      "groundM": -3651.160400390625
     },
     "apps": {
-     "integration": {
+     "before": {
       "cut": "2025-03-16T18:11:00Z",
       "half": "2025-03-16T18:44:00Z",
       "lastLimb": "2025-03-16T19:16:26Z",
       "lastLimbMinusReferenceMin": 0.3203125
      },
-     "analysis": {
+     "now": {
       "cut": "2025-03-16T18:11:00Z",
       "half": "2025-03-16T18:44:00Z",
       "lastLimb": "2025-03-16T19:16:19Z",
@@ -42,13 +42,13 @@
      "groundM": -3651.160400390625
     },
     "apps": {
-     "integration": {
+     "before": {
       "cut": "2025-03-16T18:25:00Z",
       "half": "2025-03-16T18:58:00Z",
       "lastLimb": "2025-03-16T19:30:19Z",
       "lastLimbMinusReferenceMin": 0.2578125
      },
-     "analysis": {
+     "now": {
       "cut": "2025-03-16T18:25:00Z",
       "half": "2025-03-16T18:58:00Z",
       "lastLimb": "2025-03-16T19:30:11Z",
@@ -69,13 +69,13 @@
      "groundM": -3651.160400390625
     },
     "apps": {
-     "integration": {
+     "before": {
       "cut": "2025-03-16T18:53:00Z",
       "half": "2025-03-16T19:26:00Z",
       "lastLimb": "2025-03-16T19:58:11Z",
       "lastLimbMinusReferenceMin": 0.2421875
      },
-     "analysis": {
+     "now": {
       "cut": "2025-03-16T18:53:00Z",
       "half": "2025-03-16T19:25:00Z",
       "lastLimb": "2025-03-16T19:58:04Z",
@@ -100,7 +100,7 @@
    "C3": "2025-03-14T08:34:25Z"
   },
   "apps": {
-   "integration": {
+   "before": {
     "firstPartialSample": "2025-03-14T05:01:00Z",
     "darkStart": "2025-03-14T06:17:19Z",
     "darkEnd": "2025-03-14T08:34:19Z",
@@ -108,7 +108,7 @@
     "darkStartMinusReferenceS": -5.15625,
     "darkEndMinusReferenceS": -6.09375
    },
-   "analysis": {
+   "now": {
     "firstPartialSample": "2025-03-14T05:01:00Z",
     "darkStart": "2025-03-14T06:17:19Z",
     "darkEnd": "2025-03-14T08:34:19Z",
@@ -130,13 +130,13 @@
    "wholeDiscClear": "2023-09-20T02:42:19Z"
   },
   "apps": {
-   "integration": {
+   "before": {
     "sunset": "2023-09-04T08:09:01Z",
     "sunrise": "2023-09-19T23:56:31Z",
     "sunsetMinusReferenceMin": 6.6328125,
     "sunriseMinusReferenceMin": -0.6171875
    },
-   "analysis": {
+   "now": {
     "sunset": "2023-09-04T08:02:08Z",
     "sunrise": "2023-09-19T23:56:40Z",
     "sunsetMinusReferenceMin": -0.2421875,
@@ -155,13 +155,13 @@
    }
   },
   "apps": {
-   "integration": {
+   "before": {
     "sunset": "1971-08-13T11:37:01Z",
     "sunsetMinusReferenceMin": 0.1015625,
     "darkStart": "1971-08-06T18:26:23Z",
     "darkEnd": "1971-08-06T21:03:25Z"
    },
-   "analysis": {
+   "now": {
     "sunset": "1971-08-13T11:36:42Z",
     "sunsetMinusReferenceMin": -0.2109375,
     "darkStart": "1971-08-06T18:26:23Z",
@@ -181,7 +181,7 @@
    }
   },
   "apps": {
-   "integration": {
+   "before": {
     "commit": "375f816",
     "source": "horizons",
     "blueGhostSunsetMinusReferenceS": 8.25,
@@ -193,8 +193,8 @@
      "earthVisiblePct": 88.90632750496032
     }
    },
-   "analysis": {
-    "commit": "ecc9793",
+   "now": {
+    "commit": "4f007f1",
     "source": "horizons",
     "blueGhostSunsetMinusReferenceS": 0.75,
     "im2EarthsetMinusReferenceMin": 1.8828125,
@@ -210,7 +210,7 @@
  "alsj": {
   "rows": 43,
   "apps": {
-   "integration": {
+   "before": {
     "commit": "375f816",
     "sunAltDeg": 0.06475553151637747,
     "sunAzArcDeg": 0.4004304660464705,
@@ -221,8 +221,8 @@
     "vsSpiceEarthAltDeg": 0.001888745236108491,
     "vsSpiceEarthAzArcDeg": 0.003378310025593903
    },
-   "analysis": {
-    "commit": "ecc9793",
+   "now": {
+    "commit": "4f007f1",
     "sunAltDeg": 0.06475553151637747,
     "sunAzArcDeg": 0.4004304660464705,
     "earthAltDeg": 0.2607149635873256,

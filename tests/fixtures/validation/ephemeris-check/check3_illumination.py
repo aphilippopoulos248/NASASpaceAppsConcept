@@ -102,7 +102,7 @@ with open(os.path.join(DIR, 'scenarios.json')) as fh:
 with open(os.path.join(common.BASE, 'sites.json')) as fh:
     sites = json.load(fh)['sites']
 apps = {}
-for name in ('integration', 'analysis'):
+for name in ('before', 'now'):
     p = os.path.join(DIR, 'app-%s.json' % name)
     if os.path.exists(p):
         with open(p) as fh:
