@@ -4,12 +4,10 @@ Audit for decision D-1 of the original project ("the LLM can operate the full na
 original T-1 / T-16, team tasks T-1 and T-6. Owner: @assistant (lunyx-experience).
 
 **State of this document.** 2026-11-15, from branch `am/lunyx-experience/agent/assistant`,
-which merges `am/lunyx/integration` (bbaa93d: compare panel slices 1 and 2, the surface HUD of
-original T-10, T-20 / T-33) and `am/lunyx-experience/integration` (c12fc06). **59 actions.**
-Read from every event handler and every `runAction` call in `src/ui/` and `src/scene/`, and
-from the registry at run time. Not in this build, so not covered: the mission-window table
-and export (`exportResults`) and the seasonal outlook chart (`showOutlook`), compare panel
-slices 3 and 4 on `am/lunyx/agent/analysis`; add them when they land (section 7).
+which merges `am/lunyx/integration` (a958d6b: compare panel slices 1 to 4 with the window
+table, export and seasonal outlook, the surface HUD of original T-10, T-20 / T-33) and
+`am/lunyx-experience/integration` (c4aaba5). **61 actions.** Read from every event handler and
+every `runAction` call in `src/ui/` and `src/scene/`, and from the registry at run time.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tools are
 `toolDefinitions()` over the same registry and its calls are `runAction(name, input, 'assistant')`.
@@ -27,7 +25,7 @@ Check columns:
 | **U** | Unit tests of the owner | the module's `*.test.ts` |
 | **H** | Checked by hand | |
 
-## 1. The registry: 59 actions
+## 1. The registry: 61 actions
 
 | Action | Module (owner) | Parameters | Control that runs it | Checks |
 | --- | --- | --- | --- | --- |
@@ -55,27 +53,29 @@ Check columns:
 | `compare`, `stopCompare` | core | | compare panel close, Escape | C D |
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
-| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30) | Filters: Terrain relief, Exaggeration | C D |
-| `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D |
+| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30) | Filters: Terrain relief, Exaggeration | C D E |
+| `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |
 | `getSiteScience`, `nearestIceTargets` (queries) | site science (T-30, mounted by @globe) | ; `lat?`, `lon?`, `count?`, `limit?`, `maxKm?` | the card's "Site science" section | C D U |
-| `setGeneratedDetail` | surface (@surface) | `on` | HUD "Generated detail" | C D |
+| `setGeneratedDetail` | surface (@surface) | `on` | HUD "Generated detail" | C D E |
 | `setFieldOfView` | surface | `fovDeg` (4 to 100) | scroll, pinch, + / - in the surface view (pose) | C D |
-| `lookAtBody` | surface | `body`, `fovDeg?` | HUD "Face Sun" / "Face Earth"; key metrics Sun / Earth; chart Enter / E | C D |
-| `walkTo` | surface | `eastM`, `northM`, `liftM?` | W A S D, E / Q (pose); HUD "Return to site" | C D |
-| `setSkyAnnotations` | surface | `tracks?`, `labels?` | HUD "Sky paths" | C D |
+| `lookAtBody` | surface | `body`, `fovDeg?` | HUD "Face Sun" / "Face Earth"; key metrics Sun / Earth; chart Enter / E | C D E |
+| `walkTo` | surface | `eastM`, `northM`, `liftM?` | W A S D, E / Q (pose); HUD "Return to site" | C D E |
+| `setSkyAnnotations` | surface | `tracks?`, `labels?` | HUD "Sky paths" | C D E |
 | `getSurfaceView` (query) | surface | | HUD status line, ground line, "About this view" | C D |
 | `explainBlockage` | surface HUD (@surface) | `body`, `utc?` | key metrics "why", chart click on a hidden mark, X, explanation "Now" | C D U |
 | `dismissBlockageExplanation` | surface HUD | | explanation "Close", Escape on the chart | C D |
-| `setChart` | surface HUD | `show?`, `expanded?`, `mode?`, `table?`, `azimuthRange?` | HUD "Skyline chart"; chart Skyline / Time / Table / fit / size / × | C D |
-| `showKeyMetrics` | surface HUD | `open` | key metrics fold | C D |
-| `openCompare` | compare panel (@analysis) | `tab?: compare \| nearby` | launcher "Compare", tab buttons, arrow keys on the tabs | C D |
-| `compareDelayedArrival` | compare panel | `delayH?`, `basis?` | "Compare arrivals" (with "B arrives later than A by") | C D U |
-| `compareMastHeights` | compare panel | `heightBM`, `heightAM?`, `basis?` | "Compare masts" (with "B has a mast of") | C D U |
-| `swapComparison`, `clearComparison` | compare panel | ; `slot?` | "Swap A and B", "Empty A and B" | C D U |
+| `setChart` | surface HUD | `show?`, `expanded?`, `mode?`, `table?`, `azimuthRange?` | HUD "Skyline chart"; chart Skyline / Time / Table / fit / size / × | C D E |
+| `showKeyMetrics` | surface HUD | `open` | key metrics fold | C D E |
+| `openCompare` | compare panel (@analysis) | `tab?: compare \| nearby \| windows \| outlook` | launcher "Compare", tab buttons, arrow keys on the tabs | C D E |
+| `compareDelayedArrival` | compare panel | `delayH?`, `basis?` | "Compare arrivals" (with "B arrives later than A by") | C D E U |
+| `compareMastHeights` | compare panel | `heightBM`, `heightAM?`, `basis?` | "Compare masts" (with "B has a mast of") | C D E U |
+| `swapComparison`, `clearComparison` | compare panel | ; `slot?` | "Swap A and B", "Empty A and B" | C D E U |
 | `saveComparison`, `loadComparison`, `deleteComparison` | compare panel | `name?`; `name`; `name` | "Save this comparison", saved list "Load" / "Delete" | C D U |
 | `listComparisons` (query) | compare panel | | the saved list | C D U |
+| `exportResults` | compare panel | `format: csv \| json`, `slot?: current \| A \| B \| AB` | "Window table" tab: download buttons | C D U |
+| `showOutlook` | compare panel | `months?`, `slot?` | "Outlook" tab | C D U |
 | `rankNearby` | compare panel | `radiusM?`, `spacingM?`, `slopeLimitDeg?` | "Nearby sites" tab, its scan | C D U |
 | `selectCandidate` | compare panel | `rank?` or `id?`, `asB?` | a row of the nearby list | C D U |
 | `setAssistantOpen`, `clearConversation` | drawer (@assistant) | `open`; | assistant button, drawer close, Escape; "New chat" | C D E |
@@ -135,6 +135,7 @@ the compare panel: `setSlopeLimit`, `setMaxEarthGap`.
 | key metrics, countdowns, skyline chart, explanation | `getAnalysis` (the same figures), `explainBlockage` (the explanation) |
 | compare panel: A, B, B minus A, requirements flagged | `compare` / `compareDelayedArrival` / `compareMastHeights` results (`diff`, `analysisA/B`); `getAnalysis { slot }` |
 | nearby list | `rankNearby` result (`reference`, `candidates`, `rejected`, `basis`) |
+| window table, outlook chart | `exportResults` (the file and its spells), `showOutlook` (lunar days, planned, best and worst arrival, slips) |
 | saved comparisons | `listComparisons` |
 | a failed control's message | the action's error, word for word |
 
@@ -161,7 +162,7 @@ A gap is something a user can do or read that no action covers, or data neither 
 | G-8 | Locator zoom not in `getState` | @globe | **closed**: `getState.locatorZoom` (T-33) |
 | G-9 | Hover readouts (marker tooltip, locator pointer) | - | accepted: the information is in `listSites` and `getState` |
 | G-10 | The scrubber's "Now" starts the window at the **real** time; the assistant has no wall clock: `getState` has none, and `setMissionWindow { startUtc: "now" }` means the simulated time. A model asked "start the mission now" can only guess the date. Deterministic mode uses the browser clock, so it is not affected. Proposal: `getState.wallClockUtc` (the browser's time), or `startUtc: "real-now"` | @globe (`src/core/coreActions.ts`) | open, reported in the T-1 gap list |
-| G-11 | Not in this build: mission-window table and CSV / JSON export (`exportResults`), seasonal outlook chart (`showOutlook`) | @analysis | committed on `am/lunyx/agent/analysis` (67828ad, 72f9392), not integrated; deterministic mode already binds "export the results as csv" to `exportResults` |
+| G-11 | Mission-window table and CSV / JSON export, seasonal outlook | @analysis | **closed**: `exportResults`, `showOutlook` (a958d6b); phrases "export the results as csv", "show the seasonal outlook for 2 months", "show the window table" |
 
 ## 4. Findings, rechecked on this build
 
@@ -194,8 +195,7 @@ has been done; only the plumbing it would use is tested.
 
 ## 7. To add when the remaining work lands
 
-- `exportResults` (CSV / JSON) and `showOutlook`: a control case, a phrase (export is already
-  bound), and an equivalence case for their buttons.
+- Equivalence cases for the download buttons of the window table and for the outlook tab.
 - The span of each rise and set (T-31) in `getAnalysis` and `jumpToEvent`: deterministic
   replies then say "starts setting ..., fully set ... UTC".
 - G-10, F-5 and F-6 when their owners answer.
