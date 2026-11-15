@@ -176,7 +176,9 @@ case) and compared three builds with them. App minus reference, worst azimuth:
 The first two columns are @ephemeris-check's own figures (`skyline/results.txt`); the last is
 this repository's test against their stored reference skylines
 (`horizon.test.ts`, "the two polar pins of the independent validation"), which they are asked
-to repeat with their own run.
+to repeat with their own run. Apollo 15 was measured once and is not in the standing test:
+task T-32 eases the 3 m site models onto their 60 m windows at load, after which the app's
+terrain at the sites with a 3 m model no longer equals the stored files the reference used.
 
 **The defect they found: an observer on the ground.** Seen from height H above the ground,
 terrain at a small distance d stands at about (h(d) - h(0) - H) / d. With H = 0 the limit at
