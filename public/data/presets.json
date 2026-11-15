@@ -23,6 +23,7 @@
       "title": "IM-2 Athena, Mons Mouton",
       "description": "Touchdown on 6 March 2025, 17:28 UTC, 5 degrees from the south pole: 14 days of low Sun, until it sets on 19 March.",
       "siteId": "im-2",
+      "caveat": "The touchdown minute is not confirmed by an official source (NASA: about 11:30 a.m. CST, 17:30 UTC).",
       "windowStartUtc": "2025-03-06T17:28Z",
       "windowDurationH": 336,
       "clockUtc": "2025-03-06T17:28Z",
@@ -47,6 +48,7 @@
       "look": { "towards": "earth", "fovDeg": 12, "elOffsetDeg": -1.5 },
       "rateSecondsPerSecond": 600,
       "play": true,
+      "caveat": "The times of the Sun behind Earth are computed by this app from geometric discs (Earth's atmosphere ignored), to the minute.",
       "sunBehindEarth": {
         "partlyCoveredFromUtc": "2025-03-14T05:00Z",
         "entirelyHiddenFromUtc": "2025-03-14T06:17Z",

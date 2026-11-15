@@ -1,10 +1,20 @@
 // Landing-site decision engine: entry points (decision D-17).
-// Contract stubs by the coordinator; @analysis replaces each body (T-71). Everything here is
-// pure and deterministic except loadMissionProfiles(), which reads a bundled file once.
-// Signatures are the contract: callers (actions T-73, UI T-74, assistant) code against them.
+// Signatures by the coordinator (the contract: callers in actions T-73, UI T-74 and the assistant
+// code against them); bodies by @analysis (T-71), in the modules beside this file:
+//   criteria.ts  the six criteria and the number formats of every sentence
+//   measure.ts   siteMetrics(): analysis and region terrain into measured values
+//   evaluate.ts  verdicts, feasibility, utility, summary
+//   rank.ts      ranking, Pareto frontier, explanations, pairwise comparison
+//   profiles.ts  presets (public/data/mission-profiles.json) and overrides
+// Everything here is pure and deterministic except loadMissionProfiles(), which reads a bundled file once.
 
 import type { SiteRef } from '../../core/types';
 import type { WindowMetrics } from '../types';
+import { CRITERION_DEFS } from './criteria';
+import { evaluateMetrics as evaluate } from './evaluate';
+import { siteMetrics as measure } from './measure';
+import { loadMissionProfiles as loadProfiles, resolveProfile as resolve } from './profiles';
+import { compareEvaluations as compare, rankEvaluations as rank } from './rank';
 import type {
   CriterionDef,
   MissionProfile,
@@ -18,22 +28,14 @@ import type {
   SiteMetrics,
 } from './types';
 
-/** Thrown by a stub that is not implemented yet. */
-class NotImplemented extends Error {
-  constructor(what: string) {
-    super(`${what} is not part of this build yet (decision engine, T-71).`);
-    this.name = 'NotImplemented';
-  }
-}
-
 /** The six criteria: label, unit, sense, safety flag, ideal and reference worst values, definition. */
 export function criterionDefs(): readonly CriterionDef[] {
-  throw new NotImplemented('criterionDefs');
+  return CRITERION_DEFS;
 }
 
 /** Mission profiles from public/data/mission-profiles.json, loaded once. The first is the default. */
 export function loadMissionProfiles(): Promise<MissionProfile[]> {
-  return Promise.reject(new NotImplemented('loadMissionProfiles'));
+  return loadProfiles();
 }
 
 /**
@@ -42,9 +44,7 @@ export function loadMissionProfiles(): Promise<MissionProfile[]> {
  * in relaxations. Tightening is always allowed. Out-of-range values are refused with a reason.
  */
 export function resolveProfile(base: MissionProfile, overrides: ProfileOverrides): ResolvedProfile {
-  void base;
-  void overrides;
-  throw new NotImplemented('resolveProfile');
+  return resolve(base, overrides);
 }
 
 /** Input for siteMetrics(): what the analysis and the terrain module measured for one candidate. */
@@ -63,28 +63,20 @@ export interface MeasurementInput {
 
 /** Builds the six measured values, with bounds, basis and missing reasons. Never fills a gap with a guess. */
 export function siteMetrics(input: MeasurementInput): SiteMetrics {
-  void input;
-  throw new NotImplemented('siteMetrics');
+  return measure(input);
 }
 
 /** Verdicts against the profile's thresholds, the utility (feasible sites only) and the summary sentences. */
 export function evaluateMetrics(metrics: SiteMetrics, profile: MissionProfile): SiteEvaluation {
-  void metrics;
-  void profile;
-  throw new NotImplemented('evaluateMetrics');
+  return evaluate(metrics, profile);
 }
 
 /** Orders the evaluations, marks the Pareto frontier of the feasible ones and explains the order. */
 export function rankEvaluations(evaluations: readonly SiteEvaluation[], profile: MissionProfile, relaxations: readonly Relaxation[]): Ranking {
-  void evaluations;
-  void profile;
-  void relaxations;
-  throw new NotImplemented('rankEvaluations');
+  return rank(evaluations, profile, relaxations);
 }
 
 /** Criterion-by-criterion comparison of two evaluations under the same profile, with dominance and sentences. */
 export function compareEvaluations(a: SiteEvaluation, b: SiteEvaluation): PairComparison {
-  void a;
-  void b;
-  throw new NotImplemented('compareEvaluations');
+  return compare(a, b);
 }

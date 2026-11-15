@@ -1,4 +1,4 @@
-/* "Missions to replay" at the top of the Filters panel. */
+/* "Missions to replay" at the bottom of the Filters panel. */
 .pl { display: grid; gap: var(--sp-2); }
 .pl > summary { cursor: pointer; list-style-position: inside; }
 .pl > summary:hover { color: var(--text); }
@@ -15,11 +15,6 @@
 .pl-text { display: grid; gap: 2px; min-width: 0; }
 .pl-name { font-size: var(--fs-sm); font-weight: var(--fw-medium); line-height: var(--lh-tight); }
 .pl-desc { font-size: var(--fs-xs); color: var(--text-muted); line-height: var(--lh-tight); }
-
-.pl-more { font-size: var(--fs-xs); }
-.pl-more > summary { cursor: pointer; color: var(--text-muted); }
-.pl-more > summary:hover { color: var(--text); }
-.pl-more .ly-note { margin-top: var(--sp-1); }
 
 .pl-status:empty, .pl-ephemeris:empty { display: none; }
 .pl-ephemeris--bundled { color: var(--text); }

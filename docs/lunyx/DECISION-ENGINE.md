@@ -54,6 +54,17 @@ For each candidate site and a mission profile:
    differences), which constraints removed most candidates, and for a pair, dominance or the
    trade-off criterion by criterion.
 
+**Rulings of T-77** (from T-76's property checks; these override the wording above where they differ):
+1. **Verdicts:** a null value is always `unknown`, with or without a threshold.
+2. **Feasibility** counts only the criteria that have a threshold: every one passes means feasible;
+   any one fails means infeasible; otherwise unknown. A criterion without a threshold never blocks
+   feasibility.
+3. **Utility:** weights are normalised over every criterion with weight > 0. A null value scores 0 and
+   is named as missing in the summary, so missing data never raises a site's utility.
+4. **Pareto** compares the feasible sites on all six criteria, null counting as the worst value. Ties
+   are allowed. The front is never empty when there are feasible sites.
+5. **Relaxations** and the "Changed on request" line follow the fixed criterion order.
+
 ## 2. Mission profiles and safety
 
 `public/data/mission-profiles.json` (T-71) holds a few presets. Each has a window length, a mast
@@ -93,6 +104,23 @@ How each source is measured:
 - Progress is reported. The number of candidates is capped, with the cap stated.
 
 Schemas are strict (D-3): unknown keys and out-of-range numbers are refused with a reason.
+
+Rulings of 2026-11-15 (Lunyx m1132, confirmed in m1142), binding for T-73 and T-74. The reference for the exact shapes is `docs/lunyx/handover/T-73-decision-tools.md` at @globe's 5e74548:
+- **Thresholds in action parameters are numbers only.** The schema language has no null, and tool
+  schemas must stay valid JSON Schema. `removeThresholds: CriterionId[]` removes requirements; the
+  action maps it to `null` in `ProfileOverrides`. Removing or loosening a safety threshold still
+  needs `allowSafetyRelaxation`.
+- **`setDecisionSettings` semantics:**
+  - `overrides` replace the stored overrides, so send the whole set;
+  - `profileId` alone switches the profile and clears the overrides;
+  - `reset: true` clears the overrides and keeps the profile.
+- **A site is always an object:** `{landing: id or name}` or `{lat, lon}`. The schema language has no
+  unions.
+- **`findBestSites` returns** the Ranking, plus the `overrides` used, the `cap` and `dropped` (the
+  number of candidates over the cap). `evaluations` holds the top `limit` feasible sites and every
+  unknown and infeasible one, each as a full `SiteEvaluation`. `limit` defaults to 5, maximum 50.
+- **`compareSites` returns** `{profile, overrides, relaxations, comparison}`.
+- **Progress:** `decisionRun()` gives `{running, done, total, label}`, and `onDecisionRun(fn)` returns an unsubscribe function. Both are exported from `src/core/decisionActions.ts`. There is no `AppState` field for progress.
 
 ## 4. Interface
 

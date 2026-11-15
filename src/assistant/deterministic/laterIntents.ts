@@ -33,48 +33,11 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 // ---------------------------------------------------------------- how the globe is drawn
 
 /**
- * The landings' explored areas ("territories") are drawn enlarged so they show from orbit (T-64).
- * The control's factor is a display setting, not a width multiple: it eases between true size and
- * the default enlargement (with x5 a 60 m area is drawn about 100 times wider). So a reply never
- * says "N times wider"; it quotes the real enlargement only when the result gives it.
+ * Words about the landings' areas and territories. Since T-67 there is no territory size setting
+ * (the whole Moon is coloured by the country of the nearest landing shown, with showMissions), so
+ * these words only keep a request like "territory size exaggeration 25" from being read as the relief.
  */
 const TERRITORY = /\b(territor(?:y|ies)|explored areas?|landing areas?)\b/;
-
-/**
- * The selected landing's area as drawn from orbit, from setTerritoryScale's `selectedSiteArea`
- * (T-64 fix 3b4fb45): the site card's own sentence, else its width factor and drawn width.
- * Nothing when no landing with a mapped area is selected.
- */
-function enlargementText(r: Json): string {
-  const a = r.selectedSiteArea;
-  if (!isObject(a)) return '';
-  const name = str(a, 'name') ?? 'the selected site';
-  const text = str(a, 'text');
-  if (text) return ` At ${name} the explored area is ${text}.`;
-  const factor = num(a, 'widthFactorFromOrbit'), km = num(a, 'drawnWidthFromOrbitKm');
-  if (factor === undefined) return '';
-  return ` At ${name} the explored area is drawn ${factor}× its true width from orbit${km !== undefined ? `, about ${km} km across` : ''}; true size close to the ground.`;
-}
-
-export const territory: Intent = (step) => {
-  if (!TERRITORY.test(step) || QUESTION.test(step)) return null;
-  let factor: number | undefined;
-  if (/\b(true|real|actual)[- ]?(size|scale)\b|\bno exaggeration\b|\bexaggerat\w*\b.*\b(off|none)\b/.test(step)) factor = 1;
-  else {
-    const n = /(?:\b(?:times|factor(?: of)?|to|by|at)\s*|[x×=]\s*)(\d+(?:\.\d+)?)\b/.exec(step) ?? /\b(\d+(?:\.\d+)?)\s*(?:[x×]|times)(?=\s|$)/.exec(step) ?? /\b(?:size|exaggeration|scale)\s+(\d+(?:\.\d+)?)$/.exec(step);
-    if (n) factor = Number(n[1]);
-  }
-  if (factor === undefined) return null;
-  const want = factor;
-  // A factor the action does not take is refused by the action itself, as for the relief.
-  return plan(want === 1 ? 'draw the explored areas at true size' : `set the territory size exaggeration to ×${want}`, async (ctx) => {
-    const r = await ctx.run('setTerritoryScale', { factor: want });
-    const chosen = num(r, 'territoryScale') ?? want;
-    if (chosen === 1) return `The landings' explored areas are drawn at true size on the globe.${enlargementText(r)}`;
-    // The setting is not a width multiplier (territoryRule says how it works): never "N times wider".
-    return `Territory size exaggeration set to ${chosen}, the Filters setting of that name: a display setting, not a width multiplier; only the drawing changes, not the sizes on the site card.${enlargementText(r)}`;
-  });
-};
 
 export const relief: Intent = (step) => {
   const about = /\b(relief|exaggerat\w*)\b/.test(step) || /\bsmooth (sphere|globe|moon)\b/.test(step);
@@ -88,14 +51,15 @@ export const relief: Intent = (step) => {
   }
   if (factor === undefined) return null;
   const f = factor;
-  return plan(f === 0 ? 'turn the globe relief off' : f === 1 ? 'draw the globe relief at true scale' : `exaggerate the globe relief ×${f}`, async (ctx) => {
-    const r = await ctx.run('setReliefExaggeration', { factor: f });
-    const chosen = num(r, 'reliefExaggeration') ?? f;
+  // Heights are never exaggerated: asking for more than true scale gets true scale, and says so.
+  const asked = Math.min(f, 1);
+  return plan(asked === 0 ? 'turn the globe relief off' : asked === 1 ? 'draw the globe relief at true scale' : `draw the globe relief at ×${asked}`, async (ctx) => {
+    const r = await ctx.run('setReliefExaggeration', { factor: asked });
+    const chosen = num(r, 'reliefExaggeration') ?? asked;
     if (chosen === 0) return 'Relief is off: the globe is drawn as a smooth sphere. The analysis never uses the drawn relief.';
+    if (f > 1) return `The globe's relief is not exaggerated: it is drawn at true scale (×1), not ×${f}.`;
     if (chosen === 1) return 'Relief is drawn at true scale (×1).';
-    const drawn = num(r, 'reliefDrawnNow');
-    const rule = str(r, 'reliefRule');
-    return `Relief exaggeration set to ×${chosen}${drawn !== undefined ? `; drawn at ×${drawn} at the present camera altitude` : ''}.${rule ? ` ${rule}` : ''} The analysis never uses the exaggeration.`;
+    return `Relief is drawn at ×${chosen} of its true height. The analysis never uses the drawn relief.`;
   });
 };
 
@@ -735,7 +699,7 @@ export const presets: Intent = (step) => {
       if (!list.length) return 'No mission presets are loaded in this build.';
       return [
         `${plural(list.length, 'mission')} can be replayed from bundled data${str(r, 'loaded') ? ` (on screen now: ${str(r, 'loaded')})` : ''}:`,
-        ...list.map((x) => `- ${str(x, 'title') ?? str(x, 'id')} (say "replay ${str(x, 'id')}"): ${utc(str(x, 'missionWindow.startUtc'))} for ${span(num(x, 'missionWindow.durationH'))}, clock from ${utc(str(x, 'clockStartsUtc'))}, ${str(x, 'view') === 'surface' ? 'surface view' : 'globe view'}`),
+        ...list.map((x) => `- ${str(x, 'title') ?? str(x, 'id')} (say "replay ${str(x, 'id')}"): ${utc(str(x, 'missionWindow.startUtc'))} for ${span(num(x, 'missionWindow.durationH'))}, clock from ${utc(str(x, 'clockStartsUtc'))}, ${str(x, 'view') === 'surface' ? 'surface view' : 'globe view'}${str(x, 'caveat') ? `. Caveat: ${str(x, 'caveat')!.replace(/\.$/, '')}` : ''}`),
       ].join('\n');
     });
   }
@@ -754,7 +718,9 @@ export const presets: Intent = (step) => {
       throw new Halt(hits.length ? `"${wanted}" fits ${hits.length} presets: ${hits.map((x) => str(x, 'id')).join(', ')}. Say which.` : `No preset matches "${wanted}". Presets: ${names}.`);
     }
     const r = await ctx.run('loadPreset', { id: str(hits[0], 'id')! });
-    return `Replaying ${str(r, 'preset.title') ?? str(hits[0], 'title')}: ${siteText(r.site)}, clock at ${utc(str(r, 'timeUtc'))}${r.playing === true ? `, running at ${span((num(r, 'rateSimSecondsPerSecond') ?? NaN) / 3600)} per second` : ', paused'}, ${str(r, 'view') === 'surface' ? 'in the surface view' : 'on the globe'}; mission window ${utc(str(r, 'missionWindow.startUtc'))} to ${utc(str(r, 'missionWindow.endUtc'))}.`;
+    // What is uncertain or computed rather than reported, as the preset list says it on screen (T-67).
+    const caveats = [str(r, 'caveat'), str(r, 'sunBehindEarth.reported')].filter((x): x is string => Boolean(x));
+    return `Replaying ${str(r, 'preset.title') ?? str(hits[0], 'title')}: ${siteText(r.site)}, clock at ${utc(str(r, 'timeUtc'))}${r.playing === true ? `, running at ${span((num(r, 'rateSimSecondsPerSecond') ?? NaN) / 3600)} per second` : ', paused'}, ${str(r, 'view') === 'surface' ? 'in the surface view' : 'on the globe'}; mission window ${utc(str(r, 'missionWindow.startUtc'))} to ${utc(str(r, 'missionWindow.endUtc'))}.${caveats.length ? ` ${caveats.join(' ')}` : ''}`;
   });
 };
 
@@ -764,7 +730,44 @@ export const flags: Intent = (step) => {
   const show = !/hide|remove|off|disable/.test(m[1]);
   return plan(`${show ? 'show' : 'hide'} the country flags on the landing markers`, async (ctx) => {
     const r = await ctx.run('showFlags', { show });
-    return r.showFlags === true ? 'Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia).' : 'The country flags are hidden.';
+    if (r.showFlags !== true) return 'The country flags are hidden.';
+    // The flags ride on the landing markers: none is drawn while previous missions are hidden
+    // (flagsShown from T-67 on; before it, getState.showMissions).
+    const drawn = typeof r.flagsShown === 'boolean' ? r.flagsShown : (await ctx.state()).showMissions !== false;
+    if (!drawn) return `Country flags are switched on, but no flag is drawn ${await notDrawnWhy(ctx)}. ${FLAG_RULE}`;
+    return `Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia). ${FLAG_RULE}`;
+  });
+};
+
+/**
+ * Why a layer that is switched on is not drawn: the landing markers are hidden, or the mission
+ * filters let no landing through (T-67: territoriesShown and flagsShown are false in both cases).
+ */
+async function notDrawnWhy(ctx: { state(): Promise<Json> }): Promise<string> {
+  const st = await ctx.state();
+  if (st.showMissions === false) return 'while previous missions are hidden (say "show previous missions" to see them)';
+  if (num(st, 'missionsShown.shown') === 0) return 'while the mission filters hide every landing (say "reset the filters" to see them)';
+  return 'now';
+}
+
+/** Said with the flags: they are about the hardware, not the ground. */
+const FLAG_RULE = 'A flag names who the hardware belongs to, not a claim to the ground: no country owns lunar ground.';
+/** Said with the territories until a result gives its own territoryRule (T-67). */
+const TERRITORY_WORDS = 'It shows who landed nearest, not ownership: no country owns lunar ground.';
+
+export const territories: Intent = (step) => {
+  const m = /^(show|display|turn on|enable|hide|remove|turn off|disable)\s+(?:the\s+)?(?:country\s+)?territor(?:y|ies)(?:\s+(?:colours?|colors?|colouring|coloring))?(?:\s+on the globe)?$/.exec(step);
+  if (!m) return null;
+  const show = !/hide|remove|off|disable/.test(m[1]);
+  return plan(`${show ? 'show' : 'hide'} the country territories on the globe`, async (ctx) => {
+    const r = await ctx.run('showTerritories', { show });
+    if (r.showTerritories !== true) return 'The country territories are hidden.';
+    const rule = str(r, 'territoryRule') ?? TERRITORY_WORDS;
+    // Drawn only while previous missions are shown (globeView: showMissions && showTerritories; the checkbox is disabled otherwise).
+    const drawn = typeof r.territoriesShown === 'boolean' ? r.territoriesShown : (await ctx.state()).showMissions !== false;
+    return drawn
+      ? `The globe is coloured by the country of the nearest landing shown. ${rule}`
+      : `Country territories are switched on, but nothing is drawn ${await notDrawnWhy(ctx)}. ${rule}`;
   });
 };
 
@@ -800,9 +803,8 @@ export const siteRecords: Intent = (step) => {
     const a = site.exploredArea;
     if (a === undefined) throw new Halt('This build does not report the explored area of a site.');
     if (!isObject(a)) return `The explored area of ${name} is not available.`;
-    const scale = num(a, 'displayScale');
     return [
-      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size${scale && scale !== 1 ? `; the globe draws it ${scale} times wider so it can be seen` : ''}).`,
+      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size).`,
       ...(a.located === false ? ['The lander has not been found in LRO images: this is the lander alone at the catalogue\'s approximate position.'] : []),
       ...(str(a, 'note') ? [str(a, 'note')!] : []),
       ...(str(a, 'source') ? [`Source: ${str(a, 'source')}.`] : []),
@@ -823,8 +825,7 @@ export const realClock: Intent = (step) => {
 
 /** For the help text: one example per group, shown only when the build has the action. */
 export const LATER_HELP: [needs: string[], text: string][] = [
-  [['setReliefExaggeration'], 'Globe drawing: "relief x5", "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
-  [['setTerritoryScale'], 'Explored areas: "territory size x25", "territories at true size"'],
+  [['setReliefExaggeration'], 'Globe drawing: "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
   [['getSiteScience'], 'Site science: "dsn stations", "long-term averages here", "temperature", "shadowcam", "site science"'],
   [['nearestIceTargets'], 'Ice targets: "nearest ice targets", "how far is the nearest ice"'],
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],
@@ -837,5 +838,6 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
   [['loadPreset'], 'Replays: "list the presets", "replay the eclipse", "replay IM-2 landing"'],
   [['showFlags'], 'Flags: "show country flags", "hide the flags"'],
+  [['showTerritories'], 'Territories: "show territories", "hide territory colours"'],
   [['getState'], 'Site records and the real clock: "who owns this site", "how big is the explored area", "what is the real time"'],
 ];

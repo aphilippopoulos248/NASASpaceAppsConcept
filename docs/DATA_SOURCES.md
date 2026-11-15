@@ -96,7 +96,7 @@ without downloading again.
 - **Relief (8K):** LOLA Gridded Data Record `LDEM_64.IMG` (64 px per degree, about 474 m), PDS Geosciences mirror at
   MIT (<https://imbrium.mit.edu/DATA/LOLA_GDR/CYLINDRICAL/IMG/>), turned into `moon_normal_8k.webp`. Loaded on
   desktop only.
-- **Exaggeration:** relief is shaded at 4× its true height so craters read at globe scale.
+- **Exaggeration:** the normal maps were computed with the relief at 4× its true height; the app scales them back by 1/4 (`src/scene/globe.ts`), so the globe is shaded and drawn at true scale.
 - **Credit:** NASA / GSFC / Arizona State University (LROC); NASA / GSFC (LOLA); NASA Scientific Visualization
   Studio. NASA data is generally not subject to copyright in the US.
 
@@ -189,20 +189,21 @@ without downloading again.
 
 ## 11. Explored area at each site
 
-- **What it is:** the ground each mission is known to have worked on, drawn on the globe in the country's
-  colour (orbit view only). **Drawn larger than true size so it can be seen from orbit: by default every area is
-  about 150 to 500 km across from orbit, whatever its true size** (a 60 m lander site 2500× wider, Apollo 17's 11.4 km
-  about 44×), enlarged about the area's centre (`areaDisplayScale`, `MIN_ORBIT_AREA_WIDTH_M` and
-  `MAX_ORBIT_AREA_WIDTH_M` in `src/scene/siteAreas.ts`). The "Territory size exaggeration" control (the
-  `setTerritoryScale` action, 1 to 100, default 100: `DEFAULT_AREA_SCALE` in `src/scene/globe/displayState.ts`) is a
-  display setting, not a width multiplier: 1 is true size, 100 the enlargement above, and the settings in between blend
-  linearly between the two. The enlargement applies above 1,500 km camera altitude and eases to true size below 100 km
-  (the same altitudes as the relief exaggeration), so close-ups show every area at true size. The data in
-  `site-areas.json` and the size in the info card are true size; the card, and the result of `setTerritoryScale` for
-  the selected site, also say how much larger the area is drawn from orbit. **No country owns any lunar ground** — the Outer Space Treaty (1967)
-  forbids national claims. What a country does keep is ownership of its hardware, and that hardware (landers,
-  rovers, instruments, equipment left along traverses) is spread across this area. So this is the closest real
-  equivalent of "what a country owns" at a site; it is not a legal boundary.
+- **What it is:** the ground each mission is known to have worked on, quoted at true size in the info card
+  (`site-areas.json`). It is no longer drawn on the globe. Instead the globe shows **territories**
+  (`src/scene/globe/territories.ts`): the whole Moon is coloured by the country of the nearest landing site
+  currently shown, so neighbouring sites of one country share one continuous territory and borders run halfway
+  between sites of different countries. Hiding sites with the mission filters redivides the Moon among the rest.
+  The colouring is off by default: "Show country territories" in Filters (the `showTerritories` action) switches it
+  on, and it is drawn only while the landing markers are shown. It is not drawn over the south-polar close-up or the
+  close-up around a selected site, so their shading and Sun shadows keep their true grey.
+  **The territories are a display of who landed nearest, derived only from the landing coordinates; they are
+  not data and not a boundary of any kind. No country owns any lunar ground** — the Outer Space Treaty (1967,
+  Article II) forbids national claims. What a country does keep is ownership of its hardware, and that hardware
+  (landers, rovers, instruments, equipment left along traverses) is spread across the explored area quoted in the
+  card. So the explored area, not the territory colouring, is the closest real equivalent of "what a country owns"
+  at a site; it is not a legal boundary either. The same meaning is on screen under "Show country territories"
+  while the colouring is drawn, and in the `showTerritories` action's `territoryRule`.
 - **Sources:**
   - LROC `ANTHROPOGENIC_OBJECTS` (NASA PDS, `LROLRC_2001/EXTRAS/SHAPEFILE/`) — measured positions of landers, rovers
     and instruments. Wagner, R. V., et al. (2017), *Coordinates of anthropogenic features on the Moon*, Icarus 283,

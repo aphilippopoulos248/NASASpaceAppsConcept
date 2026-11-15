@@ -31,6 +31,7 @@ export function initialState(nowMs: number): AppState {
     decisionOverrides: {},
     overlay: 'off',
     showMissions: true,
+    showTerritories: false,
     showFlags: false,
     lightMode: 'real',
     globeCenter: { lat: 0, lon: 0, altitudeKm: 4170 },

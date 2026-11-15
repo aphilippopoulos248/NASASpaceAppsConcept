@@ -181,5 +181,5 @@ describe('assistant loop end to end (scripted model, no key)', () => {
 });
 
 function actionNames(): string[] {
-  return ['clearSite', 'compare', 'dropPin', 'enterSurface', 'exitSurface', 'explainBlockage', 'getState', 'jumpToEvent', 'lookAt', 'pause', 'play', 'rankNearby', 'saveScenario', 'selectCandidate', 'selectSite', 'setDelay', 'setFilters', 'setGlobeCamera', 'setLightMode', 'setMastHeight', 'setMaxEarthGap', 'setMissionWindow', 'setOverlay', 'setRate', 'setSlopeLimit', 'setSunBand', 'setTime', 'showMissions', 'stopCompare'].sort();
+  return ['clearSite', 'compare', 'dropPin', 'enterSurface', 'exitSurface', 'explainBlockage', 'getState', 'jumpToEvent', 'lookAt', 'pause', 'play', 'rankNearby', 'saveScenario', 'selectCandidate', 'selectSite', 'setDelay', 'setFilters', 'setGlobeCamera', 'setLightMode', 'setMastHeight', 'setMaxEarthGap', 'setMissionWindow', 'setOverlay', 'setRate', 'setSlopeLimit', 'setSunBand', 'setTime', 'showMissions', 'showTerritories', 'stopCompare'].sort();
 }
