@@ -145,6 +145,17 @@ describe('surface view actions', () => {
     expect(trackingBody).toBeNull();
   });
 
+  it('stops tracking when the view is turned to the other body, and keeps it for the same one', async () => {
+    await runAction('setBodyTracking', { body: 'sun', on: true }, 'test');
+    expect((await runAction('lookAtBody', { body: 'sun' }, 'test')).ok).toBe(true);
+    expect(trackingBody).toBe('sun');
+    const before = changes;
+    expect((await runAction('lookAtBody', { body: 'earth' }, 'test')).ok).toBe(true);
+    expect(trackingBody).toBeNull();
+    // The HUD hears of it, so the "Track Sun" toggle is released.
+    expect(changes).toBeGreaterThan(before);
+  });
+
   it('walks to an absolute position and says when it was clamped', async () => {
     const r = await runAction<{ position: Record<string, number>; clamped: boolean }>('walkTo', { eastM: 120, northM: -50, liftM: 10 }, 'test');
     expect(r.ok && r.result).toEqual({ position: { eastM: 120, northM: -50, distanceFromSiteM: 130, eyeHeightM: 12 }, clamped: false });

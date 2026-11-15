@@ -20,8 +20,7 @@ import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapU
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
 import { globeDisplay } from '../../scene/globe/displayState';
-import { areaDisplayScale, describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
-
+import { exploredText, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
 import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
@@ -381,8 +380,8 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (display footprint enlarged up to ${Math.round(areaDisplayScale(area, globeDisplay.get().areaScale))}× from orbit for visibility; true size close to the ground)` : '—');
-
+    // True size, then how much larger it is drawn from orbit (the same words as setTerritoryScale's result).
+    facts.set('area', !l ? null : area ? exploredText(area, globeDisplay.get().areaScale) : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
