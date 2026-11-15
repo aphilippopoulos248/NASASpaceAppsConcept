@@ -84,6 +84,12 @@ rest of the second round. Read section 4 before quoting any number from the app.
 
 ## 5. Limits that affect how results should be read
 
+- **Known defect, deferred (operator decision D-14, task T-56).** In the compare panel's Nearby sites
+  tab, a Radius or Spacing typed before a scan is put back to the last scan's value when any
+  requirement changes (slope limit, solar band, Earth gap). The scan then uses the restored value,
+  not the one that was typed. Its summary names the radius it used ("within 2.0 km"), so check that line,
+  or type the radius again after changing a requirement. A fix has been written but not verified or
+  integrated: `8c58f49`, kept on `am/lunyx-standby/integration` at `46ce096`.
 - Earth visibility is geometric line of sight to Earth's centre (and, for DSN, to a station
   above its elevation limit). It is not a link budget.
 - Sunlight percentage is the time-average of the visible fraction of the Sun's disc. It is
