@@ -3,7 +3,7 @@
 // and a custom pin with the whole-Moon grid only).
 import { describe, expect, it } from 'vitest';
 import type { SiteRef } from '../core/types';
-import { loadTerrainFor } from './api';
+import { loadTerrainFor, storedGrid } from './api';
 import { offsetPoint, polarLatLon } from './geo';
 import { readTerrainJson } from './reader';
 import { loadRegionTerrain, MAX_RADIUS_M, regionTerrainMetrics, ROUGHNESS_MAX_SPACING_M } from './region';
@@ -193,6 +193,24 @@ describe('regionTerrainMetrics on synthetic grids', () => {
     expect(regionTerrainMetrics(stackOf(globe, mid, fine), CENTRE, 100, null).demName).toBe('fine');
   });
 
+  it('never mixes grids: a 20 m step where the fine grid meets the coarse one does not read as slope', () => {
+    const fine = localGrid(257, 3, () => 0, { name: 'fine' }); // reaches 384 m from its centre
+    const coarse = localGrid(129, 60, () => 20, { name: 'coarse' });
+    const stack = stackOf(fine, coarse);
+    // The two grids disagree by 20 m, so the stack steps by 20 m at the fine grid's edge.
+    expect(fine.sample(CENTRE.lat, CENTRE.lon) - coarse.sample(CENTRE.lat, CENTRE.lon)).toBe(-20);
+    const inside = regionTerrainMetrics(stack, CENTRE, 300, 5);
+    const across = regionTerrainMetrics(stack, CENTRE, 450, 5);
+    expect(inside.demName).toBe('fine');
+    expect(across.demName).toBe('coarse');
+    for (const r of [inside, across]) {
+      expect(r.slopeDeg).toBeCloseTo(0, 6);
+      expect(r.roughnessM).toBeCloseTo(0, 6);
+      expect(r.hazardFraction).toBe(0);
+    }
+    expect(across.notes[0]).toContain('The region is measured on this grid alone, so the height step where a finer grid ends does not count as slope or roughness.');
+  });
+
   it('refuses bad input, and says so when nothing covers the region', () => {
     const stack = stackOf(localGrid(65, 3, () => 0));
     for (const radius of [0, -5, NaN, Infinity, MAX_RADIUS_M + 1]) expect(() => regionTerrainMetrics(stack, CENTRE, radius, null)).toThrow(RangeError);
@@ -230,6 +248,19 @@ describe('loadRegionTerrain at real sites', () => {
     expect(r.notes[1]).toMatch(/^Slope: .*95th percentile/);
     // The same stack as the analysis uses, measured the same way.
     expect(regionTerrainMetrics(await loadTerrainFor(landing('apollo-11')), landing('apollo-11'), 100, 10)).toEqual(r);
+  });
+
+  it('Apollo 17 with its 3 m model eased onto the 60 m window: measured as stored, the blend band left out', async () => {
+    const site = landing('apollo-17');
+    const eased = await loadTerrainFor(site, { easeEdges: true });
+    const stored = await loadTerrainFor(site);
+    expect(storedGrid(eased.sources[0])).not.toBe(eased.sources[0]);
+    // 700 m reaches into the band the easing changed (the model's outer 129 m, from 639 m).
+    const a = regionTerrainMetrics(eased, site, 700, 10), b = regionTerrainMetrics(stored, site, 700, 10);
+    expect(a.gridSpacingM).toBe(3);
+    expect({ ...a, notes: [] }).toEqual({ ...b, notes: [] });
+    expect(a.notes[0]).toContain('read as stored, not as the copy eased onto the grid around it');
+    expect(b.notes[0]).not.toContain('eased');
   });
 
   it('IM-2: only the 60 m window (from LOLA polar data), a handful of samples, the resolution caveat', async () => {

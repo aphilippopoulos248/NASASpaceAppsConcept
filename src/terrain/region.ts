@@ -16,9 +16,16 @@
 // What the grid cannot support is null, and `notes` says why. Notes come in a fixed order:
 // what the region was measured on, then "Slope: ...", "Roughness: ...", the share over the
 // limit (when there is a limit), and what the grid's spacing hides.
+//
+// Grids are never mixed. Where a 3 m model meets its 60 m window the stack keeps a height
+// step of metres (docs/lunyx/handover/T-32-verification.md); a stencil across it would count
+// the step as steep ground. Here every cell and the plane use the samples of one grid: a
+// region inside the 3 m model is measured on the model alone, a region that reaches past its
+// edge on the 60 m window alone. A grid the stack eased onto its neighbour (easeEdges, a
+// comparison mode) is measured as stored (storedGrid), so its blend band does not enter either.
 
 import type { LatLon, SiteRef } from '../core/types';
-import { loadTerrainFor } from './api';
+import { loadTerrainFor, storedGrid } from './api';
 import { localOffset, polarXY, R_MOON_M } from './geo';
 import type { HeightGridDescriptor, HeightSource, RegionTerrain, TerrainStack } from './types';
 
@@ -359,7 +366,8 @@ export function regionTerrainMetrics(stack: TerrainStack, center: LatLon, radius
   // Finest first (the stack's own order between equals).
   const sources = stack.sources.map((s, k) => ({ s, k })).sort((a, b) => a.s.resolutionM - b.s.resolutionM || a.k - b.k).map((e) => e.s);
   const passedOver: string[] = [];
-  for (const source of sources) {
+  for (const inStack of sources) {
+    const source = storedGrid(inStack);
     const patch = patchOf(source, center, radiusM);
     if (!patch) continue;
     if (!covers(patch, radiusM)) {
@@ -369,15 +377,19 @@ export function regionTerrainMetrics(stack: TerrainStack, center: LatLon, radius
       }
       continue;
     }
-    return describe(source, patch, measure(patch, radiusM), center, radiusM, slopeLimitDeg, passedOver);
+    return describe(source, patch, measure(patch, radiusM), center, radiusM, slopeLimitDeg, passedOver, source !== inStack);
   }
   throw new Error(`No elevation grid covers the whole landing region (${metres(radiusM)} around ${center.lat.toFixed(4)}, ${center.lon.toFixed(4)}).`);
 }
 
-function describe(source: HeightSource, patch: Patch, m: Measured, center: LatLon, radiusM: number, slopeLimitDeg: number | null, passedOver: string[]): RegionTerrain {
+function describe(source: HeightSource, patch: Patch, m: Measured, center: LatLon, radiusM: number, slopeLimitDeg: number | null, passedOver: string[], unEased: boolean): RegionTerrain {
   const h = patch.spacingM;
   const notes: string[] = [];
-  notes.push(`Measured on ${source.name} (${metres(h)} spacing): ${m.samples} sample${m.samples === 1 ? '' : 's'} within ${metres(radiusM)} of the centre.` + (passedOver.length ? ` Finer data here does not reach over the whole region: ${passedOver.join('; ')}.` : ''));
+  notes.push(
+    `Measured on ${source.name} (${metres(h)} spacing): ${m.samples} sample${m.samples === 1 ? '' : 's'} within ${metres(radiusM)} of the centre.` +
+      (passedOver.length ? ` Finer data here does not reach over the whole region: ${passedOver.join('; ')}. The region is measured on this grid alone, so the height step where a finer grid ends does not count as slope or roughness.` : '') +
+      (unEased ? ' The grid is read as stored, not as the copy eased onto the grid around it, so the blend band at its edge does not count as slope or roughness.' : ''),
+  );
 
   // Slope.
   const cells = m.cellSlopes;
