@@ -184,6 +184,7 @@ describe('grazes and peeks: the disc cut but never fully set, or seen but never 
     const g = sun[0];
     expect(g.kind).toBe('graze');
     expect([g.start.edge, g.end.edge]).toEqual(['first-cut', 'whole-clear']);
+    console.log(`graze: least visible fraction ${g.minVisibleFraction.toFixed(4)}, from azimuth ${g.start.azDeg.toFixed(2)} to ${g.end.azDeg.toFixed(2)}; ${transitionSummary(g)}`);
     expect(g.minVisibleFraction).toBeGreaterThan(0.45);
     expect(g.minVisibleFraction).toBeLessThan(0.55);
     // It starts as the disc's leading edge (0.25 deg ahead of its centre) reaches the slope up to the bump (99.5-100 deg of azimuth).
@@ -208,6 +209,7 @@ describe('grazes and peeks: the disc cut but never fully set, or seen but never 
     expect(pk.start.timeMs).toBe(rise.timeMs);
     expect(pk.end.timeMs).toBe(set.timeMs);
     // In the notch the centre is 0.1 deg (0.4 radii) above its floor: the part of the disc below the floor is about 25 % of its area.
+    console.log(`peek: largest visible fraction ${pk.maxVisibleFraction.toFixed(4)} (circular segment: ${(1 - (Math.acos(0.4) - 0.4 * Math.sqrt(0.84)) / Math.PI).toFixed(4)})`);
     expect(pk.maxVisibleFraction).toBeGreaterThan(0.7);
     expect(pk.maxVisibleFraction).toBeLessThan(0.8);
     expect(eventText(set)).toMatch(/^Sunset: partly visible from .*, last part gone again .* UTC; never fully risen$/);
@@ -317,9 +319,10 @@ describe('real terrain: the validator\'s instants (tests/fixtures/validation/eph
       console.log(`Blue Ghost ${r.mast} m: ${describeSet(set)}; minus independent: first cut ${f1(minutesOff(set.start.timeMs, r.cut))} min, centre ${half ? f1(minutesOff(half.timeMs, r.half)) : '-'} min (independent: half of the disc hidden), last limb ${f1(minutesOff(set.end.timeMs, r.last))} min. ${eventText(sunset)}`);
       expect(set.kind).toBe('set');
       expect(set.start.inWindow).toBe(true);
-      // Tolerances leave room for elevation-data changes still pending (T-32 moves this sunset); the differences are reported, not tuned.
-      expect(Math.abs(minutesOff(set.start.timeMs, r.cut))).toBeLessThan(20);
-      expect(Math.abs(minutesOff(set.end.timeMs, r.last))).toBeLessThan(20);
+      // Two minutes: the validator's own tolerance for times when the skylines agree (the differences are printed, not tuned).
+      // The stored 3 m model is the reference (lunyx-science D-7); the opt-in T-32 easing would move this sunset.
+      expect(Math.abs(minutesOff(set.start.timeMs, r.cut))).toBeLessThan(2);
+      expect(Math.abs(minutesOff(set.end.timeMs, r.last))).toBeLessThan(2);
       expect(set.hours).toBeGreaterThan(0.8);
       expect(set.hours).toBeLessThan(1.4);
       expect(a.metrics.earthAnyPct).toBe(100);
@@ -335,8 +338,10 @@ describe('real terrain: the validator\'s instants (tests/fixtures/validation/eph
     const rise = a.events.find((e) => e.type === 'sunrise')!.span!;
     console.log(`Chandrayaan-3: ${describeSet(set)}; ${describeSet(rise)}; minus independent: first cut ${f1(minutesOff(set.start.timeMs, '2023-09-04T04:53:35Z'))} min, last limb ${f1(minutesOff(set.end.timeMs, '2023-09-04T08:02:23Z'))} min, first limb ${f1(minutesOff(rise.start.timeMs, '2023-09-19T23:57:08Z'))} min, whole disc clear ${f1(minutesOff(rise.end.timeMs, '2023-09-20T02:42:19Z'))} min. ${transitionText(set)} ${transitionText(rise)}`);
     expect([set.kind, rise.kind]).toEqual(['set', 'rise']);
-    expect(Math.abs(minutesOff(set.start.timeMs, '2023-09-04T04:53:35Z'))).toBeLessThan(10);
-    expect(Math.abs(minutesOff(rise.end.timeMs, '2023-09-20T02:42:19Z'))).toBeLessThan(10);
+    expect(Math.abs(minutesOff(set.start.timeMs, '2023-09-04T04:53:35Z'))).toBeLessThan(2);
+    expect(Math.abs(minutesOff(set.end.timeMs, '2023-09-04T08:02:23Z'))).toBeLessThan(2);
+    expect(Math.abs(minutesOff(rise.start.timeMs, '2023-09-19T23:57:08Z'))).toBeLessThan(2);
+    expect(Math.abs(minutesOff(rise.end.timeMs, '2023-09-20T02:42:19Z'))).toBeLessThan(2);
   });
 
   it('IM-2, 14 days from landing (bundled Horizons): the Sun sets over hours; Earth\'s set around its Earthset; any part of Earth above the centre figure', async () => {

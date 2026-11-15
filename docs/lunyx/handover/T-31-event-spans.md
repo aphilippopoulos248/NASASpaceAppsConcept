@@ -132,7 +132,12 @@ the other end, which `span` / `nextTransitions` now provide.
 | `src/assistant/deterministic/intents.ts:495` | @assistant | "The next sunset is at HH:MM UTC": an **unlabelled sunset time** | "The Sun starts setting ... and is fully set ... UTC" from the span (once `analysisReport.ts` passes it) |
 | `src/ui/compare/model.ts:160, 187-200` (event rows) | @analysis | Labelled single instant ("Sun fully set") | Both ends; `ComparisonDiff.earthAnyPct` row if wanted |
 
-## 6. Verification and example sentences
+## 6. For validation.md
+
+For @analysis to take into `docs/lunyx/validation.md` (T-31 item 4 is theirs; @events does not edit
+that file). Everything here is reproduced by `npx vitest run src/analysis/transitions.test.ts`
+(`--silent=false` prints the instants) on the branch of this note, except the 18.6-year table, which is
+the opt-in test named there.
 
 ### How the new instants are found
 
@@ -175,9 +180,10 @@ crossing only where the skyline runs straight across the disc.
 
 So the Sun takes 66 min to set at Blue Ghost (2 m), 3 h 8 min at Chandrayaan-3 and 6 h 35 min at
 IM-2. Firefly's start of night at Blue Ghost (about 18:15-18:35 UTC, D-8) falls at the first cut,
-18:23. These Blue Ghost times rest on the elevation data of 2ade856: the T-32 easing of the 3 m site
-models (lunyx-science T-1, not integrated here) moves this sunset, so the test allows 20 min and the
-table above will change with it.
+18:23. The Blue Ghost times rest on the stored 3 m model and 60 m window; under lunyx-science D-7 the
+T-32 easing stays off by default, so they do not move with T-1 (turned on, the easing would move
+this sunset; see T-1 and docs/lunyx/handover/T-32-verification.md). The test holds all these instants to 2 min, the validator's own tolerance for
+times when the skylines agree.
 
 ### Earth by disc
 
@@ -220,7 +226,21 @@ the disc, span and height not stated). Opt-in test, about 12-48 s per run here:
   connecting ridge pin, 0-57.9) a single-pixel comparison proves nothing, and on the ground at crest
   points any grid point has rising ground somewhere (validation README, check 3): not forced to agree.
 
-### Example sentences (real results, `eventText` / `transitionText` / `transitionSummary`)
+### Synthetic cases (`src/analysis/transitions.test.ts`; stub ephemeris, skyline given per azimuth)
+
+| Case | What is checked | Result |
+| --- | --- | --- |
+| Flat skyline, Sun elevation 3 cos(2 pi h / 48) deg | One set and one rise; first cut, centre, last limb, first limb, whole disc clear at the analytic instants (disc tested at its 24 strips); sunset/sunrise events are the passages' ends, same object | All within 10 s; set and rise 1.27 h each |
+| Same, window starting mid-set / ending mid-rise | The cut-off end followed past the window with the ephemeris; `inWindow` false; not followed: edge `unresolved` | Within 10 s of the analytic instant |
+| Ridge 1.5 deg high in the west | First cut, centre, last limb at the elevations 1.5 + r, 1.5, 1.5 - r | Within 10 s; more than 3 h earlier than over the flat skyline |
+| Flat-topped rise level with the Sun's centre, Sun moving along it | A graze: first cut and whole disc clear, no sunrise/sunset event, any-Sun 100 % | Least visible fraction 0.5000 (expected 0.5); from azimuth 99.72 to 110.28 (analytic 99.72, 110.28) |
+| Notch below a skyline that hides the Sun | A peek: the sunrise and sunset are the same passage | Largest visible fraction 0.7479 (circular segment: 0.7477) |
+| Earth sinking 0.1 deg/h through a flat skyline | Earthset is the centre crossing inside the set; first cut and last limb at the analytic instants; earthAnyPct = time to the last limb, earthVisiblePct = time to the centre | Within 10 s; percentages within 0.005 points |
+| Sun parked on the skyline, 1-day search limit | Both ends `unresolved`, kind `unresolved`, no time quoted | As stated |
+| Smooth Moon, east limb, 2 lunar months (outlook) | Each row's earthAnyPct above its earthVisiblePct | Holds in both rows |
+| Comparison of the two Earth cases | Sentences say "Earth's centre"; `ComparisonDiff.earthAnyPct` = B - A | As stated |
+
+## 7. Example sentences (real results, `eventText` / `transitionText` / `transitionSummary`)
 
 - Blue Ghost 1, 2 m: `Sunset: starts setting 2025-03-16 18:23, fully set 19:30 UTC`
 - IM-2, 2 m: `Sunset: starts setting 2025-03-19 16:42, fully set 23:17 UTC`
