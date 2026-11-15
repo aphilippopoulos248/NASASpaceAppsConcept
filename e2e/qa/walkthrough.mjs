@@ -310,17 +310,9 @@ async function faceBody(page, body) {
  * handled; the step's notes say which one this build does.
  */
 async function openFromMarker(page, id, p, { check, note }) {
-  // Overlapping landings (Apollo 11 and Surveyor 5 from far out) take turns on repeated clicks, so
-  // zoom in with the wheel, as a person would, until the marker stands alone.
-  for (let i = 0; i < 8 && p.near?.length; i++) {
-    if (i === 0) note(`Landings drawn next to it: ${p.near.join(', ')}; zooming in with the mouse wheel.`);
-    await page.mouse.move(p.x, p.y);
-    await page.mouse.wheel(0, -400);
-    await globeSettled(page);
-    p = await markerPoint(page, id);
-    if (!p.visible || p.covered) throw new Error(`Marker lost while zooming in: ${JSON.stringify(p)}`);
-  }
-  if (p.near?.length) note(`Still drawn next to: ${p.near.join(', ')}.`);
+  // Overlapping landings (Apollo 11 and Surveyor 5 from far out) take turns on slower clicks; since
+  // @globe's aaeada2 (Q-9) a double-click still opens the landing whose details are shown.
+  if (p.near?.length) note(`Landings drawn next to it: ${p.near.join(', ')} (overlapping markers).`);
   await page.mouse.click(p.x, p.y);
   await page.waitForFunction((siteId) => window.lunyx.store.get().site?.id === siteId, id, { timeout: 20_000 });
   await sleep(1200);

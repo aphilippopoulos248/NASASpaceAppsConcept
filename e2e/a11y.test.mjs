@@ -460,14 +460,22 @@ describe('accessibility: Escape goes to the layer that holds the focus (F-10)', 
         focusOnLauncher: Boolean(a?.classList.contains('cmp-launcher')),
       };
     });
-  /** Both layers open: the compare panel from its launcher, then the drawer, which takes the focus. */
+  /** Opens the drawer (if closed) and puts the focus in its message box, after its own focus move. */
+  const openDrawer = async () => {
+    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await result(page, 'setAssistantOpen', { open: true });
+    await until(page, () => document.getElementById('assistant-drawer').classList.contains('is-open'));
+    // The drawer focuses its box on the next animation frame after opening: let that happen first.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await page.locator('#assistant-input').focus();
+    await until(page, () => document.getElementById('assistant-drawer').contains(document.activeElement));
+  };
+  /** Both layers open: the compare panel from its launcher, then the drawer, with the focus in the drawer. */
   const openBoth = async () => {
     if (await page.evaluate(() => document.querySelector('.cmp-sheet').hidden)) {
       await page.locator('.cmp-launcher').click();
       await until(page, () => !document.querySelector('.cmp-sheet').hidden);
     }
-    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await result(page, 'setAssistantOpen', { open: true });
-    await until(page, () => document.getElementById('assistant-drawer').classList.contains('is-open') && document.getElementById('assistant-drawer').contains(document.activeElement));
+    await openDrawer();
   };
   /** Presses Escape and waits until one of the layers has reacted (or 3 s went by). */
   const escape = async () => {
@@ -511,8 +519,7 @@ describe('accessibility: Escape goes to the layer that holds the focus (F-10)', 
     await result(page, 'selectSite', { site: 'im-2', fly: false });
     await result(page, 'enterSurface');
     await until(page, () => document.body.dataset.view === 'surface');
-    await result(page, 'setAssistantOpen', { open: true });
-    await until(page, () => document.getElementById('assistant-drawer').contains(document.activeElement));
+    await openDrawer();
     await page.locator('#scene').focus();
     const first = await escape();
     assert.deepEqual([first.drawer, first.view], [false, 'surface'], `first Escape: drawer open ${first.drawer}, view ${first.view}`);
