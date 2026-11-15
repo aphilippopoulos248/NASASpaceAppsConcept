@@ -3,12 +3,12 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the release candidate `41be074` (published on `feature/lunyx-navigator`;
-  its app code equals team integration `649fc4e`), plus this task's documents: the original
-  project's feature set with the mission presets, the T-37 notices, the T-38 landing sources, the
-  T-39 flags, the T-40 downloads, the T-43 coordinate entry, the T-46 band rule and compare focus,
-  the T-47 to T-49 rise and set spans, the T-50 finer skyline and all four of the science
-  project's deliveries; checked on 2026-11-15 (UTC).
+- **State described:** the tree at `2e6c8c5` (team integration: the release candidate `41be074`'s app
+  code, `649fc4e`, with the release walkthrough's record, T-8), plus this task's documents: the
+  original project's feature set with the mission presets, the T-37 notices, the T-38 landing
+  sources, the T-39 flags, the T-40 downloads, the T-43 coordinate entry, the T-46 band rule and
+  compare focus, the T-47 to T-49 rise and set spans, the T-50 finer skyline and all four of the
+  science project's deliveries; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
   for the operator to approve (section 5). Items that could not be established are in section 8.
 - **Who wrote this:** an AI agent (Claude, hub handle @submission) from the repository, its git
@@ -108,13 +108,13 @@ in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `41be074` the history has 501 commits:
+At `2e6c8c5` the history has 507 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 259 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 258 (71 "Claude Fable 5.2", 187 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 263 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 262 (71 "Claude Fable 5.2", 191 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
 | 10 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 8: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix); AI status not recorded (open item L4) |
-| 232 merge commits | 67 | 165 (97 by the hub's integration bot, 1 GitHub pull-request merge, 65 by the local account, 2 by the teammate) |
+| 234 merge commits | 67 | 167 (99 by the hub's integration bot, 1 GitHub pull-request merge, 65 by the local account, 2 by the teammate) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -137,7 +137,7 @@ committed screenshots were taken by agents with headless Chromium.
 - No code in the repository calls an image, video, speech-synthesis or other generative-media
   service (searched all code and configuration files for the usual APIs and service names;
   none found).
-- None of the 155 images in the repository carries EXIF, XMP or C2PA metadata, so none carries a
+- None of the 190 images in the repository carries EXIF, XMP or C2PA metadata, so none carries a
   generator's signature (absence of metadata is not proof by itself). The only embedded data are
   colour profiles (ICC) in 24 JPEG screenshots under `docs/lunyx/handover/screens/` and, in three
   PNG screenshots there (`t33-scrubber-1440.png`, `t42-stars-note.png`, `t47-card-im2.png`), PNG
@@ -184,8 +184,8 @@ its tests; no real model has been run, see above):
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `41be074` that is an image, texture, document image or data
-file: everything except source code, configuration and Markdown. **498 files, 171.2 MB**: 155
+**Scope:** every tracked file at `2e6c8c5` that is an image, texture, document image or data
+file: everything except source code, configuration and Markdown. **533 files, 175.6 MB**: 190
 images (JPEG, PNG, WebP), 1 PDF, 342 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
 
@@ -252,7 +252,7 @@ the file (section 2), which the guide asks to acknowledge for code and data.
 | A29 | `public/licences/THIRD-PARTY-NOTICES.txt` | 1 | 16.4 kB | P | Licence texts of the shipped packages, assembled by `scripts/build-licences.mjs` (T-37; since T-40 its header names `docs/lunyx/SOURCES.md`) | Read; `src/licences.test.ts` checks it is current | Script written by an AI agent (commits `b4a2648`, `fd46b48`, "Claude Opus 5.5" trailers); the licence texts are the packages' own |
 | A30 | `public/data/presets.json` | 1 | 4.1 kB | A | The three "Missions to replay" (site, window, clock, rate, view, sources), written with T-22; the IM-2 and Blue Ghost sources follow the LROC positions since T-38 | `src/data/presets.test.ts` checks every time and sentence against the catalogue, the bundled Horizons tables and the analysis | Written by an AI agent (commits `f9668e3`, `b68ecc4`, "Claude Opus 5.5" trailers) |
 | A31 | `src/assistant/deterministic/examples.json` | 1 | 5.4 kB | A | One example request per action for deterministic mode, read by its help text and tests | Read | Written by an AI agent (commits `5405cb1`, `bb3c602`, `db2f6ca`, `e0b2060`, "Claude Opus 5.5" trailers) |
-| A32 | `docs/lunyx/screenshots/**` | 22 | 2.37 MB | S | The desktop walkthrough's captures of the app (T-2) on build `27b0f30`, before the mission presets and T-38, at 1280x720 and 1920x1080, described in `docs/lunyx/screenshots/REVIEW.md` | All 22 viewed: app interface and rendered data only, no logos; no metadata; the assistant shots are in deterministic mode | Captured by an AI agent (@desktop-workflow) |
+| A32 | `docs/lunyx/screenshots/**` | 57 | 6.73 MB | S | The desktop walkthroughs' captures of the app at 1280x720 and 1920x1080: 22 from T-2 on build `27b0f30` (before the mission presets and T-38; described in `docs/lunyx/screenshots/REVIEW.md` at `6a24334`) and 35 from the release walkthrough T-8 on the release candidate's app code `649fc4e` (`649fc4e/`, described in the current `REVIEW.md`) | All 57 viewed: app interface and rendered data only, no logos (national flags drawn by code in the T-8 flag shots); no metadata; the assistant shots are in deterministic mode | Captured by an AI agent (@desktop-workflow) |
 | A33 | `docs/lunyx/handover/T-50-worst-cases.txt` | 1 | 6.7 kB | V | The app's passages at the validator's three worst-case pins, before and after the original team's T-50 (finer skyline reading), cited by STATUS.md | Read; two of the handover's worst cases recomputed from it, within 1 s | Written by an AI agent (commit `1fcb77d`, "Claude Opus 5.5" trailer) |
 | A25 | `docs/reference/{team-doc,challenge-page}.txt` | 2 | 20.4 kB | H | Text export of the team document (both tabs); copy of the challenge page text | Read | Authorship of tab 2 ("Our ideas") not recorded (L11) |
 
@@ -260,7 +260,7 @@ Not counted above: the data folders' `README.md` files (documentation written by
 like the rest of `docs/`).
 
 <details>
-<summary>Every file, with its group and the commit that added it (498 rows)</summary>
+<summary>Every file, with its group and the commit that added it (533 rows)</summary>
 
 | File | Size | Group | Added in | AI co-author trailer on that commit |
 | --- | ---: | --- | --- | --- |
@@ -372,6 +372,41 @@ like the rest of `docs/`).
 | `docs/lunyx/screenshots/27b0f30/1920x1080/10-im2-surface-sun-paths.jpg` | 140.8 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/screenshots/27b0f30/1920x1080/14-im2-surface-at-sun-fully-set.jpg` | 104.7 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/screenshots/27b0f30/1920x1080/16-apollo11-surface-landing-sun.jpg` | 130.3 kB | A32 | `6a24334` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/01-open.jpg` | 79.7 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/04-pin-card.jpg` | 144.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/07-nearby-ranked.jpg` | 93.9 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/08-compare-candidate-as-b.jpg` | 111.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/12-im2-card-landing.jpg` | 90.6 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/13-im2-surface-landing-sun.jpg` | 87.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/14-im2-surface-key-metrics.jpg` | 87.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/15-im2-surface-why-sun.jpg` | 93.3 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/16-im2-surface-chart-table.jpg` | 95.7 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/17-im2-surface-earth.jpg` | 84.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/18-im2-surface-sun-paths.jpg` | 88.2 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/22-im2-surface-at-sun-fully-set.jpg` | 73.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/24-apollo11-surface-landing-sun.jpg` | 75.3 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/25-assistant-open.jpg` | 82.5 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/28-assistant-compare.jpg` | 120.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/30-assistant-surface.jpg` | 105.1 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/32-preset-im2-end.jpg` | 73.1 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/33-im2-surface-earth-zoomed.jpg` | 68.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/34-window-table.jpg` | 103.6 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/35-outlook.jpg` | 81.1 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/36-globe-flags.jpg` | 129.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/38-scenario-1-nearby.jpg` | 113.7 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/39-scenario-2-compare.jpg` | 147.6 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1280x720/40-scenario-3-earthset.jpg` | 135.5 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/01-open.jpg` | 139.6 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/14-im2-surface-key-metrics.jpg` | 184.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/17-im2-surface-earth.jpg` | 149.5 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/18-im2-surface-sun-paths.jpg` | 163.3 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/22-im2-surface-at-sun-fully-set.jpg` | 110.5 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/24-apollo11-surface-landing-sun.jpg` | 132.7 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/33-im2-surface-earth-zoomed.jpg` | 97.5 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/35-outlook.jpg` | 208.4 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/36-globe-flags.jpg` | 259.0 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/39-scenario-2-compare.jpg` | 281.8 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
+| `docs/lunyx/screenshots/649fc4e/1920x1080/40-scenario-3-earthset.jpg` | 268.4 kB | A32 | `49419af` (local git account) | Claude Opus 5.5 |
 | `docs/reference/Lunyx-design.pdf` | 2.00 MB | A24 | `2116471` (local git account) | Claude Opus 5.5 |
 | `docs/reference/challenge-page.txt` | 8.2 kB | A25 | `14edf18` (local git account) | Claude Fable 5.2 |
 | `docs/reference/globe.jpg` | 306.1 kB | A24 | `2116471` (local git account) | Claude Opus 5.5 |
@@ -769,9 +804,9 @@ like the rest of `docs/`).
 
 | # | What | Rule that applies | Proposal | Who would do it |
 | --- | --- | --- | --- | --- |
-| W1 | Screenshots of the app (A23, the walkthrough's A32 under `docs/lunyx/screenshots/`, and any new ones) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
+| W1 | Screenshots of the app (A23, the walkthroughs' A32 under `docs/lunyx/screenshots/`, and any new ones) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 260 of 269 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 264 of 273 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
@@ -787,7 +822,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `41be074`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `2e6c8c5`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a

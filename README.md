@@ -336,12 +336,12 @@ centre.
   value. Its summary names the radius it used ("within 2.0 km"), so check that line, or set the
   requirements first and type the radius and spacing again before scanning. A fix exists but is
   neither verified nor in this build.
-- **Elevation downloads: fixed upstream, release re-check to come.** Opening a site could fail to
-  load an elevation file (the 1.9 km whole-Moon grid or a south-polar layer), seen in headless
-  Chrome on the build machine; the globe then kept its coarser relief and the site card a coarser
-  grid. Fixed upstream in `bbd2294` (T-40: one download at a time, retried); the walkthrough's dry
-  runs saw no failed download in 2 of 2 page loads, and its run on the release candidate (T-8)
-  is to confirm it.
+- **Nearby tab status line, not blocking (release rule D-13).** After the assistant runs a nearby
+  scan, the Nearby tab can keep an old "Candidate 1 is pinned and loaded as B" line over the new
+  list, although slot B still holds the earlier candidate. Every number is still right (the
+  list, its summary, the A/B table and the reply), the line names the old pin, and a scan started
+  from the tab's own button rewrites it (Q-8 in
+  [docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md)).
 - **Accessibility.** Every finding of the keyboard and accessibility pass is fixed upstream
   ([docs/lunyx/accessibility.md](docs/lunyx/accessibility.md)), but nobody has listened to the app
   with a screen reader: there is none on the build machine, so wording and announcements are
@@ -357,19 +357,27 @@ slide deck must show the team name, the names of the team members and the challe
 Navigator's earlier answer on GitHub (discussion 1991) gave the same limits; the guide
 confirms them.
 
-An outline built on the presets. Confirm each step in the desktop walkthrough before recording
-it. At the time of writing the walkthrough (task T-2, on build `27b0f30`; record in
-[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)) had seen working the globe
-and site search, the compare panel with nearby sites and the assistant in deterministic mode at
-1280x720, and the surface view at full settings on a real GPU at 1280x720 and 1920x1080 (IM-2 and
-Apollo 11, 60 frames per second). It had not run the presets, which came later; its run on the
-release candidate (T-8) is still to come.
+An outline built on what the release walkthrough verified. That walkthrough (task T-8) ran the
+release candidate's app code (`41be074`, identical outside `*.md` to team integration `649fc4e`)
+at 1280x720 and 1920x1080 on a real GPU at full settings, 60 frames per second: 41 of 41 steps
+and 247 of 247 value checks at each size, with no failed request, HTTP error or console error
+([docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md),
+[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)). It covered a typed pin and
+its card, the search criteria, the nearby scan and "Compare as B"; IM-2 and Apollo 11 in the
+surface view (key metrics, the skyline chart, the countdown and scrubber jumps to each end of a
+sunset); the assistant in deterministic mode, including a three-request scenario whose answers
+equalled the panels; the window table, both downloads and the outlook; country flags; and the
+IM-2 preset from "Missions to replay", which played to the end of its 14-day window on the
+bundled JPL Horizons table with no network. The Blue Ghost and eclipse presets were not part of
+that run, so check them before recording them. Its screenshots are in
+`docs/lunyx/screenshots/649fc4e/`; in shots 33 and 34 a leftover message ("End of the mission
+window…") sits at the top, and in 36 a flag covers part of the wordmark.
 
 - **Video, 30 seconds or less.** The guide's own beats: who you are (0-2 s), the challenge
   (2-5 s), the project's name (5-10 s), how it works (10-20 s), what it could do (20-30 s). For
-  "how it works", `?preset=blue-ghost-landing` or `?preset=im-2-landing` shows the surface view
-  with the Sun, Earth, key metrics and skyline chart while the clock runs; a full preset plays for
-  about 28 s (the eclipse for 34 s), so record a few seconds of it, or pause it.
+  "how it works", the IM-2 preset (Filters > "Missions to replay") shows the surface view with the
+  Sun, Earth, key metrics and skyline chart while the clock runs; it plays its 14 days in about
+  half a minute, so record a few seconds of it, or pause it.
 - **Slides, at most seven, title and introduction included.** 1: Lunyx, the team name, the
   members' names and the challenge. 2: the problem (power and line of sight to Earth depend on
   the local skyline, site and date). 3: the globe and a site card with its sources. 4: the
