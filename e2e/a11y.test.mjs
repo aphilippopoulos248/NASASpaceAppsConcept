@@ -225,10 +225,17 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 1, az0);
     // From a HUD button too (not a field): the arrows still turn the view.
-    await tabTo(page, /\|(Face Sun|Fold|Open)$/);
+    await tabTo(page, /\|Face Sun$/, { max: 60 });
     const az1 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
     await page.keyboard.press('ArrowLeft');
-    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1);
+    const turned = await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1, 15_000).catch(() => false);
+    if (!turned) {
+      const where = await page.evaluate(() => {
+        const el = document.activeElement;
+        return { focus: `${el?.tagName.toLowerCase()}#${el?.id}.${el?.className} "${(el?.getAttribute('aria-label') || el?.textContent || '').trim().slice(0, 60)}"`, look: window.lunyx.store.get().look, view: document.body.dataset.view, site: window.lunyx.store.get().site?.id };
+      });
+      assert.fail(`ArrowLeft on a HUD button did not turn the view (azimuth ${az1} before): ${JSON.stringify(where)}`);
+    }
     const el0 = await page.evaluate(() => window.lunyx.store.get().look.elDeg);
     await page.keyboard.press('ArrowUp');
     await until(page, (e) => window.lunyx.store.get().look.elDeg > e, el0);
