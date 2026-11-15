@@ -38,6 +38,7 @@
 .sc-links a { text-decoration: none; }
 .sc-links a:hover { text-decoration: underline; }
 .sc-credit { margin-top: var(--sp-2); }
+.sc-credit--missing { color: var(--warn); }
 .sc-nav { display: flex; align-items: center; justify-content: space-between; margin-top: var(--sp-3); padding-top: var(--sp-2); border-top: 1px solid var(--border); }
 
 .sc-foot { padding: var(--sp-2) var(--sp-3) var(--sp-3); border-top: 1px solid var(--border); }
@@ -54,3 +55,19 @@
 .sc-scimark { color: var(--text-muted); }
 .sc-scihint { margin-top: var(--sp-1); }
 .sc-science { margin-top: var(--sp-2); }
+
+/* Who the hardware belongs to, and the explored area. */
+.site-card .sc-flag { vertical-align: -2px; margin-right: var(--sp-2); border-radius: 1px; }
+.site-card .sc-source { color: var(--text-muted); font-size: var(--fs-xs); }
+.site-card .sc-source a { color: var(--accent); text-decoration: none; }
+.site-card .sc-source a:hover { text-decoration: underline; }
+.site-card .sc-area-note { margin: 0 0 var(--sp-2); }
+.site-card .sc-mismatch {
+  margin: 0 0 var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border: 1px solid color-mix(in srgb, var(--warn) 50%, transparent);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  font-size: var(--fs-xs);
+}
+.site-card .sc-mismatch[hidden], .site-card .sc-area-note[hidden] { display: none; }

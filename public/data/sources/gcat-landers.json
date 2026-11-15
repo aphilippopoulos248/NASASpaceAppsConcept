@@ -1,0 +1,518 @@
+{
+ "source": "GCAT: General Catalog of Artificial Space Objects, Jonathan C. McDowell",
+ "sourceUrl": "https://planet4589.org/space/gcat/",
+ "files": [
+  "https://planet4589.org/space/gcat/tsv/cat/deepcat.tsv",
+  "https://planet4589.org/space/gcat/tsv/tables/orgs.tsv"
+ ],
+ "catalogVersion": "Updated 2026 Nov 13 0021:56",
+ "licence": "CC BY 4.0 (attribution required)",
+ "retrieved": "2026-11-14T21:48:18.750Z",
+ "note": "\"state\" is GCAT's responsible-state code for the object left at each landing site; \"owner\" is its owning organisation. Copied unchanged; names come from GCAT's organisation table.",
+ "records": [
+  {
+   "landing": "luna-9",
+   "jcat": "D00100",
+   "piece": "1966-006A",
+   "name": "Luna-9",
+   "altName": "E-6M No. 202 (13)",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1966 Jan 31",
+   "status": "EO"
+  },
+  {
+   "landing": "surveyor-1",
+   "jcat": "D00110",
+   "piece": "1966-045A",
+   "name": "Surveyor 1",
+   "altName": "Surveyor SC-1",
+   "owner": "NASA/JPL",
+   "ownerName": "National Aeronautics and Space Administration / Jet Propulsion Lab",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1966 May 30",
+   "status": "EO"
+  },
+  {
+   "landing": "luna-13",
+   "jcat": "D00140",
+   "piece": "1966-116A",
+   "name": "Luna-13",
+   "altName": "E-6M No. 205",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1966 Dec 21",
+   "status": "EO"
+  },
+  {
+   "landing": "surveyor-3",
+   "jcat": "D00150",
+   "piece": "1967-035A",
+   "name": "Surveyor 3",
+   "altName": "Surveyor SC-3",
+   "owner": "NASA/JPL",
+   "ownerName": "National Aeronautics and Space Administration / Jet Propulsion Lab",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1967 Apr 17",
+   "status": "EO"
+  },
+  {
+   "landing": "surveyor-5",
+   "jcat": "D00180",
+   "piece": "1967-084A",
+   "name": "Surveyor 5",
+   "altName": "Surveyor 5",
+   "owner": "NASA/JPL",
+   "ownerName": "National Aeronautics and Space Administration / Jet Propulsion Lab",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1967 Sep  8",
+   "status": "EO"
+  },
+  {
+   "landing": "surveyor-6",
+   "jcat": "D00182",
+   "piece": "1967-112A",
+   "name": "Surveyor 6",
+   "altName": "Surveyor SC-6",
+   "owner": "NASA/JPL",
+   "ownerName": "National Aeronautics and Space Administration / Jet Propulsion Lab",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1967 Nov  7",
+   "status": "EO"
+  },
+  {
+   "landing": "surveyor-7",
+   "jcat": "D00190",
+   "piece": "1968-001A",
+   "name": "Surveyor 7",
+   "altName": "Surveyor SC-7",
+   "owner": "NASA/JPL",
+   "ownerName": "National Aeronautics and Space Administration / Jet Propulsion Lab",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1968 Jan  7",
+   "status": "EO"
+  },
+  {
+   "landing": "apollo-11",
+   "jcat": "D00271",
+   "piece": "1969-059",
+   "name": "LM 5 DS",
+   "altName": "LM 5 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1969 Jul 16",
+   "status": "EAO"
+  },
+  {
+   "landing": "apollo-12",
+   "jcat": "D00300",
+   "piece": "1969-099",
+   "name": "LM 6 DS",
+   "altName": "LM 6 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1969 Nov 14",
+   "status": "EAO"
+  },
+  {
+   "landing": "luna-16",
+   "jcat": "D00334",
+   "piece": "1970-072A",
+   "name": "Luna-16 KT",
+   "altName": "E-8-5 No. 406",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1970 Sep 12",
+   "status": "EO"
+  },
+  {
+   "landing": "luna-17",
+   "jcat": "D00342",
+   "piece": "1970-095A",
+   "name": "Luna-17",
+   "altName": "E-8 No. 203",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1970 Nov 10",
+   "status": "EO"
+  },
+  {
+   "landing": "apollo-14",
+   "jcat": "D00356",
+   "piece": "1971-008",
+   "name": "LM 8 DS",
+   "altName": "LM 8 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1971 Jan 31",
+   "status": "EAO"
+  },
+  {
+   "landing": "apollo-15",
+   "jcat": "D00388",
+   "piece": "1971-063",
+   "name": "LM 10 DS",
+   "altName": "LM 10 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1971 Jul 26",
+   "status": "EAO"
+  },
+  {
+   "landing": "luna-20",
+   "jcat": "D00427",
+   "piece": "1972-007E",
+   "name": "Luna-20 KT",
+   "altName": "E-8-5 No. 408",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1972 Feb 14",
+   "status": "EO"
+  },
+  {
+   "landing": "apollo-16",
+   "jcat": "D00450",
+   "piece": "1972-031",
+   "name": "LM 11 DS",
+   "altName": "LM 11 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1972 Apr 16",
+   "status": "EAO"
+  },
+  {
+   "landing": "apollo-17",
+   "jcat": "D00465",
+   "piece": "1972-096",
+   "name": "LM 12",
+   "altName": "LM 12 DS",
+   "owner": "MSC",
+   "ownerName": "NASA Manned Spacecraft Center",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "1972 Dec  7",
+   "status": "EAO"
+  },
+  {
+   "landing": "luna-21",
+   "jcat": "D00482",
+   "piece": "1973-001A",
+   "name": "Luna-21",
+   "altName": "E-8 No. 204",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1973 Jan  8",
+   "status": "EO"
+  },
+  {
+   "landing": "luna-23",
+   "jcat": "D00522",
+   "piece": "1974-084A",
+   "name": "Luna-23 KT",
+   "altName": "E-8-5M No. 410",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1974 Oct 28",
+   "status": "EO"
+  },
+  {
+   "landing": "luna-24",
+   "jcat": "D00566",
+   "piece": "1976-081A",
+   "name": "Luna-24 KT",
+   "altName": "E-8-5M No. 413",
+   "owner": "IKI/BABTS",
+   "ownerName": "Institut Kosmicheksiye Issledovaniya / Babakin Science and Research Space Center",
+   "state": "SU",
+   "stateName": "USSR",
+   "stateFullName": "Union of Soviet Socialist Republics",
+   "stateExisted": {
+    "from": "1922 Dec 30",
+    "to": "1991 Dec 26"
+   },
+   "launchDate": "1976 Aug  9",
+   "status": "EO"
+  },
+  {
+   "landing": "change-3",
+   "jcat": "D00934",
+   "piece": "2013-070A",
+   "name": "Chang'e-3",
+   "altName": "Chang'e-3",
+   "owner": "CASC",
+   "ownerName": "China Aerospace Corp",
+   "state": "CN",
+   "stateName": "China",
+   "stateFullName": "China, People's Republic of",
+   "stateExisted": {
+    "from": "1949 Oct  1",
+    "to": "-"
+   },
+   "launchDate": "2013 Dec  1",
+   "status": "EO"
+  },
+  {
+   "landing": "change-4",
+   "jcat": "D01017",
+   "piece": "2018-103A",
+   "name": "Chang'e-4",
+   "altName": "Chang'e-4",
+   "owner": "CASC",
+   "ownerName": "China Aerospace Corp",
+   "state": "CN",
+   "stateName": "China",
+   "stateFullName": "China, People's Republic of",
+   "stateExisted": {
+    "from": "1949 Oct  1",
+    "to": "-"
+   },
+   "launchDate": "2018 Dec  7",
+   "status": "EO"
+  },
+  {
+   "landing": "change-5",
+   "jcat": "D01047",
+   "piece": "2020-087",
+   "name": "Chang'e-5 Zhuolu Qi",
+   "altName": "Chang'e-5 Lander",
+   "owner": "LDSE/CAST",
+   "ownerName": "Key Lab of Lunar and Deep Space Exploration / Chinese Academy of Space Technology, Beijing (CASC 5th Acad)",
+   "state": "CN",
+   "stateName": "China",
+   "stateFullName": "China, People's Republic of",
+   "stateExisted": {
+    "from": "1949 Oct  1",
+    "to": "-"
+   },
+   "launchDate": "2020 Nov 23",
+   "status": "EAO"
+  },
+  {
+   "landing": "chandrayaan-3",
+   "jcat": "D01126",
+   "piece": "2023-098A",
+   "name": "Chandrayaan-3",
+   "altName": "Chandrayaan-3 Lander",
+   "owner": "ISRO",
+   "ownerName": "Indian Space Research Organization",
+   "state": "IN",
+   "stateName": "India",
+   "stateFullName": "India, Republic of",
+   "stateExisted": {
+    "from": "1947 Aug 15",
+    "to": "-"
+   },
+   "launchDate": "2023 Jul 14",
+   "status": "EAO"
+  },
+  {
+   "landing": "slim",
+   "jcat": "D01131",
+   "piece": "2023-137D",
+   "name": "SLIM",
+   "altName": "SLIM",
+   "owner": "JAXA/ISASJ",
+   "ownerName": "Japan Aerospace Exploration Agency / Institute of Space and Astronautical Sci",
+   "state": "J",
+   "stateName": "Japan",
+   "stateFullName": "Japan (Nippon), State of",
+   "stateExisted": {
+    "from": "538",
+    "to": "-"
+   },
+   "launchDate": "2023 Sep  6",
+   "status": "EO"
+  },
+  {
+   "landing": "im-1",
+   "jcat": "D01149",
+   "piece": "2024-030A",
+   "name": "IM-1",
+   "altName": "Odysseus",
+   "owner": "INTMA",
+   "ownerName": "Intuitive Machines LLC",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "2024 Feb 15",
+   "status": "EO"
+  },
+  {
+   "landing": "change-6",
+   "jcat": "D01159",
+   "piece": "2024-083",
+   "name": "Chang'e-6 Zhuolu Qi",
+   "altName": "Chang'e-6 Lander",
+   "owner": "LDSE/CAST",
+   "ownerName": "Key Lab of Lunar and Deep Space Exploration / Chinese Academy of Space Technology, Beijing (CASC 5th Acad)",
+   "state": "CN",
+   "stateName": "China",
+   "stateFullName": "China, People's Republic of",
+   "stateExisted": {
+    "from": "1949 Oct  1",
+    "to": "-"
+   },
+   "launchDate": "2024 May  3",
+   "status": "EAO"
+  },
+  {
+   "landing": "blue-ghost-1",
+   "jcat": "D01178",
+   "piece": "2025-010A",
+   "name": "Blue Ghost",
+   "altName": "Blue Ghost 1",
+   "owner": "FFLY",
+   "ownerName": "Firefly Aerospace",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "2025 Jan 15",
+   "status": "EO"
+  },
+  {
+   "landing": "im-2",
+   "jcat": "D01180",
+   "piece": "2025-038A",
+   "name": "IM-2 Athena",
+   "altName": "IM-2",
+   "owner": "INTMA",
+   "ownerName": "Intuitive Machines LLC",
+   "state": "US",
+   "stateName": "USA",
+   "stateFullName": "United States of America",
+   "stateExisted": {
+    "from": "1776 Jul  4",
+    "to": "-"
+   },
+   "launchDate": "2025 Feb 27",
+   "status": "EO"
+  }
+ ]
+}

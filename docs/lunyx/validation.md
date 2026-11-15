@@ -5,6 +5,15 @@ Conventions: UTC; latitude north-positive; longitude east-positive (ME frame); h
 metres above the 1737.4 km sphere; azimuth clockwise from north; elevation above the local
 horizontal, airless (no refraction).
 
+**Site positions.** Results for a landing site below were computed at the catalogue position of
+the time, which the tests pin explicitly (IM-2 at 84.79 S, 29.2 E; Blue Ghost 1 at 18.562 N,
+61.81 E; Chang'e 4 at 45.4446 S, 177.5991 E). Task T-38 (2026-11-15) replaced the catalogue
+positions in `public/data/landings.json` with LROC's measured lander positions, which moved
+IM-2 by 22 m, Blue Ghost 1 by 8 m and Chang'e 4 by 417 m, so the app now analyses slightly
+different points. At IM-2, 14 days from the landing with a 2 m mast, the new pin gives sunlight
+92.4 % (92.5 % at the old pin), longest darkness 18.4 h (18.2 h), Earth's centre in view
+88.9 % (unchanged) and a slope of 2.2 deg (2.1 deg) over 120 m.
+
 ## 1. Sun and Earth in a site's sky (`skyAt`, `src/astro/topocentric.ts`)
 
 **Model.** astronomy-engine heliocentric Earth and Moon states (VSOP87 / its lunar theory),
@@ -179,6 +188,14 @@ this repository's test against their stored reference skylines
 to repeat with their own run. Apollo 15 was measured once and is not in the standing test:
 task T-32 eases the 3 m site models onto their 60 m windows at load, after which the app's
 terrain at the sites with a 3 m model no longer equals the stored files the reference used.
+
+**Re-checked independently** by Lunyx Science's @validation (T-34, branch
+am/lunyx-science/agent/validation at af49a12, `tests/fixtures/validation/science-validation/skyline-masts/results.txt`):
+the skyline of `analyse()` at 1289083 for observers at 0, 0.5 and 2 m at nine pins (the seven
+of round 1 and two grid summits picked by a fixed rule before any app output was seen), 27 runs:
+within 0.0042 deg at the seven round-1 pins, worst 0.0171 deg at one new summit pin with a 2 m
+mast (app low, at a crease 8.5 m away), no azimuth over 0.02 deg. Verdict: agrees. Still to
+come from them: the 18.6-year any-Sun share at 0 m at the connecting ridge pin.
 
 **The defect they found: an observer on the ground.** Seen from height H above the ground,
 terrain at a small distance d stands at about (h(d) - h(0) - H) / d. With H = 0 the limit at

@@ -13,7 +13,7 @@ import { effectiveStartMs, labelPair, scenarioFromState } from './scenario';
 import { EVENT_INFO, EVENT_TYPES, findEvent, type EventType } from './skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, Store } from './store';
 import { isoUtc, parseUtc } from './time';
-import { AppState, LightMode, MOON_RADIUS_KM, OverlayMode, pinId, SiteRef, wrapLon } from './types';
+import { AppState, LightMode, MOON_RADIUS_KM, OverlayMode, pinId, SiteRef, ViewMode, wrapLon } from './types';
 
 /** Camera altitude (km above the reference sphere) for the whole-Moon view. */
 export const GLOBE_ALTITUDE_KM = 2.4 * MOON_RADIUS_KM;
@@ -24,6 +24,7 @@ export const MAX_ALTITUDE_KM = 8 * MOON_RADIUS_KM;
 
 export const RATE_PRESETS = [
   { secondsPerSecond: 60, label: '1 min/s' },
+  { secondsPerSecond: 600, label: '10 min/s' },
   { secondsPerSecond: 3600, label: '1 hour/s' },
   { secondsPerSecond: 43200, label: '12 hours/s' },
   { secondsPerSecond: 259200, label: '3 days/s' },
@@ -39,6 +40,12 @@ export interface CoreContext {
    * show (terrain loaded, camera arrived), rejects with a sentence when it cannot be shown.
    */
   prepareSurface?: (site: SiteRef) => Promise<void>;
+  /**
+   * Provided by the scene host: resolves when this view is the one on screen. The switch fades
+   * over about a third of a second, and what needs the surface on screen (looking at the Sun,
+   * zooming) must not run before it.
+   */
+  viewShown?: (view: ViewMode) => Promise<void>;
   /** The science lookups getAnalysis reads Sun/Earth "now" and the next events from. Defaults to the science core. */
   science?: ReportScience;
   /** How the globe is being drawn (relief exaggeration, coverage outlines, polar close-up), for getState. */
@@ -110,6 +117,34 @@ function windowSummary(s: Readonly<AppState>) {
   };
 }
 
+/** Turns the globe to a point; when no scene is listening (tests, headless) records where it would point. */
+export function flyGlobeTo(store: Store, lat: number, lon: number, altitudeKm?: number): void {
+  const delivered = emitCommand('flyTo', { lat, lon, altitudeKm });
+  if (!delivered) store.set({ globeCenter: { lat, lon, altitudeKm: altitudeKm ?? store.get().globeCenter.altitudeKm } });
+}
+
+/**
+ * Steps down to the surface at the selected site: waits until the scene can show it, switches
+ * the view, and returns once the surface is on screen, so the next action can use it at once.
+ */
+export async function enterSurfaceView(ctx: Pick<CoreContext, 'store' | 'prepareSurface' | 'viewShown'>): Promise<void> {
+  const { store } = ctx;
+  const site = store.get().site;
+  if (!site) throw new ActionError('No site is selected. Select a landing site or drop a pin first.');
+  if (store.get().view !== 'surface') {
+    if (ctx.prepareSurface) {
+      try {
+        await ctx.prepareSurface(site);
+      } catch (err) {
+        throw new ActionError(err instanceof Error ? err.message : String(err));
+      }
+    }
+    if (store.get().site?.id !== site.id) throw new ActionError('The selected site changed before the surface view was ready.');
+    store.set({ view: 'surface' });
+  }
+  await ctx.viewShown?.('surface');
+}
+
 export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
   const { store } = ctx;
   const state = () => store.get();
@@ -127,25 +162,9 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     return site;
   };
 
-  const flyTo = (lat: number, lon: number, altitudeKm?: number) => {
-    const delivered = emitCommand('flyTo', { lat, lon, altitudeKm });
-    // Nothing is rendering the globe (tests, headless): record where it would point.
-    if (!delivered) store.set({ globeCenter: { lat, lon, altitudeKm: altitudeKm ?? state().globeCenter.altitudeKm } });
-  };
+  const flyTo = (lat: number, lon: number, altitudeKm?: number) => flyGlobeTo(store, lat, lon, altitudeKm);
 
-  const enterSurface = async () => {
-    const site = requireSite();
-    if (state().view === 'surface') return;
-    if (ctx.prepareSurface) {
-      try {
-        await ctx.prepareSurface(site);
-      } catch (err) {
-        throw new ActionError(err instanceof Error ? err.message : String(err));
-      }
-    }
-    if (state().site?.id !== site.id) throw new ActionError('The selected site changed before the surface view was ready.');
-    store.set({ view: 'surface' });
-  };
+  const enterSurface = () => enterSurfaceView(ctx);
 
   const viewResult = () => ({ view: state().view, site: siteSummary(state().site, ctx.landings()) });
 
@@ -201,7 +220,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     defineAction<{ rate?: number }, unknown>({
       name: 'play',
       title: 'Play',
-      description: 'Starts the simulated clock. Optional `rate` in simulated seconds per real second (3600 = one hour per second).',
+      description: 'Starts the simulated clock. Optional `rate` in simulated seconds per real second (3600 = one hour per second). A clock that runs into the end of the mission window stops there; play again to go on past it.',
       effect: 'command',
       params: { type: 'object', properties: { rate: { type: 'number', description: 'Simulated seconds per real second.', minimum: 1, maximum: 31_536_000 } } },
       run: ({ rate }) => {
@@ -224,7 +243,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     defineAction<{ secondsPerSecond: number }, unknown>({
       name: 'setRate',
       title: 'Set playback speed',
-      description: 'Sets how fast the simulated clock runs while playing, in simulated seconds per real second (60 = 1 min/s, 3600 = 1 h/s, 86400 = 1 day/s).',
+      description: 'Sets how fast the simulated clock runs while playing, in simulated seconds per real second (60 = 1 min/s, 600 = 10 min/s, 3600 = 1 h/s, 86400 = 1 day/s).',
       effect: 'command',
       params: { type: 'object', properties: { secondsPerSecond: { type: 'number', description: 'Simulated seconds per real second.', minimum: 1, maximum: 31_536_000 } }, required: ['secondsPerSecond'] },
       run: ({ secondsPerSecond }) => {
@@ -549,6 +568,18 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         return { showMissions: state().showMissions };
       },
     }),
+    defineAction<{ show: boolean }, unknown>({
+      name: 'showFlags',
+      title: 'Show country flags',
+      description:
+        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state).',
+      effect: 'command',
+      params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the flags.' } }, required: ['show'] },
+      run: ({ show }) => {
+        store.set({ showFlags: show });
+        return { showFlags: state().showFlags };
+      },
+    }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: MissionType; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({
       name: 'setFilters',
       title: 'Filter landings',
@@ -714,7 +745,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         return {
           view: s.view,
           ...timeSummary(s),
-          /** The line under the time scrubber: the Moon's phase as seen from Earth at the simulated time (in-app ephemeris model). */
+          /** The line under the time scrubber: the Moon's phase as seen from Earth at the simulated time, and whether the Moon is in Earth's shadow (in-app ephemeris model, geometric discs). */
           moonPhase: moonPhaseAt(s.timeMs),
           lightMode: s.lightMode,
           site: siteSummary(s.site, ctx.landings()),
@@ -727,6 +758,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           sunBandDeg: { min: s.sunElMinDeg, max: s.sunElMaxDeg },
           overlay: s.overlay,
           showMissions: s.showMissions,
+          showFlags: s.showFlags,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },
           globeDisplay: ctx.display?.() ?? null,
