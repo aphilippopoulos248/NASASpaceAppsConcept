@@ -717,7 +717,8 @@ describe('equivalence: controls added since the 33-action build', () => {
   test('Filters: "Go to a landing site", "Show country flags", a mission preset', SLOW, async () => {
     const picked = await equivalent({ ui: () => filters().getByLabel('Go to a landing site').selectOption('apollo-15'), expect: 'selectSite', action: ['selectSite', { site: 'apollo-15' }], keys: ['siteId', 'view'] });
     assert.equal(picked.siteId, 'apollo-15');
-    const flags = await equivalent({ ui: () => filters().getByLabel('Show country flags').check(), expect: 'showFlags', action: ['showFlags', { show: true }], keys: ['flags'] });
+    // Flags are on by default: switch them off first so ticking the box is a change.
+    const flags = await equivalent({ prepare: () => result(page, 'showFlags', { show: false }), ui: () => filters().getByLabel('Show country flags').check(), expect: 'showFlags', action: ['showFlags', { show: true }], keys: ['flags'] });
     assert.equal(flags.flags, true);
     await result(page, 'showFlags', { show: false });
     const preset = await equivalent({ ui: () => page.locator('.pl-button').filter({ hasText: 'Eclipse of 14 March 2025' }).click(), expect: 'loadPreset', action: ['loadPreset', { id: 'eclipse-2025-03-14' }], keys: ['siteId', 'view', 'window', 'rate'], wait: () => until(page, () => document.body.dataset.view === 'surface') });

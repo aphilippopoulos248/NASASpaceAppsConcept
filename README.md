@@ -400,7 +400,7 @@ centre.
   A/B table, the reply); a scan from the tab's own button rewrites the line
   ([docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md)).
 - **Flags over the wordmark: low (cosmetic), on hold, not fixed in release candidate `41be074`.**
-  With the country flags switched on (they are off by default), Japan's flag can cover the N of
+  With the country flags switched on (they are on by default), Japan's flag can cover the N of
   the LUNYX wordmark at 1280x720.
 - **Accessibility.** Every finding of the keyboard and accessibility pass is fixed, and the
   accessibility tests passed 15 of 15 on the release candidate's app code, twice; a first run

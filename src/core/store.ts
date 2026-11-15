@@ -32,7 +32,7 @@ export function initialState(nowMs: number): AppState {
     overlay: 'off',
     showMissions: true,
     showTerritories: false,
-    showFlags: false,
+    showFlags: true,
     lightMode: 'real',
     globeCenter: { lat: 0, lon: 0, altitudeKm: 4170 },
     look: { azDeg: 0, elDeg: 0, fovDeg: 70 },

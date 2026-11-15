@@ -54,13 +54,13 @@ describe('core actions', () => {
     expect(getAction('showMissions')!.description).toMatch(/^Shows or hides the markers of catalogued landings on the globe\. The territory colouring \(showTerritories\) and the country flags \(showFlags\) are drawn only while the markers are shown/);
     const rule = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
     expect(TERRITORY_RULE).toBe(rule);
-    // Off by default.
-    expect(store.get()).toMatchObject({ showMissions: true, showTerritories: false });
+    // Territories off by default; flags on by default.
+    expect(store.get()).toMatchObject({ showMissions: true, showTerritories: false, showFlags: true });
     expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: true, territoryRule: rule } });
     // Hiding the markers hides the colouring; showing them brings it back.
     expect(await runAction('showMissions', { show: false })).toEqual({ ok: true, result: { showMissions: false, territoriesShown: false, flagsShown: false } });
     expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: false, territoryRule: rule } });
-    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true, flagsShown: false } });
+    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true, flagsShown: true } });
     expect(getAction('showTerritories')!.description).toMatch(/not drawn over the south-polar close-up or the close-up around a selected site/);
     // Flags the same way (lunyx-experience batch 16): switched on while the markers are hidden, nothing is drawn, and the result says so.
     expect(getAction('showFlags')!.description).toMatch(/drawn only while the landing markers are shown \(showMissions\)/);

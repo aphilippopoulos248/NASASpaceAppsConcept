@@ -97,7 +97,7 @@ Two rounds of independent end-to-end validation and the `lunyx-science` validati
   other than the tab's own button (for example by the assistant's `rankNearby`), the Nearby sites
   tab can keep an old green status line such as "Candidate 1 is pinned and loaded as B" above the
   new list. The list is right. A scan from the tab's own button rewrites the line. Not fixed in the RC.
-- **Cosmetic.** With the country flags switched on (they are off by default), Japan's flag can cover
+- **Cosmetic.** With the country flags switched on (they are on by default), Japan's flag can cover
   the N of the LUNYX wordmark at 1280x720. Not fixed in the RC.
 - Earth visibility is geometric line of sight to Earth's centre (and, for DSN, to a station
   above its elevation limit). It is not a link budget.

@@ -30,12 +30,15 @@ let uid = 0;
 
 /** The flags choice is remembered per browser; a link with ?flags=1 turns them on. */
 const FLAGS_KEY = 'moon-landings:flags';
+/** The flags are on unless `?flags=0` or a remembered choice says otherwise. */
 function flagsWanted(): boolean {
-  if (new URLSearchParams(location.search).get('flags') === '1') return true;
+  const param = new URLSearchParams(location.search).get('flags');
+  if (param === '1') return true;
+  if (param === '0') return false;
   try {
-    return localStorage.getItem(FLAGS_KEY) === '1';
+    return localStorage.getItem(FLAGS_KEY) !== '0';
   } catch {
-    return false; // storage unavailable: start with flags off
+    return true; // storage unavailable: start with the default, flags on
   }
 }
 
@@ -371,7 +374,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
   store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showTerritories', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
   sync();
-  if (flagsWanted()) void runAction('showFlags', { show: true });
+  if (flagsWanted() !== store.get().showFlags) void runAction('showFlags', { show: flagsWanted() });
   store.subscribe(['showFlags'], (s) => {
     try {
       localStorage.setItem(FLAGS_KEY, s.showFlags ? '1' : '0');
