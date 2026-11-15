@@ -15,7 +15,16 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 | Q-1 | Filters > Centre of view, typed in the natural order (latitude, Tab, longitude, Enter): the latitude field is refilled with the centre of the still-flying camera when it loses focus, and the longitude commit sends that in-flight latitude, not the typed one. Typed 84.79° S, 29.2° E: the view ends at 57.43° S (830 km off) when typed quickly, 81.63° S (96 km) at 80 ms per key, 83.37° S (43 km) at 150 ms per key, and 84.67° S (3.6 km, F-3 twice) when the typist waits for the flight. | @globe | f928038, 2f7e813 | open, new; e2e todo test in `e2e/flow.test.mjs` |
 | Q-2 | Typing both coordinates and pressing "Drop pin at centre" straight away pins wherever the camera is at the moment of the click, mid-flight, with the old longitude: typed 84.79° S, 29.2° E, pinned 55.92681° S, 0.06° W (879 km off) and 83.02705° S, 0.06° W (97 km off). | @globe | f928038, 2f7e813 | open, new; e2e todo test |
 | F-3 | (legacy, reported 2026-11-14) Poleward of 80.06° the fly-to clamps the camera direction, so the view stops short of the typed latitude and "Drop pin at centre" pins off the typed point, even when each field is committed with Enter and each flight is awaited: IM-2's 84.79° S, 29.2° E gives a pin at 84.67269° S (3.56 km off: the clamp once on the latitude, once more when the longitude commit re-sends the shifted latitude shown in the field); 89.45° S, 137.2° W gives 89.4315° S (0.56 km). The same at both poles; exact at 80° and below. | @globe | f928038, 2f7e813 | open; e2e todo test |
+| Q-4 | "Compare as B" in a ranked row of "Nearby sites" switches the panel to "A and B", which hides the button that had the focus: the focus falls to the page (`document.body`), so a keyboard user loses their place, and the next Escape closes the panel without giving the focus back to the launcher. Seen with the mouse (walkthrough) and with the keyboard only (`e2e/a11y.test.mjs`). | @analysis (`src/ui/compare/`) | 2f7e813 | open, new; e2e todo test |
+| Q-5 | The default solar elevation band (0° to 90°) means "no band" in the compare panel since c331052 ("No requirement: no solar elevation band is set"), but the surface Key metrics still raise "Requirement not met … outside the required band (0° to 90°)" whenever the window includes a night (Apollo 11, 29.5-day window), and `getAnalysis` reports `requirements.sunElevationBand.metForWholeWindow: false`, which the assistant words as "The Sun leaves the required elevation band (0.0° to 90.0°) during the window". One app state, two answers. | @surface (`src/ui/surface/metricsModel.ts` `flags`), the owner of `src/core/analysisReport.ts` (`checkRequirements`); the assistant follows `getAnalysis` | 2f7e813 | open, new |
+| Q-6 | (adds to the original T-40, not a new defect) The polar elevation layers fail too, not only the whole-Moon grid: `lola_south_875s_40m.lxg`, `lola_south_85s_80m.lxg` and `lola_south_80s_160m.lxg` each failed with `net::ERR_CACHE_WRITE_FAILURE`: two of the three in each of four walkthrough page loads, one in the reproduction's (none in the e2e runs, whose requests go through Playwright's request interception). Then the site card names a coarser grid than the analysis beside it used (card "160 m grid", elevation 1,946 m; analysis 40 m layer, 1,948 m), or still says "Loading…" when the analysis is ready, and when the analysis's own copy fails it uses the 1.9 km grid for that distance range (skyline 0.01° different between two loads of the same pin). | owner of T-40 (@surface) | 2f7e813 | for T-40 |
 | Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | open, new, low |
+
+## Walkthrough record
+
+`e2e/qa/walkthrough.mjs` on the app tree of 2f7e813 (= published 27b0f30), GPU, 2026-11-15
+03:47Z: 47 of 47 steps ran, 244 of 248 value checks passed; the four failures are F-3 (two),
+Q-4 and Q-6. Screenshots and the review against the mockups: `docs/lunyx/screenshots/REVIEW.md`.
 
 ## Reproductions
 
@@ -67,6 +76,29 @@ gives 89.4417° S; 80.5° S gives 80.4878° S; 79.9° S is exact; 84.79° N give
 **Q-3**, the first flight after load: a 1° hop east from the auto-rotating start view ended at
 0.6042° E on arrival and 0.5927° E once the camera rested (target 0.6055° E); the next 1° hop
 was exact.
+
+### Q-4
+
+`npm run e2e -- a11y`, test "after "Compare as B" the focus stays in the compare dialog" (todo).
+By hand: open Compare, "Nearby sites", "Scan nearby sites", then Tab to "Compare as B" in a
+ranked row and press Enter. The panel shows "A and B" and the focus is on the page; Escape
+closes the panel and the focus does not return to the "Compare" button.
+
+### Q-5
+
+Open Apollo 11, "At landing time", "Enter surface view", set the window to 29.5 days, leave
+the solar band at its default 0° to 90°: Key metrics shows "Requirement not met. Over the
+mission window the Sun's elevation runs from −88.43° to 89.51°: outside the required band
+(0° to 90°)" (`27b0f30/1920x1080/16-apollo11-surface-landing-sun.jpg`). Open Compare with any
+A and B: "No requirement: no solar elevation band is set" (`27b0f30/1280x720/28-assistant-compare.jpg`).
+Ask the assistant "what is the illumination?": "The Sun leaves the required elevation band
+(0.0° to 90.0°) during the window".
+
+### Q-6
+
+Visible in the console of any walkthrough or e2e run (`e2e/qa/out/*/report.json`,
+`failedRequests`). The walkthrough's pin-card step now compares the card's "Elevation data"
+line with the finest grid in the analysis's provenance.
 
 ### By hand
 
