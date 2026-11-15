@@ -4,10 +4,12 @@
 import { findLanding, landingSite } from '../data/catalog';
 import { formatCoords, Landing, landingDate } from '../data/landings';
 import { ActionError, ActionDef, defineAction } from './actions';
-import type { AnalysisStore } from './analysisStore';
+import { reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
+import { rounded, type AnalysisSlot, type AnalysisStore } from './analysisStore';
 import { emitCommand } from './bus';
 import { ALL_MISSIONS, matchesFilter, MissionFilter, MissionFilterStore, MissionType } from './missionFilter';
-import { scenarioFromState } from './scenario';
+import { effectiveStartMs, labelPair, scenarioFromState } from './scenario';
+import { findEvent } from './skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, Store } from './store';
 import { isoUtc, parseUtc } from './time';
 import { AppState, LightMode, MOON_RADIUS_KM, OverlayMode, pinId, SiteRef, wrapLon } from './types';
@@ -36,9 +38,15 @@ export interface CoreContext {
    * show (terrain loaded, camera arrived), rejects with a sentence when it cannot be shown.
    */
   prepareSurface?: (site: SiteRef) => Promise<void>;
+  /** The science lookups getAnalysis reads Sun/Earth "now" and the next events from. Defaults to the science core. */
+  science?: ReportScience;
+  /** How the globe is being drawn (relief exaggeration, coverage outlines, polar close-up), for getState. */
+  display?: () => Record<string, unknown>;
 }
 
 const OVERLAYS: readonly OverlayMode[] = ['off', 'sun-band', 'avg-illumination', 'avg-earth-visibility'];
+export const EVENT_TYPES = ['sunrise', 'sunset', 'earthrise', 'earthset'] as const;
+export type EventType = (typeof EVENT_TYPES)[number];
 const NO_PARAMS = { type: 'object', properties: {} } as const;
 
 function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
@@ -63,6 +71,19 @@ function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
 
 function timeSummary(s: Readonly<AppState>) {
   return { timeUtc: isoUtc(s.timeMs), playing: s.playing, rateSimSecondsPerSecond: s.rate };
+}
+
+/** The mission window as results report it. `startUtc` is the planned start; the analysed window begins at `effectiveStartUtc` (planned start plus delay). */
+function windowSummary(s: Readonly<AppState>) {
+  const start = effectiveStartMs(s), end = start + s.windowDurationH * 3_600_000;
+  return {
+    startUtc: isoUtc(s.windowStartMs),
+    durationH: s.windowDurationH,
+    delayH: s.delayH,
+    effectiveStartUtc: isoUtc(start),
+    endUtc: isoUtc(end),
+    clockInsideWindow: s.timeMs >= start && s.timeMs <= end,
+  };
 }
 
 export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
@@ -103,6 +124,21 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
   };
 
   const viewResult = () => ({ view: state().view, site: siteSummary(state().site, ctx.landings()) });
+
+  const selectedLanding = (): Landing | undefined => {
+    const site = state().site;
+    return site?.kind === 'landing' ? ctx.landings().find((l) => l.id === site.id) : undefined;
+  };
+
+  const checkTime = (ms: number, what: string) => {
+    if (!Number.isFinite(ms) || ms < MIN_TIME_MS || ms > MAX_TIME_MS) throw new ActionError(`${what} must be between ${isoUtc(MIN_TIME_MS)} and ${isoUtc(MAX_TIME_MS)} (the span the ephemeris is validated for).`);
+    return ms;
+  };
+
+  const requireAnalysis = (): AnalysisStore => {
+    if (!ctx.analysis) throw new ActionError('The site analysis is not running in this session.');
+    return ctx.analysis;
+  };
 
   const filterResult = () => {
     const all = ctx.landings();
@@ -184,39 +220,75 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       },
     }),
 
+    defineAction<{ type: EventType; which?: 'next' | 'previous' }, unknown>({
+      name: 'jumpToEvent',
+      title: 'Jump to sunrise / sunset / Earthrise / Earthset',
+      description:
+        'Moves the clock to the next (or previous) sunrise, sunset, Earthrise or Earthset at the selected site and pauses it. The times come from the site analysis, so they are measured against the terrain skyline, and only events inside the analysed mission window can be reached (lengthen the window with setMissionWindow to look further). Waits for the analysis if it is still running.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', description: 'Event type.', enum: EVENT_TYPES },
+          which: { type: 'string', description: 'next (default) or previous, relative to the current simulated time.', enum: ['next', 'previous'] },
+        },
+        required: ['type'],
+      },
+      run: async ({ type, which = 'next' }) => {
+        const st = await requireAnalysis().settled('current');
+        if (st.state === 'idle') throw new ActionError('No site is selected. Select a landing site or drop a pin first.');
+        if (st.state !== 'ready') throw new ActionError(st.state === 'error' ? `The site analysis is not available: ${st.error}` : 'The site analysis has not finished. Ask again in a moment.');
+        const hit = findEvent(st.value.events, type, which, state().timeMs);
+        if (!hit) {
+          const from = isoUtc(st.scenario.startMs), to = isoUtc(st.scenario.startMs + st.scenario.durationH * 3_600_000);
+          throw new ActionError(`There is no ${which} ${type} ${which === 'next' ? 'after' : 'before'} the simulated time inside the analysed mission window (${from} to ${to}).`);
+        }
+        store.set({ timeMs: hit.timeMs, playing: false });
+        return { event: type, timeUtc: isoUtc(hit.timeMs), azDeg: rounded(hit.azDeg, 1), playing: false };
+      },
+    }),
+
     // ---------- site and view ----------
-    defineAction<{ site: string; surface?: boolean }, unknown>({
+    defineAction<{ site: string; surface?: boolean; atLanding?: boolean; fly?: boolean }, unknown>({
       name: 'selectSite',
       title: 'Select landing site',
       description:
-        'Selects a catalogued landing site by id or name (e.g. "apollo-11", "Apollo 11", "Chang\'e 4") and flies the globe to it. With `surface: true` it then steps down into the surface view. Custom coordinates use dropPin instead.',
+        'Selects a catalogued landing site by id or name (e.g. "apollo-11", "Apollo 11", "Chang\'e 4") and flies the globe to it. ' +
+        'With `atLanding: true` it also lines everything up with that mission: the clock and the mission window start are set to the touchdown time (UTC), any arrival delay is cleared, sunlight is real and the clock is paused, so "IM-2 at its landing" is one step. ' +
+        'With `surface: true` it then steps down into the surface view. `fly: false` keeps the camera where it is. Custom coordinates use dropPin instead.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
           site: { type: 'string', description: 'Landing id or name.' },
+          atLanding: { type: 'boolean', description: 'Also set the clock and the mission window start to the touchdown time and clear the arrival delay.' },
           surface: { type: 'boolean', description: 'Enter the surface view once the camera arrives.' },
+          fly: { type: 'boolean', description: 'Fly the globe to the site (default true).' },
         },
         required: ['site'],
       },
-      run: async ({ site, surface }) => {
+      run: async ({ site, surface, atLanding, fly }) => {
         const all = ctx.landings();
         const pinned = /^pin:(-?[\d.]+),(-?[\d.]+)$/.exec(site.trim());
         let ref: SiteRef;
+        let landing: Landing | undefined;
         if (pinned) {
           const lat = Number(pinned[1]), lon = wrapLon(Number(pinned[2]));
           if (!(Math.abs(lat) <= 90)) throw new ActionError('Pin latitude must be within -90..90.');
           ref = { id: pinId(lat, lon), name: `Pin ${formatCoords(lat, lon)}`, kind: 'custom', lat, lon };
         } else {
-          const l = findLanding(site, all);
-          if (!l) throw new ActionError(`No catalogued landing matches "${site}". Known sites: ${all.map((x) => x.name).join(', ')}.`);
-          ref = landingSite(l);
+          landing = findLanding(site, all);
+          if (!landing) throw new ActionError(`No catalogued landing matches "${site}". Known sites: ${all.map((x) => x.name).join(', ')}.`);
+          ref = landingSite(landing);
         }
+        if (atLanding && !landing) throw new ActionError('`atLanding` needs a catalogued landing: a pin has no landing date. Use setMissionWindow and setTime for a pin.');
+        const touchdown = atLanding ? checkTime(landingDate(landing!).getTime(), 'The landing time') : null;
         if (state().view === 'surface' && state().site?.id !== ref.id) store.set({ view: 'globe' });
         store.set({ site: ref });
-        flyTo(ref.lat, ref.lon, SITE_ALTITUDE_KM);
+        if (touchdown !== null) store.set({ timeMs: touchdown, windowStartMs: touchdown, delayH: 0, playing: false, lightMode: 'real' });
+        if (fly !== false) flyTo(ref.lat, ref.lon, SITE_ALTITUDE_KM);
         if (surface) await enterSurface();
-        return viewResult();
+        return { ...viewResult(), ...(touchdown !== null && { ...timeSummary(state()), missionWindow: windowSummary(state()), lightMode: state().lightMode }) };
       },
     }),
     defineAction<{ lat: number; lon: number; fly?: boolean }, unknown>({
@@ -333,31 +405,46 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         return { mastHeightM: state().mastHeightM };
       },
     }),
-    defineAction<{ startUtc?: string; durationH?: number }, unknown>({
+    defineAction<{ startUtc?: string; durationH?: number; moveClock?: boolean }, unknown>({
       name: 'setMissionWindow',
       title: 'Set mission window',
-      description: 'Sets the mission window evaluated by the analysis: `startUtc` (arrival, "YYYY-MM-DDTHH:MMZ", or "now" for the current simulated time) and/or `durationH` in hours.',
+      description:
+        'Sets the mission window the analysis evaluates (it starts at arrival). `startUtc`: "YYYY-MM-DDTHH:MMZ", or "now" for the current simulated time, or "landing" for the touchdown time of the selected catalogued landing. `durationH`: length in hours. ' +
+        '`moveClock: true` also sets the simulated clock to the start of the window (planned start plus any arrival delay), so the views show the moment of arrival. Without it the clock stays where it is, which may be outside the new window.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
-          startUtc: { type: 'string', description: 'Window start (UTC), or "now" for the simulated time.' },
+          startUtc: { type: 'string', description: 'Planned window start (UTC), "now" for the simulated time, or "landing" for the selected landing\'s touchdown.' },
           durationH: { type: 'number', description: 'Window length, hours.', minimum: 1, maximum: 8760 },
+          moveClock: { type: 'boolean', description: 'Also set the simulated clock to the start of the window.' },
         },
       },
-      run: ({ startUtc, durationH }) => {
-        if (startUtc === undefined && durationH === undefined) throw new ActionError('Give `startUtc` and/or `durationH`.');
+      run: ({ startUtc, durationH, moveClock }) => {
+        if (startUtc === undefined && durationH === undefined && !moveClock) throw new ActionError('Give `startUtc` and/or `durationH` (or `moveClock: true` to bring the clock to the window start).');
         let start = state().windowStartMs;
         if (startUtc !== undefined) {
-          try {
-            start = startUtc.trim().toLowerCase() === 'now' ? state().timeMs : parseUtc(startUtc);
-          } catch (err) {
-            throw new ActionError((err as Error).message);
+          const word = startUtc.trim().toLowerCase();
+          if (word === 'now') start = state().timeMs;
+          else if (word === 'landing') {
+            const l = selectedLanding();
+            if (!l) throw new ActionError('"landing" needs a selected catalogued landing site (selectSite). A pin has no landing date.');
+            start = landingDate(l).getTime();
+          } else {
+            try {
+              start = parseUtc(startUtc);
+            } catch (err) {
+              throw new ActionError((err as Error).message);
+            }
           }
-          if (start < MIN_TIME_MS || start > MAX_TIME_MS) throw new ActionError(`The window must start between ${isoUtc(MIN_TIME_MS)} and ${isoUtc(MAX_TIME_MS)}.`);
+          checkTime(start, 'The window start');
         }
+        const next = { windowStartMs: start, windowDurationH: durationH ?? state().windowDurationH, delayH: state().delayH };
+        if (moveClock) checkTime(effectiveStartMs(next), 'The window start plus the arrival delay');
         store.set({ windowStartMs: start, ...(durationH !== undefined && { windowDurationH: durationH }) });
-        return { windowStartUtc: isoUtc(state().windowStartMs), windowDurationH: state().windowDurationH, delayH: state().delayH };
+        if (moveClock) store.set({ timeMs: effectiveStartMs(state()) });
+        const w = windowSummary(state());
+        return { windowStartUtc: w.startUtc, windowDurationH: w.durationH, delayH: w.delayH, effectiveStartUtc: w.effectiveStartUtc, windowEndUtc: w.endUtc, timeUtc: isoUtc(state().timeMs), clockInsideWindow: w.clockInsideWindow };
       },
     }),
     defineAction<{ hours: number }, unknown>({
@@ -368,7 +455,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       params: { type: 'object', properties: { hours: { type: 'number', description: 'Delay, hours.', minimum: 0, maximum: 720 } }, required: ['hours'] },
       run: ({ hours }) => {
         store.set({ delayH: hours });
-        return { delayH: state().delayH, effectiveStartUtc: isoUtc(state().windowStartMs + hours * 3_600_000) };
+        const w = windowSummary(state());
+        return { delayH: w.delayH, plannedStartUtc: w.startUtc, effectiveStartUtc: w.effectiveStartUtc, clockInsideWindow: w.clockInsideWindow };
       },
     }),
     defineAction<{ degrees: number }, unknown>({
@@ -499,7 +587,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     defineAction<{ slot: 'A' | 'B'; label?: string }, unknown>({
       name: 'saveScenario',
       title: 'Save scenario for comparison',
-      description: 'Saves the current scenario (site, mission window incl. delay, mast height) into comparison slot A or B.',
+      description:
+        'Saves the current scenario (site, mission window including any arrival delay, mast height) into comparison slot A or B. Without a `label` the two slots are named after their sites, plus what differs between them when the site is the same (arrival, mast height, window length). Returns immediately; `compare` waits for the analyses.',
       effect: 'command',
       params: {
         type: 'object',
@@ -512,22 +601,43 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       run: ({ slot, label }) => {
         requireSite();
         const sc = scenarioFromState(state(), label)!;
-        store.set(slot === 'A' ? { compareA: sc } : { compareB: sc });
-        return { slot, scenario: { label: sc.label, siteId: sc.site.id, startUtc: isoUtc(sc.startMs), durationH: sc.durationH, mastHeightM: sc.mastHeightM } };
+        // Name both sides so they can be told apart ("... (earlier arrival)" / "... (arrival 24 h later)").
+        const [a, b] = slot === 'A' ? labelPair(sc, state().compareB) : labelPair(state().compareA, sc);
+        store.set({ compareA: a, compareB: b });
+        const saved = (slot === 'A' ? a : b)!;
+        return {
+          slot,
+          scenario: { label: saved.label, siteId: saved.site.id, startUtc: isoUtc(saved.startMs), durationH: saved.durationH, mastHeightM: saved.mastHeightM },
+          labels: { A: a?.label ?? null, B: b?.label ?? null },
+        };
       },
     }),
     defineAction({
       name: 'compare',
       title: 'Compare A and B',
-      description: 'Opens the side-by-side comparison of the scenarios saved in slots A and B (use saveScenario first).',
+      description:
+        'Opens the side-by-side comparison of the scenarios saved in slots A and B (use saveScenario first), waits until both analyses have finished, and returns both sides with `diff`: B minus A for illumination (percentage points), longest darkness (h), Earth line of sight (percentage points), longest Earth gap (h) and slope (deg), plus the headline differences in words.',
       effect: 'command',
       params: NO_PARAMS,
-      run: () => {
+      run: async () => {
         const s = state();
         const missing = [!s.compareA && 'A', !s.compareB && 'B'].filter(Boolean);
         if (missing.length) throw new ActionError(`Save a scenario in slot ${missing.join(' and ')} first (saveScenario).`);
-        store.set({ comparing: true });
-        return { comparing: true, A: s.compareA!.label, B: s.compareB!.label, analysisA: ctx.analysis?.summary('A') ?? null, analysisB: ctx.analysis?.summary('B') ?? null };
+        const [a, b] = labelPair(s.compareA, s.compareB);
+        store.set({ compareA: a, compareB: b, comparing: true });
+        const result = ctx.analysis ? reportComparison(await ctx.analysis.settledComparison()) : { diff: null, error: 'The site analysis is not running in this session.' };
+        // Read the state again: the wait can take seconds and the slots may have been renamed or closed meanwhile.
+        const now = state();
+        return {
+          comparing: now.comparing,
+          A: now.compareA?.label ?? null,
+          B: now.compareB?.label ?? null,
+          scenarioA: now.compareA ? scenarioFacts(now.compareA) : null,
+          scenarioB: now.compareB ? scenarioFacts(now.compareB) : null,
+          analysisA: ctx.analysis?.summary('A') ?? null,
+          analysisB: ctx.analysis?.summary('B') ?? null,
+          ...result,
+        };
       },
     }),
     defineAction({
@@ -543,11 +653,21 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     }),
 
     // ---------- query ----------
+    defineAction<{ slot?: AnalysisSlot }, unknown>({
+      name: 'getAnalysis',
+      title: 'Read the site analysis',
+      description:
+        'Waits until the analysis of the scenario on screen (default), or of comparison slot "A" or "B", has finished, then returns it: window metrics (illumination %, longest darkness, Earth line of sight %, longest Earth gap), ground slope, where the Sun and Earth are at the simulated time (azimuth, elevation, clearance above the terrain skyline, the terrain that forms the skyline there), the next sunrise / sunset / Earthrise / Earthset in the window, darkness and Earth-gap intervals, the user\'s requirements checked against it, data sources, assumptions and warnings. ' +
+        'Use this after selecting a site or changing the window, mast or delay. `state` is "ready", or "error" / "idle" with the reason in `error`. Earth figures are geometric line of sight, not a radio link.',
+      effect: 'query',
+      params: { type: 'object', properties: { slot: { type: 'string', description: 'Which analysis: the scenario on screen, or a saved comparison slot.', enum: ['current', 'A', 'B'] } } },
+      run: async ({ slot = 'current' }) => reportAnalysis(slot, await requireAnalysis().settled(slot), state(), ctx.science),
+    }),
     defineAction({
       name: 'getState',
       title: 'Current state',
       description:
-        'Reads what is on screen now: view, simulated time (UTC), site, globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots and the analysis status of the current scenario.',
+        'Reads what is on screen now, without waiting: view, simulated time (UTC), site, globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up) and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
       effect: 'query',
       params: NO_PARAMS,
       run: () => {
@@ -560,7 +680,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           site: siteSummary(s.site, ctx.landings()),
           globeCenter: { latDeg: s.globeCenter.lat, lonDegEast: s.globeCenter.lon, altitudeKm: s.globeCenter.altitudeKm },
           look: s.view === 'surface' ? s.look : null,
-          missionWindow: { startUtc: isoUtc(s.windowStartMs), durationH: s.windowDurationH, delayH: s.delayH },
+          missionWindow: windowSummary(s),
           mastHeightM: s.mastHeightM,
           slopeLimitDeg: s.slopeLimitDeg,
           maxEarthGapH: s.maxEarthGapH,
@@ -570,6 +690,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           showFlags: s.showFlags,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },
+          globeDisplay: ctx.display?.() ?? null,
           analysis: ctx.analysis?.summary('current') ?? null,
         };
       },

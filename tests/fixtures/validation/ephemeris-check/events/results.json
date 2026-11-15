@@ -1,0 +1,249 @@
+{
+ "blueGhostSunset": {
+  "published": "night began around 18:15-18:35 UTC",
+  "rows": [
+   {
+    "mastM": 0.5,
+    "reference": {
+     "cut": "2025-03-16T18:09:45Z",
+     "half": "2025-03-16T18:42:57Z",
+     "lastLimb": "2025-03-16T19:16:07Z",
+     "sunAzAtLastLimb": 269.83789909626444,
+     "skylineThereDeg": 0.7034917900520429,
+     "formedAtM": 767.7630091042488,
+     "heightM": -3641.083616074749,
+     "groundM": -3651.160400390625
+    },
+    "apps": {
+     "before": {
+      "cut": "2025-03-16T18:11:00Z",
+      "half": "2025-03-16T18:44:00Z",
+      "lastLimb": "2025-03-16T19:16:26Z",
+      "lastLimbMinusReferenceMin": 0.3203125
+     },
+     "now": {
+      "cut": "2025-03-16T18:11:00Z",
+      "half": "2025-03-16T18:44:00Z",
+      "lastLimb": "2025-03-16T19:16:19Z",
+      "lastLimbMinusReferenceMin": 0.1953125
+     }
+    }
+   },
+   {
+    "mastM": 2.0,
+    "reference": {
+     "cut": "2025-03-16T18:23:40Z",
+     "half": "2025-03-16T18:56:53Z",
+     "lastLimb": "2025-03-16T19:30:03Z",
+     "sunAzAtLastLimb": 269.87560743689323,
+     "skylineThereDeg": 0.592237941449543,
+     "formedAtM": 767.7630091042488,
+     "heightM": -3641.0714831033124,
+     "groundM": -3651.160400390625
+    },
+    "apps": {
+     "before": {
+      "cut": "2025-03-16T18:25:00Z",
+      "half": "2025-03-16T18:58:00Z",
+      "lastLimb": "2025-03-16T19:30:19Z",
+      "lastLimbMinusReferenceMin": 0.2578125
+     },
+     "now": {
+      "cut": "2025-03-16T18:25:00Z",
+      "half": "2025-03-16T18:58:00Z",
+      "lastLimb": "2025-03-16T19:30:11Z",
+      "lastLimbMinusReferenceMin": 0.1328125
+     }
+    }
+   },
+   {
+    "mastM": 5.0,
+    "reference": {
+     "cut": "2025-03-16T18:51:31Z",
+     "half": "2025-03-16T19:24:45Z",
+     "lastLimb": "2025-03-16T19:57:57Z",
+     "sunAzAtLastLimb": 269.9510638595001,
+     "skylineThereDeg": 0.3688088104001537,
+     "formedAtM": 767.7630091042488,
+     "heightM": -3641.0593711436322,
+     "groundM": -3651.160400390625
+    },
+    "apps": {
+     "before": {
+      "cut": "2025-03-16T18:53:00Z",
+      "half": "2025-03-16T19:26:00Z",
+      "lastLimb": "2025-03-16T19:58:11Z",
+      "lastLimbMinusReferenceMin": 0.2421875
+     },
+     "now": {
+      "cut": "2025-03-16T18:53:00Z",
+      "half": "2025-03-16T19:25:00Z",
+      "lastLimb": "2025-03-16T19:58:04Z",
+      "lastLimbMinusReferenceMin": 0.1171875
+     }
+    }
+   }
+  ]
+ },
+ "blueGhostEclipse": {
+  "published": {
+   "start": "05:00",
+   "totalityStart": "06:18",
+   "sunAboutToEmerge": "08:30",
+   "end": "09:52",
+   "assumedZone": "CDT (UTC-5)"
+  },
+  "reference": {
+   "C1": "2025-03-14T05:00:43Z",
+   "C4": "2025-03-14T09:51:10Z",
+   "C2": "2025-03-14T06:17:24Z",
+   "C3": "2025-03-14T08:34:25Z"
+  },
+  "apps": {
+   "before": {
+    "firstPartialSample": "2025-03-14T05:01:00Z",
+    "darkStart": "2025-03-14T06:17:19Z",
+    "darkEnd": "2025-03-14T08:34:19Z",
+    "lastPartialSample": "2025-03-14T09:51:00Z",
+    "darkStartMinusReferenceS": -5.15625,
+    "darkEndMinusReferenceS": -6.09375
+   },
+   "now": {
+    "firstPartialSample": "2025-03-14T05:01:00Z",
+    "darkStart": "2025-03-14T06:17:19Z",
+    "darkEnd": "2025-03-14T08:34:19Z",
+    "lastPartialSample": "2025-03-14T09:51:00Z",
+    "darkStartMinusReferenceS": -5.15625,
+    "darkEndMinusReferenceS": -6.09375
+   }
+  }
+ },
+ "chandrayaan3": {
+  "published": {
+   "sunset": "2023-09-04",
+   "nextSunrise": "2023-09-22"
+  },
+  "reference": {
+   "cut": "2023-09-04T04:53:35Z",
+   "sunset": "2023-09-04T08:02:23Z",
+   "sunrise": "2023-09-19T23:57:08Z",
+   "wholeDiscClear": "2023-09-20T02:42:19Z"
+  },
+  "apps": {
+   "before": {
+    "sunset": "2023-09-04T08:09:01Z",
+    "sunrise": "2023-09-19T23:56:31Z",
+    "sunsetMinusReferenceMin": 6.6328125,
+    "sunriseMinusReferenceMin": -0.6171875
+   },
+   "now": {
+    "sunset": "2023-09-04T08:02:08Z",
+    "sunrise": "2023-09-19T23:56:40Z",
+    "sunsetMinusReferenceMin": -0.2421875,
+    "sunriseMinusReferenceMin": -0.4609375
+   }
+  }
+ },
+ "apollo15": {
+  "reference": {
+   "sunset": "1971-08-13T11:36:55Z",
+   "eclipse": {
+    "C1": "1971-08-06T17:30:32Z",
+    "C4": "1971-08-06T21:59:08Z",
+    "C2": "1971-08-06T18:26:23Z",
+    "C3": "1971-08-06T21:03:21Z"
+   }
+  },
+  "apps": {
+   "before": {
+    "sunset": "1971-08-13T11:37:01Z",
+    "sunsetMinusReferenceMin": 0.1015625,
+    "darkStart": "1971-08-06T18:26:23Z",
+    "darkEnd": "1971-08-06T21:03:25Z"
+   },
+   "now": {
+    "sunset": "1971-08-13T11:36:42Z",
+    "sunsetMinusReferenceMin": -0.2109375,
+    "darkStart": "1971-08-06T18:26:23Z",
+    "darkEnd": "1971-08-06T21:03:25Z"
+   }
+  }
+ },
+ "bundledWindows": {
+  "reference": {
+   "im2Sunset": "2025-03-19T23:17:13Z",
+   "im2Earthset": "2025-03-19T04:07:45Z",
+   "im2Eclipse": {
+    "C1": "2025-03-14T04:23:34Z",
+    "C4": "2025-03-14T09:28:26Z",
+    "C2": "2025-03-14T05:33:04Z",
+    "C3": "2025-03-14T08:18:52Z"
+   }
+  },
+  "apps": {
+   "before": {
+    "commit": "375f816",
+    "source": "horizons",
+    "blueGhostSunsetMinusReferenceS": 8.25,
+    "im2EarthsetMinusReferenceMin": 3.7578125,
+    "im2SunsetMinusReferenceMin": 0.2421875,
+    "im2Metrics": {
+     "illuminationPct": 92.47300783821314,
+     "sunAnyPct": 93.7682136656746,
+     "earthVisiblePct": 88.90632750496032
+    }
+   },
+   "now": {
+    "commit": "32ef35a",
+    "source": "horizons",
+    "blueGhostSunsetMinusReferenceS": 0.75,
+    "im2EarthsetMinusReferenceMin": 1.8828125,
+    "im2SunsetMinusReferenceMin": -0.0703125,
+    "im2Metrics": {
+     "illuminationPct": 92.47118980378478,
+     "sunAnyPct": 93.76666356646825,
+     "earthVisiblePct": 88.89702690972223
+    }
+   }
+  }
+ },
+ "alsj": {
+  "rows": 43,
+  "apps": {
+   "before": {
+    "commit": "375f816",
+    "sunAltDeg": 0.06475553151637747,
+    "sunAzArcDeg": 0.4004304660464705,
+    "earthAltDeg": 0.2607149635873256,
+    "earthAzArcDeg": 0.04611732715601364,
+    "vsSpiceSunAltDeg": 0.0021133572820986046,
+    "vsSpiceSunAzArcDeg": 0.0032791874486708325,
+    "vsSpiceEarthAltDeg": 0.001888745236108491,
+    "vsSpiceEarthAzArcDeg": 0.003378310025593903
+   },
+   "now": {
+    "commit": "32ef35a",
+    "sunAltDeg": 0.06475553151637747,
+    "sunAzArcDeg": 0.4004304660464705,
+    "earthAltDeg": 0.2607149635873256,
+    "earthAzArcDeg": 0.04611732715601364,
+    "vsSpiceSunAltDeg": 0.0021133572820986046,
+    "vsSpiceSunAzArcDeg": 0.0032791874486708325,
+    "vsSpiceEarthAltDeg": 0.001888745236108491,
+    "vsSpiceEarthAzArcDeg": 0.003378310025593903
+   }
+  },
+  "spiceSiteMinusPublished": {
+   "sunAltDeg": 0.06594003657290415,
+   "sunAzArcDeg": 0.40314275740915345,
+   "earthAltDeg": 0.2613225177425633,
+   "earthAzArcDeg": 0.04425119984186835
+  },
+  "spiceCentreMinusPublished": {
+   "sunAltDeg": 0.06657644243616012,
+   "sunAzArcDeg": 0.40314277130428366,
+   "earthAltDeg": 0.07484166072750043,
+   "earthAzArcDeg": 0.04425141023317912
+  }
+ }
+}

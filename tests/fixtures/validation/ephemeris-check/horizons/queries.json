@@ -1,0 +1,13 @@
+{
+ "note": "Input for fetch_horizons_series.mjs: hourly JPL Horizons Sun/Earth series (airless, topocentric) used as the independent ephemeris of checks 2 and 4. altKm = terrain height read by lib/lunyx_dem.py + the 2 m mast, rounded to 1 m.",
+ "series": [
+  { "id": "blue-ghost-1.2025-03",     "site": { "lat": 18.562,   "lon": 61.81,   "altKm": -3.649 }, "start": "2025-03-02T08:00:00Z", "stop": "2025-03-17T12:00:00Z", "stepMinutes": 60 },
+  { "id": "chandrayaan-3.2023-08-09", "site": { "lat": -69.3741, "lon": 32.32,   "altKm": 0.531 },  "start": "2023-08-23T12:00:00Z", "stop": "2023-09-25T12:00:00Z", "stepMinutes": 60 },
+  { "id": "apollo-15.1971-07-08",     "site": { "lat": 26.13239, "lon": 3.6333,  "altKm": -1.925 }, "start": "1971-07-30T22:00:00Z", "stop": "1971-08-14T12:00:00Z", "stepMinutes": 60 },
+  { "id": "im-2.2025-03-04",          "site": { "lat": -84.79,   "lon": 29.2,    "altKm": 5.323 },  "start": "2025-03-01T00:00:00Z", "stop": "2025-04-30T00:00:00Z", "stepMinutes": 60 },
+  { "id": "shackleton-rim.2025-03-04",   "site": { "lat": -89.78, "lon": -155.73, "altKm": 1.732 }, "start": "2025-03-01T00:00:00Z", "stop": "2025-04-30T00:00:00Z", "stepMinutes": 60 },
+  { "id": "connecting-ridge.2025-03-04", "site": { "lat": -89.45, "lon": -137.2,  "altKm": 1.958 }, "start": "2025-03-01T00:00:00Z", "stop": "2025-04-30T00:00:00Z", "stepMinutes": 60 },
+  { "id": "limb-east.2025-03-04",     "site": { "lat": 0,        "lon": 90,      "altKm": -3.808 }, "start": "2025-03-01T00:00:00Z", "stop": "2025-04-30T00:00:00Z", "stepMinutes": 60 },
+  { "id": "limb-west.2025-03-04",     "site": { "lat": -35,      "lon": -88,     "altKm": 1.170 },  "start": "2025-03-01T00:00:00Z", "stop": "2025-04-30T00:00:00Z", "stepMinutes": 60 }
+ ]
+}

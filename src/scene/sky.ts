@@ -36,18 +36,24 @@ const LUNAR = /* glsl */ `
 	float lunar = min( 2.0 * dotNL / ( dotNL + lunarNV + 1e-3 ), 1.35 );
 	vec3 irradiance = pow( lunar, 0.75 ) * directLight.color;`;
 
-/** Swaps a standard material's diffuse falloff for a Moon-like one. */
-export function applyLunarShading(material: Material): void {
+/**
+ * Rewrites a standard material's fragment shader so its diffuse falloff is Moon-like.
+ * For materials that compose several shader patches; returns the source unchanged (with a
+ * warning) if three.js no longer contains the line this replaces.
+ */
+export function lunarFragmentShader(fragmentShader: string): string {
   const chunk = ShaderChunk.lights_physical_pars_fragment;
   if (!chunk.includes(LAMBERT)) {
     console.warn('Lunar shading not applied: three.js shader source has changed.');
-    return;
+    return fragmentShader;
   }
+  return fragmentShader.replace('#include <lights_physical_pars_fragment>', chunk.replace(LAMBERT, LUNAR));
+}
+
+/** Swaps a standard material's diffuse falloff for a Moon-like one. */
+export function applyLunarShading(material: Material): void {
   material.onBeforeCompile = (shader) => {
-    shader.fragmentShader = shader.fragmentShader.replace(
-      '#include <lights_physical_pars_fragment>',
-      chunk.replace(LAMBERT, LUNAR),
-    );
+    shader.fragmentShader = lunarFragmentShader(shader.fragmentShader);
   };
   material.customProgramCacheKey = () => 'lunar-shading';
 }

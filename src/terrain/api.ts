@@ -5,9 +5,9 @@
 // Node/vitest (files are read from public/). Decoded grids are cached per JavaScript
 // realm, so calling loadTerrainFor inside a worker avoids copying the large grids across.
 import type { SiteRef } from '../core/types';
-import type { CoverageRegion, HeightGridDescriptor, HeightProvenance, HeightSource, TerrainStack } from './types';
-import { decodeLxg, type LxgGrid } from './lxg';
-import { localOffset, polarXY, surfaceDistanceM } from './geo';
+import type { CoverageRegion, HeightGridDescriptor, HeightProvenance, HeightSource, TerrainSeam, TerrainStack } from './types';
+import { decodeLxg, type LxgArray, type LxgGrid } from './lxg';
+import { localOffset, offsetPoint, polarXY, surfaceDistanceM } from './geo';
 import { readTerrainFile, readTerrainJson, siteUrl, TerrainFileMissing } from './reader';
 import { createSource } from './sources';
 
@@ -140,7 +140,8 @@ export async function demLayers(): Promise<DemLayerInfo[]> {
   return (await demIndex())?.layers ?? [];
 }
 
-function descriptorFromGrid(g: LxgGrid, data: Int16Array | Float32Array): HeightGridDescriptor {
+function descriptorFromGrid(g: LxgGrid, data: LxgArray): HeightGridDescriptor {
+  if (data instanceof Uint8Array) throw new Error('grid header: a height grid cannot be 8-bit');
   const num = (key: string): number => {
     const v = g[key];
     if (typeof v !== 'number' || !Number.isFinite(v)) throw new Error(`grid header: ${key} is missing`);
@@ -444,7 +445,80 @@ export async function loadTerrainFor(site: SiteRef, options: LoadTerrainOptions 
     const anyReach = Math.max(...here.map((s) => reachFrom(s, site.lat, site.lon)));
     notes.push(`The whole-Moon grid is not installed, so terrain farther than about ${km(anyReach)} from the site is not taken into account.`);
   }
-  return { sources, notes };
+  // 5. Where one grid hands over to the next: how well they agree there, measured for this site.
+  const seams = measureSeams(sources, site);
+  if (seams.length) {
+    const m = (v: number): string => `${v > 0 ? '+' : ''}${Math.abs(v) >= 99.5 ? v.toFixed(0) : v.toFixed(1)}`;
+    notes.push(
+      `Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: ` +
+        seams.map((x) => `${m(x.minM)} to ${m(x.maxM)} m (${x.rmsM >= 99.5 ? x.rmsM.toFixed(0) : x.rmsM.toFixed(1)} m RMS) at ${km(x.distanceM)}, where the ${x.inner} ends`).join('; ') +
+        `. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is ${seams.map((x) => `${x.degPerMetre.toFixed(3)}° at ${km(x.distanceM)}`).join(', ')}.`,
+    );
+  }
+  return { sources, notes, ...(seams.length ? { seams } : {}) };
+}
+
+/** Short name of a grid for the seam sentence: "3 m model", "60 m window", "whole-Moon grid". */
+function shortName(s: HeightSource): string {
+  const d = s.descriptor;
+  if (d.kind === 'equirect') return 'whole-Moon grid';
+  if (d.kind === 'polar') return `${res(d.metresPerPx)} polar layer`;
+  return /NAC/.test(s.name) ? `${res(d.spacingM)} model` : `${res(d.spacingM)} window`;
+}
+
+/**
+ * Along the edge of each grid centred on the site: where that grid is the one in use just
+ * inside the edge (the first source of the stack with a value there), compares it with the
+ * source in use just outside. Edges that are never a hand-over (a finer layer covers both
+ * sides) are left out.
+ */
+function measureSeams(sources: HeightSource[], site: { lat: number; lon: number }): TerrainSeam[] {
+  /** The source the stack uses at a point, and its height there. */
+  const inUse = (lat: number, lon: number): { source: HeightSource; h: number } | null => {
+    for (const source of sources) {
+      const h = source.sample(lat, lon);
+      if (!Number.isNaN(h)) return { source, h };
+    }
+    return null;
+  };
+  const seams: TerrainSeam[] = [];
+  for (const inner of sources) {
+    const d = inner.descriptor;
+    if (d.kind !== 'local' || surfaceDistanceM(d.lat0, d.lon0, site.lat, site.lon) > 1) continue;
+    const half = ((d.n - 1) / 2) * d.spacingM;
+    const outerNames = new Map<string, number>();
+    let min = Infinity, max = -Infinity, sum2 = 0, n = 0;
+    for (let k = 0; k < d.n - 1; k++) {
+      const t = -half + k * d.spacingM;
+      for (const [east, north] of [[t, -half], [half, t], [-t, half], [-half, -t]]) {
+        // A hair inside the edge and a hair outside it: the same ground to within a few centimetres.
+        const pIn = offsetPoint(d.lat0, d.lon0, east * 0.9999, north * 0.9999);
+        const pOut = offsetPoint(d.lat0, d.lon0, east * 1.0001, north * 1.0001);
+        const a = inUse(pIn.lat, pIn.lon);
+        if (a?.source !== inner) continue;
+        const b = inUse(pOut.lat, pOut.lon);
+        if (!b) continue;
+        const name = shortName(b.source);
+        outerNames.set(name, (outerNames.get(name) ?? 0) + 1);
+        const diff = b.h - a.h;
+        if (diff < min) min = diff;
+        if (diff > max) max = diff;
+        sum2 += diff * diff;
+        n++;
+      }
+    }
+    if (n < d.n) continue; // this edge is a hand-over along less than a quarter of its length: not worth a line
+    seams.push({
+      inner: shortName(inner),
+      outer: [...outerNames].sort((x, y) => y[1] - x[1]).map(([name]) => name).join(' / '),
+      distanceM: half,
+      minM: Math.round(min * 10) / 10,
+      maxM: Math.round(max * 10) / 10,
+      rmsM: Math.round(Math.sqrt(sum2 / n) * 10) / 10,
+      degPerMetre: Math.atan(1 / half) * (180 / Math.PI),
+    });
+  }
+  return seams.sort((a, b) => a.distanceM - b.distanceM);
 }
 
 // ---------------------------------------------------------------- coverage

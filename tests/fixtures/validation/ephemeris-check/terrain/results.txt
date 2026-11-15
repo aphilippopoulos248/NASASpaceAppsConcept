@@ -1,0 +1,13 @@
+Bundled south-polar layers against the PDS files they were made from (2x2 block means; 64 bundled samples per place)
+  LOLA south pole, 87.5S square at 40 m     320 samples at 5 places: worst difference 0.25 m (rounding allows 0.25)  ok   [control: shifted one sample 31.4 m, mirrored 3711.4 m]
+  LOLA south pole, 85S square at 80 m       448 samples at 7 places: worst difference 0.50 m (rounding allows 0.50)  ok   [control: shifted one sample 57.9 m, mirrored 3753.9 m]
+  LOLA south pole, 80S square at 160 m      512 samples at 8 places: worst difference 0.50 m (rounding allows 0.50)  ok   [control: shifted one sample 111.9 m, mirrored 3747.4 m]
+
+Bundled whole-Moon grid against PDS LDEM_16 (whole rows; the bundle starts at 180 W, the source at 0 E; bundle rounded to 1 m)
+  row at latitude  88.97: 5760 samples, worst difference 0.50 m (rounding allows 0.50)  ok   [control: without the 180 deg shift 1324 m]
+  row at latitude  26.09: 5760 samples, worst difference 0.50 m (rounding allows 0.50)  ok   [control: without the 180 deg shift 9509 m]
+  row at latitude   0.72: 5760 samples, worst difference 0.50 m (rounding allows 0.50)  ok   [control: without the 180 deg shift 10313 m]
+  row at latitude -45.41: 5760 samples, worst difference 0.50 m (rounding allows 0.50)  ok   [control: without the 180 deg shift 6578 m]
+  row at latitude -84.78: 5760 samples, worst difference 0.50 m (rounding allows 0.50)  ok   [control: without the 180 deg shift 10047 m]
+
+PASS: every bundled sample checked equals its source within rounding.

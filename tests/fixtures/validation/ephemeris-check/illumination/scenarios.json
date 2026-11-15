@@ -1,0 +1,182 @@
+[
+ {
+  "id": "im-2.m0",
+  "siteKey": "im-2",
+  "site": {
+   "id": "im-2",
+   "name": "IM-2",
+   "kind": "landing",
+   "lat": -84.79,
+   "lon": 29.2
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "im-2.m2",
+  "siteKey": "im-2",
+  "site": {
+   "id": "im-2",
+   "name": "IM-2",
+   "kind": "landing",
+   "lat": -84.79,
+   "lon": 29.2
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "shackleton-floor.m0",
+  "siteKey": "shackleton-floor",
+  "site": {
+   "id": "pin:-89.67000,129.78000",
+   "name": "Shackleton floor",
+   "kind": "custom",
+   "lat": -89.67,
+   "lon": 129.78
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "shackleton-floor.m2",
+  "siteKey": "shackleton-floor",
+  "site": {
+   "id": "pin:-89.67000,129.78000",
+   "name": "Shackleton floor",
+   "kind": "custom",
+   "lat": -89.67,
+   "lon": 129.78
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "shackleton-rim.m0",
+  "siteKey": "shackleton-rim",
+  "site": {
+   "id": "pin:-89.78000,-155.73000",
+   "name": "Shackleton rim pin",
+   "kind": "custom",
+   "lat": -89.78,
+   "lon": -155.73
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "shackleton-rim.m2",
+  "siteKey": "shackleton-rim",
+  "site": {
+   "id": "pin:-89.78000,-155.73000",
+   "name": "Shackleton rim pin",
+   "kind": "custom",
+   "lat": -89.78,
+   "lon": -155.73
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "connecting-ridge.m0",
+  "siteKey": "connecting-ridge",
+  "site": {
+   "id": "pin:-89.45000,-137.20000",
+   "name": "Connecting ridge pin",
+   "kind": "custom",
+   "lat": -89.45,
+   "lon": -137.2
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "connecting-ridge.m2",
+  "siteKey": "connecting-ridge",
+  "site": {
+   "id": "pin:-89.45000,-137.20000",
+   "name": "Connecting ridge pin",
+   "kind": "custom",
+   "lat": -89.45,
+   "lon": -137.2
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "ridge-top.m0",
+  "siteKey": "ridge-top",
+  "site": {
+   "id": "pin:-89.47490,-137.44310",
+   "name": "Connecting ridge, brightest PGDA pixel",
+   "kind": "custom",
+   "lat": -89.4749,
+   "lon": -137.4431
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "ridge-top.m2",
+  "siteKey": "ridge-top",
+  "site": {
+   "id": "pin:-89.47490,-137.44310",
+   "name": "Connecting ridge, brightest PGDA pixel",
+   "kind": "custom",
+   "lat": -89.4749,
+   "lon": -137.4431
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "rim-top.m0",
+  "siteKey": "rim-top",
+  "site": {
+   "id": "pin:-89.78430,-155.90410",
+   "name": "Shackleton rim, brightest PGDA pixel",
+   "kind": "custom",
+   "lat": -89.7843,
+   "lon": -155.9041
+  },
+  "mastHeightM": 0,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ {
+  "id": "rim-top.m2",
+  "siteKey": "rim-top",
+  "site": {
+   "id": "pin:-89.78430,-155.90410",
+   "name": "Shackleton rim, brightest PGDA pixel",
+   "kind": "custom",
+   "lat": -89.7843,
+   "lon": -155.9041
+  },
+  "mastHeightM": 2,
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ }
+]
