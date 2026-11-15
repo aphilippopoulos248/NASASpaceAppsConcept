@@ -175,6 +175,7 @@ A gap is something a user can do or read that no action covers, or data neither 
 | F-4 | The "Arrival delay" field loses its explanatory tooltip after the first good edit (`numberField` writes the error into `title`, then clears it) | @globe | **open** (code unchanged, `src/ui/globe/filtersPanel.ts`), minor |
 | F-5 | After `rankNearby` the compare panel was on its "Nearby sites" tab, and the core `compare` action left it there, hiding the side-by-side it reports. Found from the code of slice 2 | @analysis | **fixed** in a958d6b: the panel follows a successful `compare` (`src/ui/compare/panel.ts`); `e2e/scenario/control.test.mjs` "after a scan, compare shows the A/B tab" passes |
 | F-6 | On the card a pin or candidate is titled "Pinned location"; its name (for a candidate "Candidate 300 m W, 600 m S of ...", as `selectCandidate` and the nearby list give it) appears nowhere on the card | @globe | open, minor: the coordinates line identifies it |
+| F-7 | Arrow keys and + / - on the globe turn from the centre the globe has published, which it updates once per drawn frame: presses within one frame start from the same centre and all but the last are lost (seen in the equivalence test on the GPU; on a slow software renderer a keyboard user would lose presses) | @globe (`src/scene/globe/globeView.ts`, keyboard handler) | open, minor; the equivalence test presses at a person's pace |
 
 ## 5. How each path has been verified
 
