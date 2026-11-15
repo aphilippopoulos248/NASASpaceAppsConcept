@@ -13,7 +13,8 @@
     "fetch-terrain": "node scripts/fetch-terrain.mjs",
     "fetch-apollo-terrain": "node scripts/fetch-apollo-terrain.mjs",
     "derive-detail": "node scripts/derive-detail.mjs",
-    "fetch-gcat": "node scripts/fetch-gcat-landers.mjs"
+    "fetch-gcat": "node scripts/fetch-gcat-landers.mjs",
+    "fetch-site-areas": "node scripts/fetch-site-areas.mjs"
   },
   "dependencies": {
     "astronomy-engine": "^2.1.19",

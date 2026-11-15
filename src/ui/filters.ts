@@ -1,4 +1,4 @@
-import { Landing, programColor } from '../data/landings';
+import { countryColor, Landing, landingColor } from '../data/landings';
 import { displayCountry } from '../data/ownership';
 
 export type TypeFilter = 'all' | 'crewed' | 'robotic';
@@ -100,28 +100,28 @@ export class Filters {
       this.emit();
     };
 
-    // Programs
-    panel.append(el('h3', undefined, 'Program'));
-    for (const program of this.allPrograms) {
+    // Countries: the colour key for the markers.
+    panel.append(el('h3', undefined, 'Country'));
+    for (const country of this.allCountries) {
       const btn = el('button', 'filter-row');
       btn.type = 'button';
       const sw = el('span', 'swatch');
-      sw.style.background = programColor(program);
-      const n = this.landings.filter((l) => l.program === program).length;
-      btn.append(sw, el('span', 'label', program), el('span', 'count', String(n)));
-      btn.addEventListener('click', () => toggle(s.programs, program));
-      this.sync.push(() => btn.setAttribute('aria-pressed', String(s.programs.has(program))));
+      sw.style.background = countryColor(country);
+      const n = this.landings.filter((l) => l.country === country).length;
+      btn.append(sw, el('span', 'label', displayCountry(country)), el('span', 'count', String(n)));
+      btn.addEventListener('click', () => toggle(s.countries, country));
+      this.sync.push(() => btn.setAttribute('aria-pressed', String(s.countries.has(country))));
       panel.append(btn);
     }
 
-    // Countries
-    panel.append(el('h3', undefined, 'Country'));
+    // Programs
+    panel.append(el('h3', undefined, 'Program'));
     const chips = el('div', 'chips');
-    for (const country of this.allCountries) {
-      const chip = el('button', 'chip', displayCountry(country));
+    for (const program of this.allPrograms) {
+      const chip = el('button', 'chip', program);
       chip.type = 'button';
-      chip.addEventListener('click', () => toggle(s.countries, country));
-      this.sync.push(() => chip.setAttribute('aria-pressed', String(s.countries.has(country))));
+      chip.addEventListener('click', () => toggle(s.programs, program));
+      this.sync.push(() => chip.setAttribute('aria-pressed', String(s.programs.has(program))));
       chips.append(chip);
     }
     panel.append(chips);
@@ -172,7 +172,7 @@ export class Filters {
       const frac = d.getUTCFullYear() + d.getUTCMonth() / 12;
       const tick = el('span', 'tl-tick');
       tick.style.left = `${pct(frac)}%`;
-      tick.style.background = programColor(l.program);
+      tick.style.background = landingColor(l);
       track.append(tick);
       ticks.push({ node: tick, landing: l });
     }

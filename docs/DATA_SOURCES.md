@@ -20,6 +20,7 @@ Last reviewed: 14 November 2026.
 | 8 | [Photo-derived relief](#8-photo-derived-relief) | Derived here from dataset 7 | Surface view, 19 sites | `public/terrain/<site>_detail.webp` | `npm run derive-detail` |
 | 9 | [Sun and Earth positions](#9-sun-and-earth-positions) | astronomy-engine; checked against JPL Horizons | Lighting, phases, sky | `public/data/horizons-check.json` | `npm run fetch-horizons`, `npm run check-ephemeris` |
 | 10 | [Close-up surface maps](#10-close-up-surface-maps) | "moon-surface" asset pack (third party) | Generated detail | `public/textures/surface_detail_*` | `scripts/make-surface-detail.mjs` |
+| 11 | [Explored area at each site](#11-explored-area-at-each-site) | NASA PDS: LROC anthropogenic objects and traverse maps; Apollo Analyst's Notebook | Coloured area on the globe, "Explored" in the card | `public/data/sources/site-areas.json`, `lroc-anthropogenic-objects.csv` | `npm run fetch-site-areas` |
 
 Downloaded source files are cached in `scripts/.cache/` (git-ignored, about 600 MB) so the scripts can be re-run
 without downloading again.
@@ -178,6 +179,50 @@ without downloading again.
 - **Produced:** `surface_detail_normal.jpg` (2048 px) and `surface_detail_tone.jpg` (1024 px), made seamless by
   `scripts/make-surface-detail.mjs`.
 - **Used for:** shading only, as part of "Generated detail". Never changes terrain shape.
+
+## 11. Explored area at each site
+
+- **What it is:** the ground each mission is known to have worked on, drawn on the globe in the country's
+  colour (orbit view only). **Drawn 10× larger in width (100× in area) than true size**, enlarged about each
+  area's centre so it reads at globe scale (`AREA_DISPLAY_SCALE` in `src/scene/siteAreas.ts`). The data in
+  `site-areas.json` and the size in the info card are true size. **No country owns any lunar ground** — the Outer Space Treaty (1967)
+  forbids national claims. What a country does keep is ownership of its hardware, and that hardware (landers,
+  rovers, instruments, equipment left along traverses) is spread across this area. So this is the closest real
+  equivalent of "what a country owns" at a site; it is not a legal boundary.
+- **Sources:**
+  - LROC `ANTHROPOGENIC_OBJECTS` (NASA PDS, `LROLRC_2001/EXTRAS/SHAPEFILE/`) — measured positions of landers, rovers
+    and instruments. Wagner, R. V., et al. (2017), *Coordinates of anthropogenic features on the Moon*, Icarus 283,
+    92–103, doi:10.1016/j.icarus.2016.05.011; updated 14 August 2026. Saved unchanged as
+    `public/data/sources/lroc-anthropogenic-objects.csv`.
+  - LROC `APOLLO_11`, `APOLLO_12`, `APOLLO_14` (same archive) — mapped walking paths of each astronaut on each EVA.
+    Gonzales et al. (2019), LPSC L, abstract 3089.
+  - Apollo Analyst's Notebook, NASA PDS Geosciences Node (<https://an.rsl.wustl.edu/apollo/>), map services
+    `Apollo11_vec` … `Apollo17_vec` — traverses, sampling stations, deployed instruments and sample sites for every
+    Apollo mission. The Lunar Roving Vehicle traverses (Apollo 15–17) were reconstructed from the rover navigation
+    records in NASA TN D-7469. Checked against LROC's lunar module positions: they agree within about 10 m.
+- **Method:** convex hull of every known point for the mission, widened by 30 m or the position uncertainty,
+  whichever is larger. Stored as a lat/lon polygon per landing in `site-areas.json`, with its size, the points used
+  and any caveat. Every catalogued object for a mission lies inside its area by construction.
+- **Sizes:** most robotic sites are a single lander (about 60 m across). Apollo 11 0.14 km, Apollo 12 0.6 km
+  (includes the walk to Surveyor 3), Apollo 14 1.6 km, Apollo 15 6.0 km, Apollo 16 8.5 km, Apollo 17 11.4 km,
+  Lunokhod 1 2.4 km, Lunokhod 2 15 km.
+- **Still incomplete** (shown in the info card) — no route data could be found as a public dataset:
+  - Lunokhod 1 (about 10 km driven) and Lunokhod 2 (about 40 km): only the rovers' final positions are catalogued,
+    so the area is the straight corridor from lander to rover. The routes have been mapped in research papers
+    (Karachevtseva et al.; Gusakova et al., EPSC 2012) but not released as data.
+  - Chang'e 4's Yutu-2 (about 1.6 km by November 2024), Chang'e 3's Yutu and Chandrayaan-3's Pragyan: lander (and
+    Yutu's final position) only.
+  - Luna 9 and Luna 13 have not been located in LROC images; their areas sit at this project's approximate
+    coordinates.
+- **Not included:** hardware that crashed rather than landed (spent rocket stages, ascent stages, impactors, failed
+  landers). The LROC catalogue lists many of these impact sites with their mission, but they are not landing sites.
+- **Also useful:** the catalogue's lander positions are independent measurements that could be used to check the
+  coordinates in `landings.json` (not done yet).
+
+## Colours
+
+Sites are coloured by the country their hardware belongs to: USA blue, Russia (USSR) red, China yellow, India
+orange, Japan purple. Defined in `src/data/landings.ts`.
 
 ---
 

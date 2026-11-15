@@ -12,7 +12,7 @@ import {
   Landing,
   landingDate,
   loadLandings,
-  programColor,
+  landingColor,
   quickmapUrl,
   trekUrl,
 } from './data/landings';
@@ -25,6 +25,7 @@ import { SurfaceView } from './scene/surface';
 import { Filters } from './ui/filters';
 import { flagCode, labelDisagrees, loadOwnership, OwnershipIndex, stateLabel, stateShortName } from './data/ownership';
 import { flagCanvas, FlagMarkers } from './scene/flags';
+import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, SiteArea, SiteAreaLayer } from './scene/siteAreas';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -232,6 +233,8 @@ function stepFly(dt: number) {
 const card = $('card');
 
 let ownership: OwnershipIndex | null = null;
+let siteAreas = new Map<string, SiteArea>();
+let areaLayer: SiteAreaLayer | null = null;
 
 // ---------- country flags on the globe ----------
 let flags: FlagMarkers | null = null;
@@ -286,11 +289,15 @@ function showOwnership(l: Landing) {
 }
 
 function showCard(l: Landing) {
-  $('card-swatch').style.background = programColor(l.program);
+  $('card-swatch').style.background = landingColor(l);
   $('card-program').textContent = l.program;
   $('card-name').textContent = l.name;
   $('card-date').textContent = formatDate(l.date);
   showOwnership(l);
+  const area = siteAreas.get(l.id);
+  $('card-area').textContent = area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—';
+  $('card-area-note').textContent = area?.note ?? '';
+  $('card-area-note').hidden = !area?.note;
   $('card-type').textContent = l.crewed ? 'Crewed' : 'Robotic';
   $('card-region').textContent = l.region;
   $('card-coords').textContent = formatCoords(l.lat, l.lon) + (l.approx ? ' (approx.)' : '');
@@ -404,7 +411,7 @@ canvas.addEventListener('pointermove', (e) => {
       row.className = 'tip-row';
       const sw = document.createElement('span');
       sw.className = 'swatch';
-      sw.style.background = programColor(m.landing.program);
+      sw.style.background = landingColor(m.landing);
       const date = document.createElement('span');
       date.className = 'tip-date';
       date.textContent = m.landing.date.slice(0, 4);
@@ -581,18 +588,22 @@ renderer.setAnimationLoop((now) => {
 
   markers?.update(camera, now / 1000);
   flags?.update(camera, now / 1000, sky.litDirection);
+  areaLayer?.update(camera);
   sitePatch?.update(altNow);
   renderer.render(scene, camera);
 });
 
 // ---------- boot ----------
 async function boot() {
-  const [moon, landings, owners] = await Promise.all([createMoon(renderer), loadLandings(), loadOwnership()]);
+  const [moon, landings, owners, areas] = await Promise.all([createMoon(renderer), loadLandings(), loadOwnership(), loadSiteAreas()]);
   ownership = owners;
+  siteAreas = areas;
   landings.sort((a, b) => a.date.localeCompare(b.date));
   scene.add(moon);
   markers = new Markers(landings);
   scene.add(markers.root);
+  areaLayer = new SiteAreaLayer(markers.items, siteAreas);
+  scene.add(areaLayer.root);
   flags = new FlagMarkers(markers.items, (id) => ownership?.byLanding.get(id));
   if (import.meta.env.DEV) (window as unknown as { __flags: FlagMarkers }).__flags = flags;
   scene.add(flags.root);
