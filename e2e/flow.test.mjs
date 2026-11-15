@@ -311,9 +311,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     await openAssistant(page);
     const reply = await ask(page, 'compare with a 24 h delay');
     assert.equal(reply.shownLabel, 'Deterministic mode: no language model');
-    // The comparison comes from `compare` (older builds of the assistant) or from the compare
-    // panel's own `compareDelayedArrival` (newer ones); both return the same compare result.
-    const done = reply.actions.find((x) => (x.name === 'compare' || x.name === 'compareDelayedArrival') && x.ok);
+    const done = reply.actions.find((x) => x.name === 'compareDelayedArrival' && x.ok);
     assert.ok(done, JSON.stringify(reply.actions.map((x) => [x.name, x.ok, x.error])));
     const r = done.result;
     assert.equal(r.analysisA.state, 'ready');
@@ -323,7 +321,8 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
       const line = reply.text.split('\n').find((l) => l.startsWith(`${tag}: `)) ?? '';
       assert.ok(line.includes(`illumination ${f1(side.illuminationPct)} %`), `${tag}: illumination not reported as returned:\n${reply.text}`);
       assert.ok(line.includes(`longest darkness ${f1(side.longestDarknessH)} h`), `${tag}: longest darkness not reported as returned:\n${reply.text}`);
-      assert.ok(line.includes(`Earth line of sight ${f1(side.earthVisiblePct)} %`) || line.includes(`Earth's centre in view ${f1(side.earthVisiblePct)} %`), `${tag}: Earth in view not reported as returned:\n${reply.text}`);
+      // Earth figures name their definition (T-31 wording rule): "Earth's centre in view".
+      assert.ok(line.includes(`Earth's centre in view ${f1(side.earthVisiblePct)} %`), `${tag}: Earth's centre in view not reported as returned:\n${reply.text}`);
       assert.ok(line.includes(`slope ${f1(side.slopeDeg)}°`), `${tag}: slope not reported as returned:\n${reply.text}`);
     }
     const signed = (v) => `${v > 0 ? '+' : ''}${f1(v)}`;
@@ -335,8 +334,10 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.equal(r.scenarioA.durationH, r.scenarioB.durationH);
     const s = await state(page);
     assert.equal(s.comparing, true);
-    const names = reply.actions.map((x) => x.name).join(',');
-    assert.ok(['setDelay,saveScenario,setDelay,saveScenario,compare', 'compareDelayedArrival,openCompare'].includes(names), names);
+    // The assistant uses the compare panel's own control (@assistant m150, m221): one action, and
+    // the arrival delay on screen stays as it was.
+    assert.deepEqual(reply.actions.map((x) => x.name), ['compareDelayedArrival']);
+    assert.equal(s.delayH, 0);
   });
 
   test('asking where Earth is: the answer is the analysis at the simulated time', SLOW, async () => {
