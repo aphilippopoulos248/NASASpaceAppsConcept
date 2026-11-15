@@ -162,7 +162,9 @@ npm run dev
 
 The Anthropic SDK finds the credentials itself: an auth profile from `ant auth login`, workload
 identity, or an `ANTHROPIC_API_KEY` environment variable. They are read by the server only and
-never reach the browser.
+never reach the browser. A key placed in `.env.local` is not read; set `ANTHROPIC_API_KEY` in the
+environment of `npm run dev` / `npm run preview`, or use `ant auth login`. The `LUNYX_*` settings
+below are still read from `.env.local` (or the file named by `LUNYX_ENV_FILE`).
 
 | Variable | Meaning |
 | --- | --- |
