@@ -137,6 +137,8 @@ describe('average maps', () => {
 describe('close-up imagery state', () => {
   it('says what is on screen: loading, shown with the layers that arrived, or not reachable', () => {
     expect(displaySummary().closeUpImagery).toBeNull();
+    // The stars behind the globe are generated, and getState says so.
+    expect(displaySummary().backgroundStars).toBe('Background stars are decorative: random points, not the real sky.');
     let heard = 0;
     const off = globeDisplay.subscribe(() => heard++);
     globeDisplay.setLive({ closeUp: { state: 'loading', credits: [] } });
