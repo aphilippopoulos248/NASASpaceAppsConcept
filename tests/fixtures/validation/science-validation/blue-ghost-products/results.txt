@@ -1,0 +1,53 @@
+Blue Ghost Mission 1 (18.562 N, 61.81 E), sunset of 16 March 2025 UTC, by elevation product
+Ground under the lander: 3 m model -3651.16 m, 60 m window -3652.27 m (3 m minus 60 m: +1.11 m); heights above the 1737.4 km sphere.
+3 m model: LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG (4.0 m), 3 m site window; 60 m window: SLDEM2015 512 ppd, 60 m site window.
+
+  eye     product      skyline cuts the Sun   half hidden   last limb gone   | skyline under the Sun at last limb: elevation, formed at, height
+  0.5 m   stack        18:09:45                  18:42:57         19:16:07         | 0.704 deg, 768 m, -3641.08 m
+  0.5 m   60m          18:00:29                  18:33:37         19:06:46         | 0.778 deg, 240 m, -3648.50 m
+  0.5 m   60m-obs3m    18:24:02                  18:57:04         19:30:07         | 0.593 deg, 780 m, -3642.43 m
+  0.5 m   3m-alone     18:09:45                  18:42:57         19:16:07         | 0.704 deg, 768 m, -3641.08 m
+  0.5 m   stack-eased  18:24:02                  18:57:04         19:30:07         | 0.593 deg, 780 m, -3642.43 m
+          spread over stack / 60m / 3m-alone: cut 9.3 min, half 9.3 min, last limb 9.3 min;  60m minus stack: cut -9.3, last limb -9.3 min (observer on the 3 m ground: +14.3, +14.0)
+          T-32 eased stack minus stored stack: cut +14.3 min, half +14.1 min, last limb +14.0 min
+  2.0 m   stack        18:23:40                  18:56:53         19:30:03         | 0.592 deg, 768 m, -3641.07 m
+  2.0 m   60m          18:27:22                  19:00:29         19:33:31         | 0.565 deg, 840 m, -3641.81 m
+  2.0 m   60m-obs3m    18:36:44                  19:09:53         19:42:53         | 0.489 deg, 840 m, -3641.81 m
+  2.0 m   3m-alone     18:23:40                  18:56:53         19:30:03         | 0.592 deg, 768 m, -3641.07 m
+  2.0 m   stack-eased  18:36:44                  19:09:53         19:42:53         | 0.489 deg, 840 m, -3641.81 m
+          spread over stack / 60m / 3m-alone: cut 3.7 min, half 3.6 min, last limb 3.5 min;  60m minus stack: cut +3.7, last limb +3.5 min (observer on the 3 m ground: +13.1, +12.8)
+          T-32 eased stack minus stored stack: cut +13.1 min, half +13.0 min, last limb +12.8 min
+  5.0 m   stack        18:51:31                  19:24:45         19:57:57         | 0.369 deg, 768 m, -3641.06 m
+  5.0 m   60m          18:52:45                  19:26:00         19:58:55         | 0.361 deg, 840 m, -3641.78 m
+  5.0 m   60m-obs3m    19:02:07                  19:35:25         20:08:16         | 0.287 deg, 840 m, -3641.76 m
+  5.0 m   3m-alone     18:51:31                  19:24:45         19:57:57         | 0.369 deg, 768 m, -3641.06 m
+  5.0 m   stack-eased  19:02:07                  19:35:25         20:08:16         | 0.287 deg, 840 m, -3641.76 m
+          spread over stack / 60m / 3m-alone: cut 1.2 min, half 1.2 min, last limb 1.0 min;  60m minus stack: cut +1.2, last limb +1.0 min (observer on the 3 m ground: +10.6, +10.3)
+          T-32 eased stack minus stored stack: cut +10.6 min, half +10.7 min, last limb +10.3 min
+
+Round 1 (check 2, same stack, 2 m): cut 18:23, half 18:56, last limb 19:30:03; here: 18:23:40, 18:56:53, 19:30:03.
+A march twice as fine moves the 2 m stack times by -2 s (cut) and -1 s (last limb).
+
+Heights along the Sun's azimuth at last limb (2 m, stored stack): 3 m model, 60 m window, 3 m minus 60 m, and the eased 3 m model (m)
+      0 m    -3651.16    -3652.27    +1.11    -3651.16
+    100 m    -3651.27    -3652.03    +0.75    -3651.27
+    200 m    -3652.47    -3650.81    -1.65    -3652.47
+    300 m    -3650.79    -3651.44    +0.65    -3650.79
+    400 m    -3652.06    -3654.40    +2.34    -3652.06
+    500 m    -3648.09    -3652.36    +4.27    -3648.09
+    600 m    -3647.29    -3648.07    +0.78    -3647.29
+    650 m    -3647.11    -3645.59    -1.52    -3647.07
+    700 m    -3644.44    -3644.16    -0.28    -3644.31
+    725 m    -3643.04    -3643.59    +0.55    -3643.45
+    750 m    -3641.47    -3643.07    +1.60    -3642.99
+    760 m    -3641.26    -3642.86    +1.60    -3642.84
+    765 m    -3641.16    -3642.76    +1.60    -3642.76
+    767 m    -3641.10    -3642.72    +1.62    -3642.72
+    768 m    -3641.07    -3642.70    +1.63    -3642.70
+    769 m           -    -3642.68        -           -
+    770 m           -    -3642.66        -           -
+    780 m           -    -3642.45        -           -
+    800 m           -    -3642.24        -           -
+    850 m           -    -3642.74        -           -
+    900 m           -    -3647.36        -           -
+   1000 m           -    -3655.40        -           -

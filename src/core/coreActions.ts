@@ -3,6 +3,8 @@
 // same list as tools. Every result is a small JSON object read back from real state.
 import { findLanding, landingSite } from '../data/catalog';
 import { formatCoords, Landing, landingDate, quickmapUrl, trekUrl } from '../data/landings';
+import { labelDisagrees, loadOwnership, stateLabel, type OwnershipIndex } from '../data/ownership';
+import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, type SiteArea } from '../scene/siteAreas';
 import { ActionError, ActionDef, defineAction } from './actions';
 import { reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
 import { rounded, type AnalysisSlot, type AnalysisStore } from './analysisStore';
@@ -54,6 +56,18 @@ export interface CoreContext {
   display?: () => Record<string, unknown>;
   /** What the shell shows that is not in AppState (zoom of the locator map, which panels are open), for getState. */
   shell?: () => ShellState;
+  /** The computer's real clock, UTC ms: getState's wallClockUtc and the "real-now" keyword. Default Date.now. */
+  wallClock?: () => number;
+  /** Who each lander belongs to (GCAT), as the site card shows it. Default: the bundled record, loaded once in the browser. */
+  ownership?: () => Promise<OwnershipIndex | null>;
+  /** The area explored at each site, as the site card shows it. Default: the bundled file, loaded once in the browser. */
+  siteAreas?: () => Promise<Map<string, SiteArea>>;
+}
+
+/** The two bundled records behind the site card's "Belongs to", "Owner" and "Explored" rows. */
+interface SiteRecords {
+  owners: OwnershipIndex | null;
+  areas: Map<string, SiteArea>;
 }
 
 export interface ShellState {
@@ -85,7 +99,47 @@ function landingFacts(l: Landing) {
   };
 }
 
-function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
+/**
+ * The site card's "Belongs to" and "Owner" rows: the state responsible for the hardware left at the
+ * site and its owning organisation, from the GCAT catalogue; null when the record is not available.
+ */
+export function ownershipFacts(l: Landing, owners: OwnershipIndex | null) {
+  const o = owners?.byLanding.get(l.id);
+  if (!owners || !o) return null;
+  const disagrees = labelDisagrees(l.country, o);
+  return {
+    /** As the card's "Belongs to": a state that no longer exists is named with its successor, "Russia (launched by the USSR)". */
+    state: stateLabel(o),
+    /** GCAT's responsible-state code ("SU", "US", "CN", ...). */
+    stateCode: o.state,
+    owner: o.ownerName ?? o.owner,
+    gcatId: o.jcat,
+    /** True when the catalogue's own country label names a different state from GCAT (the card then shows a check note). */
+    labelDisagrees: disagrees,
+    ...(disagrees && { note: `This site's own data says "${l.country}", but the GCAT catalogue records ${o.stateFullName ?? o.state}.` }),
+    source: `${owners.source}${owners.catalogVersion ? `, ${owners.catalogVersion}` : ''} (${owners.sourceUrl})`,
+  };
+}
+
+/** The site card's "Explored" row: the area explored at the site, true size, with its caveat; null when not available. */
+export function exploredAreaFacts(l: Landing, areas: ReadonlyMap<string, SiteArea>) {
+  const a = areas.get(l.id);
+  if (!a) return null;
+  return {
+    /** As on the card: "about 6.0 km across". */
+    description: describeExtent(a),
+    extentM: Math.round(a.extentM),
+    areaM2: Math.round(a.areaM2),
+    /** False when the lander has not been found in LRO images: the area is then the lander alone at the catalogue's approximate position. */
+    located: a.located,
+    /** The globe draws the area this many times wider than it is, so it can be seen; the figures here are true size. */
+    displayScale: AREA_DISPLAY_SCALE,
+    ...(a.note && { note: a.note }),
+    source: a.sources.length ? a.sources.join('; ') : 'No measured position: the lander at the landing catalogue\'s approximate coordinates.',
+  };
+}
+
+function siteSummary(site: SiteRef | null, landings: readonly Landing[], records: SiteRecords | null) {
   if (!site) return null;
   const l = site.kind === 'landing' ? landings.find((x) => x.id === site.id) : undefined;
   return {
@@ -98,9 +152,16 @@ function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
       ...landingFacts(l),
       /** The card's two outside links: the same place in LROC QuickMap and in NASA Moon Trek (they open in a new tab; nothing is loaded from them). */
       links: { quickMap: quickmapUrl(l), moonTrek: trekUrl(l) },
+      ownership: ownershipFacts(l, records?.owners ?? null),
+      exploredArea: records ? exploredAreaFacts(l, records.areas) : null,
     }),
   };
 }
+
+/** ISO 8601 UTC to the second: "2026-11-15T03:41:07Z". */
+const isoSeconds = (ms: number) => `${new Date(ms).toISOString().slice(0, 19)}Z`;
+/** The real clock to the minute, as the time scrubber's "Now" button uses it. */
+const wholeMinute = (ms: number) => Math.floor(ms / 60_000) * 60_000;
 
 function timeSummary(s: Readonly<AppState>) {
   return { timeUtc: isoUtc(s.timeMs), playing: s.playing, rateSimSecondsPerSecond: s.rate };
@@ -150,6 +211,19 @@ export async function enterSurfaceView(ctx: Pick<CoreContext, 'store' | 'prepare
 export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
   const { store } = ctx;
   const state = () => store.get();
+  const wallClock = ctx.wallClock ?? Date.now;
+
+  // The ownership record and the explored areas load once (in the browser; elsewhere only when given).
+  const inBrowser = typeof document !== 'undefined';
+  let records: SiteRecords | null = null;
+  let recordsLoad: Promise<SiteRecords> | null = null;
+  const loadRecords = (): Promise<SiteRecords> =>
+    (recordsLoad ??= Promise.all([
+      (ctx.ownership ?? (inBrowser ? loadOwnership : async () => null))(),
+      (ctx.siteAreas ?? (inBrowser ? loadSiteAreas : async () => new Map<string, SiteArea>()))(),
+    ]).then(([owners, areas]) => (records = { owners, areas })));
+  /** The site object with everything the card shows; waits for the two records the first time. */
+  const siteObject = async (site: SiteRef | null) => siteSummary(site, ctx.landings(), site?.kind === 'landing' ? await loadRecords() : records);
 
   const setTimeClamped = (ms: number) => {
     if (!Number.isFinite(ms) || ms < MIN_TIME_MS || ms > MAX_TIME_MS) {
@@ -168,7 +242,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
 
   const enterSurface = () => enterSurfaceView(ctx);
 
-  const viewResult = () => ({ view: state().view, site: siteSummary(state().site, ctx.landings()) });
+  const viewResult = () => ({ view: state().view, site: siteSummary(state().site, ctx.landings(), records) });
 
   const selectedLanding = (): Landing | undefined => {
     const site = state().site;
@@ -198,12 +272,12 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'setTime',
       title: 'Set time',
       description:
-        'Sets the simulated instant shown in every view (UTC). Give `utc` as "YYYY-MM-DD" or "YYYY-MM-DDTHH:MMZ", or `offsetHours` to move relative to the current simulated time (negative = earlier). Valid from 1950 to 2100.',
+        'Sets the simulated instant shown in every view (UTC). Give `utc` as "YYYY-MM-DD" or "YYYY-MM-DDTHH:MMZ", or "real-now" for the real date and time on the user\'s computer (to the minute; getState\'s wallClockUtc), or `offsetHours` to move relative to the current simulated time (negative = earlier). Valid from 1950 to 2100.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
-          utc: { type: 'string', description: 'Absolute UTC date/time, e.g. "2025-03-14T06:00Z".' },
+          utc: { type: 'string', description: 'Absolute UTC date/time, e.g. "2025-03-14T06:00Z", or "real-now" for the real time now.' },
           offsetHours: { type: 'number', description: 'Hours to move from the current simulated time.', minimum: -1e6, maximum: 1e6 },
         },
       },
@@ -211,7 +285,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         if ((utc === undefined) === (offsetHours === undefined)) throw new ActionError('Give exactly one of `utc` or `offsetHours`.');
         let ms: number;
         try {
-          ms = utc !== undefined ? parseUtc(utc) : state().timeMs + offsetHours! * 3_600_000;
+          ms = utc === undefined ? state().timeMs + offsetHours! * 3_600_000 : utc.trim().toLowerCase() === 'real-now' ? wholeMinute(wallClock()) : parseUtc(utc);
         } catch (err) {
           throw new ActionError((err as Error).message);
         }
@@ -302,7 +376,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       description:
         'Selects a catalogued landing site by id or name (e.g. "apollo-11", "Apollo 11", "Chang\'e 4") and flies the globe to it. ' +
         'With `atLanding: true` it also lines everything up with that mission: the clock and the mission window start are set to the touchdown time (UTC), any arrival delay is cleared, sunlight is real and the clock is paused, so "IM-2 at its landing" is one step. ' +
-        'With `surface: true` it then steps down into the surface view. `fly: false` keeps the camera where it is. Custom coordinates use dropPin instead.',
+        'With `surface: true` it then steps down into the surface view. `fly: false` keeps the camera where it is. Custom coordinates use dropPin instead. ' +
+        'The result\'s `site` carries what the site card shows: the catalogue\'s facts, summary and links, `ownership` (GCAT: the responsible state, the owner, the GCAT id, `labelDisagrees`) and `exploredArea` (true size, the globe\'s display scale, caveat, source).',
       effect: 'command',
       params: {
         type: 'object',
@@ -335,7 +410,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         if (touchdown !== null) store.set({ timeMs: touchdown, windowStartMs: touchdown, delayH: 0, playing: false, lightMode: 'real' });
         if (fly !== false) flyTo(ref.lat, ref.lon, SITE_ALTITUDE_KM);
         if (surface) await enterSurface();
-        return { ...viewResult(), ...(touchdown !== null && { ...timeSummary(state()), missionWindow: windowSummary(state()), lightMode: state().lightMode }) };
+        return { view: state().view, site: await siteObject(state().site), ...(touchdown !== null && { ...timeSummary(state()), missionWindow: windowSummary(state()), lightMode: state().lightMode }) };
       },
     }),
     defineAction<{ lat: number; lon: number; fly?: boolean }, unknown>({
@@ -464,13 +539,13 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'setMissionWindow',
       title: 'Set mission window',
       description:
-        'Sets the mission window the analysis evaluates (it starts at arrival). `startUtc`: "YYYY-MM-DDTHH:MMZ", or "now" for the current simulated time, or "landing" for the touchdown time of the selected catalogued landing. `durationH`: length in hours. ' +
+        'Sets the mission window the analysis evaluates (it starts at arrival). `startUtc`: "YYYY-MM-DDTHH:MMZ"; "now" for the current SIMULATED time (the clock on screen); "real-now" for the real date and time on the user\'s computer, to the minute, as the time slider\'s "Now" button does (getState\'s wallClockUtc); or "landing" for the touchdown time of the selected catalogued landing. `durationH`: length in hours. ' +
         '`moveClock: true` also sets the simulated clock to the start of the window (planned start plus any arrival delay), so the views show the moment of arrival. Without it the clock stays where it is, which may be outside the new window.',
       effect: 'command',
       params: {
         type: 'object',
         properties: {
-          startUtc: { type: 'string', description: 'Planned window start (UTC), "now" for the simulated time, or "landing" for the selected landing\'s touchdown.' },
+          startUtc: { type: 'string', description: 'Planned window start (UTC), "now" for the simulated time, "real-now" for the real time now, or "landing" for the selected landing\'s touchdown.' },
           durationH: { type: 'number', description: 'Window length, hours.', minimum: 1, maximum: 8760 },
           moveClock: { type: 'boolean', description: 'Also set the simulated clock to the start of the window.' },
         },
@@ -481,6 +556,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         if (startUtc !== undefined) {
           const word = startUtc.trim().toLowerCase();
           if (word === 'now') start = state().timeMs;
+          else if (word === 'real-now') start = wholeMinute(wallClock());
           else if (word === 'landing') {
             const l = selectedLanding();
             if (!l) throw new ActionError('"landing" needs a selected catalogued landing site (selectSite). A pin has no landing date.');
@@ -712,12 +788,17 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'listSites',
       title: 'List the landing catalogue',
       description:
-        'Lists the catalogued Moon landings (the markers on the globe), oldest first: id, name, latitude and longitude (degrees, longitude east-positive), touchdown time (UTC), program, country, crewed or robotic, region and the catalogue\'s short account of the mission. Each row says whether the current mission filters show it (`shown`); with `shownOnly: true` only those rows are returned. Changes nothing. Pass an `id` or `name` to selectSite to go there.',
+        'Lists the catalogued Moon landings (the markers on the globe), oldest first: id, name, latitude and longitude (degrees, longitude east-positive), touchdown time (UTC), program, country, crewed or robotic, region, the catalogue\'s short account of the mission, who the hardware belongs to (`ownership`: state, owner, GCAT id, whether the catalogue\'s own country label disagrees) and the area explored (`exploredArea`: size, true scale, how much wider the globe draws it, caveat, source). Each row says whether the current mission filters show it (`shown`); with `shownOnly: true` only those rows are returned. Changes nothing. Pass an `id` or `name` to selectSite to go there.',
       effect: 'query',
       params: { type: 'object', properties: { shownOnly: { type: 'boolean', description: 'Only the landings the current filters show (default: all of them, each marked).' } } },
-      run: ({ shownOnly }) => {
+      run: async ({ shownOnly }) => {
         const f = ctx.filters.get();
-        const rows = ctx.landings().map((l) => ({ id: l.id, name: l.name, latDeg: l.lat, lonDegEast: l.lon, ...landingFacts(l), shown: matchesFilter(f, l) }));
+        const r = await loadRecords();
+        const rows = ctx.landings().map((l) => ({
+          id: l.id, name: l.name, latDeg: l.lat, lonDegEast: l.lon, ...landingFacts(l),
+          ownership: ownershipFacts(l, r.owners), exploredArea: exploredAreaFacts(l, r.areas),
+          shown: matchesFilter(f, l),
+        }));
         const sites = shownOnly ? rows.filter((r) => r.shown) : rows;
         return {
           total: rows.length,
@@ -745,20 +826,23 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'getState',
       title: 'Current state',
       description:
-        'Reads what is on screen now, without waiting: view, simulated time (UTC) with the Moon\'s phase as seen from Earth, site (for a catalogued landing with its facts, summary and outside links), globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up), the zoom of the locator map, which panels are open, and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
+        'Reads what is on screen now: view, simulated time (UTC) with the Moon\'s phase as seen from Earth, the real date and time on the user\'s computer (`wallClockUtc`: use it for "now" in the real world; "real-now" in setMissionWindow and setTime), site (for a catalogued landing with its facts, summary, outside links, who the hardware belongs to (`ownership`, from the GCAT catalogue) and the area explored there (`exploredArea`), as on the site card), globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up), the zoom of the locator map, which panels are open, and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
       effect: 'query',
       params: NO_PARAMS,
-      run: () => {
+      run: async () => {
         const s = state();
         const f = filterResult();
         const shell = ctx.shell?.();
+        const site = await siteObject(s.site);
         return {
           view: s.view,
           ...timeSummary(s),
+          /** The real date and time on the user's computer (not the simulated time): what "real-now" means. */
+          wallClockUtc: isoSeconds(wallClock()),
           /** The line under the time scrubber: the Moon's phase as seen from Earth at the simulated time, and whether the Moon is in Earth's shadow (in-app ephemeris model, geometric discs). */
           moonPhase: moonPhaseAt(s.timeMs),
           lightMode: s.lightMode,
-          site: siteSummary(s.site, ctx.landings()),
+          site,
           globeCenter: { latDeg: s.globeCenter.lat, lonDegEast: s.globeCenter.lon, altitudeKm: s.globeCenter.altitudeKm },
           look: s.view === 'surface' ? s.look : null,
           missionWindow: windowSummary(s),
