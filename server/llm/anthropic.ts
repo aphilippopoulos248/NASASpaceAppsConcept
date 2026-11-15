@@ -208,7 +208,7 @@ export function finish(message: BetaMessage, requested: ModelInfo): StepEvent {
 export function describeFailure(err: unknown, cfg: Pick<LlmConfig, 'model' | 'secrets'>): WireError {
   if (err instanceof Anthropic.APIUserAbortError) return { kind: 'aborted', message: 'The request was cancelled.' };
   if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-    return { kind: 'auth', status: err.status, message: `The Claude API rejected the server's credentials (HTTP ${err.status}). Check ANTHROPIC_API_KEY on the server.` };
+    return { kind: 'auth', status: err.status, message: `The Claude API rejected the server's credentials (HTTP ${err.status}). Run \`ant auth login\` to re-authenticate.` };
   }
   if (err instanceof Anthropic.NotFoundError) {
     return { kind: 'model_request', status: 404, message: `The Claude API does not know the model "${cfg.model}". Check LUNYX_LLM_MODEL on the server.` };
@@ -231,11 +231,9 @@ export function describeFailure(err: unknown, cfg: Pick<LlmConfig, 'model' | 'se
   return { kind: 'server', message: 'The language model request failed.' };
 }
 
-export function createClient(cfg: LlmConfig): MessagesClient {
-  // The key comes from the server's settings only. With neither key nor token the SDK
-  // resolves credentials itself (an `ant auth login` profile or workload identity).
-  if (cfg.apiKey) return new Anthropic({ apiKey: cfg.apiKey });
-  if (cfg.authToken) return new Anthropic({ authToken: cfg.authToken });
+export function createClient(): MessagesClient {
+  // The SDK resolves credentials itself: an `ant auth login` profile, workload identity,
+  // or the ANTHROPIC_API_KEY env var if one happens to be set.
   return new Anthropic();
 }
 
@@ -247,7 +245,7 @@ export class AnthropicProvider implements LlmProvider {
 
   constructor(
     private readonly cfg: LlmConfig,
-    private readonly client: MessagesClient = createClient(cfg),
+    private readonly client: MessagesClient = createClient(),
     private readonly log: (line: string) => void = (line) => console.warn(line),
   ) {
     this.info = { provider: PROVIDER_ID, model: cfg.model, label: modelLabel(cfg.model) };
