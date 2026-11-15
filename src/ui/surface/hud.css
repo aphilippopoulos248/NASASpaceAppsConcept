@@ -21,5 +21,5 @@
   .sh-ground { -webkit-line-clamp: 1; line-clamp: 1; }
   .sh-keys { display: none; }
 }
-.sh-owner { margin: var(--sp-1) 0 0; font-size: var(--fs-xs); }
-.sh-owner[hidden] { display: none; }
+/* Who the hardware at the site belongs to: a note like the ground line (the strip's grid gap spaces it). */
+.sh-owner { margin: 0; }
