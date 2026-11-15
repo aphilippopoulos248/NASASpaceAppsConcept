@@ -54,6 +54,15 @@ export function territoryAt(lat: number, lon: number, landings: readonly Landing
  */
 export const TERRITORY_RULE = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
 
+/**
+ * Whether the colouring is drawn: switched on, with the landing markers shown and at least one
+ * landing left by the mission filters. The same rule as showTerritories' `territoriesShown`; the
+ * caption under "Show country territories" follows it.
+ */
+export function territoriesDrawn(showMissions: boolean, showTerritories: boolean, landingsShown: number): boolean {
+  return showMissions && showTerritories && landingsShown > 0;
+}
+
 const ORBIT_FILL = 0.24;
 const GROUND_FILL = 0.1;
 
