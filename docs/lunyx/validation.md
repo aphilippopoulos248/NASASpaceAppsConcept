@@ -180,6 +180,14 @@ to repeat with their own run. Apollo 15 was measured once and is not in the stan
 task T-32 eases the 3 m site models onto their 60 m windows at load, after which the app's
 terrain at the sites with a 3 m model no longer equals the stored files the reference used.
 
+**Re-checked independently** by Lunyx Science's @validation (T-34, branch
+am/lunyx-science/agent/validation at af49a12, `tests/fixtures/validation/science-validation/skyline-masts/results.txt`):
+the skyline of `analyse()` at 1289083 for observers at 0, 0.5 and 2 m at nine pins (the seven
+of round 1 and two grid summits picked by a fixed rule before any app output was seen), 27 runs:
+within 0.0042 deg at the seven round-1 pins, worst 0.0171 deg at one new summit pin with a 2 m
+mast (app low, at a crease 8.5 m away), no azimuth over 0.02 deg. Verdict: agrees. Still to
+come from them: the 18.6-year any-Sun share at 0 m at the connecting ridge pin.
+
 **The defect they found: an observer on the ground.** Seen from height H above the ground,
 terrain at a small distance d stands at about (h(d) - h(0) - H) / d. With H = 0 the limit at
 d = 0 is the slope of the ground at the observer's feet, and on convex ground (a crest, a rim
