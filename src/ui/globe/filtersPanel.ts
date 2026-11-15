@@ -8,6 +8,7 @@
 import { runAction } from '../../core/actions';
 import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
+import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
@@ -15,7 +16,7 @@ import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
 import { globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
-import { TERRITORY_RULE } from '../../scene/globe/territories';
+import { territoriesDrawn, TERRITORY_RULE } from '../../scene/globe/territories';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
@@ -305,6 +306,12 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
 
   let lastLegendMs = -Infinity;
+  // The caption is up exactly while the colouring is drawn (territoriesShown): not when the filters hide every landing.
+  const syncTerritoryNote = () => {
+    const s = store.get(), f = missionFilter.get();
+    territoryNote.hidden = !territoriesDrawn(s.showMissions, s.showTerritories, getLandings().filter((l) => matchesFilter(f, l)).length);
+  };
+  missionFilter.subscribe(() => syncTerritoryNote());
   const sync = (changed?: ReadonlySet<string>) => {
     const s = store.get();
     set(date, isoUtc(s.windowStartMs).slice(0, 16));
@@ -322,7 +329,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
     territoriesBox.checked = s.showTerritories;
     territoriesBox.disabled = !s.showMissions;
     territories.classList.toggle('off', !s.showMissions);
-    territoryNote.hidden = !(s.showMissions && s.showTerritories);
+    syncTerritoryNote();
     flagsBox.checked = s.showFlags;
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);

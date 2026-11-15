@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Landing } from '../../data/landings';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { createSurfaceUniforms, MAX_TERRITORY_SITES } from './surfaceShader';
-import { setTerritories, territoryAt, territoryCountry, territoryFill } from './territories';
+import { setTerritories, territoriesDrawn, territoryAt, territoryCountry, territoryFill } from './territories';
 
 const site = (id: string, country: string, lat: number, lon: number) => ({ id, name: id, country, lat, lon }) as Landing;
 const SITES = [site('us-1', 'USA', 0, 0), site('us-2', 'USA', 10, 10), site('su-1', 'USSR', 0, 90), site('cn-1', 'China', -45, 180)];
@@ -48,5 +48,15 @@ describe('territories', () => {
     expect(territoryFill(4170)).toBeCloseTo(0.24, 9);
     expect(territoryFill(40)).toBeCloseTo(0.1, 9);
     for (let km = 50; km < 2000; km += 50) expect(territoryFill(km + 50)).toBeGreaterThanOrEqual(territoryFill(km));
+  });
+});
+
+describe('when the colouring is drawn (the caption follows it)', () => {
+  it('only when switched on, with the markers shown and at least one landing left by the filters', () => {
+    expect(territoriesDrawn(true, true, 28)).toBe(true);
+    expect(territoriesDrawn(true, true, 1)).toBe(true);
+    expect(territoriesDrawn(true, true, 0)).toBe(false); // filters hide every landing: nothing drawn, no caption
+    expect(territoriesDrawn(false, true, 28)).toBe(false);
+    expect(territoriesDrawn(true, false, 28)).toBe(false);
   });
 });
