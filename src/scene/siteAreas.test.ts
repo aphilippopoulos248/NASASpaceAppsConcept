@@ -1,4 +1,4 @@
-import { Group, LineLoop, Mesh, Vector3 } from 'three';
+import { Group, LineLoop, Mesh, MeshBasicMaterial, Vector3 } from 'three';
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Landing } from '../data/landings';
@@ -32,6 +32,19 @@ describe('SiteAreaLayer', () => {
     const r = radii(layer);
     expect(r.length).toBeGreaterThan(5 + 4); // subdivided fill and outline follow the sphere
     for (const v of r) expect(v).toBeCloseTo(1.00014, 6);
+  });
+
+  it('draws over the terrain, so relief between the vertices cannot cut holes in an area', () => {
+    const layer = new SiteAreaLayer([marker], new Map([[landing.id, area]]));
+    let drawn = 0;
+    layer.root.traverse((o) => {
+      if (!(o instanceof Mesh || o instanceof LineLoop)) return;
+      const m = o.material as MeshBasicMaterial;
+      expect(m.depthTest).toBe(false);
+      expect(m.depthWrite).toBe(false);
+      drawn++;
+    });
+    expect(drawn).toBe(2); // the fill and the outline
   });
 
   it('place() puts every vertex on the drawn surface, at the same height above it', () => {

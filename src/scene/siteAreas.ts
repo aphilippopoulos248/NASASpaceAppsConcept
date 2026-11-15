@@ -169,9 +169,15 @@ export class SiteAreaLayer {
       const fillGeo = new BufferGeometry();
       fillGeo.setAttribute('position', new Float32BufferAttribute(fillPoints.flatMap((p) => p.clone().multiplyScalar(RADIUS).toArray()), 3));
       fillGeo.setIndex(idx);
-      const fill = new Mesh(fillGeo, new MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthWrite: false, side: DoubleSide, toneMapped: false }));
+      // Drawn over the terrain (no depth test), like the markers. Each vertex sits LIFT above the drawn
+      // surface, but a piece between vertices is flat and spans up to tens of kilometres at the display
+      // enlargement: with the depth test, hills and crater rims standing above it would cut holes in
+      // the fill and the outline, even at true relief (Hadley-Apennine, Taurus-Littrow). An area is
+      // hidden as a whole when its site is behind the Moon (update()); the part of a large area beyond
+      // the limb is foreshortened to a sliver.
+      const fill = new Mesh(fillGeo, new MeshBasicMaterial({ color, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false, side: DoubleSide, toneMapped: false }));
       const lineGeo = new BufferGeometry().setFromPoints(outlinePoints.map((p) => p.clone().multiplyScalar(RADIUS)));
-      const outline = new LineLoop(lineGeo, new LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthWrite: false, toneMapped: false }));
+      const outline = new LineLoop(lineGeo, new LineBasicMaterial({ color, transparent: true, opacity: 0.95, depthTest: false, depthWrite: false, toneMapped: false }));
 
       fill.renderOrder = outline.renderOrder = 2.5;
       const group = new Group();
@@ -220,7 +226,7 @@ export class SiteAreaLayer {
     }
   }
 
-  /** Follows the markers: hidden when a site is filtered out. */
+  /** Follows the markers: hidden when a site is filtered out or behind the Moon. */
   update(_camera: Camera): void {
     for (const { marker, group } of this.items) group.visible = marker.group.visible;
   }
