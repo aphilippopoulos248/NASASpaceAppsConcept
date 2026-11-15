@@ -395,6 +395,7 @@ export class GlobeView {
         ...polar,
         note: `South-polar close-up: shaded relief from LOLA elevation (${polar.resolutionM} m grid), ${polar.shadows ? 'with the shadows the terrain casts at the simulated time' : 'evenly lit, without shadows'}. Not a photograph.`,
       },
+      closeUp: this.sitePatch ? { state: this.sitePatch.state, credits: this.sitePatch.credits } : null,
     });
 
     // Markers, the pin and site imagery follow the surface when the exaggeration or the data changes.
