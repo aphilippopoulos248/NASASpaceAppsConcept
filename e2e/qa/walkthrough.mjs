@@ -3,9 +3,10 @@
 //
 //   search     site search and comparison: open, type coordinates in Filters > Centre of view,
 //              drop a pin, the pin's card against the analysis, search criteria (mission
-//              window, slope and Earth-gap limits), save A, scan nearby sites, a ranked
-//              alternative as B (or, in a build without the scan, B = A arriving 24 h later),
-//              and the compare table against the analysis.
+//              window, slope and Earth-gap limits), save A, scan nearby sites with a typed
+//              radius and spacing that must survive a change of the slope limit (Q-7, T-16),
+//              a ranked alternative as B (or, in a build without the scan, B = A arriving 24 h
+//              later), and the compare table against the analysis.
 //   surface    IM-2 from its globe marker, looking around, its card and surface view at the
 //              landing time, Face Earth / Face Sun / sky paths, the 29.5-day window, scrubbing
 //              and event jumps, Escape; Apollo 11 at its landing time. On a GPU the surface is
@@ -64,6 +65,9 @@ const IM2 = { id: 'im-2', name: 'IM-2 Athena', lat: -84.79, lon: 29.2, landingUt
 const APOLLO11 = { id: 'apollo-11', lat: 0.6741, lon: 23.4730, landingUtc: Date.UTC(1969, 6, 20, 20, 17) };
 const PIN = { lat: -89.45, lon: -137.2, latText: '-89.45', lonText: '-137.2' };
 const CRITERIA = { windowH: 168, slopeLimitDeg: 8, maxEarthGapH: 48 };
+// The nearby scan as the operator checked Q-7: a typed radius and spacing, then the slope limit
+// changed (to the detour value and back), which redraws the tab; the scan must cover what was typed.
+const SCAN = { radiusM: 900, spacingM: 150, slopeDetourDeg: 10 };
 const kmPerDeg = (1737.4 * Math.PI) / 180;
 
 // ------------------------------------------------------------------ reading the app
@@ -380,12 +384,29 @@ async function partSearch(app, step) {
   const canScan = await hasAction(page, 'rankNearby');
   app.report.build.scan = canScan;
   if (canScan) {
-    await step('Scan nearby sites (Nearby sites tab, default radius and spacing, slope limit as set)', 'control', async ({ check, note }) => {
+    await step(`Scan nearby sites (Nearby sites tab): type Radius ${SCAN.radiusM} m and Spacing ${SCAN.spacingM} m, change "Slope at most" to ${SCAN.slopeDetourDeg}° and back to ${CRITERIA.slopeLimitDeg}°, then scan (Q-7)`, 'control', async ({ check, note }) => {
       await page.getByRole('tab', { name: 'Nearby sites' }).click();
       const scan = page.getByRole('button', { name: 'Scan nearby sites' });
       await scan.waitFor({ state: 'visible', timeout: 10_000 });
-      const settings = await page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`));
-      note(`Scan settings: ${settings.join(', ')}.`);
+      const group = page.getByRole('group', { name: 'Scan settings' });
+      const [radius, spacing, slope] = [group.getByLabel('Radius'), group.getByLabel('Spacing'), group.getByLabel('Slope at most')];
+      const settingsNow = () => page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`).join(', '));
+      note(`Scan settings before: ${await settingsNow()}.`);
+      // Typed, then left with Tab (Enter in these fields starts the scan).
+      await typeInto(radius, String(SCAN.radiusM));
+      await radius.press('Tab');
+      await typeInto(spacing, String(SCAN.spacingM));
+      await spacing.press('Tab');
+      // Each change of the slope limit redraws the tab, which used to put the last scan's radius and spacing back (Q-7).
+      for (const v of [SCAN.slopeDetourDeg, CRITERIA.slopeLimitDeg]) {
+        await typeInto(slope, String(v));
+        await slope.press('Tab');
+        await page.waitForFunction((x) => window.lunyx.store.get().slopeLimitDeg === x, v, { timeout: 10_000 });
+      }
+      const kept = [await radius.inputValue(), await spacing.inputValue()];
+      check('Radius keeps the typed value after the slope limit changed twice', kept[0], String(SCAN.radiusM), kept[0] === String(SCAN.radiusM), { finding: 'Q-7' });
+      check('Spacing keeps the typed value after the slope limit changed twice', kept[1], String(SCAN.spacingM), kept[1] === String(SCAN.spacingM), { finding: 'Q-7' });
+      note(`Scan settings at the scan: ${await settingsNow()}.`);
       const t0 = Date.now();
       await scan.click();
       await page.waitForFunction(() => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), null, { polling: 250, timeout: 600_000 });
@@ -398,6 +419,12 @@ async function partSearch(app, step) {
       const view = await readNearby(page);
       app.report.values.push({ profile: app.profile, where: 'nearby scan', nearby: st, table: view });
       note(`Summary: ${view?.summary}`);
+      const grid = `${SCAN.radiusM} / ${SCAN.spacingM} / ${CRITERIA.slopeLimitDeg}`;
+      check('The scan ran on the typed grid (options radius / spacing / slope limit)', `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}`, grid, `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}` === grid, { finding: 'Q-7' });
+      const says = `within ${SCAN.radiusM} m, every ${SCAN.spacingM} m, slope at most ${CRITERIA.slopeLimitDeg}°`;
+      check('The summary names the typed grid', view?.summary, says, Boolean(view?.summary?.includes(says)), { finding: 'Q-7' });
+      const after = [await radius.inputValue(), await spacing.inputValue()];
+      check('After the scan the fields show the grid it covered', after.join(' / '), `${SCAN.radiusM} / ${SCAN.spacingM}`, after.join(' / ') === `${SCAN.radiusM} / ${SCAN.spacingM}`);
       const ranked = (st.value ?? []).filter((c) => !c.ref && Number.isFinite(c.score) && c.slope <= CRITERIA.slopeLimitDeg).sort((a, b) => b.score - a.score);
       const first = view?.rows.find((r) => r.Rank === '1');
       if (first && ranked[0]) {
