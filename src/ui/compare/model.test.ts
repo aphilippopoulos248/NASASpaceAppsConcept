@@ -3,7 +3,7 @@ import { analyseStack } from '../../analysis/api';
 import { fnSource, stackOf } from '../../analysis/testing';
 import type { Blockage, SiteAnalysis, SkyEvent } from '../../analysis/types';
 import type { Scenario } from '../../core/types';
-import { basisOf, clockPosition, nowRows, requirementLines, scenarioRows, splitAssumptions, sunBandSet, windowRows, type Science } from './model';
+import { basisOf, clockPosition, nowRows, requirementLines, scenarioRows, splitAssumptions, windowRows, type Science } from './model';
 
 // A smooth Moon at 0 N 0 E: Earth stays overhead, and the Sun sets about a week after full Moon
 // (14 March 2025). "Day" lies wholly in sunlight; "dusk" starts lit and ends in a night that
@@ -197,8 +197,6 @@ describe('requirements in words', () => {
     const [high] = requirementLines('A', day, open, 40);
     expect(high).toMatchObject({ status: 'info' });
     expect(high.text).toMatch(/^A: no solar elevation band is set\. The Sun's elevation ranges from \d+\.\d° to \d+\.\d° during the window\.$/);
-    expect(sunBandSet(open)).toBe(false);
-    expect(sunBandSet({ sunElMinDeg: 0, sunElMaxDeg: 60 })).toBe(true);
   });
 
   it('flags a breach of each requirement', () => {
