@@ -217,8 +217,8 @@ start of setting, when the skyline first cuts the disc and power begins to fall,
 the analysis since the science project's delivery (decision D-8), but the screens and the
 assistant do not show it yet, and some panels still give the time without the words "fully
 set". This matters: at Blue Ghost on 16 March 2025, with a 2 m mast, the app gives **Sun fully
-set 19:30 UTC**, while setting started at 18:23:41 UTC by the analysis (18:23:40 by the
-validator), which falls inside Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not
+set 19:30 UTC**, while setting started at 18:23 UTC (computed by the analysis, and by the
+science project's validator), which falls inside Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not
 define the term). With a 3.5 m mast the validator's instants are 18:37:36 and 19:44:00 UTC. At
 the poles the Sun can take far longer than an hour to set.
 
@@ -305,6 +305,9 @@ centre.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Open defects** (being fixed by the original team at the time of writing):
+  - typing coordinates into Filters > Centre of view could leave the view, or a pin dropped
+    straight after, short of the typed point; fixed in the code (T-43, `6d4da06`), and the
+    walkthrough's re-check of the fix is still to come;
   - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
     met" for any window with a night, while the compare panel treats that band as no
     requirement (T-46);
@@ -339,6 +342,9 @@ presets, the compare panel or the assistant yet.
   surface view from a preset (IM-2's low Sun near the pole). 5: the compare panel (arrival 24 h
   later, nearby alternatives, the mission-window table). 6: NASA data used and how it was
   checked (with "not fully validated"). 7: how AI was used, and what comes next.
+
+Until the walkthrough has re-checked the T-43 fix, steer around typing coordinates into Filters >
+Centre of view: use a preset, "Go to a landing site", a catalogued site or a click on the globe.
 
 What it must not claim: that the results are fully validated; that Earth visibility is a
 working radio link; a sunset or sunrise time without saying which instant it is; that NASA
