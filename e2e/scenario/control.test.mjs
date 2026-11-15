@@ -1,0 +1,494 @@
+// End-to-end control (task T-1, decision D-1): every action of the built app, called the way
+// a language model calls it, does what it says and leaves on screen what the UI control
+// for it shows. No API key and no network: the scripted test model (not a language model)
+// asks for the tool calls through the real /api/assistant route, the browser runs them
+// through the registry, and the results go back; deterministic mode is driven through the
+// drawer with the phrase listed for each action in src/assistant/deterministic/examples.json.
+//
+// The list of cases follows the registry of the build under test: an action without a case
+// here, or without a phrase in examples.json, fails the run, so a new action is noticed.
+//
+//   node --test e2e/scenario/control.test.mjs     (needs `npm run build` first; starts its own servers)
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { after, before, describe, test } from 'node:test';
+import { closeBrowser, lastSeq, log, openApp, SLOW, TIMEOUT, until } from '../lib/app.mjs';
+import { servers } from '../lib/servers.mjs';
+
+const EXAMPLES = JSON.parse(readFileSync(new URL('../../src/assistant/deterministic/examples.json', import.meta.url), 'utf8')).examples;
+const SCRIPTED_LABEL = 'Scripted test model (not a language model)';
+const DETERMINISTIC_LABEL = 'Deterministic mode: no language model';
+
+// IM-2 touchdown: south-polar site with bundled terrain, inside the bundled Horizons table.
+const IM2 = '2025-03-06T17:28Z';
+// Blue Ghost Mission 1 on the day of its sunset, 16 March 2025 (bundled terrain and Horizons table).
+const BLUE_GHOST_DAY = '2025-03-16T06:00Z';
+
+let srv;
+before(async () => {
+  srv = await servers();
+}, SLOW);
+after(async () => {
+  await closeBrowser();
+  await srv?.stop();
+});
+
+/**
+ * Types a request into the drawer and waits for the turn to end. Returns the reply as the
+ * session holds it and what the action log gained, with results.
+ */
+async function send(page, text) {
+  const from = await lastSeq(page);
+  const before = await page.evaluate(() => window.lunyxAssistant.session.messages.filter((m) => m.role === 'assistant').length);
+  await page.locator('#assistant-input').fill(text);
+  await page.locator('#assistant-input').press('Enter');
+  await until(page, () => !window.lunyxAssistant.session.busy);
+  return page.evaluate(
+    ([from, before]) => {
+      const s = window.lunyxAssistant.session;
+      const replies = s.messages.filter((m) => m.role === 'assistant');
+      const m = replies.length > before ? replies.at(-1) : null;
+      const shown = [...document.querySelectorAll('.am--assistant')].at(-1);
+      return {
+        text: m?.text ?? null,
+        source: m?.source ?? null,
+        shownLabel: m ? (shown?.querySelector('.am-source')?.textContent ?? '') : null,
+        shownActions: m ? [...(shown?.querySelectorAll('.am-action-title') ?? [])].map((e) => e.textContent) : [],
+        entries: window.lunyx.actions
+          .actionLog()
+          .filter((e) => e.seq > from)
+          .map(({ name, params, origin, ok, error, result }) => ({ name, params, origin, ok, error: error ?? null, result: result === undefined ? null : JSON.parse(JSON.stringify(result)) })),
+      };
+    },
+    [from, before],
+  );
+}
+
+const run = (page, name, params = {}) => page.evaluate(([n, p]) => window.lunyx.actions.runAction(n, p, 'test'), [name, params]);
+const has = (page, name) => page.evaluate((n) => Boolean(window.lunyx.actions.getAction(n)), name);
+const store = (page) => page.evaluate(() => JSON.parse(JSON.stringify(window.lunyx.store.get())));
+const registered = (page) => page.evaluate(() => window.lunyx.actions.listActions().map((a) => a.name));
+
+/** What the controls on screen show, read from the DOM (the same things a person reads). */
+function screen(page) {
+  return page.evaluate(() => {
+    const q = (s) => document.querySelector(s);
+    const labelled = (text) => {
+      const l = [...document.querySelectorAll('.filters-panel label')].find((x) => x.textContent.trim() === text);
+      return l?.htmlFor ? document.getElementById(l.htmlFor) : (l?.querySelector('input') ?? null);
+    };
+    const check = (text) => [...document.querySelectorAll('.filters-panel label.ly-check')].find((l) => l.textContent.includes(text))?.querySelector('input')?.checked ?? null;
+    const pressed = (group, name) => [...(q(`[role="group"][aria-label="${group}"]`)?.querySelectorAll('button') ?? [])].find((b) => b.textContent.trim() === name)?.getAttribute('aria-pressed') ?? null;
+    const band = [...(q('.filters-panel [role="group"][aria-label^="Solar elevation"]')?.querySelectorAll('input') ?? [])].map((i) => i.value);
+    const hudButton = (name) => [...document.querySelectorAll('.surface-hud .sh-controls button')].find((b) => b.textContent.trim() === name);
+    const card = q('.site-card');
+    return {
+      view: document.body.dataset.view,
+      url: location.search,
+      scrubber: { playPressed: q('.time-scrubber .ts-play')?.getAttribute('aria-pressed'), date: q('.time-scrubber .ts-date')?.value, rate: q('.time-scrubber .ts-rate')?.value, window: q('.time-scrubber .ts-window')?.value },
+      filters: {
+        arrival: q('.filters-panel input[type="datetime-local"]')?.value,
+        dateNote: q('.filters-panel .fp-datenote')?.textContent ?? '',
+        lat: labelled('Latitude')?.value,
+        lon: labelled('Longitude')?.value,
+        mast: labelled('Mast height')?.value,
+        window: labelled('Mission window')?.value,
+        delay: labelled('Arrival delay')?.value,
+        relief: labelled('Exaggeration')?.value,
+        band,
+        coverage: check('Show elevation data coverage'),
+        ice: check('Show mapped ice targets'),
+        missions: check('Show previous missions'),
+        overlayOn: check('Show optimal landing area'),
+        overlay: q('.filters-panel select[aria-label="Landing-area overlay"]')?.value,
+        legend: q('.filters-panel .fp-legend')?.textContent ?? '',
+        realPressed: pressed('Lighting', 'Real'),
+        evenPressed: pressed('Lighting', 'Even'),
+        crewedPressed: pressed('Mission type', 'Crewed'),
+        landingCount: q('.mf-years-head .ly-label')?.textContent ?? '',
+      },
+      card: card && !card.hidden ? { title: q('.site-card .sc-title')?.textContent, bodyHidden: Boolean(q('.site-card .sc-body')?.hidden), foldExpanded: q('.site-card .sc-fold')?.getAttribute('aria-expanded'), text: card.textContent } : null,
+      compass: q('.compass')?.getAttribute('aria-label') ?? '',
+      locator: { readout: q('.locator-readout')?.textContent ?? '', zoomOutDisabled: Boolean(q('.locator button[aria-label="Zoom the map out"]')?.disabled) },
+      hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null },
+      drawerOpen: Boolean(q('#assistant-drawer')?.classList.contains('is-open')),
+    };
+  });
+}
+
+/** Waits until what is on screen passes `ok` (reading the DOM again each time); returns it. Fails with the last reading. */
+async function shows(page, ok, what) {
+  const end = Date.now() + TIMEOUT;
+  let last;
+  for (;;) {
+    last = await screen(page);
+    try {
+      if (ok(last) !== false) return last;
+    } catch {
+      // not yet
+    }
+    if (Date.now() > end) assert.fail(`${what}: the screen did not show it. Last reading: ${JSON.stringify(last)}`);
+    await page.waitForTimeout(300);
+  }
+}
+
+const near = (a, b, tol, what) => assert.ok(Math.abs(a - b) <= tol, `${what}: ${a} vs ${b}`);
+
+// ---------------------------------------------------------------- the cases, one per action
+
+/**
+ * Each case: the parameters a model would send, an optional preparation (through actions with
+ * origin "test"), and a check of the result and of the screen. `needs` names actions that must
+ * exist for the preparation. Cases run in this order on one page, each building on the last.
+ */
+const CASES = [
+  // ---- state and time
+  { name: 'getState', check: async (r) => assert.equal(r.view, 'globe') },
+  { name: 'setMissionWindow', params: { startUtc: IM2, durationH: 24, moveClock: true }, check: async (r, page) => {
+    assert.equal(r.windowStartUtc, IM2);
+    await shows(page, (s) => s.filters.arrival === '2025-03-06T17:28' && s.scrubber.window === '24' && s.filters.window === '24' && s.scrubber.date === '2025-03-06T17:28', 'arrival field, both window selectors and the scrubber date');
+  } },
+  { name: 'setTime', params: { utc: '2025-03-06T20:00Z' }, check: async (r, page) => {
+    assert.equal(r.timeUtc, '2025-03-06T20:00Z');
+    await shows(page, (s) => s.scrubber.date === '2025-03-06T20:00' && s.filters.arrival === '2025-03-06T17:28', 'scrubber date moves, arrival stays');
+  } },
+  { name: 'setRate', params: { secondsPerSecond: 43200 }, check: async (r, page) => {
+    assert.equal(r.rateSimSecondsPerSecond, 43200);
+    await shows(page, (s) => s.scrubber.rate === '43200', 'speed selector');
+  } },
+  { name: 'play', check: async (r, page) => {
+    assert.equal(r.playing, true);
+    await shows(page, (s) => s.scrubber.playPressed === 'true', 'play button pressed');
+  } },
+  { name: 'pause', check: async (r, page) => {
+    assert.equal(r.playing, false);
+    await shows(page, (s) => s.scrubber.playPressed === 'false', 'play button released');
+    await run(page, 'setTime', { utc: '2025-03-06T20:00Z' });
+  } },
+  { name: 'setLightMode', params: { mode: 'even' }, check: async (r, page) => {
+    assert.equal(r.lightMode, 'even');
+    await shows(page, (s) => s.filters.evenPressed === 'true' && s.filters.realPressed === 'false', 'Lighting: Even pressed');
+    await run(page, 'setLightMode', { mode: 'real' });
+  } },
+  { name: 'setDelay', params: { hours: 24 }, check: async (r, page) => {
+    assert.equal(r.effectiveStartUtc, '2025-03-07T17:28Z');
+    await shows(page, (s) => s.filters.delay === '24' && /With the 24 h delay the mission window starts 2025-03-07 17:28 UTC/.test(s.filters.dateNote), 'delay field and its note');
+    await run(page, 'setDelay', { hours: 0 });
+  } },
+  { name: 'setMastHeight', params: { metres: 5 }, check: async (r, page) => {
+    assert.equal(r.mastHeightM, 5);
+    await shows(page, (s) => s.filters.mast === '5', 'mast field');
+    await run(page, 'setMastHeight', { metres: 2 });
+  } },
+  { name: 'setSunBand', params: { minDeg: 5, maxDeg: 60 }, check: async (r, page) => {
+    assert.deepEqual([r.sunElMinDeg, r.sunElMaxDeg], [5, 60]);
+    await shows(page, (s) => s.filters.band[0] === '5' && s.filters.band[1] === '60', 'solar elevation fields');
+  } },
+  // No control shows these two yet (the nearby panel and the requirement fields come with the compare panel / HUD): state only.
+  { name: 'setSlopeLimit', params: { degrees: 8 }, check: async (r, page) => assert.equal((await store(page)).slopeLimitDeg, 8), noControl: 'slope limit field arrives with the nearby panel (original T-11)' },
+  { name: 'setMaxEarthGap', params: { hours: 12 }, check: async (r, page) => assert.equal((await store(page)).maxEarthGapH, 12), noControl: 'Earth-gap requirement field arrives with the HUD / compare panel (original T-10 / T-11)' },
+  // ---- layers and filters
+  { name: 'setOverlay', params: { mode: 'sun-band' }, check: async (r, page) => {
+    assert.equal(r.overlay, 'sun-band');
+    await shows(page, (s) => s.filters.overlayOn === true && s.filters.overlay === 'sun-band' && /Sun between 5° and 60°/.test(s.filters.legend), 'overlay checkbox, selector and legend');
+    await run(page, 'setOverlay', { mode: 'off' });
+  } },
+  { name: 'showMissions', params: { show: false }, check: async (r, page) => {
+    assert.equal(r.showMissions, false);
+    await shows(page, (s) => s.filters.missions === false, '"Show previous missions" unticked');
+    await run(page, 'showMissions', { show: true });
+  } },
+  { name: 'setFilters', params: { type: 'crewed' }, check: async (r, page) => {
+    assert.equal(r.filter.type, 'crewed');
+    await shows(page, (s) => s.filters.crewedPressed === 'true' && s.filters.landingCount === `${r.shown} of ${r.total} landings`, 'Crewed pressed and the landing count');
+    await run(page, 'setFilters', { reset: true });
+  } },
+  { name: 'setReliefExaggeration', params: { factor: 5 }, check: async (r, page) => {
+    assert.equal(r.reliefExaggeration, 5);
+    await shows(page, (s) => s.filters.relief === '5', 'relief selector');
+    await run(page, 'setReliefExaggeration', { factor: 10 });
+  } },
+  { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.coverageShown, true);
+    await shows(page, (s) => s.filters.coverage === true, 'coverage checkbox');
+    await run(page, 'showCoverage', { show: false });
+  } },
+  { name: 'showIceTargets', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.iceTargetsShown, true);
+    await shows(page, (s) => s.filters.ice === true, 'ice-target checkbox');
+    await run(page, 'showIceTargets', { show: false });
+  } },
+  // ---- globe camera, compass, locator
+  { name: 'setGlobeCamera', params: { lat: -45, lon: 60, altitudeKm: 4170 }, check: async (r, page) => {
+    assert.deepEqual(r.target, { latDeg: -45, lonDegEast: 60, altitudeKm: 4170 });
+    await shows(page, (s) => s.filters.lat === '-45.00' && s.filters.lon === '60.00', 'latitude / longitude fields after the flight');
+  } },
+  { name: 'resetNorth', check: async (r, page) => {
+    assert.ok(Math.abs(r.northAngleDeg) < 1, JSON.stringify(r));
+    await shows(page, (s) => /lunar north is up/.test(s.compass), 'compass says north is up');
+  } },
+  { name: 'setLocatorZoom', params: { zoom: 2 }, check: async (r, page) => {
+    assert.equal(r.locatorZoom, 2);
+    await shows(page, (s) => /×2$/.test(s.locator.readout) && !s.locator.zoomOutDisabled, 'locator readout ×2 and zoom-out enabled');
+    await run(page, 'setLocatorZoom', { zoom: 1 });
+  } },
+  // ---- sites, the card, site science
+  { name: 'listSites', check: async (r, page) => {
+    assert.equal(r.total, 28);
+    assert.ok(r.sites.some((s) => s.id === 'im-2'));
+    for (const s of r.sites.slice(0, 3)) assert.equal((await page.evaluate((n) => window.lunyx.actions.runAction('selectSite', { site: n, fly: false }, 'test'), s.name)).ok, true, `selectSite accepts the listed name "${s.name}"`);
+    await run(page, 'clearSite');
+  } },
+  { name: 'selectSite', params: { site: 'IM-2', atLanding: true }, check: async (r, page) => {
+    assert.equal(r.site.id, 'im-2');
+    assert.equal(r.timeUtc, IM2);
+    await shows(page, (s) => s.card?.title === 'IM-2 Athena' && /site=im-2/.test(s.url) && s.scrubber.date === '2025-03-06T17:28', 'site card, deep link and clock');
+  } },
+  { name: 'getAnalysis', check: async (r, page) => {
+    assert.equal(r.state, 'ready', r.error);
+    const s = await shows(page, (x) => /% of the window/.test(x.card?.text ?? ''), 'mission-window figures on the card');
+    const card = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.site-card .sc-window dt')].filter((dt) => !dt.hidden).map((dt) => [dt.textContent.trim(), dt.nextElementSibling.textContent.trim()])));
+    const first = (t) => Number(/-?\d+(?:\.\d+)?/.exec(t.replace('−', '-'))[0]);
+    near(first(card.Sunlight), r.metrics.illuminationPct, 0.051, 'card sunlight vs getAnalysis');
+    near(first(card['Earth in view']), r.metrics.earthVisiblePct, 0.051, 'card Earth in view vs getAnalysis');
+    near(first(card.Slope), r.slope.slopeDeg, 0.051, 'card slope vs getAnalysis');
+    assert.ok(s.card);
+  } },
+  { name: 'getSiteScience', check: async (r, page) => {
+    assert.equal(r.site.id, 'im-2');
+    assert.equal(r.dsn.available, true, r.dsn.reason);
+    const want = [...r.dsn.stations.map((x) => `${x.receive.pctOfWindow.toFixed(1)} %`), ...(r.longTermAverages.sunlight?.available ? [`${r.longTermAverages.sunlight.pctOfTime} %`] : []), ...r.iceTargets.nearest.slice(0, 3).map((t) => t.label)];
+    await shows(page, (s) => want.every((w) => s.card?.text.includes(w)), `the card's site science shows ${want.join(', ')}`);
+  } },
+  { name: 'nearestIceTargets', params: { count: 3 }, check: async (r, page) => {
+    assert.equal(r.available, true);
+    assert.equal(r.nearest.length, 3);
+    await shows(page, (s) => r.nearest.every((t) => s.card?.text.includes(t.label) && s.card.text.includes(t.distanceText)), 'the card lists the same three ice targets and distances');
+  } },
+  { name: 'showPanel', params: { panel: 'site-details', open: false }, check: async (r, page) => {
+    assert.equal(r.open, false);
+    await shows(page, (s) => s.card?.bodyHidden === true && s.card.foldExpanded === 'false', 'card body folded');
+    await run(page, 'showPanel', { panel: 'site-details', open: true });
+  } },
+  { name: 'jumpToEvent', prepare: async (page) => {
+    // Blue Ghost on the day of its sunset: the window holds a sunset to jump to.
+    await run(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
+    await run(page, 'setMissionWindow', { startUtc: BLUE_GHOST_DAY, durationH: 24, moveClock: true });
+  }, params: { type: 'sunset' }, check: async (r, page) => {
+    assert.equal(r.event, 'sunset');
+    assert.ok(r.timeUtc > BLUE_GHOST_DAY && r.timeUtc < '2025-03-17T06:00Z', r.timeUtc);
+    const a = (await run(page, 'getAnalysis')).result;
+    assert.ok(a.events.some((e) => e.type === 'sunset' && e.timeUtc === r.timeUtc), 'the jump lands on an event of the analysis');
+    await shows(page, (s) => s.scrubber.date === r.timeUtc.slice(0, 16) && s.scrubber.playPressed === 'false', 'scrubber date at the event, paused');
+  } },
+  // ---- comparison (no panel in this build: state only)
+  { name: 'saveScenario', prepare: async (page) => {
+    await run(page, 'selectSite', { site: 'im-2', atLanding: true, fly: false });
+  }, params: { slot: 'A' }, check: async (r, page) => {
+    assert.equal(r.slot, 'A');
+    assert.equal((await store(page)).compareA.site.id, 'im-2');
+    await run(page, 'setMastHeight', { metres: 10 });
+    await run(page, 'saveScenario', { slot: 'B' });
+    await run(page, 'setMastHeight', { metres: 2 });
+  } },
+  { name: 'compare', check: async (r, page) => {
+    assert.equal(r.comparing, true);
+    assert.equal(r.analysisA.state, 'ready');
+    assert.equal(r.analysisB.state, 'ready');
+    assert.ok(r.diff && typeof r.diff.illuminationPct === 'number', JSON.stringify(r.diff));
+    const s = await page.evaluate(async () => window.lunyx.actions.getAction('getState').run({}));
+    assert.deepEqual(s.compare, { A: r.A, B: r.B, open: true });
+  } },
+  { name: 'stopCompare', check: async (r, page) => assert.equal((await store(page)).comparing, false) },
+  // ---- pins and the surface view
+  { name: 'dropPin', params: { lat: -88, lon: 136.7 }, check: async (r, page) => {
+    assert.equal(r.site.kind, 'custom');
+    await shows(page, (s) => /^Pin /.test(s.card?.title ?? ''), 'the card names the pin');
+  } },
+  { name: 'enterSurface', prepare: async (page) => {
+    await run(page, 'selectSite', { site: 'im-2', fly: false });
+  }, check: async (r, page) => {
+    assert.equal(r.view, 'surface');
+    await shows(page, (s) => s.view === 'surface' && /Facing/.test(s.hud.status), 'surface view with its HUD');
+  } },
+  { name: 'lookAt', params: { azDeg: 90, elDeg: 5, fovDeg: 60 }, check: async (r, page) => {
+    assert.deepEqual(r.look, { azDeg: 90, elDeg: 5, fovDeg: 60 });
+    await shows(page, (s) => /^Facing E 90°, \+5°/.test(s.hud.status) && /field of view 60°/.test(s.hud.status), 'HUD facing east, +5°, 60° field of view');
+  } },
+  { name: 'setFieldOfView', params: { fovDeg: 30 }, check: async (r, page) => {
+    assert.equal(r.look.fovDeg, 30);
+    await shows(page, (s) => /field of view 30°/.test(s.hud.status), 'HUD field of view 30°');
+  } },
+  { name: 'lookAtBody', params: { body: 'earth' }, check: async (r, page) => {
+    const look = (await store(page)).look;
+    near(look.azDeg, r.azDeg, 0.06, 'look azimuth vs Earth azimuth');
+    await shows(page, (s) => new RegExp(`^Facing \\w+ ${Math.round(r.azDeg) % 360}°`).test(s.hud.status), `HUD facing ${Math.round(r.azDeg)}°`);
+  } },
+  { name: 'walkTo', params: { eastM: 100, northM: 50 }, check: async (r, page) => {
+    near(r.position.distanceFromSiteM, Math.hypot(100, 50), 0.6, 'distance from the site');
+    await shows(page, (s) => /112 m from the site/.test(s.hud.status) && s.hud.homeShown === true, 'HUD 112 m from the site, "Return to site" shown');
+  } },
+  { name: 'setSkyAnnotations', params: { tracks: false, labels: false }, check: async (r, page) => {
+    assert.equal(r.tracks, false);
+    await shows(page, (s) => s.hud.pathsPressed === 'false', '"Sky paths" released');
+  } },
+  { name: 'setGeneratedDetail', params: { on: false }, check: async (r, page) => {
+    assert.equal(r.generatedDetail, false);
+    await shows(page, (s) => s.hud.generatedPressed === 'false' && /Generated detail is off/.test(s.hud.ground), '"Generated detail" released and the ground line says so');
+  } },
+  { name: 'getSurfaceView', check: async (r, page) => {
+    assert.equal(r.active, true);
+    assert.equal(r.site.id, 'im-2');
+    near(r.position.eastM, 100, 0.6, 'east');
+    near(r.position.northM, 50, 0.6, 'north');
+    assert.equal(r.ground.generatedDetailShown, false);
+    assert.equal(r.annotations.tracks, false);
+    assert.ok(r.ground.bands.length > 0 && r.ground.bands[0].product, JSON.stringify(r.ground.bands[0]));
+    await shows(page, (s) => s.hud.ground.includes(r.ground.summary), 'HUD ground line names the same data');
+  } },
+  { name: 'exitSurface', check: async (r, page) => {
+    assert.equal(r.view, 'globe');
+    assert.equal(r.site.id, 'im-2');
+    await shows(page, (s) => s.view === 'globe' && s.card?.title === 'IM-2 Athena', 'globe view with the site kept');
+  } },
+  { name: 'clearSite', check: async (r, page) => {
+    assert.equal(r.site, null);
+    await shows(page, (s) => s.card === null, 'site card closed');
+  } },
+  // ---- the drawer itself (last: they change the drawer the test types into)
+  { name: 'setAssistantOpen', params: { open: false }, check: async (r, page) => {
+    assert.equal(r.assistantOpen, false);
+    await shows(page, (s) => s.drawerOpen === false, 'drawer closed');
+    await run(page, 'setAssistantOpen', { open: true });
+    await shows(page, (s) => s.drawerOpen === true, 'drawer open again');
+  } },
+  { name: 'clearConversation', check: async (r, page) => {
+    assert.equal(r.cleared, true);
+    await until(page, () => window.lunyxAssistant.session.messages.length === 0 && !document.querySelector('.am'));
+  } },
+];
+
+const caseNames = new Set(CASES.map((c) => c.name));
+
+describe('control: what a model is given', () => {
+  let app;
+  before(async () => {
+    app = await openApp(srv.scripted);
+  }, SLOW);
+  after(() => app?.close());
+
+  test('the tool list is the registry, every definition is complete, and the route accepts all of them', SLOW, async () => {
+    const { page } = app;
+    const [names, tools] = await Promise.all([registered(page), page.evaluate(() => window.lunyx.actions.toolDefinitions())]);
+    assert.deepEqual(tools.map((t) => t.name).sort(), [...names].sort());
+    const problems = [];
+    for (const t of tools) {
+      if (t.description.length < 40) problems.push(`${t.name}: description of ${t.description.length} characters`);
+      const props = t.input_schema.properties;
+      for (const r of t.input_schema.required ?? []) if (!(r in props)) problems.push(`${t.name}: required "${r}" is not a property`);
+      for (const [k, p] of Object.entries(props)) {
+        if (!p.description || p.description.length < 4) problems.push(`${t.name}.${k}: no description`);
+        if (p.enum && !p.enum.length) problems.push(`${t.name}.${k}: empty enum`);
+        if ((p.type === 'number' || p.type === 'integer') && (p.minimum === undefined || p.maximum === undefined) && !/(id|rank)$/i.test(k)) problems.push(`${t.name}.${k}: number without both bounds`);
+      }
+    }
+    assert.deepEqual(problems, []);
+    // The real route validates the whole list before any model is involved.
+    const res = await fetch(`${srv.scripted}/api/assistant`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ messages: [{ role: 'user', text: 'call getState' }], tools }) });
+    assert.equal(res.status, 200, await res.clone().text());
+    const events = (await res.text()).trim().split('\n').map((l) => JSON.parse(l));
+    assert.equal(events.at(-1).type, 'done');
+  });
+
+  test('every registered action has a case below and a phrase in examples.json', SLOW, async () => {
+    const names = await registered(app.page);
+    assert.deepEqual(names.filter((n) => !caseNames.has(n)), [], 'actions without a control case in e2e/scenario/control.test.mjs');
+    assert.deepEqual(names.filter((n) => !EXAMPLES.some((e) => e.action === n)), [], 'actions without a phrase in src/assistant/deterministic/examples.json');
+  });
+});
+
+describe('control: every action through the scripted model and the real route', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.scripted);
+    page = app.page;
+    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await page.locator('#assistant-button').click();
+    await until(page, () => document.getElementById('assistant-drawer')?.classList.contains('is-open') && !document.querySelector('.ad-mode')?.textContent.includes('Checking'));
+  }, SLOW);
+  after(() => app?.close());
+
+  for (const c of CASES) {
+    test(`${c.name}${c.noControl ? ` (no control yet: ${c.noControl})` : ''}`, SLOW, async (t) => {
+      if (!(await has(page, c.name))) {
+        t.skip(`this build has no ${c.name} action`);
+        return;
+      }
+      if (c.prepare) await c.prepare(page);
+      const reply = await send(page, `call ${c.name}${c.params ? ` ${JSON.stringify(c.params)}` : ''}`);
+      // clearConversation empties the drawer once the turn is over, reply included.
+      const cleared = c.name === 'clearConversation';
+      if (!cleared) assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL });
+      const entry = reply.entries.find((e) => e.name === c.name && e.origin === 'assistant');
+      assert.ok(entry, `the model's call did not reach the registry: ${JSON.stringify(reply.entries.map((e) => e.name))}`);
+      assert.ok(entry.ok, `${c.name} failed: ${entry.error}`);
+      assert.deepEqual(entry.params, c.params ?? {});
+      // The model's final answer quotes the result it was sent back.
+      if (!cleared) assert.match(reply.text, new RegExp(`1\\. ${c.name}: \\{`));
+      await c.check(entry.result, page);
+    });
+  }
+
+  test('the page raised no errors', SLOW, async () => {
+    assert.deepEqual(app.problems, []);
+  });
+});
+
+describe('control: every action through deterministic mode, by its phrase', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  /** A known starting point between examples, set through actions (origin "test"). */
+  async function reset() {
+    const steps = [
+      ['setAssistantOpen', { open: true }], ['stopCompare'], ['clearComparison'], ['exitSurface'], ['clearSite'], ['pause'], ['setLightMode', { mode: 'real' }],
+      ['setDelay', { hours: 0 }], ['setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true }], ['setMastHeight', { metres: 2 }], ['setSunBand', { minDeg: 0, maxDeg: 90 }],
+      ['setOverlay', { mode: 'off' }], ['showMissions', { show: true }], ['setFilters', { reset: true }], ['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }],
+      ['showIceTargets', { show: false }], ['setLocatorZoom', { zoom: 1 }], ['showPanel', { panel: 'site-details', open: true }],
+    ];
+    for (const [name, params] of steps) if (await has(page, name)) await run(page, name, params ?? {});
+    await until(page, () => document.getElementById('assistant-drawer')?.classList.contains('is-open') && !document.querySelector('.ad-mode')?.textContent.includes('Checking'));
+  }
+
+  for (const ex of EXAMPLES) {
+    test(`"${ex.say}" runs ${ex.action}`, SLOW, async (t) => {
+      if (!(await has(page, ex.action))) {
+        t.skip(`this build has no ${ex.action} action`);
+        return;
+      }
+      await reset();
+      for (const g of ex.given ?? []) {
+        const r = await send(page, g);
+        assert.ok(r.entries.every((e) => e.ok), `setup "${g}" failed: ${r.text}`);
+      }
+      const r = await send(page, ex.say);
+      if (ex.action !== 'clearConversation') assert.equal(r.shownLabel, DETERMINISTIC_LABEL);
+      const hit = r.entries.find((e) => e.name === ex.action && e.origin === 'assistant');
+      assert.ok(hit, `"${ex.say}" ran ${JSON.stringify(r.entries.map((e) => e.name))}; reply: ${r.text}`);
+      assert.ok(hit.ok, `${ex.action} failed: ${hit.error}; reply: ${r.text}`);
+      // Only the assistant acted, and the drawer lists what it ran.
+      assert.ok(r.entries.every((e) => e.origin === 'assistant'), JSON.stringify(r.entries.map((e) => [e.name, e.origin])));
+      if (ex.action !== 'clearConversation' && ex.action !== 'setAssistantOpen') {
+        const title = await page.evaluate((n) => window.lunyx.actions.getAction(n).title, ex.action);
+        assert.ok(r.shownActions.includes(title), `the drawer lists ${JSON.stringify(r.shownActions)}, not "${title}"`);
+      }
+    });
+  }
+
+  test('the page raised no errors', SLOW, async () => {
+    assert.deepEqual(app.problems, []);
+  });
+});

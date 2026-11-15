@@ -217,9 +217,9 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     defineAction({ name: 'pause', title: 'Pause', description: 'Stops the clock.', effect: 'command', params: none, run: () => { state.playing = false; return timeOut(); } }),
     defineAction<{ secondsPerSecond: number }, unknown>({ name: 'setRate', title: 'Set playback speed', description: 'Sets the speed.', effect: 'command', params: { type: 'object', properties: { secondsPerSecond: { type: 'number', description: 'rate', minimum: 1 } }, required: ['secondsPerSecond'] }, run: ({ secondsPerSecond }) => { state.rate = secondsPerSecond; return timeOut(); } }),
     defineAction<{ mode: 'real' | 'even' }, unknown>({ name: 'setLightMode', title: 'Set lighting', description: 'Lighting.', effect: 'command', params: { type: 'object', properties: { mode: { type: 'string', description: 'mode', enum: ['real', 'even'] } }, required: ['mode'] }, run: ({ mode }) => { state.lightMode = mode; if (mode === 'even') state.playing = false; return { lightMode: state.lightMode, playing: state.playing }; } }),
-    defineAction<{ site: string; surface?: boolean; atLanding?: boolean }, unknown>({
+    defineAction<{ site: string; surface?: boolean; atLanding?: boolean; fly?: boolean }, unknown>({
       name: 'selectSite', title: 'Select landing site', description: 'Selects a catalogued landing site by id or name.', effect: 'command',
-      params: { type: 'object', properties: { site: { type: 'string', description: 'id or name' }, surface: { type: 'boolean', description: 'enter surface' }, ...(options.landingActions ? { atLanding: { type: 'boolean' as const, description: 'at touchdown' } } : {}) }, required: ['site'] },
+      params: { type: 'object', properties: { site: { type: 'string', description: 'id or name' }, surface: { type: 'boolean', description: 'enter surface' }, fly: { type: 'boolean', description: 'fly the globe there' }, ...(options.landingActions ? { atLanding: { type: 'boolean' as const, description: 'at touchdown' } } : {}) }, required: ['site'] },
       run: ({ site, surface, atLanding }) => {
         const key = site.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
         const hit = LANDINGS.find((l) => l.id.replace(/[^a-z0-9]/g, '') === key || l.name.toLowerCase().replace(/[^a-z0-9]/g, '') === key || l.name.toLowerCase().replace(/[^a-z0-9]/g, '').startsWith(key));
@@ -336,7 +336,11 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const call = compareCalls++;
         const side = (s: NonNullable<FakeState['compareA']>) =>
           call < settle ? { state: 'idle' } : call < 2 * settle ? { state: 'loading', scenario: s.label } : { state: 'ready', scenario: s.label, ...s.metrics, warnings: [] };
-        return { comparing: true, A: state.compareA!.label, B: state.compareB!.label, analysisA: side(state.compareA!), analysisB: side(state.compareB!) };
+        const ready = call >= 2 * settle;
+        // As the real result: B minus A, rounded to 2 decimals, once both sides are ready.
+        const d = (k: keyof FakeMetrics) => Math.round((state.compareB!.metrics[k] - state.compareA!.metrics[k]) * 100) / 100;
+        const diff = ready ? { meaning: 'B minus A', illuminationPct: d('illuminationPct'), longestDarknessH: d('longestDarknessH'), earthVisiblePct: d('earthVisiblePct'), longestEarthGapH: d('longestEarthGapH'), slopeDeg: d('slopeDeg'), highlights: [] as string[] } : null;
+        return { comparing: true, A: state.compareA!.label, B: state.compareB!.label, analysisA: side(state.compareA!), analysisB: side(state.compareB!), diff };
       },
     }),
     defineAction({ name: 'stopCompare', title: 'Close comparison', description: 'Closes.', effect: 'command', params: none, run: () => { state.comparing = false; return { comparing: false }; } }),
