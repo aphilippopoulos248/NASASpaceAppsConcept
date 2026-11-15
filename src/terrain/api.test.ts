@@ -428,3 +428,48 @@ describe('bundled grids (public/data/dem)', () => {
     expect(regions[regions.length - 1]).toMatchObject({ latMin: -90, latMax: 90 });
   });
 });
+
+// ------------------------------------------------------------------------------------------
+// Hand-overs between a site's grids (raised by the independent check T-26).
+
+describe('where one grid hands over to the next', () => {
+  it('measures the mismatch at each edge the stack really crosses, and says it in the notes', async () => {
+    const a17 = await loadTerrainFor(landing('apollo-17'));
+    expect(a17.seams!.map((x) => [x.inner, x.outer, x.distanceM])).toEqual([
+      ['3 m model', '60 m window', 768],
+      ['60 m window', '480 m window', 3840],
+      ['480 m window', 'whole-Moon grid', 30720],
+    ]);
+    // The 3 m model against the 60 m window: the independent check found -7.38 to +21.63 m along this edge.
+    const [nac, w60, w480] = a17.seams!;
+    expect(nac.minM).toBeCloseTo(-7.4, 0);
+    expect(nac.maxM).toBeCloseTo(21.1, 0);
+    expect(nac.rmsM).toBeLessThan(5);
+    expect(nac.degPerMetre).toBeCloseTo(0.0746, 4); // 1 m at 768 m
+    expect(w60.degPerMetre).toBeCloseTo(0.01492, 5);
+    expect(w480.degPerMetre).toBeCloseTo(0.001865, 6);
+    // The far edge meets a 1.9 km grid in mountains: hundreds of metres apart in places.
+    expect(w480.rmsM).toBeGreaterThan(50);
+    const note = a17.notes.find((n) => n.startsWith('Where one grid hands over to the next'))!;
+    expect(note).toContain('-7.4 to +21.1 m (3.6 m RMS) at 0.77 km, where the 3 m model ends');
+    expect(note).toContain('where the 60 m window ends');
+    expect(note).toContain('1 m of height is 0.075° at 0.77 km, 0.015° at 3.8 km, 0.002° at 31 km');
+
+    // Blue Ghost: the step at the edge of the 3 m model that moves the sunset of 16 March 2025 by minutes.
+    const bg = (await loadTerrainFor(landing('blue-ghost-1'))).seams![0];
+    expect([bg.inner, bg.distanceM]).toEqual(['3 m model', 768]);
+    expect(bg.minM).toBeGreaterThan(-8);
+    expect(bg.maxM).toBeLessThan(9);
+
+    // IM-2: its 60 m window hands over to the 80 m polar layer, which agrees to a few metres; the
+    // 480 m window is never in use at its own edge (finer polar layers cover both sides), so it has no seam.
+    const im2 = await loadTerrainFor(landing('im-2'));
+    expect(im2.seams!.map((x) => [x.inner, x.outer])).toEqual([['60 m window', '80 m polar layer']]);
+    expect(Math.max(Math.abs(im2.seams![0].minM), Math.abs(im2.seams![0].maxM))).toBeLessThan(6);
+
+    // A pin with no grid of its own has no such edge.
+    const pinStack = await loadTerrainFor(pin(-89.45, -137.2), { remote: false });
+    expect(pinStack.seams).toBeUndefined();
+    expect(pinStack.notes.some((n) => n.startsWith('Where one grid hands over'))).toBe(false);
+  });
+});
