@@ -6,4 +6,7 @@
 .relief-note:empty { display: none; }
 @media (max-width: 700px) {
   .relief-chip { max-width: 168px; }
+  /* The unfolded site card reaches down to the chip. Only the factor stays then: the card's own
+     credit line says what the close-up is made of. */
+  body:has(.site-card:not([hidden]):not(.folded)) .relief-note { display: none; }
 }

@@ -1,0 +1,23 @@
+im-2.landing  (-84.7900, 29.2000), 2 m, window 2025-03-06T17:28:00Z + 336 h
+  reference darkness  longest inside the window 18.18 h; longest overlapping spell in full 2025-03-19 23:17:13 .. 2025-04-04 19:04:43 = 379.79 h
+  reference Earth gap longest inside the window 37.34 h; longest overlapping spell in full 2025-03-19 04:07:44 .. 2025-03-25 08:15:58 = 148.14 h
+  app cc736f8 darkness  inside the window 18.19 h (+0.01); in full 2025-03-19 23:16:50 .. 2025-04-04 19:03:42 = 379.78 h (start -0.4 min, end -1.0 min, length -0.01 h)
+  app cc736f8 Earth gap inside the window 37.37 h (+0.03); in full 2025-03-19 04:05:44 .. 2025-03-25 08:19:02 = 148.22 h (start -2.0 min, end +3.1 min, length +0.08 h)
+
+chandrayaan-3.landing  (-69.3741, 32.3200), 2 m, window 2023-08-23T12:33:00Z + 336 h
+  reference darkness  longest inside the window 52.51 h; longest overlapping spell in full 2023-09-04 08:02:23 .. 2023-09-19 23:57:08 = 375.91 h
+  reference Earth gap none in the window
+  app cc736f8 darkness  inside the window 52.51 h (+0.00); in full 2023-09-04 08:02:08 .. 2023-09-19 23:56:40 = 375.91 h (start -0.2 min, end -0.5 min, length -0.00 h)
+  app cc736f8 Earth gap inside the window 0.00 h; no full-length value
+
+chandrayaan-3.from-night  (-69.3741, 32.3200), 2 m, window 2023-09-10T00:00:00Z + 336 h
+  reference darkness  longest inside the window 239.95 h; longest overlapping spell in full 2023-09-04 08:02:23 .. 2023-09-19 23:57:09 = 375.91 h
+  reference Earth gap none in the window
+  app cc736f8 darkness  inside the window 239.94 h (-0.01); in full 2023-09-04 08:02:07 .. 2023-09-19 23:56:38 = 375.91 h (start -0.3 min, end -0.5 min, length -0.00 h)
+  app cc736f8 Earth gap inside the window 0.00 h; no full-length value
+
+apollo-11.landing  (0.6742, 23.4731), 2 m, window 1969-07-20T20:17:00Z + 336 h
+  reference darkness  longest inside the window 4.61 h; longest overlapping spell in full 1969-08-03 15:40:14 .. 1969-08-18 08:56:25 = 353.27 h
+  reference Earth gap none in the window
+  app cc736f8 darkness  inside the window 4.61 h (-0.00); in full 1969-08-03 15:40:22 .. 1969-08-18 08:56:37 = 353.27 h (start +0.1 min, end +0.2 min, length +0.00 h)
+  app cc736f8 Earth gap inside the window 0.00 h; no full-length value

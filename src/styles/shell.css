@@ -80,17 +80,20 @@ body[data-view='surface'] .region[data-views='globe'] { display: none; }
 }
 
 @media (max-width: 700px) {
+  /* The time scrubber spans the bottom and grows with its content (the jump buttons add rows),
+     so what sits above it is placed on its real height: --scrubber-h is kept by timeScrubber.ts. */
+  .shell { --above-scrubber: calc(var(--scrubber-h, 136px) + 24px); }
   .wordmark { font-size: var(--fs-xl); }
   .region-wordmark { top: var(--sp-3); }
   .left-toggle { display: inline-flex; position: absolute; top: var(--sp-3); left: var(--edge); pointer-events: auto; }
-  .region-left { top: 56px; bottom: auto; max-height: calc(100dvh - 56px - 216px); display: none; z-index: 1; }
+  .region-left { top: 56px; bottom: auto; max-height: calc(100dvh - 56px - var(--above-scrubber) - 56px); display: none; z-index: 1; }
   body.left-open .region-left { display: flex; }
-  .region-card { top: auto; bottom: 216px; max-height: calc(100dvh - 216px - 64px); }
+  .region-card { top: auto; bottom: calc(var(--above-scrubber) + 56px); max-height: calc(100dvh - var(--above-scrubber) - 56px - 64px); }
   .region-scrubber { left: var(--edge); right: var(--edge); width: auto; transform: none; }
   .region-locator { display: none; }
-  .region-compass, .region-chart { bottom: 160px; }
+  .region-compass, .region-chart { bottom: var(--above-scrubber); }
   .region-compass .compass { width: 44px; height: 44px; }
-  .region-assistant { bottom: 160px; }
-  .region-surface-hud { bottom: 168px; }
+  .region-assistant { bottom: var(--above-scrubber); }
+  .region-surface-hud { bottom: calc(var(--above-scrubber) + 8px); }
   body[data-view='surface'] .region-metrics { width: calc(100vw - 2 * var(--edge) - 48px); }
 }
