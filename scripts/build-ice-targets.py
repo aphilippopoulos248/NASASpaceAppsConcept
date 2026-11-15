@@ -4,7 +4,7 @@
 Source: Lemelin, M., Li, S., Mazarico, E., Siegler, M. A., Kring, D. A., Paige, D. A. (2021).
 "Database of water ice-bearing permanently shaded regions in the lunar south polar region".
 Zenodo, doi:10.5281/zenodo.4646092, CC BY 4.0. Companion to Lemelin et al. (2021),
-Planetary Science Journal 2:103, doi:10.3847/PSJ/abf3c3.
+Planetary Science Journal 2:103, doi:10.3847/PSJ/abf3c5.
 
 Run with:  npm run build-ice-targets
 Needs:     python3 (stdlib) + xlrd 2.x for the .xls attribute table
@@ -230,7 +230,7 @@ def main():
                         '[Data set]. Zenodo. https://doi.org/10.5281/zenodo.4646092',
             'paper': 'Lemelin, M., et al. (2021). Framework for Coordinated Efforts in the Exploration of Volatiles '
                      'in the South Polar Region of the Moon. Planetary Science Journal, 2, 103. '
-                     'https://doi.org/10.3847/PSJ/abf3c3',
+                     'https://doi.org/10.3847/PSJ/abf3c5',
             'license': 'CC-BY-4.0',
             'licenseUrl': 'https://creativecommons.org/licenses/by/4.0/',
             'source': {
