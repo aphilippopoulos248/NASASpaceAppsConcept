@@ -1,0 +1,804 @@
+{
+ "format": "lunyx-polar-averages/1",
+ "title": "Long-term average solar illumination and Earth visibility at the lunar poles (NASA PGDA product 69)",
+ "what": "Multi-year averages computed by the LOLA team from LOLA elevation models. They describe a place over many years; they are not the geometry of any date.",
+ "averagingPeriod": "Hourly time steps spanning 18.6 years (one lunar nutation cycle), as stated on the PGDA product page. The published files do not state the calendar dates of that span.",
+ "projection": "Polar stereographic on a sphere of radius 1737.4 km, true scale at the pole, pole at the centre of the grid. South: longitude 0 points to the top row, 90E to the right. North: longitude 0 points to the bottom row, 90E to the right. Mean Earth / Polar Axis frame, east-positive longitude.",
+ "values": "One byte per cell. 0 = no source pixel in the cell is ever lit (permanent shadow in the model). 1..100 = mean of the cell in percent of time, rounded; lit cells are stored as at least 1.",
+ "quantities": {
+  "illumination": {
+   "label": "Average sunlight (multi-year)",
+   "shortLabel": "Average sunlight",
+   "unit": "percent of time",
+   "meaning": "Fraction of time with any part of the Sun's disc above the terrain horizon, averaged over hourly steps spanning 18.6 years (one lunar nutation cycle). It counts time with any sunlight, not how much of the disc or of its energy arrives. A multi-year average computed from LOLA elevation models (Mazarico et al. 2011; NASA PGDA product 69), not the Sun's position on the date shown."
+  },
+  "earth-visibility": {
+   "label": "Average Earth visibility (multi-year)",
+   "shortLabel": "Average Earth visibility",
+   "unit": "percent of time",
+   "meaning": "Fraction of time with any part of Earth's disc above the terrain horizon, averaged over hourly steps spanning 18.6 years (one lunar nutation cycle). Geometric line of sight only, and slightly optimistic for radio because a sliver of Earth counts: not a link budget. A multi-year average (Mazarico et al. 2011; NASA PGDA product 69), not Earth's position on the date shown."
+  }
+ },
+ "caveats": [
+  "These maps are \"EXTRAS\" products: their README says they \"are not supported by the PDS or the LOLA Science Team\".",
+  "The README notes that some maps show linear artefacts inherited from the elevation models they were computed from.",
+  "Averaged cells dilute small bright spots: a narrow ridge crest reads lower here than in the 60 m source map.",
+  "Poleward of 85 degrees the detail layer (120 m cells) applies; elsewhere only the wide layer (960 m cells). Nothing equatorward of the wide layer's square."
+ ],
+ "citation": "Mazarico, E., Neumann, G. A., Smith, D. E., Zuber, M. T., & Torrence, M. H. (2011). Illumination conditions of the lunar polar regions using LOLA topography. Icarus, 211, 1066-1081. https://doi.org/10.1016/j.icarus.2010.10.030",
+ "productPage": "https://pgda.gsfc.nasa.gov/products/69",
+ "sourceDirectory": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/",
+ "usage": "NASA data. No licence file accompanies the maps; the PGDA page points to NASA's media usage guidelines (https://www.nasa.gov/nasa-brand-center/images-and-media/), under which NASA content is generally not subject to copyright in the United States. The authors ask that Mazarico et al. (2011) be cited.",
+ "fileFormat": "LXG (gzip-compressed lossless 8-bit grid; see src/terrain/lxg.ts). Rebuild with: npm run build-heatmap",
+ "totalBytes": 13413578,
+ "layers": [
+  {
+   "id": "south-illumination-detail",
+   "file": "pgda69_south_illumination_120m.lxg",
+   "quantity": "illumination",
+   "pole": "S",
+   "role": "detail",
+   "size": 2529,
+   "metresPerPx": 120,
+   "halfWidthM": 151740,
+   "latCompleteTo": -85,
+   "latCornersTo": -83,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_85S_060M_201608 (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85S_060M_201608.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85S_060M_201608.LBL",
+    "resolutionM": 60,
+    "sizePx": 5058,
+    "basedOn": "LDEM_85S_060M"
+   },
+   "processing": "Each 120 m cell is the mean of 2x2 pixels of the 60 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.0981,
+    "meanFraction": 0.2126,
+    "maxPercent": 81
+   },
+   "brightest": {
+    "lat": -89.4749,
+    "lon": -137.443,
+    "sourceLine": 2724,
+    "sourceSample": 2349,
+    "sourceFraction": 0.88444,
+    "line": 1362,
+    "sample": 1174,
+    "cellMeanFraction": 0.80598,
+    "storedPercent": 81
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "sourceLine": 2635,
+     "sourceSample": 2657,
+     "sourceFraction": 0,
+     "line": 1317,
+     "sample": 1328,
+     "cellMeanFraction": 0,
+     "storedPercent": 0
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "sourceLine": 2529,
+     "sourceSample": 2529,
+     "sourceFraction": 0.2752,
+     "line": 1264,
+     "sample": 1264,
+     "cellMeanFraction": 0.21201,
+     "storedPercent": 21
+    },
+    {
+     "name": "Ridge at 89.45S 137.31W, between Shackleton and de Gerlache",
+     "lat": -89.45,
+     "lon": -137.31,
+     "sourceLine": 2733,
+     "sourceSample": 2340,
+     "sourceFraction": 0,
+     "line": 1366,
+     "sample": 1170,
+     "cellMeanFraction": 0.56291,
+     "storedPercent": 56
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "sourceLine": 506,
+     "sourceSample": 2529,
+     "sourceFraction": 0.39608,
+     "line": 253,
+     "sample": 1264,
+     "cellMeanFraction": 0.35453,
+     "storedPercent": 35
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "sourceLine": 4551,
+     "sourceSample": 2529,
+     "sourceFraction": 0.18716,
+     "line": 2275,
+     "sample": 1264,
+     "cellMeanFraction": 0.17602,
+     "storedPercent": 18
+    }
+   ],
+   "bytes": 2390641,
+   "sha256": "5622befefe7102b2e48eeff99e4cab41a3784eff29bbc1f71fe96b911de2b873"
+  },
+  {
+   "id": "south-illumination-wide",
+   "file": "pgda69_south_illumination_960m.lxg",
+   "quantity": "illumination",
+   "pole": "S",
+   "role": "wide",
+   "size": 1605,
+   "metresPerPx": 960,
+   "halfWidthM": 770400,
+   "latCompleteTo": -65,
+   "latCornersTo": -55.2,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_65S_240M_201608 (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65S_240M_201608.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65S_240M_201608.LBL",
+    "resolutionM": 240,
+    "sizePx": 6420,
+    "basedOn": "LDEM_65S_240M"
+   },
+   "processing": "Each 960 m cell is the mean of 4x4 pixels of the 240 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.0073,
+    "meanFraction": 0.3999,
+    "maxPercent": 60
+   },
+   "brightest": {
+    "lat": -89.4455,
+    "lon": -137.314,
+    "sourceLine": 3261,
+    "sourceSample": 3162,
+    "sourceFraction": 0.93476,
+    "line": 815,
+    "sample": 790,
+    "cellMeanFraction": 0.60291,
+    "storedPercent": 60
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "sourceLine": 3236,
+     "sourceSample": 3242,
+     "sourceFraction": 0,
+     "line": 809,
+     "sample": 810,
+     "cellMeanFraction": 0,
+     "storedPercent": 0
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "sourceLine": 3210,
+     "sourceSample": 3210,
+     "sourceFraction": 0,
+     "line": 802,
+     "sample": 802,
+     "cellMeanFraction": 0.28072,
+     "storedPercent": 28
+    },
+    {
+     "name": "Ridge at 89.45S 137.31W, between Shackleton and de Gerlache",
+     "lat": -89.45,
+     "lon": -137.31,
+     "sourceLine": 3261,
+     "sourceSample": 3162,
+     "sourceFraction": 0.93476,
+     "line": 815,
+     "sample": 790,
+     "cellMeanFraction": 0.60291,
+     "storedPercent": 60
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "sourceLine": 2704,
+     "sourceSample": 3210,
+     "sourceFraction": 0.39912,
+     "line": 676,
+     "sample": 802,
+     "cellMeanFraction": 0.31528,
+     "storedPercent": 32
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "sourceLine": 3715,
+     "sourceSample": 3210,
+     "sourceFraction": 0.20028,
+     "line": 928,
+     "sample": 802,
+     "cellMeanFraction": 0.20222,
+     "storedPercent": 20
+    },
+    {
+     "name": "Near side, 70S 0E",
+     "lat": -70,
+     "lon": 0,
+     "sourceLine": 657,
+     "sourceSample": 3210,
+     "sourceFraction": 0.44224,
+     "line": 164,
+     "sample": 802,
+     "cellMeanFraction": 0.44223,
+     "storedPercent": 44
+    }
+   ],
+   "bytes": 1190145,
+   "sha256": "b7c28d0a190fbe84732fb94ec87064dcb81f7557874a42be3f8e27c740efd18c"
+  },
+  {
+   "id": "south-earth-visibility-detail",
+   "file": "pgda69_south_earth_visibility_120m.lxg",
+   "quantity": "earth-visibility",
+   "pole": "S",
+   "role": "detail",
+   "size": 2529,
+   "metresPerPx": 120,
+   "halfWidthM": 151740,
+   "latCompleteTo": -85,
+   "latCornersTo": -83,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_85S_060M_201608_EARTH (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85S_060M_201608_EARTH.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85S_060M_201608_EARTH.LBL",
+    "resolutionM": 60,
+    "sizePx": 5058,
+    "basedOn": "LDEM_85S_060M"
+   },
+   "processing": "Each 120 m cell is the mean of 2x2 pixels of the 60 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.2764,
+    "meanFraction": 0.2492,
+    "maxPercent": 100
+   },
+   "brightest": {
+    "lat": -84.6285,
+    "lon": 21.451,
+    "sourceLine": 0,
+    "sourceSample": 3522,
+    "sourceFraction": 1,
+    "line": 0,
+    "sample": 1761,
+    "cellMeanFraction": 0.99682,
+    "storedPercent": 100
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "sourceLine": 2635,
+     "sourceSample": 2657,
+     "sourceFraction": 0,
+     "line": 1317,
+     "sample": 1328,
+     "cellMeanFraction": 0,
+     "storedPercent": 0
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "sourceLine": 2529,
+     "sourceSample": 2529,
+     "sourceFraction": 0.31488,
+     "line": 1264,
+     "sample": 1264,
+     "cellMeanFraction": 0.22488,
+     "storedPercent": 22
+    },
+    {
+     "name": "Ridge at 89.45S 137.31W, between Shackleton and de Gerlache",
+     "lat": -89.45,
+     "lon": -137.31,
+     "sourceLine": 2733,
+     "sourceSample": 2340,
+     "sourceFraction": 0,
+     "line": 1366,
+     "sample": 1170,
+     "cellMeanFraction": 0.40031,
+     "storedPercent": 40
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "sourceLine": 506,
+     "sourceSample": 2529,
+     "sourceFraction": 0.40084,
+     "line": 253,
+     "sample": 1264,
+     "cellMeanFraction": 0.2691,
+     "storedPercent": 27
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "sourceLine": 4551,
+     "sourceSample": 2529,
+     "sourceFraction": 0.10304,
+     "line": 2275,
+     "sample": 1264,
+     "cellMeanFraction": 0.11186,
+     "storedPercent": 11
+    }
+   ],
+   "bytes": 1977657,
+   "sha256": "6b3c956b52fb1d24101219da3477ca3a17237d2d059b585f5353c47a755ffa02"
+  },
+  {
+   "id": "south-earth-visibility-wide",
+   "file": "pgda69_south_earth_visibility_960m.lxg",
+   "quantity": "earth-visibility",
+   "pole": "S",
+   "role": "wide",
+   "size": 1605,
+   "metresPerPx": 960,
+   "halfWidthM": 770400,
+   "latCompleteTo": -65,
+   "latCornersTo": -55.2,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_65S_240M_201608_EARTH (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65S_240M_201608_EARTH.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65S_240M_201608_EARTH.LBL",
+    "resolutionM": 240,
+    "sizePx": 6420,
+    "basedOn": "LDEM_65S_240M"
+   },
+   "processing": "Each 960 m cell is the mean of 4x4 pixels of the 240 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.4058,
+    "meanFraction": 0.4055,
+    "maxPercent": 100
+   },
+   "brightest": {
+    "lat": -55.1879,
+    "lon": -45,
+    "sourceLine": 0,
+    "sourceSample": 0,
+    "sourceFraction": 1,
+    "line": 0,
+    "sample": 0,
+    "cellMeanFraction": 1,
+    "storedPercent": 100
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "sourceLine": 3236,
+     "sourceSample": 3242,
+     "sourceFraction": 0,
+     "line": 809,
+     "sample": 810,
+     "cellMeanFraction": 0,
+     "storedPercent": 0
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "sourceLine": 3210,
+     "sourceSample": 3210,
+     "sourceFraction": 0,
+     "line": 802,
+     "sample": 802,
+     "cellMeanFraction": 0.27543,
+     "storedPercent": 28
+    },
+    {
+     "name": "Ridge at 89.45S 137.31W, between Shackleton and de Gerlache",
+     "lat": -89.45,
+     "lon": -137.31,
+     "sourceLine": 3261,
+     "sourceSample": 3162,
+     "sourceFraction": 0.57676,
+     "line": 815,
+     "sample": 790,
+     "cellMeanFraction": 0.45362,
+     "storedPercent": 45
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "sourceLine": 2704,
+     "sourceSample": 3210,
+     "sourceFraction": 0.41512,
+     "line": 676,
+     "sample": 802,
+     "cellMeanFraction": 0.1691,
+     "storedPercent": 17
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "sourceLine": 3715,
+     "sourceSample": 3210,
+     "sourceFraction": 0.24704,
+     "line": 928,
+     "sample": 802,
+     "cellMeanFraction": 0.24572,
+     "storedPercent": 25
+    },
+    {
+     "name": "Near side, 70S 0E",
+     "lat": -70,
+     "lon": 0,
+     "sourceLine": 657,
+     "sourceSample": 3210,
+     "sourceFraction": 1,
+     "line": 164,
+     "sample": 802,
+     "cellMeanFraction": 1,
+     "storedPercent": 100
+    }
+   ],
+   "bytes": 702637,
+   "sha256": "0c13ce12c1cdfe96acb4821df723f15dd15d970b87652d68af3778dc9630a291"
+  },
+  {
+   "id": "north-illumination-detail",
+   "file": "pgda69_north_illumination_120m.lxg",
+   "quantity": "illumination",
+   "pole": "N",
+   "role": "detail",
+   "size": 2529,
+   "metresPerPx": 120,
+   "halfWidthM": 151740,
+   "latCompleteTo": 85,
+   "latCornersTo": 83,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_85N_060M_201608 (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85N_060M_201608.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85N_060M_201608.LBL",
+    "resolutionM": 60,
+    "sizePx": 5058,
+    "basedOn": "LDEM_85N_060M"
+   },
+   "processing": "Each 120 m cell is the mean of 2x2 pixels of the 60 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.0753,
+    "meanFraction": 0.2105,
+    "maxPercent": 73
+   },
+   "brightest": {
+    "lat": 89.3673,
+    "lon": 128.142,
+    "sourceLine": 2331,
+    "sourceSample": 2780,
+    "sourceFraction": 0.89664,
+    "line": 1165,
+    "sample": 1390,
+    "cellMeanFraction": 0.6708,
+    "storedPercent": 67
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "sourceLine": 2529,
+     "sourceSample": 2529,
+     "sourceFraction": 0,
+     "line": 1264,
+     "sample": 1264,
+     "cellMeanFraction": 0.06266,
+     "storedPercent": 6
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "sourceLine": 4551,
+     "sourceSample": 2529,
+     "sourceFraction": 0.22496,
+     "line": 2275,
+     "sample": 1264,
+     "cellMeanFraction": 0.18486,
+     "storedPercent": 18
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "sourceLine": 506,
+     "sourceSample": 2529,
+     "sourceFraction": 0.14376,
+     "line": 253,
+     "sample": 1264,
+     "cellMeanFraction": 0.15382,
+     "storedPercent": 15
+    }
+   ],
+   "bytes": 2774458,
+   "sha256": "0d246f6968acd410c89cdbf4a429f84d97aeb89943d716c0b67794be12594e40"
+  },
+  {
+   "id": "north-illumination-wide",
+   "file": "pgda69_north_illumination_960m.lxg",
+   "quantity": "illumination",
+   "pole": "N",
+   "role": "wide",
+   "size": 1605,
+   "metresPerPx": 960,
+   "halfWidthM": 770400,
+   "latCompleteTo": 65,
+   "latCornersTo": 55.2,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_65N_240M_201608 (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65N_240M_201608.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65N_240M_201608.LBL",
+    "resolutionM": 240,
+    "sizePx": 6420,
+    "basedOn": "LDEM_65N_240M"
+   },
+   "processing": "Each 960 m cell is the mean of 4x4 pixels of the 240 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.005,
+    "meanFraction": 0.4073,
+    "maxPercent": 61
+   },
+   "brightest": {
+    "lat": 89.3489,
+    "lon": 130.564,
+    "sourceLine": 3156,
+    "sourceSample": 3272,
+    "sourceFraction": 0.89084,
+    "line": 789,
+    "sample": 818,
+    "cellMeanFraction": 0.52395,
+    "storedPercent": 52
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "sourceLine": 3210,
+     "sourceSample": 3210,
+     "sourceFraction": 0.32512,
+     "line": 802,
+     "sample": 802,
+     "cellMeanFraction": 0.14047,
+     "storedPercent": 14
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "sourceLine": 3715,
+     "sourceSample": 3210,
+     "sourceFraction": 0.40732,
+     "line": 928,
+     "sample": 802,
+     "cellMeanFraction": 0.37804,
+     "storedPercent": 38
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "sourceLine": 2704,
+     "sourceSample": 3210,
+     "sourceFraction": 0.236,
+     "line": 676,
+     "sample": 802,
+     "cellMeanFraction": 0.25407,
+     "storedPercent": 25
+    },
+    {
+     "name": "Near side, 70N 0E",
+     "lat": 70,
+     "lon": 0,
+     "sourceLine": 5762,
+     "sourceSample": 3210,
+     "sourceFraction": 0.47172,
+     "line": 1440,
+     "sample": 802,
+     "cellMeanFraction": 0.47207,
+     "storedPercent": 47
+    }
+   ],
+   "bytes": 1224258,
+   "sha256": "cc33a63c4c281168d192c0446d82d89adeccf3ea082ea3043744e095bba04c21"
+  },
+  {
+   "id": "north-earth-visibility-detail",
+   "file": "pgda69_north_earth_visibility_120m.lxg",
+   "quantity": "earth-visibility",
+   "pole": "N",
+   "role": "detail",
+   "size": 2529,
+   "metresPerPx": 120,
+   "halfWidthM": 151740,
+   "latCompleteTo": 85,
+   "latCornersTo": 83,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_85N_060M_201608_EARTH (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85N_060M_201608_EARTH.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_85N_060M_201608_EARTH.LBL",
+    "resolutionM": 60,
+    "sizePx": 5058,
+    "basedOn": "LDEM_85N_060M"
+   },
+   "processing": "Each 120 m cell is the mean of 2x2 pixels of the 60 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.2314,
+    "meanFraction": 0.3013,
+    "maxPercent": 100
+   },
+   "brightest": {
+    "lat": 84.8762,
+    "lon": -14.951,
+    "sourceLine": 5032,
+    "sourceSample": 1860,
+    "sourceFraction": 1,
+    "line": 2516,
+    "sample": 930,
+    "cellMeanFraction": 0.99999,
+    "storedPercent": 100
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "sourceLine": 2529,
+     "sourceSample": 2529,
+     "sourceFraction": 0,
+     "line": 1264,
+     "sample": 1264,
+     "cellMeanFraction": 0.05316,
+     "storedPercent": 5
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "sourceLine": 4551,
+     "sourceSample": 2529,
+     "sourceFraction": 0.56624,
+     "line": 2275,
+     "sample": 1264,
+     "cellMeanFraction": 0.56667,
+     "storedPercent": 57
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "sourceLine": 506,
+     "sourceSample": 2529,
+     "sourceFraction": 0.1374,
+     "line": 253,
+     "sample": 1264,
+     "cellMeanFraction": 0.13624,
+     "storedPercent": 14
+    }
+   ],
+   "bytes": 2409453,
+   "sha256": "cb907c22c79636ef5f58f452eed4d3872988f6f73f818acf33b8ca6e5a7c466b"
+  },
+  {
+   "id": "north-earth-visibility-wide",
+   "file": "pgda69_north_earth_visibility_960m.lxg",
+   "quantity": "earth-visibility",
+   "pole": "N",
+   "role": "wide",
+   "size": 1605,
+   "metresPerPx": 960,
+   "halfWidthM": 770400,
+   "latCompleteTo": 65,
+   "latCornersTo": 55.2,
+   "valueStep": 0.01,
+   "source": {
+    "product": "AVGVISIB_65N_240M_201608_EARTH (LOLA team, PDS label version V1.05, created 2016-09-15)",
+    "url": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65N_240M_201608_EARTH.IMG",
+    "label": "https://imbrium.mit.edu/EXTRAS/ILLUMINATION/IMG/AVGVISIB_65N_240M_201608_EARTH.LBL",
+    "resolutionM": 240,
+    "sizePx": 6420,
+    "basedOn": "LDEM_65N_240M"
+   },
+   "processing": "Each 960 m cell is the mean of 4x4 pixels of the 240 m source map, stored as a whole percent (largest rounding change 0.50 points). 0 is kept for cells in which no source pixel is ever lit; any lit cell is stored as at least 1. Same projection as the source.",
+   "stats": {
+    "neverLitFraction": 0.3873,
+    "meanFraction": 0.4262,
+    "maxPercent": 100
+   },
+   "brightest": {
+    "lat": 84.8783,
+    "lon": -14.991,
+    "sourceLine": 3835,
+    "sourceSample": 3042,
+    "sourceFraction": 1,
+    "line": 958,
+    "sample": 760,
+    "cellMeanFraction": 0.69152,
+    "storedPercent": 69
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "sourceLine": 3210,
+     "sourceSample": 3210,
+     "sourceFraction": 0.4658,
+     "line": 802,
+     "sample": 802,
+     "cellMeanFraction": 0.18434,
+     "storedPercent": 18
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "sourceLine": 3715,
+     "sourceSample": 3210,
+     "sourceFraction": 0.71576,
+     "line": 928,
+     "sample": 802,
+     "cellMeanFraction": 0.68863,
+     "storedPercent": 69
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "sourceLine": 2704,
+     "sourceSample": 3210,
+     "sourceFraction": 0.13804,
+     "line": 676,
+     "sample": 802,
+     "cellMeanFraction": 0.12899,
+     "storedPercent": 13
+    },
+    {
+     "name": "Near side, 70N 0E",
+     "lat": 70,
+     "lon": 0,
+     "sourceLine": 5762,
+     "sourceSample": 3210,
+     "sourceFraction": 1,
+     "line": 1440,
+     "sample": 802,
+     "cellMeanFraction": 1,
+     "storedPercent": 100
+    }
+   ],
+   "bytes": 744329,
+   "sha256": "4cb85bd37c3d9f47416528cdb2608fa06d4e222137a7273e7d23daa614d6a87d"
+  }
+ ]
+}

@@ -283,6 +283,26 @@ describe('LXG container', () => {
     expect(out.header.grids).toHaveLength(2);
   });
 
+  it('round-trips 8-bit grids through the predictor, raw and wrapped', async () => {
+    const w = 97;
+    const h = 53;
+    const a = new Uint8Array(w * h);
+    for (let i = 0; i < a.length; i++) a[i] = Math.round(50 + 49 * Math.sin(i / 7) * Math.cos(i / 131));
+    a[0] = 255;
+    a[1] = 0;
+    a[w] = 0;
+    a[w + 1] = 255;
+    a[9 * w + 9] = 255;
+    for (const encoding of ['plane-delta', 'raw'] as const) {
+      const body = encodeLxg(header([{ dtype: 'uint8', encoding, width: w, height: h }]), [a]);
+      expect(body.length).toBeLessThan(a.length + 200);
+      const out = (await decodeLxg(await gzip(body))).arrays[0];
+      expect(out).toBeInstanceOf(Uint8Array);
+      expect(out).toEqual(a);
+    }
+    expect(() => encodeLxg(header([{ dtype: 'uint8', encoding: 'raw', width: 2, height: 1 }]), [new Int16Array(2)])).toThrow(/dtype does not match/);
+  });
+
   it('reads from an unaligned view into a larger buffer (how Node hands files over)', async () => {
     const f = new Float32Array([1.5, -2.5, 3.25, 4]);
     const body = encodeLxg(header([{ dtype: 'float32', encoding: 'raw', width: 2, height: 2 }]), [f]);
@@ -296,6 +316,9 @@ describe('LXG container', () => {
     const body = encodeLxg(header([{ dtype: 'int16', encoding: 'raw', width: 4, height: 4 }]), [new Int16Array(16)]);
     await expect(decodeLxg(body.subarray(0, body.length - 3))).rejects.toThrow(/truncated/);
     expect(() => encodeLxg(header([{ dtype: 'int16', encoding: 'raw', width: 4, height: 4 }]), [new Int16Array(15)])).toThrow(/samples/);
-    expect(() => encodeLxg(header([{ dtype: 'float32', encoding: 'plane-delta', width: 1, height: 1 }]), [new Float32Array(1)])).toThrow(/int16 only/);
+    expect(() => encodeLxg(header([{ dtype: 'float32', encoding: 'plane-delta', width: 1, height: 1 }]), [new Float32Array(1)])).toThrow(/int16 and uint8 only/);
+    const odd = encodeLxg(header([{ dtype: 'int16', encoding: 'raw', width: 1, height: 1 }]), [new Int16Array(1)]);
+    const text = new TextDecoder().decode(odd).replace('"int16"', '"int64"');
+    await expect(decodeLxg(new TextEncoder().encode(text))).rejects.toThrow(/unsupported sample type int64/);
   });
 });
