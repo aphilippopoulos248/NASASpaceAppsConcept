@@ -1,20 +1,25 @@
 # Lunyx status
 
-Kept by the coordinator. Last updated 2026-11-15 00:30 UTC, for the integration that
-contains the seasonal outlook and the Diviner / ShadowCam layers (hub integration I-12, commit `e4889b0`).
+Kept by the coordinator. Last updated 2026-11-15 01:25 UTC, for the integration that
+contains the rebuilt surface scene, the globe relief and overlays, the first round of
+independent validation and the site-science module (hub integrations I-15 and I-16).
 "Shipped" means merged through the build gate and published on
 `origin/feature/lunyx-navigator`. Task numbers refer to the project hub board.
 
-The build is **not fully validated**: the independent end-to-end validation (T-26) is
-still running. See section 4 before quoting any number from the app.
+The build is **not fully validated**. A first round of independent end-to-end validation
+(T-26) is complete and its findings are in section 4; a second round (T-34) and three
+follow-ups from the first (T-31, T-32) are open. Read section 4 before quoting any number
+from the app.
 
 ## 1. Shipped
 
 | Area | What works | Task |
 | --- | --- | --- |
-| App shell | One state store, one action registry (33 actions) used by every control and by the assistant, mount regions per the mockups, design tokens, deep links (`?site=&view=&light=&t=&time=`), `/api/*` served in dev and preview | T-2, T-3, T-25 |
+| App shell | One state store, one action registry (43 actions) used by every control and by the assistant, mount regions per the mockups, design tokens, deep links (`?site=&view=&light=&t=&time=`), `/api/*` served in dev and preview | T-2, T-3, T-25 |
 | Globe view | LUNYX wordmark, Filters panel (UTC date/time, centre-of-view latitude/longitude, solar elevation band, mast height, mission window, arrival delay, previous missions), pin at any coordinate, little-person surface entry, compass, locator map with view footprint, mission-window scrubber with sunrise/sunset/Earthrise/Earthset marks and jumps, site card with elevation, data provenance and Sun/Earth against the real skyline | T-12, T-25 |
-| Surface view | The original ground view at the 28 catalogued landings (measured terrain, drag to look, walking) with the surface look reworked upstream on GitHub main (rocks, close-up crater maps, automatic resolution scaling) | T-27 |
+| Globe relief and overlays | Real 3D relief from the LOLA whole-Moon grid with the exaggeration factor shown on screen and adjustable (off to x30, true scale below 100 km); south-polar close-ups drawn as shaded relief from the polar elevation layers with the shadows of the simulated time, labelled as not a photograph; overlays with legends: Sun-elevation band (smooth Moon), long-term average sunlight and Earth visibility (PGDA 69), elevation-data coverage; ice-target outlines | T-13, T-20 |
+| Surface view | Ground view for any site (catalogued landing or pin) drawn to 246 km from the elevation data, with the product behind each distance band stated; black sky; Sun and Earth at computed size and position (topocentric), Earth with its phase; terrain shadows with penumbra over all drawn terrain; dotted Sun and Earth tracks, hollow where behind terrain; drag, touch, keys, walking; the surface look reworked upstream on GitHub main (rocks, close-up crater maps, generated craters, earthshine, automatic resolution scaling) carried into the rebuilt scene | T-9, T-27 |
+| Site science | Readouts on the site card and as query actions: DSN station opportunities, long-term averages, nearest ice targets (Diviner annual temperatures and ShadowCam links are in the module that replaces the interim card section when T-20's swap lands) | T-20, T-30 |
 | Elevation data | Whole-Moon LOLA grid at 16 px/deg (1.9 km) and 4 px/deg; south-polar layers at 40 m (inside 87.5S), 80 m (85S), 160 m (80S); 60 m and 480 m windows for the 28 sites, 3 m LROC NAC models for 19 of them; on-request 60 m / 480 m windows for custom pins through `/api/terrain` (needs network) | T-4 |
 | Sun and Earth | Topocentric, airless azimuth/elevation, disc sizes, Earth phase, sub-Earth and sub-solar points from the in-app model; bundled JPL Horizons tables for Blue Ghost Mission 1 (2025-03-01 to 04-01) and IM-2 (2025-03-05 to 04-05), used automatically inside those windows; `/api/horizons` proxy | T-5 |
 | Skyline and slope | Curvature-corrected terrain skyline from site coordinates, terrain height and mast height, with the terrain that forms it and the data used per distance range; slope with stated baseline | T-6, T-21 |
@@ -29,11 +34,8 @@ still running. See section 4 before quoting any number from the app.
 
 ## 2. Built but not shipped yet
 
-| What | State | Task |
-| --- | --- | --- |
-| Rebuilt surface scene: any site, Sun and Earth at true size with Earth's phase, Sun-directed shadows over all drawn terrain, dotted sky paths, absolute look and walk actions | On its branch; being reconciled with the upstream surface look before review | T-9 |
-| Real 3D relief on the globe, south-polar close-ups shaded from the polar elevation layers, overlays (Sun band, long-term averages, data coverage) | On its branch; not yet reviewed | T-13 |
-| Independent validation of skyline, events, long-term sunlight and Earth visibility | Skyline check done; three checks running | T-26 |
+Nothing at the time of writing. In progress: surface key-metrics panel and skyline chart
+(T-10), compare panel (T-11), assistant audit and browser tests (T-16, T-17).
 
 ## 3. Not built
 
@@ -42,7 +44,8 @@ still running. See section 4 before quoting any number from the app.
 | Surface key-metrics panel, countdowns, skyline chart | The numbers exist (site card, assistant); the surface HUD does not show them yet | T-10 |
 | Compare panel, nearby-alternatives panel, mission-window table, CSV/JSON export, saved comparisons | The comparison and the scan run (assistant, actions); no on-screen panel, no export | T-11 |
 | Controls and actions for nearby ranking, candidate selection, blocking-ridge explanation, mast-height comparison, export | Arrive with T-10/T-11; until then the assistant says the build has no such action | T-10, T-11 |
-| Site-card readouts for DSN opportunities, long-term averages, ice targets, Diviner, ShadowCam | Data and lookups shipped; no control and no action, so neither a user nor the assistant can reach them | T-20 |
+| Diviner and ShadowCam readouts on the site card | The module that carries them is merged but not yet mounted; the card shows DSN, long-term averages and ice targets in the meantime | T-20 |
+| Labelled start and end of each sunset/sunrise (decision D-8) | The app's "sunset" is the last limb; the first cut of the disc, about an hour earlier at Blue Ghost and much longer at the poles, is not shown yet | T-31, T-33 |
 | Seasonal-outlook chart | Science shipped; no UI | follow-up to T-29 |
 | Eclipse replay preset (14 March 2025, Blue Ghost) | The eclipse is in the computed series; no preset or dedicated view | T-22 |
 | Full assistant audit: capability inventory, UI/assistant equivalence tests, the multi-step browser scenario | Waits for T-10/T-11 | T-16 |
@@ -57,10 +60,17 @@ still running. See section 4 before quoting any number from the app.
 | --- | --- | --- |
 | Sun/Earth azimuth and elevation | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035, fetched independently of the model's author | Worst difference 0.0036 deg. After 2035 the error grows (0.006 deg in 2060, 0.021 deg in 2099) because predictions of Earth's rotation differ |
 | Skyline geometry | Analytic cases (smooth sphere, ridge, bowl), Apollo 15 against published heights of Mons Hadley and Hadley Delta | Within the tolerances in `docs/lunyx/validation.md` section 3 |
-| Skyline on real terrain | An independent ray march straight from the bundled elevation files, five sites (T-26, check 1) | Builds up to and including `375f816` read the skyline too low at crest sites (up to 1.04 deg at a Shackleton-rim pin), so polar sunlight read too high there. From `319fba0` the validator reports agreement within 0.05 deg at all five sites. Its written results are not yet committed |
+| Skyline on real terrain, observer 2 m up | An independent ray march straight from the bundled elevation files, five sites (T-26; `tests/fixtures/validation/ephemeris-check/`) | Builds up to and including `375f816` (the commit on GitHub `main`) read the skyline too low at crest sites, up to 1.04 deg at a Shackleton-rim pin, with Earth visibility 2.0 points high and rise/set times up to 6 h off there. From `319fba0`: within 0.05 deg at all five sites |
+| Skyline with the observer on the ground (0 m) | Same reference | **Open (T-31)**: up to 1.2 deg low on convex ground, which is +4.7 points of 18.6-year sunlight at a connecting-ridge pin. Does not arise at 2 m |
+| Bundled elevation grids | The PDS originals, 30 080 samples | Equal within rounding. Open (T-32): the 3 m site models and the 60 m windows step by several metres where they join, 768 m from a landing site; about 15 minutes of sunset time at Blue Ghost |
+| Sunset, sunrise and eclipse times | The validator's own skyline and Horizons/SPICE directions | Within 0.5 min |
+| Long-term sunlight | 18.6-year runs at six polar points against the validator's own computation and PGDA product 69 | Within 0.03 points of the validator. IM-2 three ways: PGDA 46.55 %, validator 46.71 %, app 46.68 % |
+| Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth elevation | Within 0.05 points. PGDA's Earth map counts any part of the disc and reads 4 to 11 points higher by definition |
+| Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3 sunset date agrees; 42 of 43 Apollo rows agree. Firefly's start of night (about 18:15 to 18:35 UTC, 16 March 2025) matches the first cut of the Sun (18:23), not the last limb (19:30) the app calls sunset: see D-8. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is not confirmed by ISRO. No published time was found for IM-2 |
 | 14 March 2025 eclipse at the Blue Ghost site | Reported times (05:00, 06:18, 09:52 UTC) | Computed 05:00:38, 06:17:21, 09:51:06 |
 | DSN station geometry | JPL Horizons with each station as observer, 1154 rows | Elevation within 0.0012 deg; limit crossings within 0.3 s |
-| Rise/set times against mission records, long-term sunlight against PGDA 69, Earth visibility at limb and polar sites | T-26, checks 2 to 4 | **Not finished** |
+| Seasonal outlook, longest darkness, DSN geometry by a second party, slopes | T-34 | **Not checked independently yet** |
+| Surface view picture | | Checked by eye in software-rendered headless Chromium only. Full visual settings at a polar site have not been seen on a real GPU |
 | Assistant with a real language model; Jev router with the real service | | **Never run**: no API keys on the build machine. Verified only with a scripted stand-in model and in deterministic mode |
 
 ## 5. Limits that affect how results should be read
