@@ -211,6 +211,8 @@ const AVERAGE_WORDS = /\b(long[- ]term|18\.6[- ]years?|multi[- ]year|pgda)\b/;
 
 export const siteScience: Intent = (step) => {
   if (/^(compare|rank|find|search|set|go|select)\b/.test(step)) return null;
+  // Folding the card's section is the panel command (showPanel), not the readout.
+  if (/^(fold|unfold|collapse|expand|hide|close)\b/.test(step) || /\bscience section$/.test(step)) return null;
   const whole = /^(?:(?:show|read|give|tell|list|report|what (?:is|are|does))\s+)?(?:me\s+)?(?:the\s+)?(?:site\s+)?science(?:\s+(?:readouts?|layers?|data|section))?(?:\s+(?:here|for (?:this|the) (?:site|pin)|at (?:this|the) (?:site|pin)))?(?:\s+say)?$/.test(step);
   const parts: SciencePart[] = [];
   if (DSN_WORDS.test(step)) parts.push('dsn');

@@ -11,6 +11,7 @@
 // all, is docs/lunyx/actions.md.
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
+import './scenario/gpu.mjs';
 import { click, closeBrowser, lastSeq, log, openApp, result, setField, SLOW, until } from './lib/app.mjs';
 import { servers } from './lib/servers.mjs';
 
@@ -47,7 +48,8 @@ function snapshot() {
       siteKind: s.site?.kind ?? null,
       siteLat: s.site?.latDeg ?? null,
       siteLon: s.site?.lonDegEast ?? null,
-      camera: { lat: Math.round(s.globeCenter.latDeg * 50) / 50, lon: Math.round(s.globeCenter.lonDegEast * 50) / 50, altitudeKm: Math.round(s.globeCenter.altitudeKm) },
+      // Compared with a tolerance (sameCamera), not to the digit: the globe settles within 0.01° but not always to the same last digits.
+      camera: { lat: s.globeCenter.latDeg, lon: s.globeCenter.lonDegEast, altitudeKm: s.globeCenter.altitudeKm },
       look: raw.look,
       window: { startUtc: s.missionWindow.startUtc, durationH: s.missionWindow.durationH, delayH: s.missionWindow.delayH },
       mastHeightM: s.mastHeightM,
@@ -58,8 +60,23 @@ function snapshot() {
       shown: s.missionsShown.shown,
       assistantOpen: raw.assistantOpen,
       comparing: raw.comparing,
+      display: s.globeDisplay ? { relief: s.globeDisplay.reliefExaggeration, coverage: s.globeDisplay.coverageShown, ice: s.globeDisplay.iceTargetsShown } : null,
+      slots: { A: s.compare.A, B: s.compare.B },
+      compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
+      panels: s.panels ?? null,
+      surface: s.view === 'surface' && actions.getAction('getSurfaceView')
+        ? await actions.getAction('getSurfaceView').run({}).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null }))
+        : null,
+      hud: { chart: document.querySelector('.skc')?.dataset.size ?? null, chartShown: document.querySelector('.skc') ? !document.querySelector('.skc').hidden : null, metricsOpen: document.querySelector('.km .km-body') ? !document.querySelector('.km .km-body').hidden : null },
     };
   });
+}
+
+/** Two camera poses are the same view: within 0.02° (about 600 m on the surface) and 0.5 % in altitude. */
+function sameCamera(a, b) {
+  if (!a || !b) return a === b;
+  const dLon = Math.abs(((a.lon - b.lon + 540) % 360) - 180);
+  return Math.abs(a.lat - b.lat) <= 0.02 && dLon <= 0.02 && Math.abs(a.altitudeKm - b.altitudeKm) <= 0.005 * Math.max(a.altitudeKm, b.altitudeKm);
 }
 
 /** The known state every case starts from, set through actions in one go. */
@@ -83,6 +100,9 @@ async function reset(site = null) {
       await run('setFilters', { reset: true });
       await run('setLocatorZoom', { zoom: 1 });
       await run('showPanel', { panel: 'site-details', open: true });
+      for (const [n, p] of [['setReliefExaggeration', { factor: 10 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }]]) {
+        if (window.lunyx.actions.getAction(n)) await run(n, p);
+      }
       if (siteId) await run('selectSite', { site: siteId, fly: false });
       await run('setGlobeCamera', home);
     },
@@ -107,12 +127,14 @@ function cameraAt({ lat, lon, altitudeKm }) {
 
 /** Waits until the camera has stopped changing between two looks. */
 async function cameraSettled() {
-  let last = '';
-  for (let i = 0; i < 80; i++) {
-    const now = JSON.stringify((await snapshot()).camera);
-    if (now === last) return;
-    last = now;
-    await page.waitForTimeout(400);
+  // Still when two readings 400 ms apart differ by less than 1e-4° (about 3 m) and 0.01 % in altitude.
+  let last = null, still = 0;
+  for (let i = 0; i < 120 && still < 2; i++) {
+    const c = (await snapshot()).camera;
+    const moved = !last || Math.abs(c.lat - last.lat) > 1e-4 || Math.abs(((c.lon - last.lon + 540) % 360) - 180) > 1e-4 || Math.abs(c.altitudeKm - last.altitudeKm) > 1e-4 * c.altitudeKm;
+    still = moved ? 0 : still + 1;
+    last = c;
+    if (still < 2) await page.waitForTimeout(400);
   }
 }
 
@@ -147,7 +169,10 @@ async function equivalent({ site = null, prepare, ui, expect, action, keys, wait
   if (wait) await wait();
   const viaAction = await snapshot();
   const pick = (s) => (keys ? Object.fromEntries(keys.map((k) => [k, s[k]])) : s);
-  assert.deepEqual(pick(viaAction), pick(viaUi));
+  const { camera: camAction, ...restAction } = pick(viaAction);
+  const { camera: camUi, ...restUi } = pick(viaUi);
+  assert.deepEqual(restAction, restUi);
+  assert.ok(sameCamera(camAction, camUi), `camera: ${JSON.stringify(camAction)} vs ${JSON.stringify(camUi)}`);
   return viaUi;
 }
 
@@ -438,10 +463,8 @@ describe('equivalence: site selection and views', () => {
     }
   });
 
-  // Known difference, reported to @globe and @surface: the surface view's Escape handler and
-  // the site card's Escape handler both act on the same key press, so Escape leaves the
-  // surface AND deselects the site. exitSurface (and the two buttons) keep the site.
-  test('Escape in the surface view = exitSurface (the site stays selected)', { ...SLOW, todo: 'app bug: Escape in the surface view also runs clearSite' }, async () => {
+  // F-1, fixed by T-33 (src/ui/globe/cardKeys.ts): one Escape in the surface view only leaves the surface.
+  test('Escape in the surface view = exitSurface (the site stays selected)', SLOW, async () => {
     const s = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => page.keyboard.press('Escape'), expect: 'exitSurface', action: ['exitSurface', {}], keys: ['view', 'siteId'], wait: inGlobe });
     assert.equal(s.siteId, 'im-2');
   });
@@ -460,7 +483,7 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
       action: ['setGlobeCamera', { lat: -45, lon: 60 }],
       wait: () => cameraAt(target),
     });
-    assert.deepEqual(s.camera, { lat: -45, lon: 60, altitudeKm: 4170 });
+    assert.ok(sameCamera(s.camera, { lat: -45, lon: 60, altitudeKm: 4170 }), JSON.stringify(s.camera));
   });
 
   test('arrow keys, plus / minus, drag and wheel on the globe = setGlobeCamera with the pose they reach', SLOW, async () => {
@@ -497,7 +520,9 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     await reset();
     await result(page, 'setGlobeCamera', zoomed.camera);
     await cameraAt(zoomed.camera);
-    assert.deepEqual((await snapshot()).camera, zoomed.camera);
+    await cameraSettled();
+    const replayed = (await snapshot()).camera;
+    assert.ok(sameCamera(replayed, zoomed.camera), `${JSON.stringify(replayed)} vs ${JSON.stringify(zoomed.camera)}`);
   });
 
   test('locator map click and its zoom buttons; compass', SLOW, async () => {
@@ -511,8 +536,9 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     });
     assert.ok(s.camera.lon > 60 && s.camera.lat > 10, JSON.stringify(s.camera));
 
-    // The map's zoom is not part of the shared state: compare what the map shows (its zoom-out button and its label).
-    const shows = () => page.evaluate(() => ({ canZoomOut: !document.querySelector('.locator button[aria-label="Zoom the map out"]').disabled, label: document.querySelector('.locator-canvas').getAttribute('aria-label') }));
+    // Compare what the map shows about its zoom (the zoom-out button, the "×2" of the readout) and getState.locatorZoom.
+    // Its label also names the centre of view to 0.01°, which the reset's camera flight leaves within 0.02° (sameCamera), so the centre is not compared here.
+    const shows = () => page.evaluate(async () => ({ canZoomOut: !document.querySelector('.locator button[aria-label="Zoom the map out"]').disabled, zoomText: /×\d+$/.exec(document.querySelector('.locator-readout').textContent)?.[0] ?? null, locatorZoom: (await window.lunyx.actions.getAction('getState').run({})).locatorZoom ?? null }));
     await reset();
     const from = await lastSeq(page);
     await page.getByRole('button', { name: 'Zoom the map in' }).click();
@@ -546,6 +572,68 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     const replayed = (await snapshot()).look;
     assert.ok(Math.abs(replayed.azDeg - dragged.azDeg) < 0.5 && Math.abs(replayed.elDeg - dragged.elDeg) < 0.5, `${JSON.stringify(replayed)} vs ${JSON.stringify(dragged)}`);
     await result(page, 'exitSurface');
+  });
+});
+
+describe('equivalence: controls added since the 33-action build', () => {
+  const status = (text) => () => until(page, (t) => [...document.querySelectorAll('.cmp-status')].some((e) => e.textContent.includes(t)), text);
+  const enterSurface = async () => {
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface' && window.lunyx.actions.getAction('getSurfaceView') !== undefined);
+  };
+  const hudButton = (name) => page.locator('.surface-hud .sh-controls').getByRole('button', { name, exact: true });
+
+  test('Filters: relief exaggeration, coverage and ice-target outlines', SLOW, async () => {
+    const relief = await equivalent({ ui: () => filters().getByLabel('Exaggeration').selectOption('5'), expect: 'setReliefExaggeration', action: ['setReliefExaggeration', { factor: 5 }], keys: ['display'] });
+    assert.equal(relief.display.relief, 5);
+    const cover = await equivalent({ ui: () => filters().getByLabel('Show elevation data coverage').check(), expect: 'showCoverage', action: ['showCoverage', { show: true }], keys: ['display'] });
+    assert.equal(cover.display.coverage, true);
+    const ice = await equivalent({ ui: () => filters().getByLabel('Show mapped ice targets').check(), expect: 'showIceTargets', action: ['showIceTargets', { show: true }], keys: ['display'] });
+    assert.equal(ice.display.ice, true);
+  });
+
+  test('site card: the site-science fold = showPanel { panel: "site-science" }', SLOW, async () => {
+    const s = await equivalent({ site: 'im-2', ui: () => card().locator('.sc-scitoggle').click(), expect: 'showPanel', action: ['showPanel', { panel: 'site-science', open: false }], keys: ['panels'] });
+    assert.equal(s.panels['site-science'], false);
+  });
+
+  test('compare panel: launcher, "Compare arrivals", "Compare masts", "Swap A and B", "Empty A and B"', SLOW, async () => {
+    const opened = await equivalent({ site: 'im-2', ui: () => page.locator('.cmp-launcher').click(), expect: 'openCompare', action: ['openCompare', {}], keys: ['comparing', 'compareTab'] });
+    assert.deepEqual([opened.comparing, opened.compareTab], [true, 'A and B']);
+    const open = () => result(page, 'openCompare', { tab: 'compare' });
+    const late = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare arrivals' }).click(), expect: 'compareDelayedArrival', action: ['compareDelayedArrival', { delayH: 24 }], keys: ['slots', 'comparing', 'compareTab', 'window'], wait: status('B is A arriving 24 h later') });
+    assert.match(late.slots.B, /arrival 24 h later/);
+    assert.equal(late.window.delayH, 0, 'the scenario on screen keeps its own delay');
+    const masts = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare masts' }).click(), expect: 'compareMastHeights', action: ['compareMastHeights', { heightBM: 10 }], keys: ['slots', 'comparing', 'mastHeightM'], wait: status('B is A with a 10 m mast') });
+    assert.match(masts.slots.B, /10 m mast/);
+    const pair = async () => {
+      await open();
+      await result(page, 'compareDelayedArrival', { delayH: 24 });
+    };
+    const swapped = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Swap A and B' }).click(), expect: 'swapComparison', action: ['swapComparison', {}], keys: ['slots'], wait: status('Swapped A and B.') });
+    assert.match(swapped.slots.A, /arrival 24 h later/);
+    const emptied = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Empty A and B' }).click(), expect: 'clearComparison', action: ['clearComparison', {}], keys: ['slots'], wait: status('Slots A and B are empty') });
+    assert.deepEqual(emptied.slots, { A: null, B: null });
+  });
+
+  test('surface HUD: Face Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
+    const face = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Face Sun').click(), expect: 'lookAtBody', action: ['lookAtBody', { body: 'sun' }], keys: ['surface'] });
+    assert.ok(face.surface && Number.isFinite(face.surface.look.azDeg), JSON.stringify(face.surface));
+    const paths = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Sky paths').click(), expect: 'setSkyAnnotations', action: ['setSkyAnnotations', { tracks: false, labels: false }], keys: ['surface'] });
+    assert.deepEqual([paths.surface.tracks, paths.surface.labels], [false, false]);
+    const gen = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Generated detail').click(), expect: 'setGeneratedDetail', action: ['setGeneratedDetail', { on: false }], keys: ['surface'] });
+    assert.equal(gen.surface.generated, false);
+    const away = async () => {
+      await enterSurface();
+      await result(page, 'walkTo', { eastM: 100, northM: 50 });
+      await until(page, () => !document.querySelector('.surface-hud .sh-controls button:last-child')?.hidden);
+    };
+    const home = await equivalent({ site: 'im-2', prepare: away, ui: () => hudButton('Return to site').click(), expect: 'walkTo', action: ['walkTo', { eastM: 0, northM: 0 }], keys: ['surface'] });
+    assert.deepEqual([home.surface.position.eastM, home.surface.position.northM], [0, 0]);
+    const metrics = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => page.locator('.km .km-fold').click(), expect: 'showKeyMetrics', action: ['showKeyMetrics', { open: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.km .km-body')?.hidden === true) });
+    assert.equal(metrics.hud.metricsOpen, false);
+    const chart = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Skyline chart').click(), expect: 'setChart', action: ['setChart', { show: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.skc')?.hidden === true) });
+    assert.equal(chart.hud.chartShown, false);
   });
 });
 

@@ -723,7 +723,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     actions.push(
       defineAction<{ panel: string; open: boolean }, unknown>({
         name: 'showPanel', title: 'Show or fold a panel', description: 'Folds the site details or the filters sheet.', effect: 'command',
-        params: { type: 'object', properties: { panel: { type: 'string', description: 'panel', enum: ['site-details', 'filters'] }, open: { type: 'boolean', description: 'open' } }, required: ['panel', 'open'] },
+        params: { type: 'object', properties: { panel: { type: 'string', description: 'panel', enum: ['site-details', 'filters', 'site-science'] }, open: { type: 'boolean', description: 'open' } }, required: ['panel', 'open'] },
         run: ({ panel, open }) => ({ panel, open }),
       }),
     );

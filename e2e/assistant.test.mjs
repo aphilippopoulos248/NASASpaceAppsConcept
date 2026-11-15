@@ -52,6 +52,16 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.equal(await page.locator('#assistant-drawer').getAttribute('inert'), null);
   });
 
+  test('the drawer says where answers come from and that NASA is not responsible for them (T-10)', SLOW, async () => {
+    const note = page.locator('#assistant-disclaimer');
+    assert.equal(await note.textContent(), "Answers are worked out from Lunyx's own results, without an AI model. NASA is not responsible for their accuracy and has not reviewed them.");
+    // Under the conversation, inside the drawer, on screen at 1280x720: it never covers a reply.
+    const [n, conversation, drawer] = await Promise.all([note.boundingBox(), page.locator('.ad-log').boundingBox(), page.locator('#assistant-drawer').boundingBox()]);
+    assert.ok(n && conversation && drawer, 'not laid out');
+    assert.ok(n.y >= conversation.y + conversation.height - 1, `the note (${n.y}) overlaps the conversation (ends ${conversation.y + conversation.height})`);
+    assert.ok(n.y + n.height <= Math.min(720, drawer.y + drawer.height) + 1, `the note is cut off: ${JSON.stringify(n)}`);
+  });
+
   test('a typed command runs through the action registry and the reply is labelled', SLOW, async () => {
     const from = await lastSeq(page);
     const reply = await ask(page, 'go to IM-2');
@@ -73,8 +83,8 @@ describe('assistant: deterministic mode (server without a model)', () => {
     const f1 = (v) => v.toFixed(1);
     assert.ok(reply.text.includes(`illumination ${f1(a.metrics.illuminationPct)} %`), reply.text);
     assert.ok(reply.text.includes(`longest darkness ${f1(a.metrics.longestDarknessH)} h`), reply.text);
-    assert.ok(reply.text.includes(`Earth line of sight ${f1(a.metrics.earthVisiblePct)} %`), reply.text);
-    assert.ok(reply.text.includes(`longest Earth gap ${f1(a.metrics.longestEarthGapH)} h`), reply.text);
+    assert.ok(reply.text.includes(`Earth's centre in view ${f1(a.metrics.earthVisiblePct)} %`), reply.text);
+    assert.ok(reply.text.includes(`longest Earth-centre gap ${f1(a.metrics.longestEarthGapH)} h`), reply.text);
     assert.ok(reply.text.includes(`slope ${f1(a.slope.slopeDeg)}°`), reply.text);
     assert.match(reply.text, /not a guarantee of a working radio link/);
     assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
@@ -152,6 +162,8 @@ describe('assistant: scripted test model through the real /api/assistant route',
 
   test('the drawer names the model that is answering', SLOW, async () => {
     assert.equal(await page.locator('.ad-mode').textContent(), `Language model: ${SCRIPTED_LABEL}`);
+    // The scripted test model is not a language model: no "AI-generated" mark, and the standing note says so.
+    assert.equal(await page.locator('#assistant-disclaimer').textContent(), "Answers are worked out from Lunyx's own results, without an AI model. NASA is not responsible for their accuracy and has not reviewed them.");
     const status = await (await fetch(`${srv.scripted}/api/assistant`)).json();
     assert.deepEqual(status, { available: true, model: { provider: 'scripted', model: 'script:default', label: SCRIPTED_LABEL }, router: 'direct' });
   });
@@ -160,6 +172,7 @@ describe('assistant: scripted test model through the real /api/assistant route',
     const reply = await ask(page, 'call selectSite {"site":"Apollo 11"}; call setTime {"utc":"1969-07-20T20:17Z"}; call setMastHeight {"metres":5}');
     assert.deepEqual(reply.source, { kind: 'model', label: SCRIPTED_LABEL, provider: 'scripted' });
     assert.equal(reply.shownLabel, SCRIPTED_LABEL);
+    assert.doesNotMatch(reply.shownLabel, /AI-generated/);
     assert.deepEqual(reply.actions.map((a) => [a.name, a.ok, a.origin]), [['selectSite', true, 'assistant'], ['setTime', true, 'assistant'], ['setMastHeight', true, 'assistant']]);
     const s = await state(page);
     assert.equal(s.site.id, 'apollo-11');

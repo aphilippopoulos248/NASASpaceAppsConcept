@@ -337,6 +337,23 @@ describe('deterministic mode: the catalogue and the compare panel', () => {
   });
 });
 
+describe('deterministic mode: the site science section of the card', () => {
+  it('folds and opens the section with showPanel, and still reads the science for "site science"', async () => {
+    installFakeApp(ALL_ACTIONS);
+    const e = engine();
+    await e.reply('go to IM-2');
+    let from = lastSeq();
+    expect((await e.reply('fold the site science')).text).toBe('The site science section is folded away.');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['showPanel', { panel: 'site-science', open: false }]]);
+    from = lastSeq();
+    expect((await e.reply('show the site science section')).text).toBe('The site science section is open.');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['showPanel']);
+    from = lastSeq();
+    await e.reply('site science');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['getSiteScience']);
+  });
+});
+
 describe('deterministic mode: the surface HUD', () => {
   let state: FakeState;
   beforeEach(() => {

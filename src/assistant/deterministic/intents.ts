@@ -749,13 +749,14 @@ const views: Intent = (step) => {
       return `Back on the globe${r.site ? `, with ${str(r, 'site.name') ?? 'the site'} still selected` : ''}.`;
     });
   }
-  const panel = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site (?:details|card)|details|filters?(?: panel| sheet)?)$/.exec(step);
+  const panel = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site (?:details|card)|details|filters?(?: panel| sheet)?|site science section|science section)$/.exec(step) ?? /^(unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site science)$/.exec(step);
   if (panel) {
     const open = /show|open|unfold|expand/.test(panel[1]);
-    const which = panel[2].startsWith('filter') ? 'filters' : 'site-details';
+    const which = panel[2].startsWith('filter') ? 'filters' : /science/.test(panel[2]) ? 'site-science' : 'site-details';
     return plan(`${open ? 'open' : 'close'} the ${which === 'filters' ? 'filters panel' : 'site details'}`, async (ctx) => {
       const r = await ctx.run('showPanel', { panel: which, open });
-      return `${which === 'filters' ? 'The filters panel' : 'The site details'} ${r.open === true ? 'are open' : 'are folded away'}.`.replace('panel are', 'panel is');
+      const name = which === 'filters' ? 'The filters panel' : which === 'site-science' ? 'The site science section' : 'The site details';
+      return `${name} ${r.open === true ? 'are open' : 'are folded away'}.`.replace(/(panel|section) are/, '$1 is');
     });
   }
   if (/^(clear|remove|delete|deselect|unselect|forget)\s+(the\s+|this\s+|my\s+)?(site|pin|selection|marker)$/.test(step) || /^(deselect|unselect)$/.test(step)) {

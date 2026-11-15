@@ -109,7 +109,7 @@ function screen(page) {
         crewedPressed: pressed('Mission type', 'Crewed'),
         landingCount: q('.mf-years-head .ly-label')?.textContent ?? '',
       },
-      card: card && !card.hidden ? { title: q('.site-card .sc-title')?.textContent, bodyHidden: Boolean(q('.site-card .sc-body')?.hidden), foldExpanded: q('.site-card .sc-fold')?.getAttribute('aria-expanded'), text: card.textContent } : null,
+      card: card && !card.hidden ? { title: q('.site-card .sc-title')?.textContent, where: q('.site-card .sc-where')?.textContent ?? '', bodyHidden: Boolean(q('.site-card .sc-body')?.hidden), foldExpanded: q('.site-card .sc-fold')?.getAttribute('aria-expanded'), text: card.textContent } : null,
       compass: q('.compass')?.getAttribute('aria-label') ?? '',
       locator: { readout: q('.locator-readout')?.textContent ?? '', zoomOutDisabled: Boolean(q('.locator button[aria-label="Zoom the map out"]')?.disabled) },
       hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null },
@@ -119,6 +119,13 @@ function screen(page) {
         if (!sheet) return null;
         const panel = [...sheet.querySelectorAll('[role="tabpanel"]')].find((p) => !p.hidden);
         return { open: !sheet.hidden, tab: [...sheet.querySelectorAll('[role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null, text: panel?.textContent ?? '', loadButtons: [...sheet.querySelectorAll('button[aria-label^="Load the saved comparison "]')].map((b) => b.getAttribute('aria-label').slice('Load the saved comparison '.length)) };
+      })(),
+      requirements: (() => {
+        const field = (text) => {
+          const l = [...document.querySelectorAll('.cmp-sheet label')].find((x) => x.textContent.trim() === text);
+          return l?.htmlFor ? (document.getElementById(l.htmlFor)?.value ?? null) : null;
+        };
+        return document.querySelector('.cmp-sheet') ? { slope: field('Slope at most'), gap: field('Earth gap at most') } : null;
       })(),
       metrics: q('.km') ? { bodyHidden: Boolean(q('.km .km-body')?.hidden), foldExpanded: q('.km .km-fold')?.getAttribute('aria-expanded') ?? null } : null,
       chart: q('.skc') ? { hidden: q('.skc').hidden, size: q('.skc').dataset.size ?? null, mode: q('.skc').dataset.mode ?? null, explainShown: !q('.skc .skc-explain')?.hidden, explainText: q('.skc .skc-explain')?.textContent ?? '' } : null,
@@ -194,9 +201,17 @@ const CASES = [
     assert.deepEqual([r.sunElMinDeg, r.sunElMaxDeg], [5, 60]);
     await shows(page, (s) => s.filters.band[0] === '5' && s.filters.band[1] === '60', 'solar elevation fields');
   } },
-  // No control shows these two yet (the nearby panel and the requirement fields come with the compare panel / HUD): state only.
-  { name: 'setSlopeLimit', params: { degrees: 8 }, check: async (r, page) => assert.equal((await store(page)).slopeLimitDeg, 8), noControl: 'slope limit field arrives with the nearby panel (original T-11)' },
-  { name: 'setMaxEarthGap', params: { hours: 12 }, check: async (r, page) => assert.equal((await store(page)).maxEarthGapH, 12), noControl: 'Earth-gap requirement field arrives with the HUD / compare panel (original T-10 / T-11)' },
+  // Their fields are in the compare panel ("Slope at most", "Earth gap at most"), read when it is open.
+  { name: 'setSlopeLimit', prepare: (page) => run(page, 'openCompare', { tab: 'compare' }), params: { degrees: 8 }, check: async (r, page) => {
+    assert.equal(r.slopeLimitDeg, 8);
+    assert.equal((await store(page)).slopeLimitDeg, 8);
+    await shows(page, (s) => s.requirements?.slope === '8', 'the compare panel field "Slope at most"');
+  } },
+  { name: 'setMaxEarthGap', params: { hours: 12 }, check: async (r, page) => {
+    assert.equal(r.maxEarthGapH, 12);
+    await shows(page, (s) => s.requirements?.gap === '12', 'the compare panel field "Earth gap at most"');
+    await run(page, 'stopCompare');
+  } },
   // ---- layers and filters
   { name: 'setOverlay', params: { mode: 'sun-band' }, check: async (r, page) => {
     assert.equal(r.overlay, 'sun-band');
@@ -367,7 +382,9 @@ const CASES = [
   { name: 'selectCandidate', params: { rank: 1 }, check: async (r, page) => {
     assert.equal(r.site.id, page.__nearby.candidates[0].id);
     assert.equal((await store(page)).site.id, r.site.id);
-    await shows(page, (s) => s.card?.title === r.site.name, 'the card names the chosen candidate');
+    // A pin or a candidate is "Pinned location" on the card, with its coordinates (formatCoords: 3 decimals).
+    const where = `${Math.abs(r.site.latDeg).toFixed(3)}° ${r.site.latDeg >= 0 ? 'N' : 'S'}, ${Math.abs(r.site.lonDegEast).toFixed(3)}° ${r.site.lonDegEast >= 0 ? 'E' : 'W'}`;
+    await shows(page, (s) => s.card?.title === 'Pinned location' && s.card.where.startsWith(where), `the card shows the chosen candidate at ${where}`);
   } },
   { name: 'stopCompare', check: async (r, page) => {
     assert.equal((await store(page)).comparing, false);
@@ -376,7 +393,7 @@ const CASES = [
   // ---- pins and the surface view
   { name: 'dropPin', params: { lat: -88, lon: 136.7 }, check: async (r, page) => {
     assert.equal(r.site.kind, 'custom');
-    await shows(page, (s) => /^Pin /.test(s.card?.title ?? ''), 'the card names the pin');
+    await shows(page, (s) => s.card?.title === 'Pinned location' && s.card.where.startsWith('88.000° S, 136.700° E'), 'the card shows the pin and its coordinates');
   } },
   { name: 'enterSurface', prepare: async (page) => {
     await run(page, 'selectSite', { site: 'im-2', fly: false });
@@ -537,6 +554,24 @@ describe('control: every action through the scripted model and the real route', 
       await c.check(entry.result, page);
     });
   }
+
+  // F-5 in docs/lunyx/actions.md: after a scan the panel stays on "Nearby sites" when the core
+  // compare action opens the comparison, so the side-by-side it reports is not on screen.
+  // Deterministic mode and the scenario script ask openCompare for the A/B tab; a model that
+  // follows compare's description would not. The mark comes off when the panel follows compare.
+  test('after a scan, compare shows the A/B tab', { ...SLOW, todo: 'F-5: compare leaves the compare panel on its "Nearby sites" tab (reported to @analysis / @globe)' }, async (t) => {
+    if (!(await has(page, 'rankNearby'))) return t.skip('this build has no rankNearby');
+    await run(page, 'dropPin', { lat: -88, lon: 136.7 });
+    await run(page, 'setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true });
+    assert.ok((await run(page, 'rankNearby')).ok);
+    await run(page, 'saveScenario', { slot: 'A' });
+    await run(page, 'selectCandidate', { rank: 1 });
+    await run(page, 'saveScenario', { slot: 'B' });
+    assert.ok((await run(page, 'compare')).ok);
+    const s = await screen(page);
+    await run(page, 'stopCompare');
+    assert.equal(s.compare?.tab, 'A and B', `the panel shows "${s.compare?.tab}"`);
+  });
 
   test('the page raised no errors', SLOW, async () => {
     assert.deepEqual(app.problems, []);
