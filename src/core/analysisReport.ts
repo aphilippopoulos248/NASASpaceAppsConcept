@@ -6,6 +6,7 @@
 import { blockageAt as realBlockageAt, eventText, nextEvents as realNextEvents, nextTransitions } from '../analysis/api';
 import type { Blockage, ComparisonDiff, Interval, SiteAnalysis, SkyEvent } from '../analysis/types';
 import { rounded, type AnalysisSlot, type AnalysisStatus, type ComparisonStatus } from './analysisStore';
+import { NO_SUN_BAND_TEXT, sunBandRequired } from './requirements';
 import { describeScenario } from './scenario';
 import { EVENT_INFO, eventDefinitions, spanReport } from './skyEvents';
 import { isoUtc } from './time';
@@ -96,20 +97,25 @@ function skylineSummary(a: SiteAnalysis) {
 /**
  * The user's requirements against an analysis: plain facts, no verdict beyond met / not met.
  * The Sun band is about elevation above the local horizontal only; whether terrain hides the
- * Sun is in the clearance figures.
+ * Sun is in the clearance figures. A band left at its default (0 to 90 deg) is no requirement:
+ * `required` is false, `metNow` and `metForWholeWindow` are null and `note` says so.
  */
 export function checkRequirements(a: SiteAnalysis, s: Pick<AppState, 'sunElMinDeg' | 'sunElMaxDeg' | 'maxEarthGapH'>, sunElNowDeg: number) {
   const m = a.metrics;
-  const inBand = (el: number) => (Number.isFinite(el) ? el > s.sunElMinDeg && el < s.sunElMaxDeg : null);
+  const required = sunBandRequired(s);
+  const inBand = (el: number) => (required && Number.isFinite(el) ? el > s.sunElMinDeg && el < s.sunElMaxDeg : null);
   return {
     sunElevationBand: {
+      /** False while the band is at its default, 0 to 90 deg: nothing is checked, and the two "met" fields are null. */
+      required,
       minDeg: s.sunElMinDeg,
       maxDeg: s.sunElMaxDeg,
       sunElNowDeg: rounded(sunElNowDeg),
       metNow: inBand(sunElNowDeg),
       windowMinSunElDeg: rounded(m.minSunElDeg),
       windowMaxSunElDeg: rounded(m.maxSunElDeg),
-      metForWholeWindow: Number.isFinite(m.minSunElDeg) && Number.isFinite(m.maxSunElDeg) ? m.minSunElDeg > s.sunElMinDeg && m.maxSunElDeg < s.sunElMaxDeg : null,
+      metForWholeWindow: required && Number.isFinite(m.minSunElDeg) && Number.isFinite(m.maxSunElDeg) ? m.minSunElDeg > s.sunElMinDeg && m.maxSunElDeg < s.sunElMaxDeg : null,
+      ...(!required && { note: NO_SUN_BAND_TEXT }),
     },
     maxEarthGap:
       s.maxEarthGapH === null
