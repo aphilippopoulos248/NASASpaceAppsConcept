@@ -137,10 +137,10 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     assert.match(await card().locator('.sc-winnote').textContent(), /not a radio link/);
   });
 
-  // Finding Q-3 (docs/lunyx/qa-findings.md; F-3 of the legacy notes), owner @globe: poleward of
+  // Finding F-3 (docs/lunyx/actions.md, docs/lunyx/qa-findings.md), owner @globe: poleward of
   // 80.06 degrees the fly-to clamps the camera direction, so the view stops short of the latitude
   // asked for, and a pin dropped "at the centre" is not at the typed latitude.
-  test('typing coordinates centres the view exactly on them', { ...SLOW, todo: 'Q-3 (@globe): poleward of 80.06° the globe camera stops up to 0.06° (1.7 km) short of the typed latitude' }, async () => {
+  test('typing coordinates centres the view exactly on them', { ...SLOW, todo: 'F-3 (@globe): poleward of 80.06° the globe camera stops up to 0.06° (1.7 km) short of the typed latitude' }, async () => {
     assert.ok(typedCentre, 'the previous test did not run');
     assert.ok(Math.abs(typedCentre.lat - -88) < 0.001, `typed latitude -88, the view is centred on ${typedCentre.lat.toFixed(4)}`);
   });
@@ -206,7 +206,7 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     await result(page, 'setGlobeCamera', { lat: -84.79, lon: 29.2, altitudeKm: 300 });
     await cameraSettled();
     const from = await lastSeq(page);
-    // The marker sits at the site; the centre of view is slightly off it near the pole (Q-3), so find it on screen.
+    // The marker sits at the site; the centre of view is slightly off it near the pole (F-3), so find it on screen.
     const at = await markerOnScreen('im-2');
     await page.mouse.click(at.x, at.y);
     await until(page, () => window.lunyx.store.get().site?.id === 'im-2' && document.body.dataset.view === 'surface');

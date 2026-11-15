@@ -1,17 +1,17 @@
 // Reproduction for the coordinate-entry defects in Filters > "Centre of view" (desktop, 1280x720),
-// recorded in docs/lunyx/qa-findings.md as Q-1, Q-2 and Q-3:
+// recorded in docs/lunyx/qa-findings.md (Q-1, Q-2, Q-3; F-3 is the legacy finding in docs/lunyx/actions.md):
 //
 //   Q-1  Latitude, Tab, longitude, Enter (the natural keyboard order): when the latitude field
 //        loses focus it is refilled with the centre of the camera, which is still flying, and the
 //        longitude commit then sends that in-flight latitude instead of the typed one.
 //   Q-2  Type both, then press "Drop pin at centre" without waiting: the pin goes wherever the
 //        camera is at the moment of the click, not to the typed coordinates.
-//   Q-3  Poleward of 80.06 degrees the fly-to clamps the camera direction (|y| <= 0.985, then
+//   F-3  Poleward of 80.06 degrees the fly-to clamps the camera direction (|y| <= 0.985, then
 //        normalised), so the view never centres on the typed latitude, and each further commit
 //        of either field (which re-sends the displayed, already shifted latitude) moves it again.
 //        Even typing both fields carefully, Enter after each and waiting for each flight, drops
 //        the pin off the typed point.
-//   Q-4  (side observation) The globe auto-rotates after load; its damped momentum keeps turning
+//   Q-3  (side observation) The globe auto-rotates after load; its damped momentum keeps turning
 //        the camera after the first flight has arrived, so a short first hop ends off in longitude.
 //
 //   flock /tmp/lunyx-heavy.lock node e2e/qa/repro-centre.mjs [--out <dir>]
@@ -52,12 +52,12 @@ const report = {
   load: { before: execSync('cat /proc/loadavg').toString().trim() },
   startedUtc: new Date().toISOString(),
   flight: null,
-  q4FirstFlight: null,
+  q3FirstFlight: null,
   resetMisses: [],
   q1Typing: [],
   q2DropPinRightAway: [],
-  q3Careful: [],
-  q3PoleClamp: [],
+  f3Careful: [],
+  f3PoleClamp: [],
 };
 const srv = await servers();
 const browser = await launch();
@@ -98,7 +98,7 @@ try {
     await field.pressSequentially(text, { delay });
   };
 
-  // Q-4: the first flight after load, a short hop while the globe still auto-rotates, then the
+  // Q-3: the first flight after load, a short hop while the globe still auto-rotates, then the
   // same hop again with the auto-rotation stopped.
   await sleep(3000);
   const hop = async () => {
@@ -112,7 +112,7 @@ try {
     return { from, target, atArrival, settled, lonDriftAfterArrivalDeg: r4(settled.lon - atArrival.lon), lonErrorDeg: r4(settled.lon - target.lon) };
   };
   const autoRotating = await page.evaluate(() => window.lunyx.scene.globe.controls.autoRotate);
-  report.q4FirstFlight = { autoRotatingBefore: autoRotating, first: await hop(), second: await hop() };
+  report.q3FirstFlight = { autoRotatingBefore: autoRotating, first: await hop(), second: await hop() };
 
   // How long one flight takes (START to IM-2), for the record.
   await reset();
@@ -165,7 +165,7 @@ try {
     report.q2DropPinRightAway.push({ keyDelayMs: keyMs, typed: { lat: IM2.lat, lon: IM2.lon }, pin: { lat: site.lat, lon: site.lon, id: site.id }, centreAfter: await centre(), pinOffKm: Math.round(Math.hypot((site.lat - IM2.lat) * kmPerDeg, (site.lon - IM2.lon) * kmPerDeg * Math.cos((IM2.lat * Math.PI) / 180)) * 10) / 10 });
   }
 
-  // Q-3, careful path: latitude + Enter, wait; longitude + Enter, wait; then the button.
+  // F-3, careful path: latitude + Enter, wait; longitude + Enter, wait; then the button.
   for (const p of [IM2, { lat: -89.45, lon: -137.2, latText: '-89.45', lonText: '-137.2' }, { lat: -70, lon: 10, latText: '-70', lonText: '10' }]) {
     await reset();
     await type(lat, p.latText, 60);
@@ -179,7 +179,7 @@ try {
     await page.getByRole('button', { name: 'Drop pin at centre' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().site?.kind === 'custom', null, { timeout: 10_000 });
     const site = await page.evaluate(() => window.lunyx.store.get().site);
-    report.q3Careful.push({
+    report.f3Careful.push({
       typed: { lat: p.lat, lon: p.lon },
       afterLat,
       afterLon,
@@ -190,7 +190,7 @@ try {
     });
   }
 
-  // Q-3, the clamp itself: ask for the exact point by action, then re-commit the longitude field
+  // F-3, the clamp itself: ask for the exact point by action, then re-commit the longitude field
   // (unchanged value) three times; each commit re-sends the latitude the field displays.
   for (const [la, lo] of [[-84.79, 29.2], [-89.45, -137.2], [-88, 0], [-80.5, 10], [-79.9, 10], [84.79, 29.2]]) {
     await reset();
@@ -207,7 +207,7 @@ try {
       predicted = clampLat(Number(predicted.toFixed(2)));
       predictions.push(r4(predicted));
     }
-    report.q3PoleClamp.push({ asked: { lat: la, lon: lo }, steps, predictedLat: predictions });
+    report.f3PoleClamp.push({ asked: { lat: la, lon: lo }, steps, predictedLat: predictions });
   }
   report.console = app.diag.console;
   report.hosts = [...app.diag.hosts].sort();

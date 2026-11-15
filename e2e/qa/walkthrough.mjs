@@ -339,7 +339,7 @@ async function partSearch(app, step) {
   await step('Type the coordinates in Filters > Centre of view (latitude + Enter, wait; longitude + Enter, wait)', 'keyboard', async ({ check, note }) => {
     const r = await typeCentre(page, PIN.latText, PIN.lonText);
     note(`After the latitude: centre ${r.afterLat.lat.toFixed(4)}, ${r.afterLat.lon.toFixed(4)}. Fields now ${r.fields.lat}, ${r.fields.lon}.`);
-    check('Globe centre latitude = typed latitude', `${r.centre.lat.toFixed(4)} (field shows ${r.fields.lat})`, PIN.lat, close(r.centre.lat, PIN.lat, 0.005), { finding: 'Q-3' });
+    check('Globe centre latitude = typed latitude', `${r.centre.lat.toFixed(4)} (field shows ${r.fields.lat})`, PIN.lat, close(r.centre.lat, PIN.lat, 0.005), { finding: 'F-3' });
     check('Globe centre longitude = typed longitude', `${r.centre.lon.toFixed(4)} (field shows ${r.fields.lon})`, PIN.lon, close(r.centre.lon, PIN.lon, 0.005));
     note('The natural order (latitude, Tab, longitude, Enter) and pressing the pin button right after typing are covered by e2e/qa/repro-centre.mjs (findings Q-1, Q-2).');
   });
@@ -349,7 +349,7 @@ async function partSearch(app, step) {
     await page.waitForFunction(() => window.lunyx.store.get().site?.kind === 'custom', null, { timeout: 15_000 });
     const s = await appState(page);
     const offKm = Math.hypot((s.site.lat - PIN.lat) * kmPerDeg, (s.site.lon - PIN.lon) * kmPerDeg * Math.cos((PIN.lat * Math.PI) / 180));
-    check('Pin latitude = typed latitude', s.site.lat, PIN.lat, close(s.site.lat, PIN.lat, 0.00001), { finding: 'Q-3' });
+    check('Pin latitude = typed latitude', s.site.lat, PIN.lat, close(s.site.lat, PIN.lat, 0.00001), { finding: 'F-3' });
     check('Pin longitude = typed longitude', s.site.lon, PIN.lon, close(s.site.lon, PIN.lon, 0.00001));
     note(`Pin ${s.site.id}: ${(offKm * 1000).toFixed(0)} m from the typed point.`);
     app.report.pin = { typed: PIN, pin: { lat: s.site.lat, lon: s.site.lon, id: s.site.id }, offM: Math.round(offKm * 1000) };
