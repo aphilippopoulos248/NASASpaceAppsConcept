@@ -18,7 +18,7 @@ export function initialState(nowMs: number): AppState {
     site: null,
     mastHeightM: 2,
     windowStartMs: nowMs,
-    windowDurationH: 24,
+    windowDurationH: 708, // 29.5 days: one lunar day; explicit windows and presets override it.
     delayH: 0,
     compareA: null,
     compareB: null,

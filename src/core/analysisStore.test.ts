@@ -29,7 +29,7 @@ describe('analysis store', () => {
   it('runs the real science core on bundled terrain, with no network', async () => {
     // Apollo 11, the 24 h after touchdown: lunar morning on the near side, so the Sun and
     // Earth are both up the whole time. Chang'e 4 is on the far side: Earth is never visible.
-    const store = new Store(initialState(Date.UTC(1969, 6, 20, 20, 17)));
+    const store = new Store({ ...initialState(Date.UTC(1969, 6, 20, 20, 17)), windowDurationH: 24 });
     const a = new AnalysisStore(store);
     store.set({ site });
     await a.refresh();

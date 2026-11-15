@@ -331,7 +331,7 @@ const LONG = 90_000;
 /** The app's wiring: a store, the analysis store following it with its usual debounce, the core actions. */
 function setupReal() {
   resetActions();
-  const store = new Store(initialState(T0));
+  const store = new Store({ ...initialState(T0), windowDurationH: 24 }); // Fixed 24 h science fixture.
   const analysis = new AnalysisStore(store, undefined, 200);
   void analysis.start();
   registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => CATALOGUE, analysis }));

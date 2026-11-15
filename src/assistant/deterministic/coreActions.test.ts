@@ -28,7 +28,7 @@ describe('deterministic mode on the real core actions', () => {
   let engine: DeterministicEngine;
   beforeEach(() => {
     resetActions();
-    store = new Store(initialState(T0));
+    store = new Store({ ...initialState(T0), windowDurationH: 24 }); // Fixed comparison and report fixtures.
     filters = new MissionFilterStore();
     registerActions(createCoreActions({ store, filters, landings: () => LANDINGS }));
     engine = new DeterministicEngine(undefined, { wait: () => Promise.resolve() });

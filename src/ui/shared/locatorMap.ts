@@ -1,26 +1,29 @@
 // Locator ("viewfinder") map, lower right in both views: the whole Moon (equirectangular,
 // east-positive longitude) with the globe's current view outline, or in the surface view the
-// site and the look direction. Click or drag turns the globe there; scroll zooms the map.
+// viewer's walking position and look direction. Click or drag turns the globe there; scroll zooms the map.
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { store } from '../../core/store';
 import { wrapLon } from '../../core/types';
+import type { SurfaceApi } from '../../scene/surface/actions';
 import { el } from '../dom';
 import { globeFovDeg, viewFootprint } from './footprint';
+import { observerLocation, surfaceMapWindow } from './locatorPosition';
 import './locatorMap.css';
 
 const MAX_ZOOM = 16;
 
-// Map view: zoom 1 shows the whole Moon; when zoomed it follows the globe centre / site.
+// Globe zoom 1 shows the whole Moon. Surface zoom has a separate, local walking scale.
 // Presentation state of the one locator map, kept here rather than in AppState.
-let zoom = 1;
+let globeZoom = 1;
+let surfaceZoom = 4;
 
-/** Zoom of the locator map (1 = the whole Moon), as getState reports it. */
+/** Zoom of the current map: whole Moon in globe view, local walking area in surface view. */
 export function locatorZoom(): number {
-  return zoom;
+  return store.get().view === 'surface' ? surfaceZoom : globeZoom;
 }
-const fmt = (lat: number, lon: number) => `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`;
+const fmt = (lat: number, lon: number, digits = 2) => `${Math.abs(lat).toFixed(digits)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(digits)}° ${lon >= 0 ? 'E' : 'W'}`;
 
-export function mountLocatorMap(region: HTMLElement): void {
+export function mountLocatorMap(region: HTMLElement, surface: Pick<SurfaceApi, 'site' | 'position'>, onFrame: (fn: () => void) => void): void {
   const box = el('div', 'ly-panel locator');
   const canvas = el('canvas', 'locator-canvas');
   canvas.tabIndex = 0;
@@ -48,24 +51,29 @@ export function mountLocatorMap(region: HTMLElement): void {
     defineAction<{ zoom: number }, unknown>({
       name: 'setLocatorZoom',
       title: 'Zoom locator map',
-      description: 'Zooms the small whole-Moon locator map (1 = whole Moon, up to 16). The map follows the centre of the view (globe) or the site (surface).',
+      description: 'Zooms the locator map (1 to 16). In globe view, 1 shows the whole Moon. In surface view it shows a local walking map: 1 spans about 4 km, and the default 4 spans about 1 km. The yellow dot follows the viewer; the outlined marker is the landing site.',
       effect: 'command',
       params: { type: 'object', properties: { zoom: { type: 'number', description: 'Zoom factor, 1 to 16.', minimum: 1, maximum: MAX_ZOOM } }, required: ['zoom'] },
       run: ({ zoom: z }) => {
-        zoom = z;
+        if (store.get().view === 'surface') surfaceZoom = z;
+        else globeZoom = z;
         draw();
-        return { locatorZoom: zoom };
+        return { locatorZoom: locatorZoom() };
       },
     }),
   ]);
 
   const focus = () => {
     const s = store.get();
-    return s.view === 'surface' && s.site ? { lat: s.site.lat, lon: s.site.lon } : s.globeCenter;
+    if (s.view !== 'surface' || !s.site) return s.globeCenter;
+    return surface.site?.id === s.site.id ? observerLocation(surface.site, surface.position) : s.site;
   };
 
   /** Visible lat/lon window of the map. */
   const viewWindow = () => {
+    const zoom = locatorZoom();
+    const s = store.get();
+    if (s.view === 'surface' && s.site) return surfaceMapWindow(s.site, focus(), zoom);
     const w = 360 / zoom, h = 180 / zoom;
     const f = focus();
     const lon0 = zoom === 1 ? 0 : f.lon;
@@ -75,8 +83,7 @@ export function mountLocatorMap(region: HTMLElement): void {
 
   const toXY = (lat: number, lon: number, W: number, H: number) => {
     const v = viewWindow();
-    let dl = lon - v.west;
-    dl = ((dl % 360) + 360) % 360; // wrap into the window's span
+    const dl = wrapLon(lon - (v.west + v.w / 2)) + v.w / 2;
     return { x: (dl / v.w) * W, y: ((v.north - lat) / v.h) * H };
   };
   const fromXY = (x: number, y: number, W: number, H: number) => {
@@ -85,6 +92,7 @@ export function mountLocatorMap(region: HTMLElement): void {
   };
 
   function draw() {
+    const zoom = locatorZoom();
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const W = canvas.clientWidth, H = canvas.clientHeight;
     if (!W || !H) return;
@@ -109,29 +117,31 @@ export function mountLocatorMap(region: HTMLElement): void {
         g.drawImage(img, cx0, sy, cx1 - cx0, sh, ((cx0 - sx) / sw) * W, 0, ((cx1 - cx0) / sw) * W, H);
       }
     }
-    // Graticule every 30° (every 10° / 5° when zoomed).
-    const step = zoom >= 8 ? 5 : zoom >= 3 ? 10 : 30;
+    // Use a few local coordinate lines when walking, and a whole-Moon grid in globe view.
+    const inSurface = store.get().view === 'surface';
+    const step = inSurface ? 10 ** Math.ceil(Math.log10(v.h / 3)) : zoom >= 8 ? 5 : zoom >= 3 ? 10 : 30;
     g.strokeStyle = 'rgba(255,255,255,0.14)';
     g.lineWidth = 1;
     g.fillStyle = 'rgba(238,241,246,0.7)';
     g.font = '9px "Inter Variable", system-ui, sans-serif';
-    for (let lat = -90 + step; lat < 90; lat += step) {
+    for (let lat = Math.ceil((v.north - v.h) / step) * step; lat < Math.min(90, v.north); lat += step) {
       const { y } = toXY(lat, 0, W, H);
       if (y < 0 || y > H) continue;
       g.beginPath();
       g.moveTo(0, y + 0.5);
       g.lineTo(W, y + 0.5);
       g.stroke();
-      if (lat % (step * 2) === 0 || zoom > 1) g.fillText(`${Math.abs(lat)}°${lat > 0 ? 'N' : lat < 0 ? 'S' : ''}`, 2, y - 2);
+      if (lat % (step * 2) === 0 || zoom > 1) g.fillText(`${Number(Math.abs(lat).toFixed(4))}°${lat > 0 ? 'N' : lat < 0 ? 'S' : ''}`, 2, y - 2);
     }
-    for (let lon = -180; lon < 180; lon += step) {
+    const lonStep = inSurface ? Math.max(step, 10 ** Math.ceil(Math.log10(v.w / 4))) : step;
+    for (let lon = Math.ceil(v.west / lonStep) * lonStep; lon < v.west + v.w; lon += lonStep) {
       const { x } = toXY(0, lon, W, H);
       if (x < 0 || x > W) continue;
       g.beginPath();
       g.moveTo(x + 0.5, 0);
       g.lineTo(x + 0.5, H);
       g.stroke();
-      if (lon % (step * 3) === 0 || zoom > 1) g.fillText(`${Math.abs(lon)}°${lon > 0 ? 'E' : lon < 0 ? 'W' : ''}`, x + 2, H - 3);
+      if (lon % (step * 3) === 0 || zoom > 1) g.fillText(`${Number(Math.abs(wrapLon(lon)).toFixed(4))}°${wrapLon(lon) > 0 ? 'E' : lon < 0 ? 'W' : ''}`, x + 2, H - 3);
     }
 
     const s = store.get();
@@ -191,8 +201,12 @@ export function mountLocatorMap(region: HTMLElement): void {
       g.stroke();
     }
     if (s.site) {
-      const p = toXY(s.site.lat, s.site.lon, W, H);
+      const f = s.view === 'surface' ? focus() : s.site;
+      const p = toXY(f.lat, f.lon, W, H);
       if (s.view === 'surface') {
+        const sitePoint = toXY(s.site.lat, s.site.lon, W, H);
+        g.strokeStyle = '#ffd479';
+        g.strokeRect(sitePoint.x - 4, sitePoint.y - 4, 8, 8);
         // Look direction: a wedge as wide as the horizontal field of view.
         const half = ((s.look.fovDeg * (window.innerWidth / window.innerHeight)) / 2) * (Math.PI / 180);
         const az = (s.look.azDeg * Math.PI) / 180;
@@ -215,10 +229,12 @@ export function mountLocatorMap(region: HTMLElement): void {
     }
 
     const f = focus();
-    readout.textContent = hover ? `Pointer ${fmt(hover.lat, hover.lon)}` : `${s.view === 'surface' ? 'Site' : 'Centre'} ${fmt(f.lat, f.lon)}${zoom > 1 ? ` · ×${zoom}` : ''}`;
+    const digits = s.view === 'surface' ? 5 : 2;
+    readout.textContent = hover ? `Pointer ${fmt(hover.lat, hover.lon, digits)}` : `${s.view === 'surface' ? 'You' : 'Centre'} ${fmt(f.lat, f.lon, digits)}${zoom > 1 ? ` · ×${zoom}` : ''}`;
+    readout.title = s.view === 'surface' ? 'Yellow dot: your position. Outlined square: landing site. Zoom in to see smaller movements.' : 'Centre of the globe view';
     canvas.setAttribute(
       'aria-label',
-      `Locator map, ${s.view === 'surface' ? `site at ${fmt(f.lat, f.lon)}, looking ${Math.round(s.look.azDeg)}° from north` : `view centred on ${fmt(f.lat, f.lon)}`}. Click or use arrow keys to turn the globe; plus and minus zoom the map.`,
+      `Locator map, ${s.view === 'surface' ? `you are at ${fmt(f.lat, f.lon, digits)}, looking ${Math.round(s.look.azDeg)}° from north. Yellow dot: your position; outlined square: landing site` : `view centred on ${fmt(f.lat, f.lon)}. Click or use arrow keys to turn the globe`}. Plus and minus zoom the map.`,
     );
     zoomOut.disabled = zoom <= 1;
     zoomIn.disabled = zoom >= MAX_ZOOM;
@@ -261,15 +277,17 @@ export function mountLocatorMap(region: HTMLElement): void {
     'wheel',
     (e) => {
       e.preventDefault();
-      const next = Math.max(1, Math.min(MAX_ZOOM, Math.round(zoom * (e.deltaY < 0 ? 2 : 0.5))));
+      const zoom = locatorZoom();
+      const next = Math.max(1, Math.min(MAX_ZOOM, zoom * (e.deltaY < 0 ? 2 : 0.5)));
       if (next !== zoom) void runAction('setLocatorZoom', { zoom: next });
     },
     { passive: false },
   );
-  zoomIn.addEventListener('click', () => void runAction('setLocatorZoom', { zoom: Math.min(MAX_ZOOM, zoom * 2) }));
-  zoomOut.addEventListener('click', () => void runAction('setLocatorZoom', { zoom: Math.max(1, zoom / 2) }));
+  zoomIn.addEventListener('click', () => void runAction('setLocatorZoom', { zoom: Math.min(MAX_ZOOM, locatorZoom() * 2) }));
+  zoomOut.addEventListener('click', () => void runAction('setLocatorZoom', { zoom: Math.max(1, locatorZoom() / 2) }));
   canvas.addEventListener('keydown', (e) => {
     const c = store.get().globeCenter;
+    const zoom = locatorZoom();
     const step = 10 / zoom;
     const moves: Record<string, [number, number]> = { ArrowUp: [step, 0], ArrowDown: [-step, 0], ArrowLeft: [0, -step], ArrowRight: [0, step] };
     if (moves[e.key]) {
@@ -289,6 +307,16 @@ export function mountLocatorMap(region: HTMLElement): void {
     });
   };
   store.subscribe(['globeCenter', 'site', 'view', 'look'], schedule);
+  let previous = '';
+  onFrame(() => {
+    if (store.get().view !== 'surface') return;
+    const p = focus();
+    const next = `${p.lat},${p.lon}`;
+    if (next !== previous) {
+      previous = next;
+      schedule();
+    }
+  });
   window.addEventListener('resize', schedule);
   new ResizeObserver(schedule).observe(canvas);
 }

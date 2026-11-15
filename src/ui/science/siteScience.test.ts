@@ -15,7 +15,7 @@ const SHACKLETON_RIM = { lat: -89.686, lon: -163.457 };
 const APOLLO_11 = { lat: 0.67416, lon: 23.47314 };
 const landing = (id: string, name: string, at: { lat: number; lon: number }, date: string, time: string): Landing => ({ id, name, program: 'p', country: 'c', date, time, ...at, crewed: false, region: 'r', summary: 's' }) as Landing;
 
-const store = new Store(initialState(Date.UTC(2026, 10, 14)));
+const store = new Store({ ...initialState(Date.UTC(2026, 10, 14)), windowDurationH: 24 });
 const analysis = new AnalysisStore(store, undefined, 200);
 const landings = [landing('im-2', 'IM-2 Athena', IM2, '2025-03-06', '17:28'), landing('apollo-11', 'Apollo 11', APOLLO_11, '1969-07-20', '20:17')];
 

@@ -69,7 +69,7 @@ async function boot() {
   mountReliefChip(region('compass'));
   mountPerson(region('person'), (x, y) => host.globe.latLonAt(x, y));
   mountTimeScrubber(region('scrubber'));
-  mountLocatorMap(region('locator'));
+  mountLocatorMap(region('locator'), host.surface.view, (fn) => host.onFrame(fn));
   mountKeyMetrics(region('metrics'));
   mountSkylineChart(region('chart'));
   mountCloseButton(region('close'));

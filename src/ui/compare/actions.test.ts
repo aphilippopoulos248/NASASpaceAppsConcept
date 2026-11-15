@@ -59,7 +59,7 @@ function fakeBackend() {
 
 function setup(options: { real?: boolean; backend?: ReturnType<typeof fakeBackend> } = {}) {
   resetActions();
-  const store = new Store(initialState(T0));
+  const store = new Store({ ...initialState(T0), windowDurationH: 24 }); // Fixed comparison fixtures.
   const calls: string[] = [];
   const scans: { site: string; options: NearbyOptions }[] = [];
   const analysis = options.real

@@ -8,7 +8,7 @@ const T = Date.UTC(2025, 2, 6, 17, 28);
 const H = 3_600_000;
 
 const scenario = (over: Partial<Scenario> = {}, site: SiteRef = IM2): Scenario => {
-  const s = { ...initialState(T), site, ...('startMs' in over ? { windowStartMs: over.startMs! } : {}), ...('mastHeightM' in over ? { mastHeightM: over.mastHeightM! } : {}), ...('durationH' in over ? { windowDurationH: over.durationH! } : {}) };
+  const s = { ...initialState(T), windowDurationH: 24, site, ...('startMs' in over ? { windowStartMs: over.startMs! } : {}), ...('mastHeightM' in over ? { mastHeightM: over.mastHeightM! } : {}), ...('durationH' in over ? { windowDurationH: over.durationH! } : {}) };
   return scenarioFromState(s, over.label)!;
 };
 
@@ -17,8 +17,8 @@ describe('scenario from state', () => {
     const s = { ...initialState(T), site: IM2, delayH: 24 };
     expect(effectiveStartMs(s)).toBe(T + 24 * H);
     const sc = scenarioFromState(s)!;
-    expect(sc).toMatchObject({ startMs: T + 24 * H, durationH: 24, mastHeightM: 2, stepMin: 10, id: `im-2|2|${T + 24 * H}|24|10` });
-    expect(sc.label).toBe('IM-2 Athena, arrival 2025-03-07 17:28 UTC, 24 h window, 2 m mast');
+    expect(sc).toMatchObject({ startMs: T + 24 * H, durationH: 708, mastHeightM: 2, stepMin: 10, id: `im-2|2|${T + 24 * H}|708|10` });
+    expect(sc.label).toBe('IM-2 Athena, arrival 2025-03-07 17:28 UTC, 29.5-day window, 2 m mast');
     expect(describeScenario(sc)).toBe(sc.label);
     expect(scenarioFromState(initialState(T))).toBeNull();
     expect(scenarioFromState(s, '  late  ')!.label).toBe('late');

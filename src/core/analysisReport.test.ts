@@ -7,7 +7,7 @@ import { initialState } from './store';
 
 const T = Date.UTC(2025, 2, 6, 17, 28);
 const H = 3_600_000;
-const state = { ...initialState(T), site: { id: 'im-2', name: 'IM-2 Athena', kind: 'landing' as const, lat: -84.79, lon: 29.2 } };
+const state = { ...initialState(T), windowDurationH: 24, site: { id: 'im-2', name: 'IM-2 Athena', kind: 'landing' as const, lat: -84.79, lon: 29.2 } };
 const scenario = scenarioFromState(state)!;
 
 /** A stand-in analysis: only the fields the report reads. The figures are test inputs, chosen to exercise rounding and flags. */

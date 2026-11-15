@@ -1,5 +1,5 @@
 // Time scrubber along the bottom (both views): scrubs the shared clock across the mission
-// window (24 h by default), with play/pause, speed, the exact UTC instant, the window length,
+// window (29.5 days by default), with play/pause, speed, the exact UTC instant, the window length,
 // and - once the site analysis is ready - sunrise/sunset/Earthrise/Earthset marks and
 // jump-to-event buttons. Every control is an action (jumpToEvent is in core/coreActions.ts).
 //

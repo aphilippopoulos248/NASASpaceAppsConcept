@@ -50,6 +50,9 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   handle to move it, with the mouse or the arrow keys, and a Fold button; "Reset panels" puts
   them back, the assistant can move, fold and reset them too, and leaving the surface view
   restores the usual layout.
+  The initial mission window is 29.5 days; chosen windows and mission presets keep their own
+  durations. The surface locator map shows your walking position as a yellow dot and the
+  landing site as an outlined square, with its own zoom for viewing local movement.
 - **Compare panel.** Scenarios A and B side by side with B minus A in numbers and sentences;
   "B = A arriving N hours later"; "B = A with another mast"; named comparisons that reload
   exactly. Nearby alternatives: a scan around the site (radius, spacing, slope limit) ranked

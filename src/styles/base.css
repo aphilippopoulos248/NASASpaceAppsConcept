@@ -111,6 +111,12 @@ a { color: var(--accent); }
   color-scheme: dark;
 }
 .ly-input:hover, .ly-select:hover { border-color: var(--border-strong); }
+/* Native menus must use the same high-contrast palette as their closed control. */
+select, select.ly-select, select.ly-input, select option, select optgroup {
+  color: #000;
+  background-color: #fff;
+  color-scheme: light;
+}
 .ly-input[aria-invalid='true'] { border-color: var(--danger); }
 .ly-check { display: flex; align-items: center; gap: var(--sp-2); cursor: pointer; }
 .ly-check input { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
