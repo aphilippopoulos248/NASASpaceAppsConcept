@@ -33,6 +33,17 @@ export interface SkylineData {
   smoothDipDeg: number;
 }
 
+/** A disc passing through the skyline (D-8): from the first cut to the last limb of a set, from the first limb to the whole disc clear of a rise. Clipped to the window. */
+export interface Passage {
+  body: Body;
+  kind: 'set' | 'rise' | 'graze' | 'peek' | 'unresolved';
+  startMs: number;
+  endMs: number;
+  /** The ends were found (an end not found is drawn to the window's edge). */
+  startKnown: boolean;
+  endKnown: boolean;
+}
+
 export interface ChartData {
   scenarioId: string;
   startMs: number;
@@ -41,6 +52,8 @@ export interface ChartData {
   skyline: SkylineData | null;
   sun: TrackSample[];
   earth: TrackSample[];
+  /** The passages of both bodies that overlap the window, in time order (empty for analyses made without them). */
+  passages: Passage[];
 }
 
 /** The up/down rule for a sample, shared with the mission-window figures. */
@@ -69,7 +82,15 @@ export function chartData(a: SiteAnalysis): ChartData {
     if (v > max) max = v;
   }
   if (Number.isFinite(min)) skyline = { azStepDeg: h.azStepDeg, elDeg: h.elevDeg, minDeg: min, maxDeg: max, smoothDipDeg: h.smoothDipDeg };
-  return { scenarioId: a.scenario.id, startMs: s.startMs, endMs: s.startMs + (s.n - 1) * s.stepMs, stepMs: s.stepMs, skyline, sun: track('sun'), earth: track('earth') };
+  const startMs = s.startMs, endMs = s.startMs + (s.n - 1) * s.stepMs;
+  const passages: Passage[] = [];
+  for (const tr of a.transitions ?? []) {
+    const startKnown = tr.start.edge !== 'unresolved', endKnown = tr.end.edge !== 'unresolved';
+    const from = startKnown ? Math.max(startMs, tr.start.timeMs) : startMs;
+    const to = endKnown ? Math.min(endMs, tr.end.timeMs) : endMs;
+    if (to > from) passages.push({ body: tr.body, kind: tr.kind, startMs: from, endMs: to, startKnown, endKnown });
+  }
+  return { scenarioId: a.scenario.id, startMs, endMs, stepMs: s.stepMs, skyline, sun: track('sun'), earth: track('earth'), passages };
 }
 
 /** Skyline elevation at any azimuth, interpolated between samples; NaN without a skyline. */
@@ -149,6 +170,11 @@ export function timeTicks(startMs: number, endMs: number, target = 6): { ms: num
     out.push({ ms: t, label: stepH >= 24 || iso.slice(11, 16) === '00:00' ? iso.slice(5, 10) : iso.slice(11, 16) });
   }
   return out;
+}
+
+/** The passage of a body under way at an instant, if any. */
+export function passageAt(d: ChartData, body: Body, timeMs: number): Passage | null {
+  return d.passages.find((p) => p.body === body && p.startMs <= timeMs && timeMs <= p.endMs) ?? null;
 }
 
 /** The sample of a track nearest in time. */
