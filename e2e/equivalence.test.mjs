@@ -95,7 +95,11 @@ function snapshot() {
       compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
       panels: s.panels ?? null,
       surface: s.view === 'surface' && actions.getAction('getSurfaceView')
-        ? await Promise.resolve(actions.getAction('getSurfaceView').run({})).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null }))
+        ? await Promise.resolve(actions.getAction('getSurfaceView').run({})).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null, tracking: v.trackingBody ?? null }))
+        : null,
+      // The surface panels (T-65): on screen, folded, moved, and where a moved one is.
+      surfacePanels: actions.getAction('getSurfacePanels')
+        ? Object.fromEntries((await Promise.resolve(actions.getAction('getSurfacePanels').run({}))).panels.map((p) => [p.panel, { shown: p.shown, folded: p.folded, moved: p.moved, x: p.moved ? p.xPx : null, y: p.moved ? p.yPx : null }]))
         : null,
       hud: { chart: document.querySelector('.skc')?.dataset.size ?? null, chartShown: document.querySelector('.skc') ? !document.querySelector('.skc').hidden : null, metricsOpen: document.querySelector('.km .km-body') ? !document.querySelector('.km .km-body').hidden : null },
     };
@@ -130,7 +134,7 @@ async function reset(site = null) {
       await run('setFilters', { reset: true });
       await run('setLocatorZoom', { zoom: 1 });
       await run('showPanel', { panel: 'site-details', open: true });
-      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['setTerritoryScale', { factor: 100 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }]]) {
+      for (const [n, p] of [['setReliefExaggeration', { factor: 1 }], ['setTerritoryScale', { factor: 100 }], ['showCoverage', { show: false }], ['showIceTargets', { show: false }], ['clearComparison', {}], ['setChart', { show: true, expanded: false, mode: 'skyline', table: false }], ['showKeyMetrics', { open: true }], ['setSkyAnnotations', { tracks: true, labels: true }], ['setGeneratedDetail', { on: true }], ['showPanel', { panel: 'site-science', open: true }], ['resetSurfacePanels', {}]]) {
         if (window.lunyx.actions.getAction(n)) await run(n, p);
       }
       if (siteId) await run('selectSite', { site: siteId, fly: false });
@@ -730,9 +734,11 @@ describe('equivalence: controls added since the 33-action build', () => {
     assert.deepEqual(emptied.slots, { A: null, B: null });
   });
 
-  test('surface HUD: Face Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
-    const face = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Face Sun').click(), expect: 'lookAtBody', action: ['lookAtBody', { body: 'sun' }], keys: ['surface'] });
-    assert.ok(face.surface && Number.isFinite(face.surface.look.azDeg), JSON.stringify(face.surface));
+  // Pull request #2: the HUD's "Face Sun" / "Face Earth" became the toggles "Track Sun" / "Track Earth".
+  test('surface HUD: Track Sun, Sky paths, Generated detail, Return to site, key metrics fold, chart button', SLOW, async () => {
+    const track = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Track Sun').click(), expect: 'setBodyTracking', action: ['setBodyTracking', { body: 'sun', on: true }], keys: ['surface'] });
+    assert.equal(track.surface?.tracking, 'sun', JSON.stringify(track.surface));
+    assert.equal(await hudButton('Track Sun').getAttribute('aria-pressed'), 'true');
     const paths = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Sky paths').click(), expect: 'setSkyAnnotations', action: ['setSkyAnnotations', { tracks: false, labels: false }], keys: ['surface'] });
     assert.deepEqual([paths.surface.tracks, paths.surface.labels], [false, false]);
     const gen = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Generated detail').click(), expect: 'setGeneratedDetail', action: ['setGeneratedDetail', { on: false }], keys: ['surface'] });
@@ -748,6 +754,48 @@ describe('equivalence: controls added since the 33-action build', () => {
     assert.equal(metrics.hud.metricsOpen, false);
     const chart = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => hudButton('Skyline chart').click(), expect: 'setChart', action: ['setChart', { show: false }], keys: ['hud'], wait: () => until(page, () => document.querySelector('.skc')?.hidden === true) });
     assert.equal(chart.hud.chartShown, false);
+  });
+});
+
+describe('equivalence: the surface panels (T-65)', () => {
+  const enterSurface = async () => {
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface');
+  };
+
+  test('a panel\'s Fold button = setSurfacePanel { panel, folded }', SLOW, async () => {
+    const s = await equivalent({ site: 'im-2', prepare: enterSurface, ui: () => page.getByRole('button', { name: 'Fold Time', exact: true }).click(), expect: 'setSurfacePanel', action: ['setSurfacePanel', { panel: 'time', folded: true }], keys: ['surfacePanels'] });
+    assert.deepEqual([s.surfacePanels.time.folded, s.surfacePanels.time.moved], [true, false]);
+  });
+
+  test('arrow keys on a panel\'s grip = setSurfacePanel { panel, xPx, yPx } with the place they reach', SLOW, async () => {
+    const s = await equivalent({
+      site: 'im-2',
+      prepare: enterSurface,
+      ui: async () => {
+        const grip = page.getByRole('button', { name: 'Move Locator map panel' });
+        await grip.focus();
+        for (let i = 1; i <= 2; i++) {
+          const from = await lastSeq(page);
+          await page.keyboard.press('ArrowLeft');
+          await until(page, (seq) => window.lunyx.actions.actionLog().some((e) => e.seq > seq && e.name === 'setSurfacePanel' && e.origin === 'ui'), from);
+        }
+      },
+      expect: 'setSurfacePanel',
+      action: (ui) => [['setSurfacePanel', { panel: 'locator-map', xPx: ui.surfacePanels['locator-map'].x, yPx: ui.surfacePanels['locator-map'].y }]],
+      keys: ['surfacePanels'],
+    });
+    assert.equal(s.surfacePanels['locator-map'].moved, true);
+  });
+
+  test('"Reset panels" = resetSurfacePanels', SLOW, async () => {
+    const moved = async () => {
+      await enterSurface();
+      await result(page, 'setSurfacePanel', { panel: 'time', folded: true });
+      await result(page, 'setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 });
+    };
+    const s = await equivalent({ site: 'im-2', prepare: moved, ui: () => page.getByRole('button', { name: 'Reset panels' }).click(), expect: 'resetSurfacePanels', action: ['resetSurfacePanels', {}], keys: ['surfacePanels'] });
+    assert.ok(Object.values(s.surfacePanels).every((p) => !p.folded && !p.moved), JSON.stringify(s.surfacePanels));
   });
 });
 

@@ -641,7 +641,19 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
     actions.push(
       defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
-      defineAction<{ factor: number }, unknown>({ name: 'setTerritoryScale', title: 'Territory size exaggeration', description: 'How many times wider than life the explored areas are drawn.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 1, maximum: 100 } }, required: ['factor'] }, run: ({ factor }) => { state.territoryScale = factor; return display(); } }),
+      defineAction<{ factor: number }, unknown>({
+        name: 'setTerritoryScale', title: 'Territory size exaggeration', description: 'Display setting for how much the explored areas are enlarged from orbit. Not a width multiplier.', effect: 'command',
+        params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 1, maximum: 100 } }, required: ['factor'] },
+        run: ({ factor }) => {
+          state.territoryScale = factor;
+          // As src/scene/globe/displayState.ts selectedSiteArea: the selected landing's area in the card's words (IM-2's stand-in record).
+          const site = state.site;
+          const rec = site && site.kind === 'landing' ? SITE_RECORDS[site.id]?.exploredArea : null;
+          const k = factor <= 1 ? 1 : Math.round((1 + (factor - 1) * 0.5) * 10) / 10;
+          const selectedSiteArea = rec && site ? { site: site.id, name: site.name, extentM: 40, widthFactorFromOrbit: k, drawnWidthFromOrbitKm: Math.round(40 * k / 100) / 10, text: k <= 1 ? 'about 40 m across (drawn at true size on the globe)' : `about 40 m across (drawn ${k}× larger in width from orbit, about ${Math.round(40 * k)} m across, so it can be seen; true size close to the ground)` } : null;
+          return { ...display(), territoryRule: factor > 1 ? 'A display setting, not a width multiplier.' : null, selectedSiteArea };
+        },
+      }),
       bool('showCoverage', 'Show elevation data coverage', 'coverage'),
       bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
       defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),

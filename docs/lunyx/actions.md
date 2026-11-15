@@ -9,9 +9,12 @@ which merges `am/lunyx-experience/integration` (350f928) and with it `am/lunyx/i
 surface HUD, T-48; one rule for the default solar band, T-46; globe keys that add up, T-55;
 before that 50aaace: compare panel slices 1 to 4, the surface HUD of original T-10, T-20 /
 T-33, mission presets T-22, the assistant-visible state of T-44, GitHub main 282249d with
-country flags and ownership), and the teammates' GitHub main 081784a (original T-64: territory
-size, movable surface panels, one click selects a landing, the drawer's "Close ×" and Escape).
-**65 actions.** Read from every event handler and
+country flags and ownership), and the T-64 release candidate c39c516 of
+`am/lunyx/agent/upstream-sync` (a D-5 exception for T-17: the teammates' GitHub main 081784a with
+territory size, movable surface panels, one click selects a landing, the drawer's "Close ×";
+pull request #2 with the Track Sun / Track Earth toggles; d744169 "Fixed LLM", credentials from
+the Anthropic SDK; @surface's panel actions, T-65; the F-10 fix in the compare panel; @globe's
+territory-size result). **69 actions.** Read from every event handler and
 every `runAction` call in `src/ui/` and `src/scene/`, and from the registry at run time.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tools are
@@ -30,7 +33,7 @@ Check columns:
 | **U** | Unit tests of the owner | the module's `*.test.ts` |
 | **H** | Checked by hand | |
 
-## 1. The registry: 65 actions
+## 1. The registry: 69 actions
 
 | Action | Module (owner) | Parameters | Control that runs it | Checks |
 | --- | --- | --- | --- | --- |
@@ -62,14 +65,15 @@ Check columns:
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
 | `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30; default 1 since T-64) | none since T-64: the Filters selector is gone and only the assistant sets it; the "Terrain relief" note says what is drawn | C D U |
-| `setTerritoryScale` | globe display (@globe, T-64) | `factor` (1 to 100, default 100): a display setting for how much the explored areas are enlarged from orbit, not a width multiple (with ×5 a 60 m area is drawn about 100 times wider; @submission's cross-check) | Filters: "Territory size exaggeration" | C D E |
+| `setTerritoryScale` | globe display (@globe, T-64) | `factor` (1 to 100, default 100): a display setting, not a width multiplier (1 = true size, 100 = every area drawn a set width from orbit; blended in between). The result gives `territoryRule` and, for the selected landing, `selectedSiteArea` (`widthFactorFromOrbit`, `drawnWidthFromOrbitKm`, the card's `text`) | Filters: "Territory size exaggeration" | C D E |
 | `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |
 | `getSiteScience`, `nearestIceTargets` (queries) | site science (T-30, mounted by @globe) | ; `lat?`, `lon?`, `count?`, `limit?`, `maxKm?` | the card's "Site science" section | C D U |
 | `setGeneratedDetail` | surface (@surface) | `on` | HUD "Generated detail" | C D E |
 | `setFieldOfView` | surface | `fovDeg` (4 to 100) | scroll, pinch, + / - in the surface view (pose) | C D |
-| `lookAtBody` | surface | `body`, `fovDeg?` | HUD "Face Sun" / "Face Earth"; key metrics Sun / Earth; chart Enter / E | C D E |
+| `lookAtBody` | surface | `body`, `fovDeg?` | key metrics Sun / Earth; chart Enter / E (the HUD's Face buttons became Track toggles in pull request #2) | C D |
+| `setBodyTracking` | surface (pull request #2) | `body: sun \| earth`, `on` | HUD "Track Sun" / "Track Earth" (toggles, `aria-pressed`); a drag or the arrow keys stop it; `getSurfaceView.trackingBody` says which | C D E |
 | `walkTo` | surface | `eastM`, `northM`, `liftM?` | W A S D, E / Q (pose); HUD "Return to site" | C D E |
 | `setSkyAnnotations` | surface | `tracks?`, `labels?` | HUD "Sky paths" | C D E |
 | `getSurfaceView` (query) | surface | | HUD status line, ground line, "About this view" | C D |
@@ -77,6 +81,9 @@ Check columns:
 | `dismissBlockageExplanation` | surface HUD | | explanation "Close", Escape on the chart | C D |
 | `setChart` | surface HUD | `show?`, `expanded?`, `mode?`, `table?`, `azimuthRange?` | HUD "Skyline chart"; chart Skyline / Time / Table / fit / size / × | C D E |
 | `showKeyMetrics` | surface HUD | `open` | key metrics fold | C D E |
+| `setSurfacePanel` | surface panels (@surface, T-65) | `panel: key-metrics \| skyline-chart \| surface-controls \| time \| locator-map \| compare \| assistant`, `folded?`, `xPx?`, `yPx?` | each panel's Fold / Expand button; its grip (a drag is one call; arrow keys, Shift for larger steps) | C D E |
+| `resetSurfacePanels` | surface panels | | "Reset panels" | C D E |
+| `getSurfacePanels` (query) | surface panels | | where each panel is, folded, moved, its box | C D |
 | `openCompare` | compare panel (@analysis) | `tab?: compare \| nearby \| windows \| outlook` | launcher "Compare", tab buttons, arrow keys on the tabs | C D E |
 | `compareDelayedArrival` | compare panel | `delayH?`, `basis?` | "Compare arrivals" (with "B arrives later than A by") | C D E U |
 | `compareMastHeights` | compare panel | `heightBM`, `heightAM?`, `basis?` | "Compare masts" (with "B has a mast of") | C D E U |
@@ -137,7 +144,9 @@ of 14 March 2025 in one step (`listPresets`, `loadPreset`).
 | look around on the surface | drag, arrow keys | `lookAt` (pose) | C D E |
 | zoom on the surface | scroll, pinch, + / - | `setFieldOfView` (pose) | C D |
 | walk, rise and descend | W A S D, E / Q, Shift | `walkTo { eastM, northM, liftM }` (pose; closes G-1) | C D |
-| face the Sun or Earth | HUD buttons, key metrics, chart keys | `lookAtBody` | C D |
+| face the Sun or Earth once | key metrics, chart keys | `lookAtBody` | C D |
+| keep facing the Sun or Earth as the clock runs | HUD "Track Sun" / "Track Earth" | `setBodyTracking` | C D E |
+| move, fold and reset the surface panels | grips, Fold buttons, "Reset panels" | `setSurfacePanel`, `resetSurfacePanels`, `getSurfacePanels` (T-65; closes G-13) | C D E |
 | go back to the site | HUD "Return to site" | `walkTo { 0, 0 }` | C D |
 
 Where the globe view is: `getState.globeDisplay.viewTarget { latDeg, lonDegEast, flying }` is
@@ -195,6 +204,12 @@ deterministic replies give that note and the Sun's range (finding Q-5, section 4
 (not a language model)". A standing note under the message box says where the answers come
 from and that NASA is not responsible for their accuracy and has not reviewed them.
 
+Credentials (since d744169): the server uses whatever the Anthropic SDK resolves (an `ant auth
+login` profile, workload identity, ANTHROPIC_API_KEY in its environment). Without any, the
+status says no model ("No Claude credentials found ...") and the drawer answers in its labelled
+deterministic mode from the start (F-11). Escape closes the drawer when focus is in it or on the
+page or the 3D view; focus in another panel leaves Escape to that panel (F-10).
+
 ## 3. Gaps
 
 A gap is something a user can do or read that no action covers, or data neither can reach.
@@ -213,7 +228,7 @@ A gap is something a user can do or read that no action covers, or data neither 
 | G-10 | The scrubber's "Now" starts the window at the **real** time; the assistant had no wall clock | @globe | **closed** by T-44: `getState.wallClockUtc`, `"real-now"` in `setTime` and `setMissionWindow`; deterministic mode: "start the mission window now in real time" |
 | G-11 | Mission-window table and CSV / JSON export, seasonal outlook | @analysis | **closed**: `exportResults`, `showOutlook` (a958d6b); phrases "export the results as csv", "show the seasonal outlook for 2 months", "show the window table" |
 | G-12 | The card's "Belongs to", "Owner" and "Explored" rows and the ownership mismatch (GitHub main 282249d) were in no action result | @globe | **closed** by T-44: `site.ownership`, `site.exploredArea` in `getState` and the site results; deterministic mode reads them out (903b390) |
-| G-13 | The surface view's movable panels (T-64: key metrics, skyline chart, surface controls, time, locator, compare, assistant): moving a panel (drag, arrow keys on its grip), "Fold" / "Expand" and "Reset panels" run no action (only "Reset panels" runs `showKeyMetrics`), and `getState` does not say where the panels are or which are folded | @globe (original T-65) | open: T-65 brings their actions |
+| G-13 | The surface view's movable panels (T-64): moving, folding and "Reset panels" ran no action, and `getState` did not say where the panels were | @surface | **closed** by T-65 (d0381c0): `setSurfacePanel`, `resetSurfacePanels`, `getSurfacePanels`; the controls run them |
 
 ## 4. Findings, rechecked on this build
 
@@ -227,7 +242,9 @@ A gap is something a user can do or read that no action covers, or data neither 
 | F-6 | On the card a pin or candidate is titled "Pinned location"; its name (for a candidate "Candidate 300 m W, 600 m S of ...", as `selectCandidate` and the nearby list give it) appears nowhere on the card | @globe | **fixed** in dbc6c59 (T-43: candidates are named on the card) |
 | F-7 | Arrow keys and + / - on the globe turned from the centre the globe had published, which it updates once per drawn frame: presses within one frame started from the same centre and all but the last were lost (seen in the equivalence test on the GPU; on a slow software renderer a keyboard user would lose presses) | @globe | **fixed** by the original team's T-55 in 351e9fc (`src/scene/globe/globeKeys.ts`: a press steps from the pose the globe is flying to). `e2e/equivalence.test.mjs` "arrow keys pressed faster than the globe draws" checks three presses with no wait |
 | F-8 | `listSites` (28 rows, each with ownership and explored area, about 35 kB) was longer than the assistant's 24,000-character limit for one tool result, so a model would have read half the catalogue and a "cut" marker | @assistant (`src/assistant/protocol.ts`); for @globe, optional: the source and caveat texts repeated in each row could be given once | **fixed** in f5fad5b: the limit is 64,000 characters; `control.test.mjs` checks that the scripted model gets the whole result |
-| F-9 | In GPU runs of `e2e/equivalence.test.mjs` the page loaded itself again once, at "/", in the middle of a test (04:24Z run at f5fad5b; earlier runs lost an evaluate to "execution context was destroyed" three times). Nothing in the app navigates (every link opens a new tab, forms prevent submission); not seen in the SwiftShader runs. The test records each load with its kind, referrer and the running test | open, owner unknown | under watch: a separate expected-failure check, so the functional cases are not affected |
+| F-9 | In GPU runs of `e2e/equivalence.test.mjs` a second page `load` was recorded, at "/", once per run at most | @assistant (the test) | **explained** (2be8411): it is the first document's own load event, which can come after openApp has returned; seen at 09:33Z on 0de7e06, 3 s into the file, type "navigate", no referrer. The check now tells it apart by `performance.timeOrigin` (09:43Z: "the first document's own load event", the check passed); any other document still fails it, and it stays marked todo while under watch |
+| F-10 | Escape (T-64's drawer listener, capture phase on window) closed the drawer whenever it was open, wherever focus was: with focus in the compare panel, Escape closed the drawer and the panel stayed open (checked on 0de7e06) | @assistant (drawer), @analysis (compare panel) | **fixed**: "Escape goes to the layer that holds focus". The drawer: `src/ui/assistant/escape.ts` (2169311, unit tests); the compare panel: 3b52e6b |
+| F-11 | With d744169 ("Fixed LLM", credentials from the SDK) and no credentials, the server said a model was available and every message failed: SDK 1.8 builds the client and fails only on the first request with a plain Error, so 503 no_model was never sent and the browser never fell back to deterministic mode. Found by lunyx/@upstream-sync. Also, an explicit key was no longer redacted unless it matched sk-ant- | @assistant (`server/llm`) | **fixed** in 42559af: the provider checks the SDK's credentials once (`credentialsProblem`), the status says no model, a step answers 503 no_model; the SDK's error maps to no_model; explicit keys are redacted again; unit tests and an e2e server in the default configuration without credentials |
 | Q-5 | At the default solar band (0° to 90°) `getAnalysis.requirements.sunElevationBand.metForWholeWindow` was false whenever the Sun went below the horizontal, and deterministic mode answered "The Sun leaves the required elevation band". The compare panel treated the default as no requirement (since c331052). From the coordinator's walkthrough | core (`src/core/analysisReport.ts`), the original team; @assistant | **fixed** in the core by the original team's T-46 (`required: false`, null "met" fields, a `note`), and on the assistant's side in f4cc662: at the default band deterministic replies give the core's note and the Sun's range; a build without `required` falls back to the band's values (`spans.test.ts`, `e2e/assistant.test.mjs`) |
 
 ## 5. How each path has been verified

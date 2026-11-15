@@ -62,8 +62,12 @@ describe('deterministic mode: how the globe is drawn', () => {
     expect(state.reliefFactor).toBe(10);
     // The factor is a display setting, not a width multiple: the reply never says "N times wider".
     const said = (await e.reply('territory size x25')).text;
-    expect(said).toBe('Territory size exaggeration set to ×25, as the Filters setting of that name: it only changes how large the explored areas are drawn on the globe, not their real size on the site card.');
-    expect(said).not.toMatch(/times wider/);
+    expect(said).toBe('Territory size exaggeration set to 25, the Filters setting of that name: a display setting, not a width multiplier; only the drawing changes, not the sizes on the site card.');
+    expect(said).not.toMatch(/times wider|×25/);
+    // With a landing selected, its area as drawn, in the card's words (selectedSiteArea.text).
+    await e.reply('go to IM-2');
+    const atSite = (await e.reply('territory size x25')).text;
+    expect(atSite).toContain('At IM-2 Athena the explored area is about 40 m across (drawn 13× larger in width from orbit, about 520 m across, so it can be seen; true size close to the ground).');
     const tooMuch = await e.reply('territory size x500');
     expect(tooMuch.text).toContain('params.factor must be at most 100');
     expect(state.territoryScale).toBe(25);

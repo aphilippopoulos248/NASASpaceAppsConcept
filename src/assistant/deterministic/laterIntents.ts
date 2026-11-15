@@ -40,13 +40,20 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
  */
 const TERRITORY = /\b(territor(?:y|ies)|explored areas?|landing areas?)\b/;
 
-/** The real enlargement of the selected site's area, when the result carries one (shape to come with T-64's fix). */
+/**
+ * The selected landing's area as drawn from orbit, from setTerritoryScale's `selectedSiteArea`
+ * (T-64 fix 3b4fb45): the site card's own sentence, else its width factor and drawn width.
+ * Nothing when no landing with a mapped area is selected.
+ */
 function enlargementText(r: Json): string {
-  const factor = num(r, 'selectedSite.widthFactor', 'territory.widthFactor', 'enlargement.widthFactor');
-  const drawn = num(r, 'selectedSite.drawnWidthM', 'territory.drawnWidthM', 'enlargement.drawnWidthM');
-  const name = str(r, 'selectedSite.name', 'territory.siteName', 'enlargement.siteName');
+  const a = r.selectedSiteArea;
+  if (!isObject(a)) return '';
+  const name = str(a, 'name') ?? 'the selected site';
+  const text = str(a, 'text');
+  if (text) return ` At ${name} the explored area is ${text}.`;
+  const factor = num(a, 'widthFactorFromOrbit'), km = num(a, 'drawnWidthFromOrbitKm');
   if (factor === undefined) return '';
-  return ` ${name ? `At ${name}` : 'At the selected site'} the explored area is now drawn ${Math.round(factor * 10) / 10} times its real width from orbit${drawn !== undefined ? ` (${distance(drawn)} across)` : ''}, easing to true size close to the ground.`;
+  return ` At ${name} the explored area is drawn ${factor}× its true width from orbit${km !== undefined ? `, about ${km} km across` : ''}; true size close to the ground.`;
 }
 
 export const territory: Intent = (step) => {
@@ -64,7 +71,8 @@ export const territory: Intent = (step) => {
     const r = await ctx.run('setTerritoryScale', { factor: want });
     const chosen = num(r, 'territoryScale') ?? want;
     if (chosen === 1) return `The landings' explored areas are drawn at true size on the globe.${enlargementText(r)}`;
-    return `Territory size exaggeration set to ×${chosen}, as the Filters setting of that name: it only changes how large the explored areas are drawn on the globe, not their real size on the site card.${enlargementText(r)}`;
+    // The setting is not a width multiplier (territoryRule says how it works): never "N times wider".
+    return `Territory size exaggeration set to ${chosen}, the Filters setting of that name: a display setting, not a width multiplier; only the drawing changes, not the sizes on the site card.${enlargementText(r)}`;
   });
 };
 
