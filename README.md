@@ -339,16 +339,16 @@ centre.
   value. Its summary names the radius it used ("within 2.0 km"), so check that line, or set the
   requirements first and type the radius and spacing again before scanning. A fix exists but is
   neither verified nor in this build.
-- **Nearby tab status line: known defect, low, not fixed in the release candidate (Q-8).** After
-  a nearby scan started from somewhere other than the tab's own button (for example by the
-  assistant), the Nearby sites tab can keep an old green status line such as "Candidate 1 is
-  pinned and loaded as B" above the new list, although slot B still holds the earlier candidate.
-  The list is right, and so is every number with it (the list's summary, the A/B table, the
-  reply); a scan from the tab's own button rewrites the line
+- **Nearby tab status line (Q-8): known defect, low, on hold, not fixed in release candidate
+  `41be074`.** After a nearby scan started from somewhere other than the tab's own button (for
+  example by the assistant), the Nearby sites tab can keep an old green status line such as
+  "Candidate 1 is pinned and loaded as B" above the new list, although slot B still holds the
+  earlier candidate. The list is right, and so is every number with it (the list's summary, the
+  A/B table, the reply); a scan from the tab's own button rewrites the line
   ([docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md)).
-- **Flags over the wordmark: cosmetic, not fixed in the release candidate.** With the country
-  flags switched on (they are off by default), Japan's flag can cover the N of the LUNYX wordmark
-  at 1280x720.
+- **Flags over the wordmark: low (cosmetic), on hold, not fixed in release candidate `41be074`.**
+  With the country flags switched on (they are off by default), Japan's flag can cover the N of
+  the LUNYX wordmark at 1280x720.
 - **Accessibility.** Every finding of the keyboard and accessibility pass is fixed, and the
   accessibility tests passed 15 of 15 on the release candidate's app code, twice; a first run
   lost three tests to a browser crash that did not recur
