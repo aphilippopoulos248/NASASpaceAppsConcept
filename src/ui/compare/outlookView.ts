@@ -56,8 +56,8 @@ export function outlookResult(o: Outlook) {
       illuminationPct: rounded(r.illuminationPct),
       sunAnyPct: rounded(r.sunAnyPct),
       earthVisiblePct: rounded(r.earthVisiblePct),
-      // Any part of Earth's disc above the skyline (PGDA product 69's definition); earthVisiblePct is Earth's centre.
-      earthAnyPartVisiblePct: rounded(r.earthAnyPct ?? NaN),
+      // Any part of Earth's disc above the skyline (PGDA product 69's definition, getAnalysis' name); earthVisiblePct is Earth's centre.
+      earthAnyPct: rounded(r.earthAnyPct ?? NaN),
       longestDarknessH: rounded(r.longestDarknessH),
       darknessComplete: r.darknessComplete,
       longestEarthGapH: rounded(r.longestEarthGapH),

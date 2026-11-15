@@ -3,12 +3,12 @@
 // UTC start, end and duration. A spell that runs past an edge of the window is given in full
 // (followed to its real start or end by edgeSpells()) and says so; the part inside the window is
 // kept beside it. Pure: tested without a browser; the panel and exportResults both use it.
-import { TRANSITION_WORDS, transitionSummary, transitionText } from '../../analysis/api';
+import { eventText, TRANSITION_WORDS, transitionSummary, transitionText } from '../../analysis/api';
 import { edgeSpells, type SpellList } from '../../analysis/edges';
 import type { FullSpan, Interval, SiteAnalysis, SkyTransition, TransitionKind } from '../../analysis/types';
 import { checkRequirements, reportDiff, scenarioFacts } from '../../core/analysisReport';
 import { rounded } from '../../core/analysisStore';
-import { EVENT_INFO } from '../../core/skyEvents';
+import { EVENT_INFO, edgeLabel } from '../../core/skyEvents';
 import type { AppState } from '../../core/types';
 import { formatUtc } from '../../core/time';
 import type { ComparisonDiff } from '../../analysis/types';
@@ -94,7 +94,9 @@ export function spellRows(a: SiteAnalysis): SpellRow[] {
 
 /** One end of a passage: the instant it is, and when (null when that end was not found). */
 export interface PassageEnd {
-  /** "Sun starts setting", "Earth fully risen", ... or that the end was not found. */
+  /** Which edge of the disc this end is ('unresolved': not found within the search). */
+  edge: SkyTransition['start']['edge'] | SkyTransition['end']['edge'];
+  /** The app's one name for it (edgeLabel in src/core/skyEvents.ts, as in getAnalysis): "Sun starts setting", "Sun's whole disc clear again", ... or that the end was not found. */
   instant: string;
   timeMs: number | null;
   inWindow: boolean;
@@ -142,13 +144,8 @@ function passageState(tr: SkyTransition): string {
 
 function endOf(tr: SkyTransition, which: 'start' | 'end'): PassageEnd {
   const x = tr[which];
-  const own = `${BODY_NAME[tr.body]}'s`;
-  let instant: string;
-  if (x.edge === 'unresolved') instant = which === 'start' ? 'start not found' : 'end not found';
-  else if (tr.kind === 'graze') instant = which === 'start' ? `${BODY_NAME[tr.body]} starts to be partly hidden` : `${own} whole disc clear again`;
-  else if (tr.kind === 'peek') instant = which === 'start' ? `${BODY_NAME[tr.body]} starts to be partly visible` : `${own} last part gone again`;
-  else instant = TRANSITION_WORDS[tr.body][x.edge].label;
-  return { instant, timeMs: x.edge === 'unresolved' ? null : x.timeMs, inWindow: x.inWindow, azDeg: x.azDeg };
+  const instant = edgeLabel(tr, which) ?? (which === 'start' ? 'start not found' : 'end not found');
+  return { edge: x.edge, instant, timeMs: x.edge === 'unresolved' ? null : x.timeMs, inWindow: x.inWindow, azDeg: x.azDeg };
 }
 
 /** How much of the disc a graze hides or a peek shows (the summary already says what an end not found means). */
@@ -258,21 +255,24 @@ export function toJson(sides: readonly ExportSide[], s: Pick<AppState, 'sunElMin
           illuminationPct: r3(m.illuminationPct), sunAnyPct: r3(m.sunAnyPct),
           longestDarknessH: r3(m.longestDarknessH), darknessRunsIntoWindowEdge: m.darknessOpenEnded,
           earthCentreVisiblePct: r3(m.earthVisiblePct), longestEarthGapH: r3(m.longestEarthGapH), earthGapRunsIntoWindowEdge: m.earthGapOpenEnded,
-          // Any part of Earth's disc above the skyline (PGDA product 69's definition), beside the centre figures; null where the analysis has none.
-          earthAnyPartVisiblePct: r3(m.earthAnyPct ?? NaN), longestEarthWhollyHiddenH: r3(m.longestEarthAnyGapH ?? NaN), earthWhollyHiddenRunsIntoWindowEdge: m.earthAnyGapOpenEnded ?? null,
+          // Any part of Earth's disc above the skyline (PGDA product 69's definition), beside the centre figures, under getAnalysis' names; null where the analysis has none.
+          earthAnyPct: r3(m.earthAnyPct ?? NaN), longestEarthAnyGapH: r3(m.longestEarthAnyGapH ?? NaN), earthAnyGapRunsIntoWindowEdge: m.earthAnyGapOpenEnded ?? null,
           minSunElDeg: r3(m.minSunElDeg), maxSunElDeg: r3(m.maxSunElDeg),
         },
         slope: { slopeDeg: r3(a.slope.slopeDeg), downhillAzDeg: rounded(a.slope.aspectDeg, 1), baselineM: rounded(a.slope.baselineM, 1), elevationData: a.slope.demName },
         siteElevationM: rounded(a.horizon.siteElevationM, 1),
-        events: a.events.map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoSeconds(e.timeMs), azDeg: rounded(e.azDeg, 2), ...(e.span && { passage: transitionSummary(e.span) }) })),
-        passages: passageRows(a).map((p) => ({
-          body: p.body, kind: p.kind, state: p.state,
-          start: { instant: p.start.instant, timeUtc: p.start.timeMs === null ? null : isoSeconds(p.start.timeMs), inWindow: p.start.inWindow, azDeg: rounded(p.start.azDeg, 2) },
-          end: { instant: p.end.instant, timeUtc: p.end.timeMs === null ? null : isoSeconds(p.end.timeMs), inWindow: p.end.inWindow, azDeg: rounded(p.end.azDeg, 2) },
-          hours: rounded(p.hours, 4), hoursIsLowerBound: p.start.timeMs === null || p.end.timeMs === null,
-          ...(p.centre.length && { earthCentre: p.centre.map((c) => ({ instant: c.instant, timeUtc: isoSeconds(c.timeMs), inWindow: c.inWindow })) }),
-          summary: p.summary, text: p.text, ...(p.note && { note: p.note }),
-        })),
+        // As in getAnalysis: each event with its D-8 sentence, and every passage in the shape of its SpanReport (times here to the second).
+        events: a.events.map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoSeconds(e.timeMs), azDeg: rounded(e.azDeg, 2), summary: eventText(e) })),
+        passages: passageRows(a).map((p) => {
+          const end = (x: PassageEnd) => (x.timeMs === null ? { edge: x.edge, label: null, timeUtc: null, inWindow: x.inWindow } : { edge: x.edge, label: x.instant, timeUtc: isoSeconds(x.timeMs), azDeg: rounded(x.azDeg, 2), inWindow: x.inWindow });
+          return {
+            body: p.body, kind: p.kind, state: p.state,
+            start: end(p.start), end: end(p.end),
+            hours: rounded(p.hours, 4), hoursIsLowerBound: p.start.timeMs === null || p.end.timeMs === null,
+            ...(p.centre.length && { centre: p.centre.map((c) => ({ label: c.instant, timeUtc: isoSeconds(c.timeMs), inWindow: c.inWindow })) }),
+            summary: p.summary, text: p.text, ...(p.note && { note: p.note }),
+          };
+        }),
         spells: spellRows(a).map((r) => ({
           group: r.group, state: KIND_TEXT[r.kind],
           startUtc: isoSeconds(r.startMs), endUtc: isoSeconds(r.endMs), hours: rounded(r.hours, 4), startFound: r.startFound, endFound: r.endFound,

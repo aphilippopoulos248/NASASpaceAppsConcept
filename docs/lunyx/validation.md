@@ -307,7 +307,8 @@ event carries its passage through the skyline (`SkyEvent.span`, `SiteAnalysis.tr
 set runs from the first cut (the skyline starts to cut into the disc) to the last limb, a rise
 from the first limb to the whole disc clear, and Earth's centre crossings lie in between. The
 compare panel, its window table and its exports give both ends, each named ("starts setting
-2025-03-16 18:23, fully set 19:30 UTC" at Blue Ghost, 2 m, at the catalogue pin before T-38).
+2025-03-16 18:24, fully set 19:30 UTC" at Blue Ghost, 2 m, at the current catalogue pin on
+integration b6f7392).
 How the instants are found and their checks: `docs/lunyx/handover/T-31-event-spans.md`
 section 6, and section 8b below.
 
@@ -365,9 +366,10 @@ Three outside checks:
 **Blue Ghost's sunset, 16 March 2025: not a clean check.** Computed over the real skyline (2 m
 above the ground, at the catalogue pin before T-38, 18.562 N, 61.81 E): the skyline starts to
 cut the Sun's disc at 18:25 UTC, half of it is gone at 18:57, the last limb at 19:30:00. At the
-current catalogue pin (LROC's position, 18.5622 N, 61.8102 E, 8.4 m away) the validator's times
-on the 3 m model, which is the app's ground there, are 18:24:16 and 19:30:50 UTC; the 60 m window
-alone gives 18:30:27 and 19:38:22. The two elevation products put this sunset 3.5 to 7.5 min
+current catalogue pin (LROC's position, 18.5622 N, 61.8102 E, 8.4 m away) the app gives first cut
+18:24:14 and last limb 19:30:47 UTC (integration b6f7392, with T-50's fine skyline), and the
+validator's times on the 3 m model, which is the app's ground there, are 18:24:16 and 19:30:50;
+the 60 m window alone gives 18:30:27 and 19:38:22. The two elevation products put this sunset 3.5 to 7.5 min
 apart, depending on where within 8 m the lander stood (section 8b). The skyline there (+0.59 deg at azimuth 270) is a real rise
 of about 10 m, 0.75-0.85 km west of the lander, present in both the 3 m LROC model and the
 60 m SLDEM2015 window (which agree to 3.3 m rms over the model's extent). Being so near, it
@@ -722,10 +724,17 @@ was run on.
   error that explains it, is 0.0185 deg (the Sun's centre rising at IM-2 on 6 March, 7.7 min
   late), then 0.0140 deg (an Earthrise's first limb at the connecting-ridge pin, 13.9 min): near
   the poles the Sun and Earth cross the skyline so slowly that hundredths of a degree are minutes.
-  With the validator's skyline read only every 0.5 deg, as the app keeps it, the worst is
-  0.0040 deg, so the passage logic agrees and what remains is the 0.5 deg azimuth step meeting
-  narrow skyline notches (task T-50). `ephemeris-check/transitions/results-9bc4878.txt` and
-  `results-9bc4878-sky0.5.txt`.
+  With the validator's skyline read only every 0.5 deg, as the app kept it, the worst is
+  0.0040 deg, so the passage logic agreed and what remained was the 0.5 deg azimuth step meeting
+  narrow skyline notches. `ephemeris-check/transitions/results-9bc4878.txt` and
+  `results-9bc4878-sky0.5.txt`. Since T-50 (@globe, integration b6f7392) the analysis reads the
+  skyline again every 0.05 deg wherever the Sun's or Earth's disc comes within 0.25 deg of it, and
+  the worst cases collapse: the Sun's centre rising at IM-2 from +464 s to -5 s, Earth's first limb
+  at the connecting-ridge pin from +835 s to +47 s (same pins, 2 m, 60 days). What is left, a few
+  minutes on Earth's slow passages, is about 0.003 deg of skyline, the difference between the two
+  ray marches. The cost is +9 to +21 % for 14 days at IM-2 and the Shackleton-rim pin, up to
+  +143 % for a polar pin over 60 days. The seasonal outlook and the nearby scan stay on the
+  0.5 deg profile. `docs/lunyx/handover/T-50-fine-skyline.md` and `T-50-worst-cases.txt`.
 - *Earth by any part of its disc* (the figure beside Earth's centre since T-45): within 0.04 points
   of the validator over 60-day windows at five sites and IM-2's 14 days, the longest spell wholly
   hidden within 0.3 h; over 18.6 years within 0.03 points in all twelve point and eye-height
