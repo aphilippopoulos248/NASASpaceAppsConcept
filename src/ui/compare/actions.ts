@@ -167,6 +167,7 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
       description:
         'Opens the compare panel, or switches its tab, without changing any scenario. Tab "compare" shows the scenarios saved in slots A and B side by side with the differences B minus A; "nearby" the scan of nearby alternative sites (rankNearby); ' +
         '"windows" the mission-window table: every sunlit and dark spell and every spell with Earth\'s centre in view or hidden, with UTC start, end and duration, of the scenario on screen or of slot A or B (`table`; giving `table` alone opens this tab). ' +
+        '"rank" the decision engine\'s "Rank sites" tab: the mission profile with its thresholds and weights, and the last ranking (findBestSites) and comparison of two sites (compareSites). ' +
         'Returns at once with what the panel shows; use `compare` to wait for the finished comparison and exportResults for the table as a file. Close the panel with stopCompare.',
       effect: 'command',
       params: {

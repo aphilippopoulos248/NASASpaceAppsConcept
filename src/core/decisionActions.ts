@@ -18,7 +18,9 @@ import {
   CRITERIA,
   UTILITY_NOTE,
   type CriterionId,
+  type CriterionResult,
   type MissionProfile,
+  type PairComparison,
   type ProfileOverrides,
   type RegionTerrain,
   type Relaxation,
@@ -188,6 +190,133 @@ const TIME_CRITERIA: readonly CriterionId[] = ['sunlight', 'darkness', 'earthVis
 const TERRAIN_CRITERIA: readonly CriterionId[] = ['slope', 'roughness'];
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+// ---------------------------------------------------------------- findBestSites in summary
+
+/** One criterion without its basis text: what a ranking table needs. */
+const criterionRow = (c: CriterionResult) => ({
+  id: c.id,
+  verdict: c.verdict,
+  value: c.measured.value,
+  unit: c.measured.unit,
+  ...(c.measured.bound && { bound: c.measured.bound }),
+  threshold: c.threshold,
+  score: c.score,
+});
+
+/**
+ * findBestSites with detail 'summary' (F-12): a language model takes at most 64,000 characters
+ * per tool result, and the full evaluations repeat long basis texts per site and criterion
+ * (three sites gave 74,872 characters). So the small fields come first, the basis is said once,
+ * and each site carries only its rows: every criterion for the ranked sites, and for an unknown
+ * or infeasible one only the criteria that decided it, with their reasons.
+ */
+export function summariseRanking(o: {
+  profile: MissionProfile;
+  overrides: ProfileOverrides;
+  relaxations: Relaxation[];
+  counts: unknown;
+  cap: number;
+  dropped: number;
+  candidates: Record<string, unknown>;
+  paretoFront: string[];
+  ranked: { siteId: string; name: string; rank: number; utility: number; pareto: boolean }[];
+  explanation: string[];
+  evaluations: SiteEvaluation[];
+  definitions: Partial<Record<CriterionId, string>>;
+}) {
+  const rankOf = new Map(o.ranked.map((x) => [x.siteId, x]));
+  const window = o.evaluations[0]?.metrics.window;
+  return roundDeep({
+    profile: { id: o.profile.id, name: o.profile.name },
+    relaxations: o.relaxations,
+    overrides: o.overrides,
+    counts: o.counts,
+    cap: o.cap,
+    dropped: o.dropped,
+    candidates: o.candidates,
+    utilityNote: UTILITY_NOTE,
+    paretoFront: o.paretoFront,
+    ranked: o.ranked,
+    explanation: o.explanation,
+    basis: {
+      ...(window && { window }),
+      mastHeightM: o.profile.mastHeightM,
+      landingRadiusM: o.profile.landingRadiusM,
+      criteria: o.definitions,
+      perSite: 'Each site\'s data sources (elevation grid and spacing, ephemeris) are in evaluateSite, or in findBestSites with detail "full".',
+    },
+    sites: o.evaluations.map((e) => {
+      const r = rankOf.get(e.site.id);
+      // The engine's own sentences stay (a reply quotes them, never composes its own); only the basis texts go.
+      return r
+        ? { siteId: e.site.id, name: e.site.name, feasibility: e.feasibility, utility: e.utility, rank: r.rank, pareto: r.pareto, summary: e.summary, criteria: e.criteria.map((c) => ({ ...criterionRow(c), reason: c.reason })) }
+        : { siteId: e.site.id, name: e.site.name, feasibility: e.feasibility, deciding: e.criteria.filter((c) => c.verdict !== 'pass').map((c) => ({ ...criterionRow(c), reason: c.reason })) };
+    }),
+  });
+}
+
+/** The sentences two texts end with in common (from a sentence start), when that is worth saying once; '' otherwise. */
+export function sharedTail(a: string, b: string): string {
+  let k = 0;
+  while (k < a.length && k < b.length && a[a.length - 1 - k] === b[b.length - 1 - k]) k++;
+  const common = a.slice(a.length - k);
+  const start = common.indexOf('. ');
+  const tail = start < 0 ? '' : common.slice(start + 2);
+  return tail.length >= 80 ? tail : '';
+}
+
+/**
+ * compareSites with detail 'summary': the pair's verdicts, values, reasons and summary lines,
+ * the deltas and sentences, and each value's basis text said once per site (the full
+ * SiteEvaluations carry every basis twice, in `metrics` and in `criteria`, which made IM-2
+ * against Apollo 11 54,189 characters).
+ */
+export function summariseComparison(o: {
+  profile: MissionProfile;
+  overrides: ProfileOverrides;
+  relaxations: Relaxation[];
+  comparison: PairComparison;
+  definitions: Partial<Record<CriterionId, string>>;
+}) {
+  const side = (e: SiteEvaluation) => ({
+    siteId: e.site.id,
+    name: e.site.name,
+    feasibility: e.feasibility,
+    utility: e.utility,
+    summary: e.summary,
+    criteria: e.criteria.map((c) => ({ ...criterionRow(c), reason: c.reason })),
+  });
+  const sources = (e: SiteEvaluation) => {
+    const provenance = e.metrics.provenance;
+    // The engine writes the provenance into every time-based basis: said once below instead.
+    const strip = (t: string) => provenance.reduce((acc, p) => (p && acc.includes(p) ? acc.replace(p, '') : acc), t).replace(/\s{2,}/g, ' ').trim();
+    const values = Object.fromEntries(e.criteria.map((c) => [c.id, strip(c.measured.basis)])) as Record<CriterionId, string>;
+    // Slope and roughness repeat the landing region's notes after their first sentence: said once as `region`.
+    const region = sharedTail(values.slope ?? '', values.roughness ?? '');
+    if (region) {
+      values.slope = values.slope.slice(0, values.slope.length - region.length).trim();
+      values.roughness = values.roughness.slice(0, values.roughness.length - region.length).trim();
+    }
+    return { values, ...(region && { region }), ...(provenance.length && { provenance }) };
+  };
+  const { a, b, perCriterion, dominance, sentences } = o.comparison;
+  return roundDeep({
+    profile: { id: o.profile.id, name: o.profile.name },
+    relaxations: o.relaxations,
+    overrides: o.overrides,
+    utilityNote: UTILITY_NOTE,
+    comparison: { dominance, sentences, perCriterion, a: side(a), b: side(b) },
+    basis: {
+      window: a.metrics.window,
+      mastHeightM: o.profile.mastHeightM,
+      landingRadiusM: o.profile.landingRadiusM,
+      criteria: o.definitions,
+      a: sources(a),
+      b: sources(b),
+    },
+  });
+}
 
 // ---------------------------------------------------------------- the actions
 
@@ -446,28 +575,39 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
         return { ...echo(r), evaluation: roundDeep(evaluation), utilityNote: UTILITY_NOTE };
       },
     }),
-    defineAction<{ siteA: SiteParam; siteB: SiteParam } & ProfileParams, unknown>({
+    defineAction<{ siteA: SiteParam; siteB: SiteParam; detail?: 'summary' | 'full' } & ProfileParams, unknown>({
       name: 'compareSites',
       title: 'Compare two sites',
       description:
-        'Evaluates two sites under the same mission profile (as evaluateSite) and compares them criterion by criterion: which is better on each, whether one dominates the other or each wins somewhere, and deterministic sentences, most important first. Without profileId and overrides, the current decision settings.',
+        'Evaluates two sites under the same mission profile (as evaluateSite) and compares them criterion by criterion: which is better on each, whether one dominates the other or each wins somewhere, and deterministic sentences, most important first. Without profileId and overrides, the current decision settings. ' +
+        'With detail "summary" (the default): `comparison` holds the dominance, the sentences, the per-criterion deltas and each site\'s verdicts, values, reasons and summary lines; `basis` gives the window and each value\'s basis text once per site. With detail "full": `comparison` is the engine\'s PairComparison with both SiteEvaluations in full (large).',
       effect: 'query',
       params: {
         type: 'object',
-        properties: { siteA: SITE_SCHEMA('Site A.'), siteB: SITE_SCHEMA('Site B.'), profileId: PROFILE_ID, overrides: OVERRIDES_SCHEMA },
+        properties: {
+          siteA: SITE_SCHEMA('Site A.'),
+          siteB: SITE_SCHEMA('Site B.'),
+          profileId: PROFILE_ID,
+          overrides: OVERRIDES_SCHEMA,
+          detail: { type: 'string', description: '"summary" (the default): compact, for a reply. "full": both SiteEvaluations in full (large).', enum: ['summary', 'full'] },
+        },
         required: ['siteA', 'siteB'],
       },
-      run: async ({ siteA, siteB, profileId, overrides }) => {
+      run: async ({ siteA, siteB, profileId, overrides, detail = 'summary' }) => {
         const a = site(siteA, 'siteA'), b = site(siteB, 'siteB');
         if (a.id === b.id) throw new ActionError('siteA and siteB are the same site.');
         const r = await resolveFor({ profileId, overrides });
         const [ea, eb] = await evaluateAll(r.profile, [{ site: a }, { site: b }]);
         const comparison = engineCall('compare the sites', () => engine.compareEvaluations(ea, eb));
+        if (detail === 'summary') {
+          const definitions = Object.fromEntries(engineCall('list the criteria', () => engine.criterionDefs()).map((d) => [d.id, d.definition]));
+          return summariseComparison({ profile: r.profile, overrides: r.overrides, relaxations: r.relaxations, comparison, definitions });
+        }
         return { ...echo(r), comparison: roundDeep(comparison), utilityNote: UTILITY_NOTE };
       },
     }),
     defineAction<
-      { candidates: { from: 'catalogue' | 'sites' | 'nearby'; sites?: SiteParam[]; around?: SiteParam; radiusM?: number; spacingM?: number }; limit?: number } & ProfileParams,
+      { candidates: { from: 'catalogue' | 'sites' | 'nearby'; sites?: SiteParam[]; around?: SiteParam; radiusM?: number; spacingM?: number }; limit?: number; detail?: 'summary' | 'full' } & ProfileParams,
       unknown
     >({
       name: 'findBestSites',
@@ -475,7 +615,7 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
       description:
         'Measures and ranks candidate sites for a mission profile. Candidates: {from: "catalogue"} (every catalogued landing), {from: "sites", sites: [...]} (up to 12), or {from: "nearby", around?, radiusM, spacingM} (a grid around a site, default the selected one, from the nearby scan with its faster settings and its slope pre-filter; the best ' +
         `${DECISION_CAPS.nearby} by the scan's own score are measured fully). Only feasible sites are ranked (by utility, ties by site id), with the Pareto front; unknown and infeasible sites are listed with the criteria that decided them. ` +
-        'Returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
+        'With detail "summary" (the default) the result is compact for a reply: the small fields first (profile id and name, relaxations, counts, cap, dropped, candidates, utilityNote, paretoFront, ranked, explanation), one shared `basis`, then `sites`: every criterion\'s verdict, value, unit, bound, threshold and score for the ranked sites, and only the deciding criteria with their reasons for the unknown and infeasible ones. With detail "full" it returns the contract Ranking trimmed to the top `limit` (default 5): the resolved profile, overrides and relaxations, `ranked`, `paretoFront`, `counts`, `explanation`, and `evaluations` as full SiteEvaluations (the top `limit` feasible sites, then every unknown and infeasible one, each criterion with its verdict and reason); plus `cap` and `dropped` (candidates over the cap, not measured), `candidates` (where they came from) and UTILITY_NOTE. Without profileId and overrides, the current decision settings. Can take a minute for the catalogue.',
       effect: 'query',
       params: {
         type: 'object',
@@ -493,12 +633,17 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
             required: ['from'],
           },
           limit: { type: 'integer', description: 'How many ranked sites to return (default 5).', minimum: 1, maximum: 50 },
+          detail: {
+            type: 'string',
+            description: '"summary" (the default): compact, for a reply; per site its verdicts and values, without the basis texts. "full": every SiteEvaluation in full, with each value\'s basis (large: thousands of characters per site).',
+            enum: ['summary', 'full'],
+          },
           profileId: PROFILE_ID,
           overrides: OVERRIDES_SCHEMA,
         },
         required: ['candidates'],
       },
-      run: async ({ candidates: c, limit = 5, profileId, overrides }) => {
+      run: async ({ candidates: c, limit = 5, detail = 'summary', profileId, overrides }) => {
         const only = (allowed: string[]) => {
           const extra = (['sites', 'around', 'radiusM', 'spacingM'] as const).filter((k) => c[k] !== undefined && !allowed.includes(k));
           if (extra.length) throw new ActionError(`candidates.${extra.join(', candidates.')} does not apply to from: "${c.from}".`);
@@ -580,6 +725,13 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
           ...ranking.evaluations.filter((e) => e.feasibility === 'unknown'),
           ...ranking.evaluations.filter((e) => e.feasibility === 'infeasible'),
         ];
+        if (detail === 'summary') {
+          const definitions = Object.fromEntries(engineCall('list the criteria', () => engine.criterionDefs()).map((d) => [d.id, d.definition]));
+          return summariseRanking({
+            profile: r.profile, overrides: r.overrides, relaxations: r.relaxations, counts: ranking.counts, cap, dropped, candidates: source,
+            paretoFront: ranking.paretoFront, ranked: top, explanation: ranking.explanation, evaluations: shown, definitions,
+          });
+        }
         return {
           ...echo(r),
           ranked: roundDeep(top),
