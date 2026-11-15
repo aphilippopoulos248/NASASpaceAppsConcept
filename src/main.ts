@@ -31,6 +31,7 @@ import { mountToasts } from './ui/shared/toast';
 import { mountSurfaceHud } from './ui/surface/hud';
 import { mountKeyMetrics } from './ui/surface/metrics';
 import { mountSkylineChart } from './ui/surface/skylineChart';
+import { mountSurfacePanels } from './ui/surface/panels';
 
 const region = (name: string) => document.getElementById(`region-${name}`) as HTMLElement;
 
@@ -73,6 +74,7 @@ async function boot() {
   mountComparePanel(region('compare'));
   mountAssistantButton(region('assistant'));
   mountAssistantDrawer(region('drawer'));
+  mountSurfacePanels();
 
   await host.load();
   void analysis.start();
