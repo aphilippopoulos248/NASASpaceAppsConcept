@@ -1,0 +1,8 @@
+[
+ {"id": "chandrayaan-3.surface", "site": {"id": "chandrayaan-3", "name": "Chandrayaan-3", "kind": "landing", "lat": -69.3741, "lon": 32.32}, "mastHeightM": 2, "start": "2023-08-23T12:33:00Z", "durationH": 791, "stepMin": 10, "siteKey": "chandrayaan-3"},
+ {"id": "earth-60d.im-2", "horizons": "im-2.2025-03-04", "site": {"id": "im-2", "name": "IM-2", "kind": "landing", "lat": -84.79, "lon": 29.2}, "mastHeightM": 2, "start": "2025-03-01T00:00:00Z", "durationH": 1440, "stepMin": 10, "siteKey": "im-2"},
+ {"id": "earth-60d.shackleton-rim", "horizons": "shackleton-rim.2025-03-04", "site": {"id": "pin:-89.78000,-155.73000", "name": "Shackleton rim", "kind": "custom", "lat": -89.78, "lon": -155.73}, "mastHeightM": 2, "start": "2025-03-01T00:00:00Z", "durationH": 1440, "stepMin": 10, "siteKey": "shackleton-rim"},
+ {"id": "earth-60d.connecting-ridge", "horizons": "connecting-ridge.2025-03-04", "site": {"id": "pin:-89.45000,-137.20000", "name": "Connecting ridge", "kind": "custom", "lat": -89.45, "lon": -137.2}, "mastHeightM": 2, "start": "2025-03-01T00:00:00Z", "durationH": 1440, "stepMin": 10, "siteKey": "connecting-ridge"},
+ {"id": "earth-60d.limb-east", "horizons": "limb-east.2025-03-04", "site": {"id": "pin:0.00000,90.00000", "name": "East limb", "kind": "custom", "lat": 0, "lon": 90}, "mastHeightM": 2, "start": "2025-03-01T00:00:00Z", "durationH": 1440, "stepMin": 10, "siteKey": "limb-east"},
+ {"id": "earth-60d.limb-west", "horizons": "limb-west.2025-03-04", "site": {"id": "pin:-35.00000,-88.00000", "name": "West limb", "kind": "custom", "lat": -35, "lon": -88}, "mastHeightM": 2, "start": "2025-03-01T00:00:00Z", "durationH": 1440, "stepMin": 10, "siteKey": "limb-west"}
+]

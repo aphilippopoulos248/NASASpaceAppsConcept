@@ -1,0 +1,522 @@
+{
+ "site": {
+  "id": "blue-ghost-1",
+  "lat": 18.562,
+  "lon": 61.81
+ },
+ "window": [
+  "2025-03-16T16:00:00Z",
+  "2025-03-17T00:00:00Z"
+ ],
+ "fileSha256_16": {
+  "public/terrain/blue-ghost-1.bin": "23dc0f8ae6decba0",
+  "public/terrain/blue-ghost-1_fine.bin": "d2495bd9c11887f5",
+  "public/terrain/index.json": "e779fc2c07d935ce",
+  "public/data/dem/lola_global_16ppd.lxg": "ae3770e6acce291f"
+ },
+ "groundAtSiteM": {
+  "3m": -3651.160400390625,
+  "60m": -3652.266357421875
+ },
+ "rows": [
+  {
+   "mastM": 0.5,
+   "products": {
+    "stack": {
+     "cut": "2025-03-16T18:09:45Z",
+     "half": "2025-03-16T18:42:57Z",
+     "lastLimb": "2025-03-16T19:16:07Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.838,
+      "skylineDeg": 0.7035,
+      "distM": 767.8,
+      "heightM": -3641.08
+     },
+     "atCut": {
+      "sunAzDeg": 269.658,
+      "skylineDeg": 0.6995,
+      "distM": 767.8,
+      "heightM": -3641.14
+     }
+    },
+    "60m": {
+     "cut": "2025-03-16T18:00:29Z",
+     "half": "2025-03-16T18:33:37Z",
+     "lastLimb": "2025-03-16T19:06:46Z",
+     "observerGroundM": -3652.266357421875,
+     "atLastLimb": {
+      "sunAzDeg": 269.813,
+      "skylineDeg": 0.7777,
+      "distM": 240.0,
+      "heightM": -3648.5
+     },
+     "atCut": {
+      "sunAzDeg": 269.633,
+      "skylineDeg": 0.7742,
+      "distM": 240.0,
+      "heightM": -3648.51
+     }
+    },
+    "60m-obs3m": {
+     "cut": "2025-03-16T18:24:02Z",
+     "half": "2025-03-16T18:57:04Z",
+     "lastLimb": "2025-03-16T19:30:07Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.876,
+      "skylineDeg": 0.5925,
+      "distM": 780.1,
+      "heightM": -3642.43
+     },
+     "atCut": {
+      "sunAzDeg": 269.697,
+      "skylineDeg": 0.5854,
+      "distM": 839.6,
+      "heightM": -3641.9
+     }
+    },
+    "3m-alone": {
+     "cut": "2025-03-16T18:09:45Z",
+     "half": "2025-03-16T18:42:57Z",
+     "lastLimb": "2025-03-16T19:16:07Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.838,
+      "skylineDeg": 0.7035,
+      "distM": 767.8,
+      "heightM": -3641.08
+     },
+     "atCut": {
+      "sunAzDeg": 269.658,
+      "skylineDeg": 0.6995,
+      "distM": 767.8,
+      "heightM": -3641.14
+     }
+    },
+    "stack-eased": {
+     "cut": "2025-03-16T18:24:02Z",
+     "half": "2025-03-16T18:57:04Z",
+     "lastLimb": "2025-03-16T19:30:07Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.876,
+      "skylineDeg": 0.5925,
+      "distM": 780.1,
+      "heightM": -3642.43
+     },
+     "atCut": {
+      "sunAzDeg": 269.697,
+      "skylineDeg": 0.5854,
+      "distM": 839.6,
+      "heightM": -3641.9
+     }
+    }
+   },
+   "spreadMin": {
+    "cut": 9.265625,
+    "half": 9.328125,
+    "lastLimb": 9.34375
+   },
+   "60mMinusStackMin": {
+    "cut": -9.265625,
+    "half": -9.328125,
+    "lastLimb": -9.34375
+   },
+   "60mObs3mMinusStackMin": {
+    "cut": 14.296875,
+    "lastLimb": 14.0
+   },
+   "3mAloneMinusStackMin": {
+    "cut": 0.0,
+    "lastLimb": 0.0
+   },
+   "easedMinusStackMin": {
+    "cut": 14.296875,
+    "half": 14.125,
+    "lastLimb": 14.0
+   }
+  },
+  {
+   "mastM": 2.0,
+   "products": {
+    "stack": {
+     "cut": "2025-03-16T18:23:40Z",
+     "half": "2025-03-16T18:56:53Z",
+     "lastLimb": "2025-03-16T19:30:03Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.876,
+      "skylineDeg": 0.5922,
+      "distM": 767.8,
+      "heightM": -3641.07
+     },
+     "atCut": {
+      "sunAzDeg": 269.696,
+      "skylineDeg": 0.5884,
+      "distM": 767.8,
+      "heightM": -3641.12
+     }
+    },
+    "60m": {
+     "cut": "2025-03-16T18:27:22Z",
+     "half": "2025-03-16T19:00:29Z",
+     "lastLimb": "2025-03-16T19:33:31Z",
+     "observerGroundM": -3652.266357421875,
+     "atLastLimb": {
+      "sunAzDeg": 269.885,
+      "skylineDeg": 0.5646,
+      "distM": 839.6,
+      "heightM": -3641.81
+     },
+     "atCut": {
+      "sunAzDeg": 269.706,
+      "skylineDeg": 0.5585,
+      "distM": 839.6,
+      "heightM": -3641.9
+     }
+    },
+    "60m-obs3m": {
+     "cut": "2025-03-16T18:36:44Z",
+     "half": "2025-03-16T19:09:53Z",
+     "lastLimb": "2025-03-16T19:42:53Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.91,
+      "skylineDeg": 0.489,
+      "distM": 839.6,
+      "heightM": -3641.81
+     },
+     "atCut": {
+      "sunAzDeg": 269.731,
+      "skylineDeg": 0.4844,
+      "distM": 839.6,
+      "heightM": -3641.87
+     }
+    },
+    "3m-alone": {
+     "cut": "2025-03-16T18:23:40Z",
+     "half": "2025-03-16T18:56:53Z",
+     "lastLimb": "2025-03-16T19:30:03Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.876,
+      "skylineDeg": 0.5922,
+      "distM": 767.8,
+      "heightM": -3641.07
+     },
+     "atCut": {
+      "sunAzDeg": 269.696,
+      "skylineDeg": 0.5884,
+      "distM": 767.8,
+      "heightM": -3641.12
+     }
+    },
+    "stack-eased": {
+     "cut": "2025-03-16T18:36:44Z",
+     "half": "2025-03-16T19:09:53Z",
+     "lastLimb": "2025-03-16T19:42:53Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.91,
+      "skylineDeg": 0.489,
+      "distM": 839.6,
+      "heightM": -3641.81
+     },
+     "atCut": {
+      "sunAzDeg": 269.731,
+      "skylineDeg": 0.4844,
+      "distM": 839.6,
+      "heightM": -3641.87
+     }
+    }
+   },
+   "spreadMin": {
+    "cut": 3.703125,
+    "half": 3.59375,
+    "lastLimb": 3.46875
+   },
+   "60mMinusStackMin": {
+    "cut": 3.703125,
+    "half": 3.59375,
+    "lastLimb": 3.46875
+   },
+   "60mObs3mMinusStackMin": {
+    "cut": 13.0625,
+    "lastLimb": 12.828125
+   },
+   "3mAloneMinusStackMin": {
+    "cut": 0.0,
+    "lastLimb": 0.0
+   },
+   "easedMinusStackMin": {
+    "cut": 13.0625,
+    "half": 13.0,
+    "lastLimb": 12.828125
+   }
+  },
+  {
+   "mastM": 5.0,
+   "products": {
+    "stack": {
+     "cut": "2025-03-16T18:51:31Z",
+     "half": "2025-03-16T19:24:45Z",
+     "lastLimb": "2025-03-16T19:57:57Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.951,
+      "skylineDeg": 0.3688,
+      "distM": 767.8,
+      "heightM": -3641.06
+     },
+     "atCut": {
+      "sunAzDeg": 269.771,
+      "skylineDeg": 0.3651,
+      "distM": 767.8,
+      "heightM": -3641.11
+     }
+    },
+    "60m": {
+     "cut": "2025-03-16T18:52:45Z",
+     "half": "2025-03-16T19:26:00Z",
+     "lastLimb": "2025-03-16T19:58:55Z",
+     "observerGroundM": -3652.266357421875,
+     "atLastLimb": {
+      "sunAzDeg": 269.954,
+      "skylineDeg": 0.361,
+      "distM": 839.6,
+      "heightM": -3641.78
+     },
+     "atCut": {
+      "sunAzDeg": 269.775,
+      "skylineDeg": 0.3549,
+      "distM": 839.6,
+      "heightM": -3641.87
+     }
+    },
+    "60m-obs3m": {
+     "cut": "2025-03-16T19:02:07Z",
+     "half": "2025-03-16T19:35:25Z",
+     "lastLimb": "2025-03-16T20:08:16Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.979,
+      "skylineDeg": 0.2869,
+      "distM": 839.6,
+      "heightM": -3641.76
+     },
+     "atCut": {
+      "sunAzDeg": 269.8,
+      "skylineDeg": 0.2808,
+      "distM": 839.6,
+      "heightM": -3641.85
+     }
+    },
+    "3m-alone": {
+     "cut": "2025-03-16T18:51:31Z",
+     "half": "2025-03-16T19:24:45Z",
+     "lastLimb": "2025-03-16T19:57:57Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.951,
+      "skylineDeg": 0.3688,
+      "distM": 767.8,
+      "heightM": -3641.06
+     },
+     "atCut": {
+      "sunAzDeg": 269.771,
+      "skylineDeg": 0.3651,
+      "distM": 767.8,
+      "heightM": -3641.11
+     }
+    },
+    "stack-eased": {
+     "cut": "2025-03-16T19:02:07Z",
+     "half": "2025-03-16T19:35:25Z",
+     "lastLimb": "2025-03-16T20:08:16Z",
+     "observerGroundM": -3651.160400390625,
+     "atLastLimb": {
+      "sunAzDeg": 269.979,
+      "skylineDeg": 0.2869,
+      "distM": 839.6,
+      "heightM": -3641.76
+     },
+     "atCut": {
+      "sunAzDeg": 269.8,
+      "skylineDeg": 0.2808,
+      "distM": 839.6,
+      "heightM": -3641.85
+     }
+    }
+   },
+   "spreadMin": {
+    "cut": 1.234375,
+    "half": 1.234375,
+    "lastLimb": 0.96875
+   },
+   "60mMinusStackMin": {
+    "cut": 1.234375,
+    "half": 1.234375,
+    "lastLimb": 0.96875
+   },
+   "60mObs3mMinusStackMin": {
+    "cut": 10.59375,
+    "lastLimb": 10.328125
+   },
+   "3mAloneMinusStackMin": {
+    "cut": 0.0,
+    "lastLimb": 0.0
+   },
+   "easedMinusStackMin": {
+    "cut": 10.59375,
+    "half": 10.65625,
+    "lastLimb": 10.328125
+   }
+  }
+ ],
+ "stack2mFinerMarch": {
+  "cut": "2025-03-16T18:23:38Z",
+  "half": "2025-03-16T18:56:51Z",
+  "lastLimb": "2025-03-16T19:30:02Z",
+  "lastLimbShiftS": -0.65625,
+  "cutShiftS": -2.03125
+ },
+ "profileAtLastLimbAzimuth": {
+  "azDeg": 269.876,
+  "rows": [
+   {
+    "distM": 0,
+    "h3m": -3651.16,
+    "h60m": -3652.27,
+    "h3mEased": -3651.16
+   },
+   {
+    "distM": 100,
+    "h3m": -3651.27,
+    "h60m": -3652.03,
+    "h3mEased": -3651.27
+   },
+   {
+    "distM": 200,
+    "h3m": -3652.47,
+    "h60m": -3650.81,
+    "h3mEased": -3652.47
+   },
+   {
+    "distM": 300,
+    "h3m": -3650.79,
+    "h60m": -3651.44,
+    "h3mEased": -3650.79
+   },
+   {
+    "distM": 400,
+    "h3m": -3652.06,
+    "h60m": -3654.4,
+    "h3mEased": -3652.06
+   },
+   {
+    "distM": 500,
+    "h3m": -3648.09,
+    "h60m": -3652.36,
+    "h3mEased": -3648.09
+   },
+   {
+    "distM": 600,
+    "h3m": -3647.29,
+    "h60m": -3648.07,
+    "h3mEased": -3647.29
+   },
+   {
+    "distM": 650,
+    "h3m": -3647.11,
+    "h60m": -3645.59,
+    "h3mEased": -3647.07
+   },
+   {
+    "distM": 700,
+    "h3m": -3644.44,
+    "h60m": -3644.16,
+    "h3mEased": -3644.31
+   },
+   {
+    "distM": 725,
+    "h3m": -3643.04,
+    "h60m": -3643.59,
+    "h3mEased": -3643.45
+   },
+   {
+    "distM": 750,
+    "h3m": -3641.47,
+    "h60m": -3643.07,
+    "h3mEased": -3642.99
+   },
+   {
+    "distM": 760,
+    "h3m": -3641.26,
+    "h60m": -3642.86,
+    "h3mEased": -3642.84
+   },
+   {
+    "distM": 765,
+    "h3m": -3641.16,
+    "h60m": -3642.76,
+    "h3mEased": -3642.76
+   },
+   {
+    "distM": 767,
+    "h3m": -3641.1,
+    "h60m": -3642.72,
+    "h3mEased": -3642.72
+   },
+   {
+    "distM": 768,
+    "h3m": -3641.07,
+    "h60m": -3642.7,
+    "h3mEased": -3642.7
+   },
+   {
+    "distM": 769,
+    "h3m": null,
+    "h60m": -3642.68,
+    "h3mEased": null
+   },
+   {
+    "distM": 770,
+    "h3m": null,
+    "h60m": -3642.66,
+    "h3mEased": null
+   },
+   {
+    "distM": 780,
+    "h3m": null,
+    "h60m": -3642.45,
+    "h3mEased": null
+   },
+   {
+    "distM": 800,
+    "h3m": null,
+    "h60m": -3642.24,
+    "h3mEased": null
+   },
+   {
+    "distM": 850,
+    "h3m": null,
+    "h60m": -3642.74,
+    "h3mEased": null
+   },
+   {
+    "distM": 900,
+    "h3m": null,
+    "h60m": -3647.36,
+    "h3mEased": null
+   },
+   {
+    "distM": 1000,
+    "h3m": null,
+    "h60m": -3655.4,
+    "h3mEased": null
+   }
+  ]
+ },
+ "note": "Nothing here is eased: the products are compared as bundled. The spread is an uncertainty of the input data, not of the computation (the finer march moves the times by seconds)."
+}

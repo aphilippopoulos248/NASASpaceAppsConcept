@@ -1,0 +1,2225 @@
+{
+ "build": "1289083",
+ "root": "/tmp/lsv-validation/exports/analysis-1289083",
+ "limitDeg": 0.1,
+ "referenceMode": "as stored",
+ "sites": {
+  "im-2@0m": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 13,
+     "largestRaiseDeg": 0.00018149747752893575,
+     "atAzDeg": 158.0,
+     "seconds": 4.5
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.002589999999999981,
+     "signedAtMaxDeg": 0.002589999999999981,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-im-2@0m.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 5320.7685546875,
+    "appGroundM": 5320.7685546875,
+    "maxAbsDeg": 0.002589999999999981,
+    "atAzDeg": 5.5,
+    "signedAtMaxDeg": 0.002589999999999981,
+    "meanDeg": -2.1031719103666972e-05,
+    "rmsDeg": 0.00019173435662657052,
+    "appLowestDeg": -0.0009300000000003195,
+    "appHighestDeg": 0.002589999999999981,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -1.355027756121532,
+     4.07411
+    ],
+    "worst": [
+     {
+      "azDeg": 5.5,
+      "diffDeg": 0.002589999999999981,
+      "refElevDeg": -0.41061,
+      "refDistM": 14702.1,
+      "refHeightM": 5277.48,
+      "appElevDeg": -0.40802,
+      "appDistM": 14704.9,
+      "appHeightM": 5278.15
+     },
+     {
+      "azDeg": 208.0,
+      "diffDeg": -0.0009300000000003195,
+      "refElevDeg": 2.33611,
+      "refDistM": 611.6,
+      "refHeightM": 5345.9,
+      "appElevDeg": 2.33518,
+      "appDistM": 610.9,
+      "appHeightM": 5345.86
+     },
+     {
+      "azDeg": 237.0,
+      "diffDeg": -0.0007887502293794091,
+      "refElevDeg": 0.8845587502293794,
+      "refDistM": 429.25078542095844,
+      "refHeightM": 5327.469564610163,
+      "appElevDeg": 0.88377,
+      "appDistM": 428.9,
+      "appHeightM": 5327.46
+     }
+    ],
+    "warnings": [
+     "Beyond about 166 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -2.9 to +4.1 m (0.7 m RMS) at 3.8 km, where the 60 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km."
+    ]
+   }
+  },
+  "apollo-15@0m": {
+   "site": {
+    "id": "apollo-15",
+    "name": "Apollo 15",
+    "kind": "landing",
+    "lat": 26.13239,
+    "lon": 3.6333
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 66,
+     "largestRaiseDeg": 0.001554323400033919,
+     "atAzDeg": 286.5,
+     "seconds": 4.3
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0038800000000005497,
+     "signedAtMaxDeg": -0.0038800000000005497,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-apollo-15@0m.json, 89 s, two marches)",
+    "referenceConvergenceDeg": 0.0016302437572477402,
+    "referenceGroundM": -1927.097412109375,
+    "appGroundM": -1927.097412109375,
+    "maxAbsDeg": 0.0038800000000005497,
+    "atAzDeg": 187.0,
+    "signedAtMaxDeg": -0.0038800000000005497,
+    "meanDeg": -0.00014276803766021797,
+    "rmsDeg": 0.00046639830076739735,
+    "appLowestDeg": -0.0038800000000005497,
+    "appHighestDeg": 0.0020599999999983964,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.23401,
+     13.48047
+    ],
+    "worst": [
+     {
+      "azDeg": 187.0,
+      "diffDeg": -0.0038800000000005497,
+      "refElevDeg": 12.07723,
+      "refDistM": 9670.6,
+      "refHeightM": 169.19,
+      "appElevDeg": 12.07335,
+      "appDistM": 9664.9,
+      "appHeightM": 167.25
+     },
+     {
+      "azDeg": 188.0,
+      "diffDeg": -0.003510000000000346,
+      "refElevDeg": 11.73539,
+      "refDistM": 9694.8,
+      "refHeightM": 114.02,
+      "appElevDeg": 11.73188,
+      "appDistM": 9685,
+      "appHeightM": 111.31
+     },
+     {
+      "azDeg": 192.0,
+      "diffDeg": -0.002649999999999153,
+      "refElevDeg": 10.2965,
+      "refDistM": 9324.1,
+      "refHeightM": -208.41,
+      "appElevDeg": 10.29385,
+      "appDistM": 9330.6,
+      "appHeightM": -207.63
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -8.5 to +7.4 m (1.8 m RMS) at 0.77 km, where the 3 m model ends; -45.9 to +73.5 m (10.9 m RMS) at 3.8 km, where the 60 m window ends; -353 to +232 m (86.1 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.075\u00b0 at 0.77 km, 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "chandrayaan-3@0m": {
+   "site": {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3",
+    "kind": "landing",
+    "lat": -69.3741,
+    "lon": 32.32
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 140,
+     "largestRaiseDeg": 0.000270419936632349,
+     "atAzDeg": 223.5,
+     "seconds": 4.7
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0041400000000000325,
+     "signedAtMaxDeg": 0.0041400000000000325,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-chandrayaan-3@0m.json, 144 s, two marches)",
+    "referenceConvergenceDeg": 0.003500852337548377,
+    "referenceGroundM": 529.109619140625,
+    "appGroundM": 529.109619140625,
+    "maxAbsDeg": 0.0041400000000000325,
+    "atAzDeg": 284.5,
+    "signedAtMaxDeg": 0.0041400000000000325,
+    "meanDeg": -8.953344276766078e-05,
+    "rmsDeg": 0.00039706675222924527,
+    "appLowestDeg": -0.0034199999999999786,
+    "appHighestDeg": 0.0041400000000000325,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 124,
+    "appAtFeet": 124,
+    "refSkylineDeg": [
+     0.93235,
+     2.44806
+    ],
+    "worst": [
+     {
+      "azDeg": 284.5,
+      "diffDeg": 0.0041400000000000325,
+      "refElevDeg": 2.25685,
+      "refDistM": 31715.2,
+      "refHeightM": 2070.23,
+      "appElevDeg": 2.26099,
+      "appDistM": 31729.5,
+      "appHeightM": 2073.36
+     },
+     {
+      "azDeg": 155.5,
+      "diffDeg": -0.0034199999999999786,
+      "refElevDeg": 1.29431,
+      "refDistM": 36681.0,
+      "refHeightM": 1746.23,
+      "appElevDeg": 1.29089,
+      "appDistM": 36650.2,
+      "appHeightM": 1742.69
+     },
+     {
+      "azDeg": 278.5,
+      "diffDeg": -0.0024999999999999467,
+      "refElevDeg": 1.73907,
+      "refDistM": 6795.0,
+      "refHeightM": 748.8,
+      "appElevDeg": 1.73657,
+      "appDistM": 6790.8,
+      "appHeightM": 748.36
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 124 of 720 directions is the ground within 42 m of the observer: the slope of the 60 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -21.2 to +22.7 m (6.6 m RMS) at 3.8 km, where the 60 m window ends; -221 to +127 m (52.4 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "shackleton-rim@0m": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 314,
+     "largestRaiseDeg": 0.0029797577476973203,
+     "atAzDeg": 268.0,
+     "seconds": 3.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0029700000000003612,
+     "signedAtMaxDeg": -0.0029700000000003612,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-shackleton-rim@0m.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1730.3912127832746,
+    "appGroundM": 1730.3912127832746,
+    "maxAbsDeg": 0.00319755807254829,
+    "atAzDeg": 80.0,
+    "signedAtMaxDeg": -0.00319755807254829,
+    "meanDeg": -0.0004630557381318006,
+    "rmsDeg": 0.0008676382249091122,
+    "appLowestDeg": -0.00319755807254829,
+    "appHighestDeg": 5.837783034756683e-06,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     1.18965181056597,
+     8.188222460626076
+    ],
+    "worst": [
+     {
+      "azDeg": 80.0,
+      "diffDeg": -0.00319755807254829,
+      "refElevDeg": 2.845037558072548,
+      "refDistM": 80.39205167845502,
+      "refHeightM": 1734.3922361772406,
+      "appElevDeg": 2.84184,
+      "appDistM": 80.5,
+      "appHeightM": 1734.39
+     },
+     {
+      "azDeg": 129.0,
+      "diffDeg": -0.003072644694959159,
+      "refElevDeg": 4.988982644694959,
+      "refDistM": 68.90332157603956,
+      "refHeightM": 1736.4135009211077,
+      "appElevDeg": 4.98591,
+      "appDistM": 68.8,
+      "appHeightM": 1736.4
+     },
+     {
+      "azDeg": 78.0,
+      "diffDeg": -0.003033868374036963,
+      "refElevDeg": 2.740023868374037,
+      "refDistM": 79.73288855921354,
+      "refHeightM": 1734.2127836551751,
+      "appElevDeg": 2.73699,
+      "appDistM": 79.7,
+      "appHeightM": 1734.2
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 81 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window has no end within 60 days of the window: it lasts at least 2454.3 h."
+    ]
+   }
+  },
+  "connecting-ridge@0m": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 535,
+     "largestRaiseDeg": 0.00161306032987385,
+     "atAzDeg": 92.5,
+     "seconds": 2.9
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0017900000000001803,
+     "signedAtMaxDeg": 0.0017900000000001803,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-connecting-ridge@0m.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1955.872711592073,
+    "appGroundM": 1955.872711592073,
+    "maxAbsDeg": 0.0017947523087432082,
+    "atAzDeg": 334.0,
+    "signedAtMaxDeg": -0.0017947523087432082,
+    "meanDeg": -0.00012237362741834937,
+    "rmsDeg": 0.00035108384456841496,
+    "appLowestDeg": -0.0017947523087432082,
+    "appHighestDeg": 0.00018294347936165245,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 298,
+    "appAtFeet": 298,
+    "refSkylineDeg": [
+     -2.035721575905077,
+     2.543665855805009
+    ],
+    "worst": [
+     {
+      "azDeg": 334.0,
+      "diffDeg": -0.0017947523087432082,
+      "refElevDeg": 0.12248475230874321,
+      "refDistM": 316.37047989613063,
+      "refHeightM": 1956.5786361764397,
+      "appElevDeg": 0.12069,
+      "appDistM": 316.1,
+      "appHeightM": 1956.57
+     },
+     {
+      "azDeg": 331.5,
+      "diffDeg": -0.0017042394845083117,
+      "refElevDeg": 0.05891423948450831,
+      "refDistM": 312.5518241847396,
+      "refHeightM": 1956.2225992914266,
+      "appElevDeg": 0.05721,
+      "appDistM": 312.3,
+      "appHeightM": 1956.21
+     },
+     {
+      "azDeg": 26.5,
+      "diffDeg": -0.0015866313114643038,
+      "refElevDeg": -0.7092333686885357,
+      "refDistM": 350.9456706047782,
+      "refHeightM": 1951.5589281870457,
+      "appElevDeg": -0.71082,
+      "appDistM": 350.7,
+      "appHeightM": 1951.55
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 441 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "ridge-top@0m": {
+   "site": {
+    "id": "pin:-89.47490,-137.44310",
+    "name": "Connecting ridge, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.4749,
+    "lon": -137.4431
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 424,
+     "largestRaiseDeg": 0.0008161061736000619,
+     "atAzDeg": 357.5,
+     "seconds": 2.9
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0013099999999999223,
+     "signedAtMaxDeg": 0.0013099999999999223,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-ridge-top@0m.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1946.5726105829087,
+    "appGroundM": 1946.5726105829085,
+    "maxAbsDeg": 0.0013099999999999223,
+    "atAzDeg": 197.5,
+    "signedAtMaxDeg": 0.0013099999999999223,
+    "meanDeg": 4.581127537552636e-05,
+    "rmsDeg": 0.00017178605463685553,
+    "appLowestDeg": -0.0007200000000000539,
+    "appHighestDeg": 0.0013099999999999223,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 313,
+    "appAtFeet": 313,
+    "refSkylineDeg": [
+     -2.530201268739028,
+     3.4161064414934166
+    ],
+    "worst": [
+     {
+      "azDeg": 197.5,
+      "diffDeg": 0.0013099999999999223,
+      "refElevDeg": -1.6673,
+      "refDistM": 9171.5,
+      "refHeightM": 1703.58,
+      "appElevDeg": -1.66599,
+      "appDistM": 9173.3,
+      "appHeightM": 1703.74
+     },
+     {
+      "azDeg": 199.5,
+      "diffDeg": 0.0012600000000000389,
+      "refElevDeg": -1.78211,
+      "refDistM": 8954.1,
+      "refHeightM": 1690.8,
+      "appElevDeg": -1.78085,
+      "appDistM": 8951.8,
+      "appHeightM": 1691.06
+     },
+     {
+      "azDeg": 197.0,
+      "diffDeg": 0.001060000000000061,
+      "refElevDeg": -1.64335,
+      "refDistM": 9222.1,
+      "refHeightM": 1706.23,
+      "appElevDeg": -1.64229,
+      "appDistM": 9220.7,
+      "appHeightM": 1706.44
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 493 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "rim-top@0m": {
+   "site": {
+    "id": "pin:-89.78430,-155.90410",
+    "name": "Shackleton rim, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.7843,
+    "lon": -155.9041
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 521,
+     "largestRaiseDeg": 0.0016142587255547625,
+     "atAzDeg": 201.5,
+     "seconds": 3.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0017900000000001803,
+     "signedAtMaxDeg": 0.0017900000000001803,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-rim-top@0m.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1735.797048259804,
+    "appGroundM": 1735.7970482598041,
+    "maxAbsDeg": 0.001731925159879577,
+    "atAzDeg": 17.0,
+    "signedAtMaxDeg": -0.001731925159879577,
+    "meanDeg": -0.00017722643840889033,
+    "rmsDeg": 0.00038134406699511734,
+    "appLowestDeg": -0.001731925159879577,
+    "appHighestDeg": 0.0002300000000000635,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 180,
+    "appAtFeet": 180,
+    "refSkylineDeg": [
+     -1.73328,
+     3.3227779209332535
+    ],
+    "worst": [
+     {
+      "azDeg": 17.0,
+      "diffDeg": -0.001731925159879577,
+      "refElevDeg": -0.21161807484012043,
+      "refDistM": 227.64732676313605,
+      "refHeightM": 1734.9703337852084,
+      "appElevDeg": -0.21335,
+      "appDistM": 227.4,
+      "appHeightM": 1734.96
+     },
+     {
+      "azDeg": 70.5,
+      "diffDeg": -0.001658533487667202,
+      "refElevDeg": -0.2890514665123328,
+      "refDistM": 69.86238267727958,
+      "refHeightM": 1735.4456505110725,
+      "appElevDeg": -0.29071,
+      "appDistM": 69.8,
+      "appHeightM": 1735.44
+     },
+     {
+      "azDeg": 16.0,
+      "diffDeg": -0.0016190154556141312,
+      "refElevDeg": -0.22650098454438586,
+      "refDistM": 232.33142125350642,
+      "refHeightM": 1734.8932261874295,
+      "appElevDeg": -0.22812,
+      "appDistM": 232.1,
+      "appHeightM": 1734.89
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 347 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 318.2 h in full, from 2025-02-28 12:52 to 2025-03-13 19:03 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "fresh-a@0m": {
+   "site": {
+    "id": "pin:-88.46586,94.25475",
+    "name": "Fresh crest pin A (science-validation)",
+    "kind": "custom",
+    "lat": -88.46586,
+    "lon": 94.25475
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 329,
+     "largestRaiseDeg": 0.011101679442982793,
+     "atAzDeg": 216.0,
+     "seconds": 2.9
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.012340000000000018,
+     "signedAtMaxDeg": 0.012340000000000018,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-a@0m.json, 70 s, two marches)",
+    "referenceConvergenceDeg": 0.006168884690261223,
+    "referenceGroundM": -747.2950206888293,
+    "appGroundM": -747.2950206888293,
+    "maxAbsDeg": 0.002713433419891942,
+    "atAzDeg": 140.5,
+    "signedAtMaxDeg": -0.002713433419891942,
+    "meanDeg": -6.514194755763733e-06,
+    "rmsDeg": 0.0006636789267946288,
+    "appLowestDeg": -0.002713433419891942,
+    "appHighestDeg": 0.0023400000000000087,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 160,
+    "appAtFeet": 160,
+    "refSkylineDeg": [
+     0.63403,
+     23.46625639746749
+    ],
+    "worst": [
+     {
+      "azDeg": 140.5,
+      "diffDeg": -0.002713433419891942,
+      "refElevDeg": 23.42305343341989,
+      "refDistM": 14.555458961963538,
+      "refHeightM": -740.9919851021587,
+      "appElevDeg": 23.42034,
+      "appDistM": 14.5,
+      "appHeightM": -741
+     },
+     {
+      "azDeg": 139.5,
+      "diffDeg": -0.0025264221348528793,
+      "refElevDeg": 23.443366422134854,
+      "refDistM": 14.206731619958902,
+      "refHeightM": -741.1370181547369,
+      "appElevDeg": 23.44084,
+      "appDistM": 14.2,
+      "appHeightM": -741.15
+     },
+     {
+      "azDeg": 137.0,
+      "diffDeg": -0.0024963974674889755,
+      "refElevDeg": 23.46625639746749,
+      "refDistM": 13.420962300008533,
+      "refHeightM": -741.4712508962485,
+      "appElevDeg": 23.46376,
+      "appDistM": 13.4,
+      "appHeightM": -741.48
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 340 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 258 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 65.6 h in full, from 2025-03-05 18:41 to 2025-03-08 12:19 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "fresh-b@0m": {
+   "site": {
+    "id": "pin:-89.50713,-177.52577",
+    "name": "Fresh crest pin B (science-validation)",
+    "kind": "custom",
+    "lat": -89.50713,
+    "lon": -177.52577
+   },
+   "mastHeightM": 0,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 307,
+     "largestRaiseDeg": 0.004080515015631114,
+     "atAzDeg": 48.5,
+     "seconds": 3.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0046399999999999775,
+     "signedAtMaxDeg": 0.0046399999999999775,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-b@0m.json, 22 s, two marches)",
+    "referenceConvergenceDeg": 0.0030644351399420344,
+    "referenceGroundM": 1059.7643723159567,
+    "appGroundM": 1059.7643723159567,
+    "maxAbsDeg": 0.0046399999999999775,
+    "atAzDeg": 302.5,
+    "signedAtMaxDeg": 0.0046399999999999775,
+    "meanDeg": -0.00014968357204370552,
+    "rmsDeg": 0.0004898400851515546,
+    "appLowestDeg": -0.0031400000000001427,
+    "appHighestDeg": 0.0046399999999999775,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 117,
+    "appAtFeet": 117,
+    "refSkylineDeg": [
+     -1.8788,
+     13.23035
+    ],
+    "worst": [
+     {
+      "azDeg": 302.5,
+      "diffDeg": 0.0046399999999999775,
+      "refElevDeg": -1.63907,
+      "refDistM": 49288.2,
+      "refHeightM": 348.51,
+      "appElevDeg": -1.63443,
+      "appDistM": 49276.1,
+      "appHeightM": 352.51
+     },
+     {
+      "azDeg": 248.0,
+      "diffDeg": -0.0031400000000001427,
+      "refElevDeg": 8.55002,
+      "refDistM": 1427.0,
+      "refHeightM": 1275.05,
+      "appElevDeg": 8.54688,
+      "appDistM": 1427.5,
+      "appHeightM": 1275.04
+     },
+     {
+      "azDeg": 141.5,
+      "diffDeg": -0.002644288129568295,
+      "refElevDeg": 6.829164288129569,
+      "refDistM": 434.77115909314284,
+      "refHeightM": 1111.9199149885392,
+      "appElevDeg": 6.82652,
+      "appDistM": 435,
+      "appHeightM": 1111.93
+     }
+    ],
+    "warnings": [
+     "With the observer on the ground, the skyline in 297 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 289 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest Earth gap runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 564.5 h in full, from 2025-03-05 13:47 to 2025-03-29 02:19 UTC; the window itself holds 1.0 h of it at most in one stretch.",
+     "The longest spell without Earth in view that touches this window has no start or end within 60 days of the window: it lasts at least 2881.0 h."
+    ]
+   }
+  },
+  "im-2@0.5m": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 9,
+     "largestRaiseDeg": 0.0001500749190359585,
+     "atAzDeg": 241.5,
+     "seconds": 9.4
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0019500000000000073,
+     "signedAtMaxDeg": 0.0019500000000000073,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-im-2@0.5m.json, 27 s, two marches)",
+    "referenceConvergenceDeg": 0.0017602449187582025,
+    "referenceGroundM": 5320.7685546875,
+    "appGroundM": 5320.7685546875,
+    "maxAbsDeg": 0.0019500000000000073,
+    "atAzDeg": 5.5,
+    "signedAtMaxDeg": 0.0019500000000000073,
+    "meanDeg": -1.629332665904945e-05,
+    "rmsDeg": 0.0001771408568252248,
+    "appLowestDeg": -0.0008500000000002395,
+    "appHighestDeg": 0.0019500000000000073,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -1.4273216544408316,
+     4.07239
+    ],
+    "worst": [
+     {
+      "azDeg": 5.5,
+      "diffDeg": 0.0019500000000000073,
+      "refElevDeg": -0.41256,
+      "refDistM": 14702.1,
+      "refHeightM": 5277.48,
+      "appElevDeg": -0.41061,
+      "appDistM": 14706,
+      "appHeightM": 5277.99
+     },
+     {
+      "azDeg": 200.5,
+      "diffDeg": -0.0008500000000002395,
+      "refElevDeg": 2.61254,
+      "refDistM": 576.5,
+      "refHeightM": 5347.75,
+      "appElevDeg": 2.61169,
+      "appDistM": 577.3,
+      "appHeightM": 5347.78
+     },
+     {
+      "azDeg": 208.5,
+      "diffDeg": -0.0008399999999997299,
+      "refElevDeg": 2.27072,
+      "refDistM": 614.3,
+      "refHeightM": 5345.81,
+      "appElevDeg": 2.26988,
+      "appDistM": 614.9,
+      "appHeightM": 5345.83
+     }
+    ],
+    "warnings": [
+     "Beyond about 166 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -2.9 to +4.1 m (0.7 m RMS) at 3.8 km, where the 60 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km."
+    ]
+   }
+  },
+  "apollo-15@0.5m": {
+   "site": {
+    "id": "apollo-15",
+    "name": "Apollo 15",
+    "kind": "landing",
+    "lat": 26.13239,
+    "lon": 3.6333
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 69,
+     "largestRaiseDeg": 0.0015362775545573193,
+     "atAzDeg": 286.5,
+     "seconds": 12.5
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.004110000000000724,
+     "signedAtMaxDeg": -0.004110000000000724,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-apollo-15@0.5m.json, 46 s, two marches)",
+    "referenceConvergenceDeg": 0.0016306530100624883,
+    "referenceGroundM": -1927.097412109375,
+    "appGroundM": -1927.097412109375,
+    "maxAbsDeg": 0.004110000000000724,
+    "atAzDeg": 186.5,
+    "signedAtMaxDeg": -0.004110000000000724,
+    "meanDeg": -0.0001463040271578272,
+    "rmsDeg": 0.0004881057213144052,
+    "appLowestDeg": -0.004110000000000724,
+    "appHighestDeg": 0.0014500000000001734,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.23309,
+     13.47791
+    ],
+    "worst": [
+     {
+      "azDeg": 186.5,
+      "diffDeg": -0.004110000000000724,
+      "refElevDeg": 12.24389,
+      "refDistM": 9661.0,
+      "refHeightM": 197.01,
+      "appElevDeg": 12.23978,
+      "appDistM": 9667.8,
+      "appHeightM": 197.8
+     },
+     {
+      "azDeg": 185.0,
+      "diffDeg": -0.003409999999998803,
+      "refElevDeg": 12.6367,
+      "refDistM": 9636.8,
+      "refHeightM": 261.02,
+      "appElevDeg": 12.63329,
+      "appDistM": 9633.6,
+      "appHeightM": 259.68
+     },
+     {
+      "azDeg": 186.0,
+      "diffDeg": -0.003330000000000055,
+      "refElevDeg": 12.41163,
+      "refDistM": 9651.3,
+      "refHeightM": 224.51,
+      "appElevDeg": 12.4083,
+      "appDistM": 9647.6,
+      "appHeightM": 223.09
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -8.5 to +7.4 m (1.8 m RMS) at 0.77 km, where the 3 m model ends; -45.9 to +73.5 m (10.9 m RMS) at 3.8 km, where the 60 m window ends; -353 to +232 m (86.1 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.075\u00b0 at 0.77 km, 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "chandrayaan-3@0.5m": {
+   "site": {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3",
+    "kind": "landing",
+    "lat": -69.3741,
+    "lon": 32.32
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 52,
+     "largestRaiseDeg": 0.00022194019494747863,
+     "atAzDeg": 174.5,
+     "seconds": 5.6
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.002890000000000059,
+     "signedAtMaxDeg": -0.002890000000000059,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-chandrayaan-3@0.5m.json, 83 s, two marches)",
+    "referenceConvergenceDeg": 0.0035012031109120656,
+    "referenceGroundM": 529.109619140625,
+    "appGroundM": 529.109619140625,
+    "maxAbsDeg": 0.002890000000000059,
+    "atAzDeg": 156.0,
+    "signedAtMaxDeg": -0.002890000000000059,
+    "meanDeg": -0.00014828939332564388,
+    "rmsDeg": 0.0004089737376888999,
+    "appLowestDeg": -0.002890000000000059,
+    "appHighestDeg": 0.0017400000000002969,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.90954,
+     2.44629
+    ],
+    "worst": [
+     {
+      "azDeg": 156.0,
+      "diffDeg": -0.002890000000000059,
+      "refElevDeg": 1.28357,
+      "refDistM": 36534.6,
+      "refHeightM": 1733.47,
+      "appElevDeg": 1.28068,
+      "appDistM": 36558.5,
+      "appHeightM": 1732.66
+     },
+     {
+      "azDeg": 287.5,
+      "diffDeg": -0.0023999999999997357,
+      "refElevDeg": 2.28977,
+      "refDistM": 32210.5,
+      "refHeightM": 2117.99,
+      "appElevDeg": 2.28737,
+      "appDistM": 32199.1,
+      "appHeightM": 2115.97
+     },
+     {
+      "azDeg": 138.0,
+      "diffDeg": -0.0019400000000000528,
+      "refElevDeg": 1.54498,
+      "refDistM": 44889.7,
+      "refHeightM": 2322.5,
+      "appElevDeg": 1.54304,
+      "appDistM": 44862.4,
+      "appHeightM": 2319.53
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -21.2 to +22.7 m (6.6 m RMS) at 3.8 km, where the 60 m window ends; -221 to +127 m (52.4 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "shackleton-rim@0.5m": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 340,
+     "largestRaiseDeg": 0.003629023603904713,
+     "atAzDeg": 266.0,
+     "seconds": 3.3
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.00338999999999956,
+     "signedAtMaxDeg": -0.00338999999999956,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-shackleton-rim@0.5m.json, 28 s, two marches)",
+    "referenceConvergenceDeg": 0.0027801492367753866,
+    "referenceGroundM": 1730.3912127832746,
+    "appGroundM": 1730.3912127832746,
+    "maxAbsDeg": 0.0035423660726419115,
+    "atAzDeg": 269.0,
+    "signedAtMaxDeg": -0.0035423660726419115,
+    "meanDeg": -0.0005121974329974438,
+    "rmsDeg": 0.0009330188728868879,
+    "appLowestDeg": -0.0035423660726419115,
+    "appHighestDeg": 5.160384080493685e-06,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.8652554366164473,
+     7.566043041094036
+    ],
+    "worst": [
+     {
+      "azDeg": 269.0,
+      "diffDeg": -0.0035423660726419115,
+      "refElevDeg": 7.564482366072642,
+      "refDistM": 45.81489619814627,
+      "refHeightM": 1736.9820085252088,
+      "appElevDeg": 7.56094,
+      "appDistM": 45.8,
+      "appHeightM": 1736.97
+     },
+     {
+      "azDeg": 125.5,
+      "diffDeg": -0.0034890920756245336,
+      "refElevDeg": 4.476419092075624,
+      "refDistM": 71.22596274701152,
+      "refHeightM": 1736.4743575068858,
+      "appElevDeg": 4.47293,
+      "appDistM": 71.3,
+      "appHeightM": 1736.47
+     },
+     {
+      "azDeg": 265.5,
+      "diffDeg": -0.003476804889182006,
+      "refElevDeg": 7.559976804889182,
+      "refDistM": 44.72413865204198,
+      "refHeightM": 1736.8334022353781,
+      "appElevDeg": 7.5565,
+      "appDistM": 44.7,
+      "appHeightM": 1736.82
+     }
+    ],
+    "warnings": [
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window has no end within 60 days of the window: it lasts at least 1753.3 h."
+    ]
+   }
+  },
+  "connecting-ridge@0.5m": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 410,
+     "largestRaiseDeg": 0.005071996246162502,
+     "atAzDeg": 140.5,
+     "seconds": 3.0
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0047000000000000375,
+     "signedAtMaxDeg": 0.0047000000000000375,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-connecting-ridge@0.5m.json, 83 s, two marches)",
+    "referenceConvergenceDeg": 0.004777524341864625,
+    "referenceGroundM": 1955.872711592073,
+    "appGroundM": 1955.872711592073,
+    "maxAbsDeg": 0.001863550326129948,
+    "atAzDeg": 23.5,
+    "signedAtMaxDeg": -0.001863550326129948,
+    "meanDeg": -0.00039939694562083814,
+    "rmsDeg": 0.0006042247943417891,
+    "appLowestDeg": -0.001863550326129948,
+    "appHighestDeg": 0.0013300000000000534,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.69524,
+     1.0520415530646359
+    ],
+    "worst": [
+     {
+      "azDeg": 23.5,
+      "diffDeg": -0.001863550326129948,
+      "refElevDeg": -0.61667644967387,
+      "refDistM": 358.5272858673626,
+      "refHeightM": 1952.546418365192,
+      "appElevDeg": -0.61854,
+      "appDistM": 358.1,
+      "appHeightM": 1952.54
+     },
+     {
+      "azDeg": 147.5,
+      "diffDeg": -0.001774806042941779,
+      "refElevDeg": 0.8871548060429417,
+      "refDistM": 17.40534908174342,
+      "refHeightM": 1956.6426244089585,
+      "appElevDeg": 0.88538,
+      "appDistM": 17.4,
+      "appHeightM": 1956.64
+     },
+     {
+      "azDeg": 334.5,
+      "diffDeg": -0.0016942740152376332,
+      "refElevDeg": 0.044964274015237636,
+      "refDistM": 317.21833143727207,
+      "refHeightM": 1956.6509287257745,
+      "appElevDeg": 0.04327,
+      "appDistM": 317.6,
+      "appHeightM": 1956.64
+     }
+    ],
+    "warnings": [
+     "With the observer 0.5 m above the ground, the skyline in 213 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "ridge-top@0.5m": {
+   "site": {
+    "id": "pin:-89.47490,-137.44310",
+    "name": "Connecting ridge, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.4749,
+    "lon": -137.4431
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 246,
+     "largestRaiseDeg": 0.0026316894875570984,
+     "atAzDeg": 8.5,
+     "seconds": 3.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0021599999999999397,
+     "signedAtMaxDeg": 0.0021599999999999397,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-ridge-top@0.5m.json, 36 s, two marches)",
+    "referenceConvergenceDeg": 0.00257720177981402,
+    "referenceGroundM": 1946.5726105829087,
+    "appGroundM": 1946.5726105829085,
+    "maxAbsDeg": 0.0014500000000001734,
+    "atAzDeg": 199.5,
+    "signedAtMaxDeg": 0.0014500000000001734,
+    "meanDeg": -1.8392225482607957e-05,
+    "rmsDeg": 0.00023198266906029237,
+    "appLowestDeg": -0.001296952503249127,
+    "appHighestDeg": 0.0014500000000001734,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.56266,
+     1.632412878782939
+    ],
+    "worst": [
+     {
+      "azDeg": 199.5,
+      "diffDeg": 0.0014500000000001734,
+      "refElevDeg": -1.7853,
+      "refDistM": 8954.1,
+      "refHeightM": 1690.8,
+      "appElevDeg": -1.78385,
+      "appDistM": 8952,
+      "appHeightM": 1691.08
+     },
+     {
+      "azDeg": 253.0,
+      "diffDeg": -0.001296952503249127,
+      "refElevDeg": -2.480333047496751,
+      "refDistM": 209.50492514625617,
+      "refHeightM": 1938.0000000001517,
+      "appElevDeg": -2.48163,
+      "appDistM": 209.4,
+      "appHeightM": 1938
+     },
+     {
+      "azDeg": 197.5,
+      "diffDeg": 0.0012099999999999334,
+      "refElevDeg": -1.67041,
+      "refDistM": 9171.5,
+      "refHeightM": 1703.58,
+      "appElevDeg": -1.6692,
+      "appDistM": 9173.6,
+      "appHeightM": 1703.72
+     }
+    ],
+    "warnings": [
+     "With the observer 0.5 m above the ground, the skyline in 305 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "rim-top@0.5m": {
+   "site": {
+    "id": "pin:-89.78430,-155.90410",
+    "name": "Shackleton rim, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.7843,
+    "lon": -155.9041
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 475,
+     "largestRaiseDeg": 0.01731251631303793,
+     "atAzDeg": 244.5,
+     "seconds": 3.6
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.015160000000000007,
+     "signedAtMaxDeg": 0.015160000000000007,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-rim-top@0.5m.json, 24 s, two marches)",
+    "referenceConvergenceDeg": 0.013455446739727928,
+    "referenceGroundM": 1735.797048259804,
+    "appGroundM": 1735.7970482598041,
+    "maxAbsDeg": 0.003661988330389887,
+    "atAzDeg": 261.0,
+    "signedAtMaxDeg": -0.003661988330389887,
+    "meanDeg": -0.0006871546347835364,
+    "rmsDeg": 0.0010866863020295172,
+    "appLowestDeg": -0.003661988330389887,
+    "appHighestDeg": 0.000360000000000138,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.386674068671498,
+     1.05043
+    ],
+    "worst": [
+     {
+      "azDeg": 261.0,
+      "diffDeg": -0.003661988330389887,
+      "refElevDeg": 0.6562219883303899,
+      "refDistM": 10.732326622144576,
+      "refHeightM": 1736.4201295234116,
+      "appElevDeg": 0.65256,
+      "appDistM": 10.7,
+      "appHeightM": 1736.42
+     },
+     {
+      "azDeg": 250.0,
+      "diffDeg": -0.00360583808609094,
+      "refElevDeg": 0.5365658380860909,
+      "refDistM": 10.388500980179813,
+      "refHeightM": 1736.394466081123,
+      "appElevDeg": 0.53296,
+      "appDistM": 10.4,
+      "appHeightM": 1736.39
+     },
+     {
+      "azDeg": 244.0,
+      "diffDeg": -0.0035990773936763754,
+      "refElevDeg": 0.46266907739367635,
+      "refDistM": 10.36769231765464,
+      "refHeightM": 1736.3808848564747,
+      "appElevDeg": 0.45907,
+      "appDistM": 10.4,
+      "appHeightM": 1736.38
+     }
+    ],
+    "warnings": [
+     "With the observer 0.5 m above the ground, the skyline in 273 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 88.3 h in full, from 2025-03-03 11:28 to 2025-03-07 03:46 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "fresh-a@0.5m": {
+   "site": {
+    "id": "pin:-88.46586,94.25475",
+    "name": "Fresh crest pin A (science-validation)",
+    "kind": "custom",
+    "lat": -88.46586,
+    "lon": 94.25475
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 291,
+     "largestRaiseDeg": 0.03590334069803269,
+     "atAzDeg": 94.0,
+     "seconds": 3.4
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.034440000000000026,
+     "signedAtMaxDeg": 0.034440000000000026,
+     "over0p02": 31
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-a@0.5m.json, 14 s, two marches)",
+    "referenceConvergenceDeg": 0.020633974512927367,
+    "referenceGroundM": -747.2950206888293,
+    "appGroundM": -747.2950206888293,
+    "maxAbsDeg": 0.006456142327721182,
+    "atAzDeg": 109.0,
+    "signedAtMaxDeg": -0.006456142327721182,
+    "meanDeg": -0.0009196856987909093,
+    "rmsDeg": 0.0018506714173236064,
+    "appLowestDeg": -0.006456142327721182,
+    "appHighestDeg": 0.0015799999999999148,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.63078,
+     21.77119334770021
+    ],
+    "worst": [
+     {
+      "azDeg": 109.0,
+      "diffDeg": -0.006456142327721182,
+      "refElevDeg": 18.223856142327723,
+      "refDistM": 9.142366859135494,
+      "refHeightM": -743.7862093312513,
+      "appElevDeg": 18.2174,
+      "appDistM": 9.1,
+      "appHeightM": -743.79
+     },
+     {
+      "azDeg": 117.5,
+      "diffDeg": -0.006213057699579139,
+      "refElevDeg": 19.75039305769958,
+      "refDistM": 9.878327969779935,
+      "refHeightM": -743.2497512551794,
+      "appElevDeg": 19.74418,
+      "appDistM": 9.9,
+      "appHeightM": -743.26
+     },
+     {
+      "azDeg": 101.0,
+      "diffDeg": -0.006132049024621722,
+      "refElevDeg": 16.41374204902462,
+      "refDistM": 8.706392258557997,
+      "refHeightM": -744.2313976880735,
+      "appElevDeg": 16.40761,
+      "appDistM": 8.7,
+      "appHeightM": -744.24
+     }
+    ],
+    "warnings": [
+     "With the observer 0.5 m above the ground, the skyline in 301 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 258 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 65.6 h in full, from 2025-03-05 18:43 to 2025-03-08 12:18 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "fresh-b@0.5m": {
+   "site": {
+    "id": "pin:-89.50713,-177.52577",
+    "name": "Fresh crest pin B (science-validation)",
+    "kind": "custom",
+    "lat": -89.50713,
+    "lon": -177.52577
+   },
+   "mastHeightM": 0.5,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 237,
+     "largestRaiseDeg": 0.031200676429116114,
+     "atAzDeg": 17.0,
+     "seconds": 3.2
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.02843000000000001,
+     "signedAtMaxDeg": 0.02843000000000001,
+     "over0p02": 16
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-b@0.5m.json, 16 s, two marches)",
+    "referenceConvergenceDeg": 0.020832222052784122,
+    "referenceGroundM": 1059.7643723159567,
+    "appGroundM": 1059.7643723159567,
+    "maxAbsDeg": 0.005777886144454847,
+    "atAzDeg": 6.0,
+    "signedAtMaxDeg": -0.005777886144454847,
+    "meanDeg": -0.0007095378329479258,
+    "rmsDeg": 0.0014220090986825718,
+    "appLowestDeg": -0.005777886144454847,
+    "appHighestDeg": 0.005449999999999955,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.67547,
+     13.18479
+    ],
+    "worst": [
+     {
+      "azDeg": 6.0,
+      "diffDeg": -0.005777886144454847,
+      "refElevDeg": -2.010122113855545,
+      "refDistM": 8.463522618020583,
+      "refHeightM": 1059.9671619599674,
+      "appElevDeg": -2.0159,
+      "appDistM": 8.4,
+      "appHeightM": 1059.97
+     },
+     {
+      "azDeg": 19.0,
+      "diffDeg": -0.005651227230589022,
+      "refElevDeg": 0.06147122723058902,
+      "refDistM": 8.995571716044083,
+      "refHeightM": 1060.2740526381303,
+      "appElevDeg": 0.05582,
+      "appDistM": 9,
+      "appHeightM": 1060.27
+     },
+     {
+      "azDeg": 23.5,
+      "diffDeg": -0.005503571403473795,
+      "refElevDeg": 0.7835035714034738,
+      "refDistM": 9.31168258996708,
+      "refHeightM": 1060.3918175676001,
+      "appElevDeg": 0.778,
+      "appDistM": 9.3,
+      "appHeightM": 1060.39
+     }
+    ],
+    "warnings": [
+     "With the observer 0.5 m above the ground, the skyline in 214 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 289 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest Earth gap runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 521.8 h in full, from 2025-03-05 13:50 to 2025-03-27 07:40 UTC; the window itself holds 1.0 h of it at most in one stretch.",
+     "The longest spell without Earth in view that touches this window has no start or end within 60 days of the window: it lasts at least 2881.0 h."
+    ]
+   }
+  },
+  "im-2@2m": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 5,
+     "largestRaiseDeg": 0.00015912254379069068,
+     "atAzDeg": 236.5,
+     "seconds": 8.2
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.00269999999999998,
+     "signedAtMaxDeg": 0.00269999999999998,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-im-2.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 5320.7685546875,
+    "appGroundM": 5320.7685546875,
+    "maxAbsDeg": 0.00269999999999998,
+    "atAzDeg": 5.5,
+    "signedAtMaxDeg": 0.00269999999999998,
+    "meanDeg": -5.913202489295323e-06,
+    "rmsDeg": 0.0001813013240852484,
+    "appLowestDeg": -0.0008300000000001084,
+    "appHighestDeg": 0.00269999999999998,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -1.47063,
+     4.06723
+    ],
+    "worst": [
+     {
+      "azDeg": 5.5,
+      "diffDeg": 0.00269999999999998,
+      "refElevDeg": -0.41838,
+      "refDistM": 14702.1,
+      "refHeightM": 5277.48,
+      "appElevDeg": -0.41568,
+      "appDistM": 14704.6,
+      "appHeightM": 5278.18
+     },
+     {
+      "azDeg": 208.0,
+      "diffDeg": -0.0008300000000001084,
+      "refElevDeg": 2.1496,
+      "refDistM": 611.6,
+      "refHeightM": 5345.9,
+      "appElevDeg": 2.14877,
+      "appDistM": 611.1,
+      "appHeightM": 5345.87
+     },
+     {
+      "azDeg": 205.5,
+      "diffDeg": -0.0007600000000000939,
+      "refElevDeg": 2.23684,
+      "refDistM": 598.3,
+      "refHeightM": 5346.31,
+      "appElevDeg": 2.23608,
+      "appDistM": 598.8,
+      "appHeightM": 5346.33
+     }
+    ],
+    "warnings": [
+     "Beyond about 166 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -2.9 to +4.1 m (0.7 m RMS) at 3.8 km, where the 60 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km."
+    ]
+   }
+  },
+  "apollo-15@2m": {
+   "site": {
+    "id": "apollo-15",
+    "name": "Apollo 15",
+    "kind": "landing",
+    "lat": 26.13239,
+    "lon": 3.6333
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 59,
+     "largestRaiseDeg": 0.001461023899637759,
+     "atAzDeg": 286.5,
+     "seconds": 7.8
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0038400000000002876,
+     "signedAtMaxDeg": -0.0038400000000002876,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-apollo-15.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": -1927.097412109375,
+    "appGroundM": -1927.097412109375,
+    "maxAbsDeg": 0.0038400000000002876,
+    "atAzDeg": 188.0,
+    "signedAtMaxDeg": -0.0038400000000002876,
+    "meanDeg": -0.0001252989379704244,
+    "rmsDeg": 0.0004395530411092311,
+    "appLowestDeg": -0.0038400000000002876,
+    "appHighestDeg": 0.0017499999999994742,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.23031,
+     13.47022
+    ],
+    "worst": [
+     {
+      "azDeg": 188.0,
+      "diffDeg": -0.0038400000000002876,
+      "refElevDeg": 11.72406,
+      "refDistM": 9694.8,
+      "refHeightM": 114.02,
+      "appElevDeg": 11.72022,
+      "appDistM": 9684.3,
+      "appHeightM": 111.1
+     },
+     {
+      "azDeg": 193.5,
+      "diffDeg": -0.002380000000000493,
+      "refElevDeg": 9.67819,
+      "refDistM": 9380.2,
+      "refHeightM": -300.35,
+      "appElevDeg": 9.67581,
+      "appDistM": 9371.7,
+      "appHeightM": -302.25
+     },
+     {
+      "azDeg": 192.0,
+      "diffDeg": -0.002369999999999095,
+      "refElevDeg": 10.2846,
+      "refDistM": 9324.1,
+      "refHeightM": -208.41,
+      "appElevDeg": 10.28223,
+      "appDistM": 9330,
+      "appHeightM": -207.71
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -8.5 to +7.4 m (1.8 m RMS) at 0.77 km, where the 3 m model ends; -45.9 to +73.5 m (10.9 m RMS) at 3.8 km, where the 60 m window ends; -353 to +232 m (86.1 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.075\u00b0 at 0.77 km, 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "chandrayaan-3@2m": {
+   "site": {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3",
+    "kind": "landing",
+    "lat": -69.3741,
+    "lon": 32.32
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 25,
+     "largestRaiseDeg": 0.00021693003723655124,
+     "atAzDeg": 201.0,
+     "seconds": 5.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0024399999999999977,
+     "signedAtMaxDeg": 0.0024399999999999977,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-chandrayaan-3.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 529.109619140625,
+    "appGroundM": 529.109619140625,
+    "maxAbsDeg": 0.0024399999999999977,
+    "atAzDeg": 147.5,
+    "signedAtMaxDeg": 0.0024399999999999977,
+    "meanDeg": -0.00012106203597114075,
+    "rmsDeg": 0.00039890513881107143,
+    "appLowestDeg": -0.0023199999999999887,
+    "appHighestDeg": 0.0024399999999999977,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.50968,
+     2.44096
+    ],
+    "worst": [
+     {
+      "azDeg": 147.5,
+      "diffDeg": 0.0024399999999999977,
+      "refElevDeg": 1.46911,
+      "refDistM": 36407.0,
+      "refHeightM": 1847.59,
+      "appElevDeg": 1.47155,
+      "appDistM": 36423.7,
+      "appHeightM": 1849.93
+     },
+     {
+      "azDeg": 183.0,
+      "diffDeg": -0.0023199999999999887,
+      "refElevDeg": 0.58988,
+      "refDistM": 5767.4,
+      "refHeightM": 600.09,
+      "appElevDeg": 0.58756,
+      "appDistM": 5760,
+      "appHeightM": 599.75
+     },
+     {
+      "azDeg": 155.5,
+      "diffDeg": -0.0021100000000000563,
+      "refElevDeg": 1.29119,
+      "refDistM": 36681.0,
+      "refHeightM": 1746.23,
+      "appElevDeg": 1.28908,
+      "appDistM": 36697.3,
+      "appHeightM": 1745.6
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: -21.2 to +22.7 m (6.6 m RMS) at 3.8 km, where the 60 m window ends; -221 to +127 m (52.4 m RMS) at 31 km, where the 480 m window ends. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is 0.015\u00b0 at 3.8 km, 0.002\u00b0 at 31 km."
+    ]
+   }
+  },
+  "shackleton-rim@2m": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 418,
+     "largestRaiseDeg": 0.004768426466160491,
+     "atAzDeg": 264.5,
+     "seconds": 3.2
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.00378999999999996,
+     "signedAtMaxDeg": -0.00378999999999996,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-shackleton-rim.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1730.3912127832746,
+    "appGroundM": 1730.3912127832746,
+    "maxAbsDeg": 0.004237902916162106,
+    "atAzDeg": 264.0,
+    "signedAtMaxDeg": -0.004237902916162106,
+    "meanDeg": -0.0007395605882304186,
+    "rmsDeg": 0.001206021183334582,
+    "appLowestDeg": -0.004237902916162106,
+    "appHighestDeg": 4.929623061533661e-06,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.054471065471786956,
+     5.716331075439786
+    ],
+    "worst": [
+     {
+      "azDeg": 264.0,
+      "diffDeg": -0.004237902916162106,
+      "refElevDeg": 5.638107902916162,
+      "refDistM": 44.32230707818848,
+      "refHeightM": 1736.7717574176954,
+      "appElevDeg": 5.63387,
+      "appDistM": 44.3,
+      "appHeightM": 1736.76
+     },
+     {
+      "azDeg": 129.0,
+      "diffDeg": -0.003976375103204699,
+      "refElevDeg": 3.336436375103205,
+      "refDistM": 68.90332157603956,
+      "refHeightM": 1736.4135009211077,
+      "appElevDeg": 3.33246,
+      "appDistM": 68.8,
+      "appHeightM": 1736.4
+     },
+     {
+      "azDeg": 257.0,
+      "diffDeg": -0.0038324467934396367,
+      "refElevDeg": 5.457972446793439,
+      "refDistM": 42.91554415387121,
+      "refHeightM": 1736.4963696352556,
+      "appElevDeg": 5.45414,
+      "appDistM": 42.9,
+      "appHeightM": 1736.49
+     }
+    ],
+    "warnings": [
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 598.9 h in full, from 2025-02-25 08:48 to 2025-03-22 07:42 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "connecting-ridge@2m": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 145,
+     "largestRaiseDeg": 0.0008806192562083037,
+     "atAzDeg": 177.0,
+     "seconds": 2.9
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0016599999999999948,
+     "signedAtMaxDeg": 0.0016599999999999948,
+     "over0p02": 0
+    },
+    "referenceOrigin": "round 1 stored ephemeris-check/skyline/reference-connecting-ridge.json (computed on 32ef35a; same elevation files)",
+    "referenceConvergenceDeg": null,
+    "referenceGroundM": 1955.872711592073,
+    "appGroundM": 1955.872711592073,
+    "maxAbsDeg": 0.0017942359652489137,
+    "atAzDeg": 332.0,
+    "signedAtMaxDeg": -0.0017942359652489137,
+    "meanDeg": -0.00013550997353805783,
+    "rmsDeg": 0.00040446078244078874,
+    "appLowestDeg": -0.0017942359652489137,
+    "appHighestDeg": 0.0016599999999999948,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.79972,
+     0.09733899820806803
+    ],
+    "worst": [
+     {
+      "azDeg": 332.0,
+      "diffDeg": -0.0017942359652489137,
+      "refElevDeg": -0.2937457640347511,
+      "refDistM": 313.26055714597635,
+      "refHeightM": 1956.2931281809026,
+      "appElevDeg": -0.29554,
+      "appDistM": 313,
+      "appHeightM": 1956.28
+     },
+     {
+      "azDeg": 22.0,
+      "diffDeg": -0.0017319090159014783,
+      "refElevDeg": -0.7847480909840985,
+      "refDistM": 362.82073954460037,
+      "refHeightM": 1952.93538938604,
+      "appElevDeg": -0.78648,
+      "appDistM": 363.1,
+      "appHeightM": 1952.92
+     },
+     {
+      "azDeg": 21.5,
+      "diffDeg": -0.0016796484303135406,
+      "refElevDeg": -0.7608503515696865,
+      "refDistM": 364.3306967738848,
+      "refHeightM": 1953.0671585069351,
+      "appElevDeg": -0.76253,
+      "appDistM": 364.6,
+      "appHeightM": 1953.05
+     }
+    ],
+    "warnings": [
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "ridge-top@2m": {
+   "site": {
+    "id": "pin:-89.47490,-137.44310",
+    "name": "Connecting ridge, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.4749,
+    "lon": -137.4431
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 87,
+     "largestRaiseDeg": 0.0009254930186825272,
+     "atAzDeg": 30.0,
+     "seconds": 3.2
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0015000000000000568,
+     "signedAtMaxDeg": 0.0015000000000000568,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-ridge-top@2m.json, 21 s, two marches)",
+    "referenceConvergenceDeg": 0.0012035254535596174,
+    "referenceGroundM": 1946.5726105829087,
+    "appGroundM": 1946.5726105829085,
+    "maxAbsDeg": 0.001531227288733339,
+    "atAzDeg": 66.0,
+    "signedAtMaxDeg": -0.001531227288733339,
+    "meanDeg": -3.540945682710994e-05,
+    "rmsDeg": 0.0003262592371778888,
+    "appLowestDeg": -0.001531227288733339,
+    "appHighestDeg": 0.0015000000000000568,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.83145,
+     0.6795
+    ],
+    "worst": [
+     {
+      "azDeg": 66.0,
+      "diffDeg": -0.001531227288733339,
+      "refElevDeg": -1.6142987727112668,
+      "refDistM": 222.55631897838563,
+      "refHeightM": 1942.307723189591,
+      "appElevDeg": -1.61583,
+      "appDistM": 222.5,
+      "appHeightM": 1942.3
+     },
+     {
+      "azDeg": 199.5,
+      "diffDeg": 0.0015000000000000568,
+      "refElevDeg": -1.79488,
+      "refDistM": 8954.1,
+      "refHeightM": 1690.8,
+      "appElevDeg": -1.79338,
+      "appDistM": 8952.1,
+      "appHeightM": 1691.09
+     },
+     {
+      "azDeg": 13.0,
+      "diffDeg": -0.0013100000000000334,
+      "refElevDeg": 0.39462,
+      "refDistM": 595.3,
+      "refHeightM": 1952.78,
+      "appElevDeg": 0.39331,
+      "appDistM": 596,
+      "appHeightM": 1952.77
+     }
+    ],
+    "warnings": [
+     "Beyond about 292 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "rim-top@2m": {
+   "site": {
+    "id": "pin:-89.78430,-155.90410",
+    "name": "Shackleton rim, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.7843,
+    "lon": -155.9041
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 75,
+     "largestRaiseDeg": 0.0007951180762187926,
+     "atAzDeg": 40.5,
+     "seconds": 3.1
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0015199999999999658,
+     "signedAtMaxDeg": -0.0015199999999999658,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-rim-top@2m.json, 23 s, two marches)",
+    "referenceConvergenceDeg": 0.0011138200762954575,
+    "referenceGroundM": 1735.797048259804,
+    "appGroundM": 1735.7970482598041,
+    "maxAbsDeg": 0.0016623727286704248,
+    "atAzDeg": 49.0,
+    "signedAtMaxDeg": -0.0016623727286704248,
+    "meanDeg": -2.2690657594691426e-05,
+    "rmsDeg": 0.00030148481263278374,
+    "appLowestDeg": -0.0016623727286704248,
+    "appHighestDeg": 0.0011600000000000499,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -2.65706,
+     1.04182
+    ],
+    "worst": [
+     {
+      "azDeg": 49.0,
+      "diffDeg": -0.0016623727286704248,
+      "refElevDeg": -0.8478476272713296,
+      "refDistM": 114.58865853689188,
+      "refHeightM": 1736.10336021037,
+      "appElevDeg": -0.84951,
+      "appDistM": 114.5,
+      "appHeightM": 1736.1
+     },
+     {
+      "azDeg": 39.0,
+      "diffDeg": -0.0016021035137328,
+      "refElevDeg": -0.7684078964862672,
+      "refDistM": 108.69549912108495,
+      "refHeightM": 1736.3411651541135,
+      "appElevDeg": -0.77001,
+      "appDistM": 108.8,
+      "appHeightM": 1736.34
+     },
+     {
+      "azDeg": 45.0,
+      "diffDeg": -0.001586103392174243,
+      "refElevDeg": -0.7235938966078258,
+      "refDistM": 117.3625256520858,
+      "refHeightM": 1736.3172734416878,
+      "appElevDeg": -0.72518,
+      "appDistM": 117.2,
+      "appHeightM": 1736.32
+     }
+    ],
+    "warnings": [
+     "Beyond about 298 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low."
+    ]
+   }
+  },
+  "fresh-a@2m": {
+   "site": {
+    "id": "pin:-88.46586,94.25475",
+    "name": "Fresh crest pin A (science-validation)",
+    "kind": "custom",
+    "lat": -88.46586,
+    "lon": 94.25475
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 193,
+     "largestRaiseDeg": 0.10148734390088965,
+     "atAzDeg": 97.0,
+     "seconds": 2.8
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.08810999999999947,
+     "signedAtMaxDeg": 0.08810999999999947,
+     "over0p02": 86
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-a@2m.json, 26 s, two marches)",
+    "referenceConvergenceDeg": 0.07955397905972728,
+    "referenceGroundM": -747.2950206888293,
+    "appGroundM": -747.2950206888293,
+    "maxAbsDeg": 0.017139223133354697,
+    "atAzDeg": 95.0,
+    "signedAtMaxDeg": -0.017139223133354697,
+    "meanDeg": -0.0017259639998073247,
+    "rmsDeg": 0.004111661512598531,
+    "appLowestDeg": -0.017139223133354697,
+    "appHighestDeg": 0.0013299999999998313,
+    "over0p01": 49,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     0.61989,
+     17.242327633674346
+    ],
+    "worst": [
+     {
+      "azDeg": 95.0,
+      "diffDeg": -0.017139223133354697,
+      "refElevDeg": 5.054159223133355,
+      "refDistM": 8.510406591988241,
+      "refHeightM": -744.5426515365691,
+      "appElevDeg": 5.03702,
+      "appDistM": 8.5,
+      "appHeightM": -744.54
+     },
+     {
+      "azDeg": 97.5,
+      "diffDeg": -0.016784033468310255,
+      "refElevDeg": 5.861064033468311,
+      "refDistM": 8.579552308367365,
+      "refHeightM": -744.4146585643739,
+      "appElevDeg": 5.84428,
+      "appDistM": 8.6,
+      "appHeightM": -744.42
+     },
+     {
+      "azDeg": 106.0,
+      "diffDeg": -0.016463544200682634,
+      "refElevDeg": 8.494523544200682,
+      "refDistM": 8.953273893166893,
+      "refHeightM": -743.9583693482958,
+      "appElevDeg": 8.47806,
+      "appDistM": 8.9,
+      "appHeightM": -743.96
+     }
+    ],
+    "warnings": [
+     "With the observer 2 m above the ground, the skyline in 193 of 720 directions is the ground within 28 m of the observer: the slope of the 40 m elevation grid there. Rocks and relief smaller than the grid are not in the data, so a real horizon this close can differ; a higher mast depends less on it.",
+     "Beyond about 258 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 65.4 h in full, from 2025-03-05 18:49 to 2025-03-08 12:12 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  },
+  "fresh-b@2m": {
+   "site": {
+    "id": "pin:-89.50713,-177.52577",
+    "name": "Fresh crest pin B (science-validation)",
+    "kind": "custom",
+    "lat": -89.50713,
+    "lon": -177.52577
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 6,
+     "largestRaiseDeg": 0.00028744849680428786,
+     "atAzDeg": 153.5,
+     "seconds": 3.0
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.005619999999999958,
+     "signedAtMaxDeg": 0.005619999999999958,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here earlier (skyline-masts/reference-fresh-b@2m.json, 17 s, two marches)",
+    "referenceConvergenceDeg": 0.003063707704651364,
+    "referenceGroundM": 1059.7643723159567,
+    "appGroundM": 1059.7643723159567,
+    "maxAbsDeg": 0.005619999999999958,
+    "atAzDeg": 302.5,
+    "signedAtMaxDeg": 0.005619999999999958,
+    "meanDeg": -3.306387452427214e-05,
+    "rmsDeg": 0.00037956620969433207,
+    "appLowestDeg": -0.0033399999999996766,
+    "appHighestDeg": 0.005619999999999958,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -3.25217,
+     13.04802
+    ],
+    "worst": [
+     {
+      "azDeg": 302.5,
+      "diffDeg": 0.005619999999999958,
+      "refElevDeg": -1.64139,
+      "refDistM": 49288.2,
+      "refHeightM": 348.51,
+      "appElevDeg": -1.63577,
+      "appDistM": 49278.1,
+      "appHeightM": 353.35
+     },
+     {
+      "azDeg": 248.0,
+      "diffDeg": -0.0033399999999996766,
+      "refElevDeg": 8.47154,
+      "refDistM": 1427.0,
+      "refHeightM": 1275.05,
+      "appElevDeg": 8.4682,
+      "appDistM": 1426.6,
+      "appHeightM": 1274.91
+     },
+     {
+      "azDeg": 190.0,
+      "diffDeg": -0.00198999999999927,
+      "refElevDeg": 12.75798,
+      "refDistM": 564.8,
+      "refHeightM": 1189.84,
+      "appElevDeg": 12.75599,
+      "appDistM": 564.5,
+      "appHeightM": 1189.73
+     }
+    ],
+    "warnings": [
+     "Beyond about 289 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest Earth gap runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 455.0 h in full, from 2025-03-05 13:58 to 2025-03-24 12:55 UTC; the window itself holds 1.0 h of it at most in one stretch.",
+     "The longest spell without Earth in view that touches this window has no start or end within 60 days of the window: it lasts at least 2881.0 h."
+    ]
+   }
+  }
+ },
+ "reproducibility": {
+  "id": "rim-top@0m",
+  "storedFile": "ephemeris-check/skyline/reference-rim-top@0m.json",
+  "maxAbsDeg": 0.0,
+  "groundDiffM": 0.0,
+  "seconds": 4.6
+ }
+}
