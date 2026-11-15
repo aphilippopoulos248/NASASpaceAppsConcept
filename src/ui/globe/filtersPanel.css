@@ -12,6 +12,7 @@
 .fp-missions.off { opacity: 0.45; }
 .fp-flags { margin-left: 24px; }
 .fp-flags.off { opacity: 0.45; }
+.fp-territory-note { margin: 2px 0 6px 24px; }
 .fp-summary { cursor: pointer; color: var(--text-muted); font-size: var(--fs-xs); padding: 2px 0; }
 .fp-summary:hover { color: var(--text); }
 .fp-mission-body { padding-top: var(--sp-2); }

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { SiteAnalysis } from '../analysis/types';
 import { quickmapUrl, trekUrl, type Landing } from '../data/landings';
 import { MAX_FOV_DEG, MIN_FOV_DEG } from '../scene/surface/actions';
-import { registerActions, resetActions, runAction } from './actions';
+import { TERRITORY_RULE } from '../scene/globe/territories';
+import { getAction, registerActions, resetActions, runAction } from './actions';
 import { AnalysisStore } from './analysisStore';
 import { onCommand } from './bus';
 import { createCoreActions, MAX_LOOK_FOV_DEG, MIN_LOOK_FOV_DEG } from './coreActions';
@@ -43,6 +44,28 @@ describe('core actions', () => {
     expect(await runAction('setTime', { utc: '1900-01-01' })).toMatchObject({ ok: false });
     expect(await runAction('setTime', { utc: 'tomorrow' })).toMatchObject({ ok: false });
     expect(await runAction('setTime', {})).toEqual({ ok: false, error: 'Give exactly one of `utc` or `offsetHours`.' });
+  });
+
+  it('showTerritories says what the colouring shows and that it is not ownership; showMissions reports it too (T-67, D-1)', async () => {
+    const { store } = setup();
+    const def = getAction('showTerritories')!;
+    expect(def.description).toMatch(/the whole Moon tinted by the country of the nearest landing shown/);
+    expect(def.description).toMatch(/who landed nearest, not ownership: no country owns lunar ground \(Outer Space Treaty, Article II\)/);
+    expect(getAction('showMissions')!.description).toMatch(/^Shows or hides the markers of catalogued landings on the globe\. The territory colouring \(showTerritories\) is drawn only while they are shown/);
+    const rule = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
+    expect(TERRITORY_RULE).toBe(rule);
+    // Off by default.
+    expect(store.get()).toMatchObject({ showMissions: true, showTerritories: false });
+    expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: true, territoryRule: rule } });
+    // Hiding the markers hides the colouring; showing them brings it back.
+    expect(await runAction('showMissions', { show: false })).toEqual({ ok: true, result: { showMissions: false, territoriesShown: false } });
+    expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: false, territoryRule: rule } });
+    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true } });
+    // Filters that hide every landing leave nothing to colour by.
+    await runAction('setFilters', { countries: [] });
+    expect(await runAction('showTerritories', { show: true })).toMatchObject({ ok: true, result: { territoriesShown: false } });
+    await runAction('setFilters', { reset: true });
+    expect(await runAction('showTerritories', { show: false })).toEqual({ ok: true, result: { showTerritories: false, territoriesShown: false, territoryRule: rule } });
   });
 
   it('plays, pauses and sets the rate; even lighting pauses and play restores real light', async () => {

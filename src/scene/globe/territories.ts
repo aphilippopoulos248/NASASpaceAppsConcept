@@ -48,6 +48,12 @@ export function territoryAt(lat: number, lon: number, landings: readonly Landing
   return best;
 }
 
+/**
+ * What the colouring means, in one sentence: the showMissions action's `territoryRule` and the
+ * caption under "Show previous missions" (D-1: the assistant quotes it).
+ */
+export const TERRITORY_RULE = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
+
 const ORBIT_FILL = 0.24;
 const GROUND_FILL = 0.1;
 
