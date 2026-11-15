@@ -184,8 +184,8 @@ The full record is [docs/lunyx/STATUS.md](docs/lunyx/STATUS.md), section 4, and
 data, outside sources and their own code, never from the app's implementation; they call the
 app only through its public entry points. They are not a NASA or peer review, and they were run
 by the same kind of AI model that wrote the app. Figures marked "round 3" come from the third
-round, by the science project; STATUS.md quotes them, and their records (now on
-`am/lunyx-science/agent/validation`) arrive in this repository with that project's next delivery.
+round, by the science project; its record is `tests/fixtures/validation/science-validation/`
+(the README there and the results files it names).
 
 | What | Checked against | Result |
 | --- | --- | --- |
@@ -217,11 +217,11 @@ start of setting, when the skyline first cuts the disc and power begins to fall,
 the analysis since the science project's delivery (decision D-8), but the screens and the
 assistant do not show it yet, and some panels still give the time without the words "fully
 set". This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the catalogue's current
-position, the app gives **Sun fully set 19:30 UTC**, while setting starts at 18:24 UTC (the
-science project's computation: 18:24:16 and 19:30:50 UTC), which falls inside Firefly's reported
-start of night (about 18:15 to 18:35 UTC; Firefly does not define the term). A higher mast
-moves both instants later. At
-the poles the Sun can take far longer than an hour to set.
+position, the app gives **Sun fully set 19:30 UTC**. Setting starts at 18:24 UTC, inside
+Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not define the term);
+the Sun is fully set about an hour later, at 19:30 (to the second, the analysis gives 18:24:16
+and 19:30:50 UTC; STATUS.md). A higher mast moves both instants later. At the poles the Sun can
+take far longer than an hour to set.
 
 ## What needs the network
 
@@ -292,6 +292,10 @@ centre.
   can be several minutes off (up to 14 min in one case) when a notch in the skyline is narrower
   than the analysis's 0.5° azimuth step; away from the poles instants agree within seconds
   (being refined as the original team's T-50).
+- **The drawn skyline and the analysed one.** The surface view eases each 3 m site model into its
+  60 m window at their seam, 768 m from the site, while the analysis uses the grids as stored.
+  Where that seam forms the skyline, the drawn skyline can sit up to 0.17° below the analysed one
+  (Blue Ghost, azimuth 274.5°). The numbers come from the analysis, not from the picture.
 - **Generated detail.** In the surface view, rocks, small craters and sub-metre texture are
   generated, not measured, and labelled as such; a switch turns them off. The stars behind
   the globe are decoration, not a star map, and the globe says so.

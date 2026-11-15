@@ -5,11 +5,11 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `e514747`: `am/lunyx-experience/integration` at `47b5043`
-  merged with `am/lunyx/integration` at `7d3803a` (T-22 mission presets, T-37 licence notices
-  and the DOI fix, T-38 a source for every landing, T-39 the flags, the science project's
-  deliveries), plus this task's documents. Since the published `cc736f8`, `public/` gained
-  `public/data/sources/` (S18 to S20), `public/data/presets.json` (S21) and
+- **State described:** the tree at `141a261`: `am/lunyx-experience/integration` at `4a36c4c`
+  merged with `am/lunyx/integration` at `2217dd2` (T-22 mission presets, T-37 licence notices
+  and the DOI fix, T-38 a source for every landing, T-39 the flags, all four of the science
+  project's deliveries), plus this task's documents. Since the published `cc736f8`, `public/`
+  gained `public/data/sources/` (S18 to S20), `public/data/presets.json` (S21) and
   `public/licences/` (section 6); `package.json` gained the scripts `fetch-gcat`,
   `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
@@ -61,7 +61,7 @@ Insignia, Logotype and identifiers are not in the public domain; Lunyx uses none
 | Bundled files against the SHA-256 that their build scripts recorded in `index.json` (`public/data/dem`, `heatmap`, `science/diviner`, `science/shadowcam`) | 18 of 18 files match |
 | Source checksums recorded by the build scripts against the publishers' current ones | Zenodo record 4646092: 2 of 2 MD5 match. Harvard Dataverse DVN/EGOOCL v3.0: 4 of 4 MD5 match |
 | Bundled values against the original archives | Not repeated here. The independent validation (T-26) compared 30 080 samples of the bundled `.lxg` grids with the PDS originals: equal within rounding (`tests/fixtures/validation/ephemeris-check/`, STATUS.md section 4). The site windows (S3, S4: `public/terrain/*.bin`) were not compared with their PDS sources; the 3 m and 60 m windows were compared with each other (they step by several metres at the 3 m model's edge) and with LRO LOLA laser shots at 17 of the 19 sites (the science project's T-32 verification) |
-| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 127 images in the repository | None of the 127 images carries any such metadata (see AI-USE.md section 4) |
+| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 149 images in the repository | None carries EXIF, XMP or C2PA metadata. The only embedded data: ICC colour profiles in 23 JPEG screenshots, and creation and modification times in the text chunks of two PNG screenshots (AI-USE.md section 2.4) |
 | Licences of npm packages | Read from each installed `node_modules/<package>/package.json` after `npm ci` at `cc736f8` (same lockfile as `bc5fb8e`); 93 packages installed |
 
 ## 3. Datasets bundled in `public/`
