@@ -54,6 +54,8 @@ export class SurfaceController {
     this.bindInput();
 
     onCommand('lookAt', ({ azDeg, elDeg }) => {
+      // Turned somewhere on purpose (the assistant, the skyline chart, "Turn the view to it"): tracking ends, as with a drag.
+      this.stopTracking();
       const look = store.get().look;
       this.view.setLook(azDeg, elDeg ?? look.elDeg, look.fovDeg);
     });
