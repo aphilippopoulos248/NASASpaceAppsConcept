@@ -11,6 +11,7 @@ import { MAX_NEARBY_CANDIDATES, nearbyPointCount } from './actions';
 import { redrawKeepingFocus } from './focus';
 import { bearingText, coordsText, degText, distanceText, hoursText, NOT_AVAILABLE, pctText } from './format';
 import { nearbyView, offsetName } from './nearbyView';
+import { bindScanSettings } from './scanSettings';
 import type { PanelStore } from './state';
 import type { TabKit } from './widgets';
 
@@ -25,6 +26,8 @@ export function mountNearbyTab(root: HTMLElement, panel: PanelStore, kit: TabKit
   const around = el('p', 'cmp-onscreen');
   const radius = numberField('Radius', 'm', { min: 50, max: 50_000, step: 100 });
   const spacing = numberField('Spacing', 'm', { min: 10, max: 10_000, step: 10 });
+  // What is typed in Radius and Spacing stays through every redraw; only a new scan puts its own settings there (Q-7).
+  const showNewScanSettings = bindScanSettings(radius, spacing, { panel, analysis });
   const slope = numberField('Slope at most', '°', { min: 0, max: 45, step: 0.5 }, async (v) => (v === null ? { ok: false, error: 'Give a number.' } : kit.run('setSlopeLimit', { degrees: v })));
   const scan = button('Scan nearby sites', 'ly-btn ly-btn--small ly-btn--primary', () => {
     const r = radius.read(), s = spacing.read(), limit = slope.read();
@@ -128,8 +131,7 @@ export function mountNearbyTab(root: HTMLElement, panel: PanelStore, kit: TabKit
     const s = store.get();
     const current = scenarioFromState(s);
     around.replaceChildren(el('span', 'ly-label', 'Around: '), document.createTextNode(current ? describeScenario(current) : 'no site is selected. Select a landing site or drop a pin, then scan around it.'));
-    radius.show(panel.get().nearbyRadiusM);
-    spacing.show(panel.get().nearbySpacingM);
+    showNewScanSettings();
     slope.show(s.slopeLimitDeg);
     renderCount();
 
