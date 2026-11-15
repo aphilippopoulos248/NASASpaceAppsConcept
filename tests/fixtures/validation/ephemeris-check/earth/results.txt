@@ -1,0 +1,85 @@
+im-2  (-84.7900, 29.2000), mast 2 m, 2025-03-01T00:00:00Z .. +60 days
+  Horizons: Earth elevation -2.88 .. 11.34 deg, azimuth 323.3 .. 337.8; reference skyline along that path -1.47 .. -0.90 deg
+  reference: Earth visible 79.58 % of the window (79.58 % with the skyline read every 0.5 deg); 4 risings/settings; longest gap 148.1 h
+  app app-integration (375f816, ephemeris model): Earth visible 79.57 % (-0.00 vs reference); longest gap 148.2 h; 4 risings/settings (reference 4); worst time difference 2.6 min
+      the same Horizons Earth against the app's own skyline gives 79.58 %, so the app's logic and ephemeris account for -0.01 and its skyline for +0.01 points
+      earthset  app 2025-03-19T04:07:35Z  reference 2025-03-19T04:07:45Z     -0.2 min
+      earthrise app 2025-03-25T08:18:12Z  reference 2025-03-25T08:15:54Z     +2.3 min
+      earthset  app 2025-04-15T12:49:08Z  reference 2025-04-15T12:51:47Z     -2.6 min
+      earthrise app 2025-04-21T14:46:48Z  reference 2025-04-21T14:48:50Z     -2.0 min
+  app app-analysis (ecc9793, ephemeris model): Earth visible 79.57 % (-0.01 vs reference); longest gap 148.2 h; 4 risings/settings (reference 4); worst time difference 4.5 min
+      the same Horizons Earth against the app's own skyline gives 79.58 %, so the app's logic and ephemeris account for -0.01 and its skyline for -0.00 points
+      earthset  app 2025-03-19T04:05:42Z  reference 2025-03-19T04:07:45Z     -2.1 min
+      earthrise app 2025-03-25T08:18:59Z  reference 2025-03-25T08:15:54Z     +3.1 min
+      earthset  app 2025-04-15T12:47:16Z  reference 2025-04-15T12:51:47Z     -4.5 min
+      earthrise app 2025-04-21T14:48:50Z  reference 2025-04-21T14:48:50Z     -0.0 min
+
+shackleton-rim  (-89.7800, -155.7300), mast 2 m, 2025-03-01T00:00:00Z .. +60 days
+  Horizons: Earth elevation -7.29 .. 6.34 deg, azimuth 148.1 .. 163.0; reference skyline along that path 3.13 .. 3.44 deg
+  reference: Earth visible 31.86 % of the window (31.86 % with the skyline read every 0.5 deg); 5 risings/settings; longest gap 462.6 h
+  app app-integration (375f816, ephemeris model): Earth visible 33.90 % (+2.04 vs reference); longest gap 450.9 h; 5 risings/settings (reference 5); worst time difference 359.3 min
+      the same Horizons Earth against the app's own skyline gives 33.91 %, so the app's logic and ephemeris account for -0.00 and its skyline for +2.05 points
+      earthrise app 2025-03-03T07:38:03Z  reference 2025-03-03T13:36:04Z   -358.0 min
+      earthset  app 2025-03-12T03:52:44Z  reference 2025-03-11T21:53:26Z   +359.3 min
+      earthrise app 2025-03-30T17:08:22Z  reference 2025-03-30T22:55:14Z   -346.9 min
+      earthset  app 2025-04-08T09:11:01Z  reference 2025-04-08T03:26:20Z   +344.7 min
+      earthrise app 2025-04-27T04:05:52Z  reference 2025-04-27T10:03:38Z   -357.8 min
+  app app-analysis (ecc9793, ephemeris model): Earth visible 31.91 % (+0.05 vs reference); longest gap 462.4 h; 5 risings/settings (reference 5); worst time difference 13.8 min
+      the same Horizons Earth against the app's own skyline gives 31.91 %, so the app's logic and ephemeris account for -0.00 and its skyline for +0.05 points
+      earthrise app 2025-03-03T13:22:16Z  reference 2025-03-03T13:36:04Z    -13.8 min
+      earthset  app 2025-03-11T21:54:18Z  reference 2025-03-11T21:53:26Z     +0.9 min
+      earthrise app 2025-03-30T22:43:40Z  reference 2025-03-30T22:55:14Z    -11.6 min
+      earthset  app 2025-04-08T03:29:37Z  reference 2025-04-08T03:26:20Z     +3.3 min
+      earthrise app 2025-04-27T09:51:38Z  reference 2025-04-27T10:03:38Z    -12.0 min
+
+connecting-ridge  (-89.4500, -137.2000), mast 2 m, 2025-03-01T00:00:00Z .. +60 days
+  Horizons: Earth elevation -7.46 .. 6.11 deg, azimuth 129.5 .. 144.5; reference skyline along that path -2.22 .. -0.86 deg
+  reference: Earth visible 56.00 % of the window (56.01 % with the skyline read every 0.5 deg); 4 risings/settings; longest gap 317.4 h
+  app app-integration (375f816, ephemeris model): Earth visible 56.01 % (+0.01 vs reference); longest gap 317.2 h; 4 risings/settings (reference 4); worst time difference 8.8 min
+      the same Horizons Earth against the app's own skyline gives 56.01 %, so the app's logic and ephemeris account for -0.00 and its skyline for +0.01 points
+      earthset  app 2025-03-14T18:20:14Z  reference 2025-03-14T18:21:51Z     -1.6 min
+      earthrise app 2025-03-27T22:33:40Z  reference 2025-03-27T22:35:01Z     -1.4 min
+      earthset  app 2025-04-10T23:48:03Z  reference 2025-04-10T23:39:12Z     +8.8 min
+      earthrise app 2025-04-24T05:02:16Z  reference 2025-04-24T05:00:26Z     +1.8 min
+  app app-analysis (ecc9793, ephemeris model): Earth visible 56.00 % (+0.00 vs reference); longest gap 317.3 h; 4 risings/settings (reference 4); worst time difference 4.3 min
+      the same Horizons Earth against the app's own skyline gives 56.01 %, so the app's logic and ephemeris account for -0.00 and its skyline for +0.00 points
+      earthset  app 2025-03-14T18:19:46Z  reference 2025-03-14T18:21:51Z     -2.1 min
+      earthrise app 2025-03-27T22:33:50Z  reference 2025-03-27T22:35:01Z     -1.2 min
+      earthset  app 2025-04-10T23:43:31Z  reference 2025-04-10T23:39:12Z     +4.3 min
+      earthrise app 2025-04-24T05:03:22Z  reference 2025-04-24T05:00:26Z     +2.9 min
+
+limb-east  (0.0000, 90.0000), mast 2 m, 2025-03-01T00:00:00Z .. +60 days
+  Horizons: Earth elevation -7.88 .. 6.95 deg, azimuth 263.2 .. 276.9; reference skyline along that path -0.11 .. 0.03 deg
+  reference: Earth visible 49.24 % of the window (49.24 % with the skyline read every 0.5 deg); 5 risings/settings; longest gap 354.3 h
+  app app-integration (375f816, ephemeris model): Earth visible 49.25 % (+0.01 vs reference); longest gap 354.2 h; 5 risings/settings (reference 5); worst time difference 3.4 min
+      the same Horizons Earth against the app's own skyline gives 49.25 %, so the app's logic and ephemeris account for +0.00 and its skyline for +0.01 points
+      earthrise app 2025-03-02T11:22:16Z  reference 2025-03-02T11:24:18Z     -2.0 min
+      earthset  app 2025-03-16T10:07:25Z  reference 2025-03-16T10:04:00Z     +3.4 min
+      earthrise app 2025-03-30T15:17:44Z  reference 2025-03-30T15:19:40Z     -1.9 min
+      earthset  app 2025-04-13T05:30:23Z  reference 2025-04-13T05:28:00Z     +2.4 min
+      earthrise app 2025-04-27T23:43:12Z  reference 2025-04-27T23:45:21Z     -2.2 min
+  app app-analysis (ecc9793, ephemeris model): Earth visible 49.24 % (+0.00 vs reference); longest gap 354.3 h; 5 risings/settings (reference 5); worst time difference 2.0 min
+      the same Horizons Earth against the app's own skyline gives 49.24 %, so the app's logic and ephemeris account for +0.00 and its skyline for +0.00 points
+      earthrise app 2025-03-02T11:24:08Z  reference 2025-03-02T11:24:18Z     -0.2 min
+      earthset  app 2025-03-16T10:06:01Z  reference 2025-03-16T10:04:00Z     +2.0 min
+      earthrise app 2025-03-30T15:19:27Z  reference 2025-03-30T15:19:40Z     -0.2 min
+      earthset  app 2025-04-13T05:28:59Z  reference 2025-04-13T05:28:00Z     +1.0 min
+      earthrise app 2025-04-27T23:44:55Z  reference 2025-04-27T23:45:21Z     -0.4 min
+
+limb-west  (-35.0000, -88.0000), mast 2 m, 2025-03-01T00:00:00Z .. +60 days
+  Horizons: Earth elevation -1.62 .. 5.62 deg, azimuth 79.2 .. 98.3; reference skyline along that path 2.00 .. 2.77 deg
+  reference: Earth visible 38.84 % of the window (38.85 % with the skyline read every 0.5 deg); 5 risings/settings; longest gap 446.1 h
+  app app-integration (375f816, ephemeris model): Earth visible 40.06 % (+1.21 vs reference); longest gap 436.2 h; 5 risings/settings (reference 5); worst time difference 460.8 min
+      the same Horizons Earth against the app's own skyline gives 40.07 %, so the app's logic and ephemeris account for -0.02 and its skyline for +1.23 points
+      earthset  app 2025-03-03T09:13:40Z  reference 2025-03-03T07:00:41Z   +133.0 min
+      earthrise app 2025-03-21T13:23:03Z  reference 2025-03-21T21:03:49Z   -460.8 min
+      earthset  app 2025-04-01T01:39:37Z  reference 2025-04-01T00:49:11Z    +50.4 min
+      earthrise app 2025-04-18T11:52:53Z  reference 2025-04-18T17:54:15Z   -361.4 min
+      earthset  app 2025-04-29T15:10:52Z  reference 2025-04-29T14:29:59Z    +40.9 min
+  app app-analysis (ecc9793, ephemeris model): Earth visible 38.90 % (+0.05 vs reference); longest gap 445.6 h; 5 risings/settings (reference 5); worst time difference 22.7 min
+      the same Horizons Earth against the app's own skyline gives 38.91 %, so the app's logic and ephemeris account for -0.02 and its skyline for +0.07 points
+      earthset  app 2025-03-03T07:03:12Z  reference 2025-03-03T07:00:41Z     +2.5 min
+      earthrise app 2025-03-21T20:41:10Z  reference 2025-03-21T21:03:49Z    -22.7 min
+      earthset  app 2025-04-01T00:49:46Z  reference 2025-04-01T00:49:11Z     +0.6 min
+      earthrise app 2025-04-18T17:36:48Z  reference 2025-04-18T17:54:15Z    -17.4 min
+      earthset  app 2025-04-29T14:31:01Z  reference 2025-04-29T14:29:59Z     +1.0 min

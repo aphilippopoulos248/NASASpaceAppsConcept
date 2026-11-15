@@ -1,0 +1,618 @@
+{
+ "definition": "Earth counts as visible when its centre is above the skyline (the app's definition).",
+ "sites": {
+  "im-2": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "window": {
+    "start": "2025-03-01T00:00:00Z",
+    "durationH": 1440
+   },
+   "reference": {
+    "earthVisiblePct": 79.57731382930996,
+    "earthVisiblePctSkylineEvery0p5deg": 79.57501925078255,
+    "longestGapH": 148.13578362875515,
+    "longestGapOpenEnded": false,
+    "events": [
+     {
+      "type": "earthset",
+      "utc": "2025-03-19T04:07:45Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-03-25T08:15:54Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-15T12:51:47Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-04-21T14:48:50Z"
+     }
+    ]
+   },
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "ephemeris": "model",
+     "earthVisiblePct": 79.57374855324073,
+     "diffPct": -0.00356527606922441,
+     "longestEarthGapH": 148.17708333333334,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-19T04:07:35Z",
+       "reference": "2025-03-19T04:07:45Z",
+       "appMinusReferenceMin": -0.1792103409767151
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-25T08:18:12Z",
+       "reference": "2025-03-25T08:15:54Z",
+       "appMinusReferenceMin": 2.2987719337145487
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-15T12:49:08Z",
+       "reference": "2025-04-15T12:51:47Z",
+       "appMinusReferenceMin": -2.6444520115852357
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-21T14:46:48Z",
+       "reference": "2025-04-21T14:48:50Z",
+       "appMinusReferenceMin": -2.042035762468974
+      }
+     ],
+     "eventCount": 4,
+     "worstEventDiffMin": 2.6444520115852357,
+     "horizonsEarthOnAppSkylinePct": 79.58246109398702
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "ephemeris": "model",
+     "earthVisiblePct": 79.56615306712963,
+     "diffPct": -0.011160762180324468,
+     "longestEarthGapH": 148.22135416666666,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-19T04:05:42Z",
+       "reference": "2025-03-19T04:07:45Z",
+       "appMinusReferenceMin": -2.054210340976715
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-25T08:18:59Z",
+       "reference": "2025-03-25T08:15:54Z",
+       "appMinusReferenceMin": 3.0800219337145487
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-15T12:47:16Z",
+       "reference": "2025-04-15T12:51:47Z",
+       "appMinusReferenceMin": -4.519452011585235
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-21T14:48:50Z",
+       "reference": "2025-04-21T14:48:50Z",
+       "appMinusReferenceMin": -0.010785762468973796
+      }
+     ],
+     "eventCount": 4,
+     "worstEventDiffMin": 4.519452011585235,
+     "horizonsEarthOnAppSkylinePct": 79.57504034681637
+    }
+   }
+  },
+  "shackleton-rim": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "window": {
+    "start": "2025-03-01T00:00:00Z",
+    "durationH": 1440
+   },
+   "reference": {
+    "earthVisiblePct": 31.857446650903167,
+    "earthVisiblePctSkylineEvery0p5deg": 31.86019844295526,
+    "longestGapH": 462.62156222820283,
+    "longestGapOpenEnded": false,
+    "events": [
+     {
+      "type": "earthrise",
+      "utc": "2025-03-03T13:36:04Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-03-11T21:53:26Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-03-30T22:55:14Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-08T03:26:20Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-04-27T10:03:38Z"
+     }
+    ]
+   },
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "ephemeris": "model",
+     "earthVisiblePct": 33.902180989583336,
+     "diffPct": 2.0447343386801684,
+     "longestEarthGapH": 450.9140625,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthrise",
+       "app": "2025-03-03T07:38:03Z",
+       "reference": "2025-03-03T13:36:04Z",
+       "appMinusReferenceMin": -358.024651714166
+      },
+      {
+       "type": "earthset",
+       "app": "2025-03-12T03:52:44Z",
+       "reference": "2025-03-11T21:53:26Z",
+       "appMinusReferenceMin": 359.3082471370697
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-30T17:08:22Z",
+       "reference": "2025-03-30T22:55:14Z",
+       "appMinusReferenceMin": -346.8675860762596
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-08T09:11:01Z",
+       "reference": "2025-04-08T03:26:20Z",
+       "appMinusReferenceMin": 344.67776736815773
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-27T04:05:52Z",
+       "reference": "2025-04-27T10:03:38Z",
+       "appMinusReferenceMin": -357.7722163240115
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 359.3082471370697,
+     "horizonsEarthOnAppSkylinePct": 33.906117733554154
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "ephemeris": "model",
+     "earthVisiblePct": 31.90547236689814,
+     "diffPct": 0.048025715994974405,
+     "longestEarthGapH": 462.3671875,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthrise",
+       "app": "2025-03-03T13:22:16Z",
+       "reference": "2025-03-03T13:36:04Z",
+       "appMinusReferenceMin": -13.805901714166005
+      },
+      {
+       "type": "earthset",
+       "app": "2025-03-11T21:54:18Z",
+       "reference": "2025-03-11T21:53:26Z",
+       "appMinusReferenceMin": 0.8707471370697022
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-30T22:43:40Z",
+       "reference": "2025-03-30T22:55:14Z",
+       "appMinusReferenceMin": -11.555086076259613
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-08T03:29:37Z",
+       "reference": "2025-04-08T03:26:20Z",
+       "appMinusReferenceMin": 3.2715173681577046
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-27T09:51:38Z",
+       "reference": "2025-04-27T10:03:38Z",
+       "appMinusReferenceMin": -11.990966324011485
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 13.805901714166005,
+     "horizonsEarthOnAppSkylinePct": 31.909345440391775
+    }
+   }
+  },
+  "connecting-ridge": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "window": {
+    "start": "2025-03-01T00:00:00Z",
+    "durationH": 1440
+   },
+   "reference": {
+    "earthVisiblePct": 56.00184367384624,
+    "earthVisiblePctSkylineEvery0p5deg": 56.006000567250595,
+    "longestGapH": 317.3539783974489,
+    "longestGapOpenEnded": false,
+    "events": [
+     {
+      "type": "earthset",
+      "utc": "2025-03-14T18:21:51Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-03-27T22:35:01Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-10T23:39:12Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-04-24T05:00:26Z"
+     }
+    ]
+   },
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "ephemeris": "model",
+     "earthVisiblePct": 56.00965711805556,
+     "diffPct": 0.007813444209318732,
+     "longestEarthGapH": 317.2369791666667,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-14T18:20:14Z",
+       "reference": "2025-03-14T18:21:51Z",
+       "appMinusReferenceMin": -1.6213646332422893
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-27T22:33:40Z",
+       "reference": "2025-03-27T22:35:01Z",
+       "appMinusReferenceMin": -1.3522265831629434
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-10T23:48:03Z",
+       "reference": "2025-04-10T23:39:12Z",
+       "appMinusReferenceMin": 8.846628936131795
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-24T05:02:16Z",
+       "reference": "2025-04-24T05:00:26Z",
+       "appMinusReferenceMin": 1.8266750892003378
+      }
+     ],
+     "eventCount": 4,
+     "worstEventDiffMin": 8.846628936131795,
+     "horizonsEarthOnAppSkylinePct": 56.01291852298618
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "ephemeris": "model",
+     "earthVisiblePct": 56.00242332175926,
+     "diffPct": 0.0005796479130211196,
+     "longestEarthGapH": 317.3307291666667,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-14T18:19:46Z",
+       "reference": "2025-03-14T18:21:51Z",
+       "appMinusReferenceMin": -2.090114633242289
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-27T22:33:50Z",
+       "reference": "2025-03-27T22:35:01Z",
+       "appMinusReferenceMin": -1.1959765831629434
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-10T23:43:31Z",
+       "reference": "2025-04-10T23:39:12Z",
+       "appMinusReferenceMin": 4.315378936131795
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-24T05:03:22Z",
+       "reference": "2025-04-24T05:00:26Z",
+       "appMinusReferenceMin": 2.9204250892003376
+      }
+     ],
+     "eventCount": 4,
+     "worstEventDiffMin": 4.315378936131795,
+     "horizonsEarthOnAppSkylinePct": 56.00558803530847
+    }
+   }
+  },
+  "limb-east": {
+   "site": {
+    "id": "pin:0.00000,90.00000",
+    "name": "East limb",
+    "kind": "custom",
+    "lat": 0,
+    "lon": 90
+   },
+   "window": {
+    "start": "2025-03-01T00:00:00Z",
+    "durationH": 1440
+   },
+   "reference": {
+    "earthVisiblePct": 49.23920743516934,
+    "earthVisiblePctSkylineEvery0p5deg": 49.239176669960585,
+    "longestGapH": 354.28917400340237,
+    "longestGapOpenEnded": false,
+    "events": [
+     {
+      "type": "earthrise",
+      "utc": "2025-03-02T11:24:18Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-03-16T10:04:00Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-03-30T15:19:40Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-13T05:28:00Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-04-27T23:45:21Z"
+     }
+    ]
+   },
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "ephemeris": "model",
+     "earthVisiblePct": 49.25302010995371,
+     "diffPct": 0.01381267478436854,
+     "longestEarthGapH": 354.2135416666667,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthrise",
+       "app": "2025-03-02T11:22:16Z",
+       "reference": "2025-03-02T11:24:18Z",
+       "appMinusReferenceMin": -2.030214373270671
+      },
+      {
+       "type": "earthset",
+       "app": "2025-03-16T10:07:25Z",
+       "reference": "2025-03-16T10:04:00Z",
+       "appMinusReferenceMin": 3.4258746186892193
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-30T15:17:44Z",
+       "reference": "2025-03-30T15:19:40Z",
+       "appMinusReferenceMin": -1.9401218175888062
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-13T05:30:23Z",
+       "reference": "2025-04-13T05:28:00Z",
+       "appMinusReferenceMin": 2.3844841281572977
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-27T23:43:12Z",
+       "reference": "2025-04-27T23:45:21Z",
+       "appMinusReferenceMin": -2.1534560759862265
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 3.4258746186892193,
+     "horizonsEarthOnAppSkylinePct": 49.249678936747856
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "ephemeris": "model",
+     "earthVisiblePct": 49.243616174768526,
+     "diffPct": 0.004408739599185196,
+     "longestEarthGapH": 354.265625,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthrise",
+       "app": "2025-03-02T11:24:08Z",
+       "reference": "2025-03-02T11:24:18Z",
+       "appMinusReferenceMin": -0.15521437327067059
+      },
+      {
+       "type": "earthset",
+       "app": "2025-03-16T10:06:01Z",
+       "reference": "2025-03-16T10:04:00Z",
+       "appMinusReferenceMin": 2.0196246186892193
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-30T15:19:27Z",
+       "reference": "2025-03-30T15:19:40Z",
+       "appMinusReferenceMin": -0.22137181758880614
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-13T05:28:59Z",
+       "reference": "2025-04-13T05:28:00Z",
+       "appMinusReferenceMin": 0.9782341281572978
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-27T23:44:55Z",
+       "reference": "2025-04-27T23:45:21Z",
+       "appMinusReferenceMin": -0.4347060759862264
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 2.0196246186892193,
+     "horizonsEarthOnAppSkylinePct": 49.24046567429179
+    }
+   }
+  },
+  "limb-west": {
+   "site": {
+    "id": "pin:-35.00000,-88.00000",
+    "name": "West limb",
+    "kind": "custom",
+    "lat": -35,
+    "lon": -88
+   },
+   "window": {
+    "start": "2025-03-01T00:00:00Z",
+    "durationH": 1440
+   },
+   "reference": {
+    "earthVisiblePct": 38.84466945413546,
+    "earthVisiblePctSkylineEvery0p5deg": 38.84645391842005,
+    "longestGapH": 446.05224156081675,
+    "longestGapOpenEnded": false,
+    "events": [
+     {
+      "type": "earthset",
+      "utc": "2025-03-03T07:00:41Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-03-21T21:03:49Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-01T00:49:11Z"
+     },
+     {
+      "type": "earthrise",
+      "utc": "2025-04-18T17:54:15Z"
+     },
+     {
+      "type": "earthset",
+      "utc": "2025-04-29T14:29:59Z"
+     }
+    ]
+   },
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "ephemeris": "model",
+     "earthVisiblePct": 40.05579065393519,
+     "diffPct": 1.2111211997997273,
+     "longestEarthGapH": 436.15625,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-03T09:13:40Z",
+       "reference": "2025-03-03T07:00:41Z",
+       "appMinusReferenceMin": 132.982871790727
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-21T13:23:03Z",
+       "reference": "2025-03-21T21:03:49Z",
+       "appMinusReferenceMin": -460.77662185827893
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-01T01:39:37Z",
+       "reference": "2025-04-01T00:49:11Z",
+       "appMinusReferenceMin": 50.42427193323771
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-18T11:52:53Z",
+       "reference": "2025-04-18T17:54:15Z",
+       "appMinusReferenceMin": -361.35288123289746
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-29T15:10:52Z",
+       "reference": "2025-04-29T14:29:59Z",
+       "appMinusReferenceMin": 40.872069811820985
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 460.77662185827893,
+     "horizonsEarthOnAppSkylinePct": 40.07269416389366
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "ephemeris": "model",
+     "earthVisiblePct": 38.895851417824076,
+     "diffPct": 0.05118196368861305,
+     "longestEarthGapH": 445.6328125,
+     "earthGapOpenEnded": false,
+     "events": [
+      {
+       "type": "earthset",
+       "app": "2025-03-03T07:03:12Z",
+       "reference": "2025-03-03T07:00:41Z",
+       "appMinusReferenceMin": 2.5141217907269797
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-03-21T20:41:10Z",
+       "reference": "2025-03-21T21:03:49Z",
+       "appMinusReferenceMin": -22.65162185827891
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-01T00:49:46Z",
+       "reference": "2025-04-01T00:49:11Z",
+       "appMinusReferenceMin": 0.5805219332377116
+      },
+      {
+       "type": "earthrise",
+       "app": "2025-04-18T17:36:48Z",
+       "reference": "2025-04-18T17:54:15Z",
+       "appMinusReferenceMin": -17.446631232897442
+      },
+      {
+       "type": "earthset",
+       "app": "2025-04-29T14:31:01Z",
+       "reference": "2025-04-29T14:29:59Z",
+       "appMinusReferenceMin": 1.028319811820984
+      }
+     ],
+     "eventCount": 5,
+     "worstEventDiffMin": 22.65162185827891,
+     "horizonsEarthOnAppSkylinePct": 38.91255887101554
+    }
+   }
+  }
+ }
+}

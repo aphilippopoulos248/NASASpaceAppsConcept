@@ -1,0 +1,995 @@
+{
+ "limitDeg": 0.1,
+ "reference": "lib/skyline.py: 0.1 m steps to 200 m, then 0.05 % of distance, to 500 km; 3-D elevation of every sample. referenceConvergenceDeg is the largest change when both step sizes are halved.",
+ "sites": {
+  "im-2": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "mastHeightM": 2,
+   "referenceGroundM": 5320.7685546875,
+   "referenceConvergenceDeg": 0.0017619165820081384,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA ldem_80s_20m, 60 m site window",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA ldem_80s_20m, 480 m site window",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 5320.7685546875,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.0355198288746954,
+     "atAzDeg": 208.0,
+     "signedAtMaxDeg": -0.0355198288746954,
+     "meanDeg": -0.003032929285774767,
+     "rmsDeg": 0.006223833924981923,
+     "appLowestDeg": -0.0355198288746954,
+     "appHighestDeg": 0.0002848306031790204,
+     "over0p02": 19,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 188580,
+     "runs": []
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 5320.7685546875,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.0022848727862306295,
+     "atAzDeg": 5.5,
+     "signedAtMaxDeg": 0.0022848727862306295,
+     "meanDeg": -3.790150799698564e-05,
+     "rmsDeg": 0.00024256434256939382,
+     "appLowestDeg": -0.0014829918804890596,
+     "appHighestDeg": 0.0022848727862306295,
+     "over0p02": 0,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 188580,
+     "runs": []
+    }
+   }
+  },
+  "apollo-15": {
+   "site": {
+    "id": "apollo-15",
+    "name": "Apollo 15",
+    "kind": "landing",
+    "lat": 26.13239,
+    "lon": 3.6333
+   },
+   "mastHeightM": 2,
+   "referenceGroundM": -1927.097412109375,
+   "referenceConvergenceDeg": 0.0016318807903754617,
+   "layers": [
+    "LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG (2.0 m), 3 m site window",
+    "SLDEM2015 512 ppd, 60 m site window",
+    "SLDEM2015 512 ppd, 480 m site window",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": -1927.097412109375,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.06830626294128983,
+     "atAzDeg": 103.5,
+     "signedAtMaxDeg": -0.06830626294128983,
+     "meanDeg": -0.009824295835623205,
+     "rmsDeg": 0.015830125213938808,
+     "appLowestDeg": -0.06830626294128983,
+     "appHighestDeg": 0.0011616809184413768,
+     "over0p02": 123,
+     "over0p05": 15,
+     "overLimit": 0,
+     "appMaxRangeM": 203564,
+     "runs": []
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": -1927.097412109375,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.0034358540720749176,
+     "atAzDeg": 309.0,
+     "signedAtMaxDeg": -0.0034358540720749176,
+     "meanDeg": -0.0001229902800676551,
+     "rmsDeg": 0.0004776670180332001,
+     "appLowestDeg": -0.0034358540720749176,
+     "appHighestDeg": 0.0013913292207980987,
+     "over0p02": 0,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 203564,
+     "runs": []
+    }
+   }
+  },
+  "chandrayaan-3": {
+   "site": {
+    "id": "chandrayaan-3",
+    "name": "Chandrayaan-3",
+    "kind": "landing",
+    "lat": -69.3741,
+    "lon": 32.32
+   },
+   "mastHeightM": 2,
+   "referenceGroundM": 529.109619140625,
+   "referenceConvergenceDeg": 0.0035022554258099525,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA ldem_60s_60m, 60 m site window",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA ldem_60s_60m, 480 m site window",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 529.109619140625,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.072510623022495,
+     "atAzDeg": 160.0,
+     "signedAtMaxDeg": -0.072510623022495,
+     "meanDeg": -0.008497275312647757,
+     "rmsDeg": 0.013524614978138637,
+     "appLowestDeg": -0.072510623022495,
+     "appHighestDeg": 0.0012582473964233287,
+     "over0p02": 87,
+     "over0p05": 7,
+     "overLimit": 0,
+     "appMaxRangeM": 173031,
+     "runs": []
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 529.109619140625,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.014395580942070385,
+     "atAzDeg": 289.0,
+     "signedAtMaxDeg": -0.014395580942070385,
+     "meanDeg": -0.0002620530904255308,
+     "rmsDeg": 0.0008616688534842169,
+     "appLowestDeg": -0.014395580942070385,
+     "appHighestDeg": 0.002708845513277769,
+     "over0p02": 0,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 173031,
+     "runs": []
+    }
+   }
+  },
+  "shackleton-rim": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "mastHeightM": 2,
+   "referenceGroundM": 1730.3912127832746,
+   "referenceConvergenceDeg": 0.004566073687664485,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1730.3912127832746,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 1.0396714462409884,
+     "atAzDeg": 269.5,
+     "signedAtMaxDeg": -1.0396714462409884,
+     "meanDeg": -0.2662110809494524,
+     "rmsDeg": 0.40894643444759776,
+     "appLowestDeg": -1.0396714462409884,
+     "appHighestDeg": 3.777507107116662e-06,
+     "over0p02": 599,
+     "over0p05": 487,
+     "overLimit": 381,
+     "appMaxRangeM": 176172,
+     "runs": [
+      {
+       "azFromDeg": 21.5,
+       "azToDeg": 36.5,
+       "count": 31,
+       "worstDeg": -0.47889900261126894,
+       "worstAzDeg": 28.5,
+       "refElevDeg": 1.518149002611269,
+       "refDistM": 97.79999999999872,
+       "refHeightM": 1734.9885402906323,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 1.03925,
+       "appDistM": 112,
+       "appHeightM": 1734.43
+      },
+      {
+       "azFromDeg": 81.5,
+       "azToDeg": 82.0,
+       "count": 2,
+       "worstDeg": -0.1063529274042998,
+       "worstAzDeg": 81.5,
+       "refElevDeg": 1.4877829274042997,
+       "refDistM": 80.99999999999967,
+       "refHeightM": 1734.4989795181484,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 1.38143,
+       "appDistM": 84,
+       "appHeightM": 1734.42
+      },
+      {
+       "azFromDeg": 114.0,
+       "azToDeg": 174.0,
+       "count": 121,
+       "worstDeg": -0.8505688024365274,
+       "worstAzDeg": 124.5,
+       "refElevDeg": 3.2554088024365275,
+       "refDistM": 72.00000000000018,
+       "refHeightM": 1736.4920744359486,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.40484,
+       "appDistM": 84,
+       "appHeightM": 1735.92
+      },
+      {
+       "azFromDeg": 212.5,
+       "azToDeg": 285.5,
+       "count": 147,
+       "worstDeg": -1.0396714462409884,
+       "worstAzDeg": 269.5,
+       "refElevDeg": 5.715001446240988,
+       "refDistM": 46.000000000000384,
+       "refHeightM": 1736.9999994990296,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 4.67533,
+       "appDistM": 56,
+       "appHeightM": 1736.98
+      },
+      {
+       "azFromDeg": 301.0,
+       "azToDeg": 324.0,
+       "count": 47,
+       "worstDeg": -0.20423058845589637,
+       "worstAzDeg": 316.0,
+       "refElevDeg": 2.541440588455896,
+       "refDistM": 62.10000000000061,
+       "refHeightM": 1735.1514234583315,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.33721,
+       "appDistM": 56,
+       "appHeightM": 1734.68
+      },
+      {
+       "azFromDeg": 334.0,
+       "azToDeg": 350.0,
+       "count": 33,
+       "worstDeg": -0.16697844202103784,
+       "worstAzDeg": 344.5,
+       "refElevDeg": 1.3726484420210379,
+       "refDistM": 99.59999999999862,
+       "refHeightM": 1734.7830507193842,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 1.20567,
+       "appDistM": 84,
+       "appHeightM": 1734.16
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1730.3912127832746,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.050454132556751574,
+     "atAzDeg": 261.5,
+     "signedAtMaxDeg": -0.050454132556751574,
+     "meanDeg": -0.006404608727230168,
+     "rmsDeg": 0.011507166098007783,
+     "appLowestDeg": -0.050454132556751574,
+     "appHighestDeg": 0.003258940873736016,
+     "over0p02": 72,
+     "over0p05": 1,
+     "overLimit": 0,
+     "appMaxRangeM": 176172,
+     "runs": []
+    }
+   }
+  },
+  "connecting-ridge": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "mastHeightM": 2,
+   "referenceGroundM": 1955.872711592073,
+   "referenceConvergenceDeg": 0.0011417714002288637,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1955.872711592073,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.27240644213144083,
+     "atAzDeg": 166.0,
+     "signedAtMaxDeg": -0.27240644213144083,
+     "meanDeg": -0.018457038677658445,
+     "rmsDeg": 0.04026546878465712,
+     "appLowestDeg": -0.27240644213144083,
+     "appHighestDeg": 0.0010523401108022412,
+     "over0p02": 190,
+     "over0p05": 87,
+     "overLimit": 19,
+     "appMaxRangeM": 279930,
+     "runs": [
+      {
+       "azFromDeg": 161.0,
+       "azToDeg": 169.0,
+       "count": 17,
+       "worstDeg": -0.27240644213144083,
+       "worstAzDeg": 166.0,
+       "refElevDeg": -0.7770335578685591,
+       "refDistM": 65.20000000000057,
+       "refHeightM": 1956.9886571332759,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.04944,
+       "appDistM": 56,
+       "appHeightM": 1956.85
+      },
+      {
+       "azFromDeg": 256.0,
+       "azToDeg": 256.5,
+       "count": 2,
+       "worstDeg": -0.12150471678757935,
+       "worstAzDeg": 256.5,
+       "refElevDeg": -2.3992452832124207,
+       "refDistM": 128.099999999997,
+       "refHeightM": 1952.504117144399,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -2.52075,
+       "appDistM": 61655.5,
+       "appHeightM": 337.69
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1955.872711592073,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.011671380540088538,
+     "atAzDeg": 221.5,
+     "signedAtMaxDeg": -0.011671380540088538,
+     "meanDeg": -0.0005180664554362207,
+     "rmsDeg": 0.0014208912287890815,
+     "appLowestDeg": -0.011671380540088538,
+     "appHighestDeg": 0.0014446657190543277,
+     "over0p02": 0,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 279930,
+     "runs": []
+    }
+   }
+  },
+  "shackleton-rim@0m": {
+   "site": {
+    "id": "pin:-89.78000,-155.73000",
+    "name": "Shackleton rim",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73
+   },
+   "mastHeightM": 0,
+   "referenceGroundM": 1730.3912127832746,
+   "referenceConvergenceDeg": 0.002083311889164108,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1730.3912127832746,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.8674528346404404,
+     "atAzDeg": 269.5,
+     "signedAtMaxDeg": -0.8674528346404404,
+     "meanDeg": -0.2044436128843266,
+     "rmsDeg": 0.28236410690959046,
+     "appLowestDeg": -0.8674528346404404,
+     "appHighestDeg": -1.0044872255310366e-05,
+     "over0p02": 645,
+     "over0p05": 578,
+     "overLimit": 433,
+     "appMaxRangeM": 145452,
+     "runs": [
+      {
+       "azFromDeg": 23.0,
+       "azToDeg": 40.5,
+       "count": 36,
+       "worstDeg": -0.5028824714145848,
+       "worstAzDeg": 29.0,
+       "refElevDeg": 2.6955024714145845,
+       "refDistM": 97.19999999999875,
+       "refHeightM": 1734.974693076443,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.19262,
+       "appDistM": 84,
+       "appHeightM": 1733.61
+      },
+      {
+       "azFromDeg": 57.5,
+       "azToDeg": 84.0,
+       "count": 54,
+       "worstDeg": -0.18534571482760587,
+       "worstAzDeg": 71.5,
+       "refElevDeg": 2.3758757148276057,
+       "refDistM": 78.29999999999983,
+       "refHeightM": 1733.644937550214,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.19053,
+       "appDistM": 84,
+       "appHeightM": 1733.61
+      },
+      {
+       "azFromDeg": 97.5,
+       "azToDeg": 162.5,
+       "count": 131,
+       "worstDeg": -0.6042572244458944,
+       "worstAzDeg": 124.0,
+       "refElevDeg": 4.814197224445894,
+       "refDistM": 72.30000000000017,
+       "refHeightM": 1736.4880470974008,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 4.20994,
+       "appDistM": 56,
+       "appHeightM": 1734.52
+      },
+      {
+       "azFromDeg": 176.5,
+       "azToDeg": 225.0,
+       "count": 98,
+       "worstDeg": -0.42387613541478153,
+       "worstAzDeg": 188.5,
+       "refElevDeg": 4.659476135414781,
+       "refDistM": 39.50000000000029,
+       "refHeightM": 1733.614241186496,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 4.2356,
+       "appDistM": 28,
+       "appHeightM": 1732.47
+      },
+      {
+       "azFromDeg": 244.0,
+       "azToDeg": 286.5,
+       "count": 86,
+       "worstDeg": -0.8674528346404404,
+       "worstAzDeg": 269.5,
+       "refElevDeg": 8.16700283464044,
+       "refDistM": 45.90000000000038,
+       "refHeightM": 1736.9857155669715,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 7.29955,
+       "appDistM": 28,
+       "appHeightM": 1733.98
+      },
+      {
+       "azFromDeg": 338.5,
+       "azToDeg": 352.0,
+       "count": 28,
+       "worstDeg": -0.15542145727516488,
+       "worstAzDeg": 346.0,
+       "refElevDeg": 2.686221457275165,
+       "refDistM": 59.400000000000574,
+       "refHeightM": 1733.1819260769264,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.5308,
+       "appDistM": 84,
+       "appHeightM": 1734.11
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1730.3912127832746,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.026539671097069117,
+     "atAzDeg": 267.5,
+     "signedAtMaxDeg": -0.026539671097069117,
+     "meanDeg": -0.0036432517732154657,
+     "rmsDeg": 0.0069197514518320735,
+     "appLowestDeg": -0.026539671097069117,
+     "appHighestDeg": 0.0010933458613973102,
+     "over0p02": 30,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 145452,
+     "runs": []
+    }
+   }
+  },
+  "connecting-ridge@0m": {
+   "site": {
+    "id": "pin:-89.45000,-137.20000",
+    "name": "Connecting ridge",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2
+   },
+   "mastHeightM": 0,
+   "referenceGroundM": 1955.872711592073,
+   "referenceConvergenceDeg": 0.0008945940720819223,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1955.872711592073,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 2.5362068212637183,
+     "atAzDeg": 66.0,
+     "signedAtMaxDeg": -2.5362068212637183,
+     "meanDeg": -0.7462695409587771,
+     "rmsDeg": 1.1545883080993713,
+     "appLowestDeg": -2.5362068212637183,
+     "appHighestDeg": -3.905384938995837e-06,
+     "over0p02": 582,
+     "over0p05": 477,
+     "overLimit": 429,
+     "appMaxRangeM": 258449,
+     "runs": [
+      {
+       "azFromDeg": 28.5,
+       "azToDeg": 186.5,
+       "count": 317,
+       "worstDeg": -2.5362068212637183,
+       "worstAzDeg": 66.0,
+       "refElevDeg": 0.6888368212637181,
+       "refDistM": 0.1,
+       "refHeightM": 1955.8739152535525,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.84737,
+       "appDistM": 28,
+       "appHeightM": 1954.97
+      },
+      {
+       "azFromDeg": 198.0,
+       "azToDeg": 201.0,
+       "count": 7,
+       "worstDeg": -0.11745414382875885,
+       "worstAzDeg": 199.0,
+       "refElevDeg": 1.778734143828759,
+       "refDistM": 35.90000000000024,
+       "refHeightM": 1956.9892040153504,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 1.66128,
+       "appDistM": 28,
+       "appHeightM": 1956.69
+      },
+      {
+       "azFromDeg": 233.0,
+       "azToDeg": 285.0,
+       "count": 105,
+       "worstDeg": -0.38032806491625104,
+       "worstAzDeg": 252.0,
+       "refElevDeg": -0.9326719350837489,
+       "refDistM": 0.1,
+       "refHeightM": 1955.8710817988504,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.313,
+       "appDistM": 28,
+       "appHeightM": 1955.23
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1955.872711592073,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 1.0931301104281848,
+     "atAzDeg": 55.5,
+     "signedAtMaxDeg": -1.0931301104281848,
+     "meanDeg": -0.19220881873655485,
+     "rmsDeg": 0.3816681442935,
+     "appLowestDeg": -1.0931301104281848,
+     "appHighestDeg": 0.0009064967816785341,
+     "over0p02": 326,
+     "over0p05": 308,
+     "overLimit": 278,
+     "appMaxRangeM": 258449,
+     "runs": [
+      {
+       "azFromDeg": 29.5,
+       "azToDeg": 123.5,
+       "count": 189,
+       "worstDeg": -1.0931301104281848,
+       "worstAzDeg": 55.5,
+       "refElevDeg": 0.2504001104281848,
+       "refDistM": 0.1,
+       "refHeightM": 1955.8731491201822,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -0.84273,
+       "appDistM": 12.3,
+       "appHeightM": 1955.69
+      },
+      {
+       "azFromDeg": 241.0,
+       "azToDeg": 285.0,
+       "count": 89,
+       "worstDeg": -0.21730234376664082,
+       "worstAzDeg": 272.0,
+       "refElevDeg": -1.649817656233359,
+       "refDistM": 0.1,
+       "refHeightM": 1955.8698280812182,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.86712,
+       "appDistM": 12.3,
+       "appHeightM": 1955.47
+      }
+     ]
+    }
+   }
+  },
+  "ridge-top@0m": {
+   "site": {
+    "id": "pin:-89.47490,-137.44310",
+    "name": "Connecting ridge, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.4749,
+    "lon": -137.4431
+   },
+   "mastHeightM": 0,
+   "referenceGroundM": 1946.5726105829087,
+   "referenceConvergenceDeg": 0.0012006952728229603,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1946.5726105829085,
+     "groundDiffM": -2.2737367544323206e-13,
+     "maxAbsDeg": 1.6163604827414746,
+     "atAzDeg": 313.0,
+     "signedAtMaxDeg": -1.6163604827414746,
+     "meanDeg": -0.717472668903209,
+     "rmsDeg": 0.9432368998031321,
+     "appLowestDeg": -1.6163604827414746,
+     "appHighestDeg": 0.0013550176361361022,
+     "over0p02": 493,
+     "over0p05": 488,
+     "overLimit": 475,
+     "appMaxRangeM": 267903,
+     "runs": [
+      {
+       "azFromDeg": 248.5,
+       "azToDeg": 125.5,
+       "count": 475,
+       "worstDeg": -1.6163604827414746,
+       "worstAzDeg": 313.0,
+       "refElevDeg": 1.7368304827414747,
+       "refDistM": 0.1,
+       "refHeightM": 1946.5756462531294,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 0.12047,
+       "appDistM": 28,
+       "appHeightM": 1946.63
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1946.5726105829085,
+     "groundDiffM": -2.2737367544323206e-13,
+     "maxAbsDeg": 0.25888048274147457,
+     "atAzDeg": 313.0,
+     "signedAtMaxDeg": -0.25888048274147457,
+     "meanDeg": -0.07388790501432019,
+     "rmsDeg": 0.10788973681225955,
+     "appLowestDeg": -0.25888048274147457,
+     "appHighestDeg": 0.0016983344903118702,
+     "over0p02": 406,
+     "over0p05": 380,
+     "overLimit": 265,
+     "appMaxRangeM": 267903,
+     "runs": [
+      {
+       "azFromDeg": 31.0,
+       "azToDeg": 72.5,
+       "count": 84,
+       "worstDeg": -0.20583996659590031,
+       "worstAzDeg": 55.0,
+       "refElevDeg": 2.3820899665959003,
+       "refDistM": 0.1,
+       "refHeightM": 1946.5767751750134,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.17625,
+       "appDistM": 12.3,
+       "appHeightM": 1947.04
+      },
+      {
+       "azFromDeg": 81.0,
+       "azToDeg": 104.0,
+       "count": 47,
+       "worstDeg": -0.10885041816454788,
+       "worstAzDeg": 92.5,
+       "refElevDeg": 0.5004104181645479,
+       "refDistM": 0.1,
+       "refHeightM": 1946.5734849673909,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 0.39156,
+       "appDistM": 12.3,
+       "appHeightM": 1946.66
+      },
+      {
+       "azFromDeg": 261.0,
+       "azToDeg": 284.0,
+       "count": 47,
+       "worstDeg": -0.1088482410103051,
+       "worstAzDeg": 272.5,
+       "refElevDeg": -0.5022017589896949,
+       "refDistM": 0.1,
+       "refHeightM": 1946.5717330737978,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -0.61105,
+       "appDistM": 12.3,
+       "appHeightM": 1946.44
+      },
+      {
+       "azFromDeg": 293.5,
+       "azToDeg": 336.5,
+       "count": 87,
+       "worstDeg": -0.25888048274147457,
+       "worstAzDeg": 313.0,
+       "refElevDeg": 1.7368304827414747,
+       "refDistM": 0.1,
+       "refHeightM": 1946.5756462531294,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 1.47795,
+       "appDistM": 12.3,
+       "appHeightM": 1946.89
+      }
+     ]
+    }
+   }
+  },
+  "rim-top@0m": {
+   "site": {
+    "id": "pin:-89.78430,-155.90410",
+    "name": "Shackleton rim, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.7843,
+    "lon": -155.9041
+   },
+   "mastHeightM": 0,
+   "referenceGroundM": 1735.797048259804,
+   "referenceConvergenceDeg": 0.0011418031927221683,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 1735.7970482598041,
+     "groundDiffM": 2.2737367544323206e-13,
+     "maxAbsDeg": 5.015182173565249,
+     "atAzDeg": 250.5,
+     "signedAtMaxDeg": -5.015182173565249,
+     "meanDeg": -1.413328667160961,
+     "rmsDeg": 2.316555638916161,
+     "appLowestDeg": -5.015182173565249,
+     "appHighestDeg": 8.408925305491977e-05,
+     "over0p02": 597,
+     "over0p05": 541,
+     "overLimit": 468,
+     "appMaxRangeM": 245378,
+     "runs": [
+      {
+       "azFromDeg": 37.5,
+       "azToDeg": 38.5,
+       "count": 3,
+       "worstDeg": -0.1186083856640798,
+       "worstAzDeg": 38.5,
+       "refElevDeg": 0.2754383856640798,
+       "refDistM": 106.7999999999982,
+       "refHeightM": 1736.3142715158986,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 0.15683,
+       "appDistM": 84,
+       "appHeightM": 1736.03
+      },
+      {
+       "azFromDeg": 55.5,
+       "azToDeg": 93.5,
+       "count": 77,
+       "worstDeg": -0.3795934500041934,
+       "worstAzDeg": 79.0,
+       "refElevDeg": -0.6008565499958066,
+       "refDistM": 71.50000000000021,
+       "refHeightM": 1735.0479295023008,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -0.98045,
+       "appDistM": 84,
+       "appHeightM": 1734.36
+      },
+      {
+       "azFromDeg": 103.5,
+       "azToDeg": 128.0,
+       "count": 50,
+       "worstDeg": -0.24357373779328895,
+       "worstAzDeg": 113.5,
+       "refElevDeg": -1.702826262206711,
+       "refDistM": 41.70000000000032,
+       "refHeightM": 1734.5566256487853,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.9464,
+       "appDistM": 28,
+       "appHeightM": 1734.84
+      },
+      {
+       "azFromDeg": 162.0,
+       "azToDeg": 328.5,
+       "count": 334,
+       "worstDeg": -5.015182173565249,
+       "worstAzDeg": 250.5,
+       "refElevDeg": 3.2916621735652485,
+       "refDistM": 10.29999999999998,
+       "refHeightM": 1736.3900612775615,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": -1.72352,
+       "appDistM": 28,
+       "appHeightM": 1734.95
+      },
+      {
+       "azFromDeg": 349.0,
+       "azToDeg": 350.5,
+       "count": 4,
+       "worstDeg": -0.13184566130323222,
+       "worstAzDeg": 349.0,
+       "refElevDeg": 0.48565566130323223,
+       "refDistM": 132.29999999999677,
+       "refHeightM": 1736.9246517029849,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 0.35381,
+       "appDistM": 140,
+       "appHeightM": 1736.67
+      }
+     ]
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 1735.7970482598041,
+     "groundDiffM": 2.2737367544323206e-13,
+     "maxAbsDeg": 1.2252045112342005,
+     "atAzDeg": 243.5,
+     "signedAtMaxDeg": -1.2252045112342005,
+     "meanDeg": -0.1917988754942944,
+     "rmsDeg": 0.39891619220805274,
+     "appLowestDeg": -1.2252045112342005,
+     "appHighestDeg": 0.0007853989006434414,
+     "over0p02": 307,
+     "over0p05": 288,
+     "overLimit": 261,
+     "appMaxRangeM": 245378,
+     "runs": [
+      {
+       "azFromDeg": 170.0,
+       "azToDeg": 276.5,
+       "count": 214,
+       "worstDeg": -1.2252045112342005,
+       "worstAzDeg": 243.5,
+       "refElevDeg": 3.2279545112342003,
+       "refDistM": 0.1,
+       "refHeightM": 1735.802693708421,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 2.00275,
+       "appDistM": 12.3,
+       "appHeightM": 1736.23
+      },
+      {
+       "azFromDeg": 305.5,
+       "azToDeg": 328.5,
+       "count": 47,
+       "worstDeg": -0.1801968803778251,
+       "worstAzDeg": 326.5,
+       "refElevDeg": 0.9244068803778251,
+       "refDistM": 9.299999999999983,
+       "refHeightM": 1735.9472818055947,
+       "refLayer": "LOLA south pole, 87.5S square at 40 m",
+       "appElevDeg": 0.74421,
+       "appDistM": 12.3,
+       "appHeightM": 1735.96
+      }
+     ]
+    }
+   }
+  },
+  "im-2@0m": {
+   "site": {
+    "id": "im-2",
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "mastHeightM": 0,
+   "referenceGroundM": 5320.7685546875,
+   "referenceConvergenceDeg": 0.0017596876884923285,
+   "layers": [
+    "LOLA south pole, 87.5S square at 40 m",
+    "LOLA ldem_80s_20m, 60 m site window",
+    "LOLA south pole, 85S square at 80 m",
+    "LOLA south pole, 80S square at 160 m",
+    "LOLA ldem_80s_20m, 480 m site window",
+    "LOLA whole-Moon grid, 16 px/deg"
+   ],
+   "apps": {
+    "app-integration": {
+     "commit": "375f816",
+     "appGroundM": 5320.7685546875,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.03793867584192989,
+     "atAzDeg": 235.5,
+     "signedAtMaxDeg": -0.03793867584192989,
+     "meanDeg": -0.003663491812001279,
+     "rmsDeg": 0.0072496588122613215,
+     "appLowestDeg": -0.03793867584192989,
+     "appHighestDeg": 0.0002751058877014101,
+     "over0p02": 24,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 185182,
+     "runs": []
+    },
+    "app-analysis": {
+     "commit": "ecc9793",
+     "appGroundM": 5320.7685546875,
+     "groundDiffM": 0.0,
+     "maxAbsDeg": 0.0023977178026168833,
+     "atAzDeg": 230.0,
+     "signedAtMaxDeg": -0.0023977178026168833,
+     "meanDeg": -6.0380700890169824e-05,
+     "rmsDeg": 0.0002923837845910529,
+     "appLowestDeg": -0.0023977178026168833,
+     "appHighestDeg": 0.0022745403115339013,
+     "over0p02": 0,
+     "over0p05": 0,
+     "overLimit": 0,
+     "appMaxRangeM": 185182,
+     "runs": []
+    }
+   }
+  }
+ }
+}

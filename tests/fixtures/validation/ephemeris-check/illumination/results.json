@@ -1,0 +1,738 @@
+{
+ "window": {
+  "start": "2010-01-01T00:00:00Z",
+  "durationH": 163044,
+  "stepMin": 60
+ },
+ "pgdaFiles": {
+  "AVGVISIB_85S_060M_201608.IMG": "82dadf321dee28f1947c1fed81858d4cf50fe8eb2aa405aae114e8ab21c1efe1",
+  "AVGVISIB_85S_060M_201608_EARTH.IMG": "0958313069d6039b2474c875ff662f28dbcba2bd853d9ea458aa807b7948c11f"
+ },
+ "sites": {
+  "im-2": {
+   "site": {
+    "name": "IM-2",
+    "kind": "landing",
+    "lat": -84.79,
+    "lon": 29.2
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 46.552,
+     "min3x3": 42.584,
+     "median3x3": 45.928000000000004,
+     "max3x3": 46.648,
+     "col": 3814,
+     "row": 228
+    },
+    "earth": {
+     "pixel": 92.256,
+     "min3x3": 84.256,
+     "median3x3": 91.108,
+     "max3x3": 92.996,
+     "col": 3814,
+     "row": 228
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 46.34610076972615,
+      "sunDiscPct": 44.71372833399572,
+      "earthCentrePct": 80.79977920206079,
+      "earthAnyPct": 92.46281701370788
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 46.343034131681435,
+      "sunDiscPct": 44.7140788511317,
+      "earthCentrePct": 80.79916587445184,
+      "earthAnyPct": 92.46036370327211
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 46.32426676234636,
+       "illuminationPct": 44.672083708837526,
+       "earthVisiblePct": 80.85357949771227,
+       "sunAnyMinusOwn": -0.02183400737978758,
+       "illuminationMinusOwn": -0.04164462515819167,
+       "earthMinusOwn": 0.053800295651484475,
+       "longestDarknessH": 414.87890625,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 46.31428335679326,
+       "illuminationPct": 44.661935471007915,
+       "earthVisiblePct": 80.79973092002773,
+       "sunAnyMinusOwn": -0.03181741293288809,
+       "illuminationMinusOwn": -0.051792862987802835,
+       "earthMinusOwn": -4.828203306317391e-05,
+       "longestDarknessH": 414.91015625,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 46.71471066270048,
+      "sunDiscPct": 45.01995462179667,
+      "earthCentrePct": 81.1174829034929,
+      "earthAnyPct": 93.3355822012328
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 46.7134840074826,
+      "sunDiscPct": 45.019925059510626,
+      "earthCentrePct": 81.12238952436444,
+      "earthAnyPct": 93.32576895948971
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 46.694512869225484,
+       "illuminationPct": 44.97534062442562,
+       "earthVisiblePct": 81.12695518541007,
+       "sunAnyMinusOwn": -0.02019779347499906,
+       "illuminationMinusOwn": -0.04461399737105154,
+       "earthMinusOwn": 0.009472281917169312,
+       "longestDarknessH": 413.32421875,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 46.68478581701872,
+       "illuminationPct": 44.96750590413601,
+       "earthVisiblePct": 81.11606975149346,
+       "sunAnyMinusOwn": -0.029924845681762235,
+       "illuminationMinusOwn": -0.05244871766065984,
+       "earthMinusOwn": -0.0014131519994435848,
+       "longestDarknessH": 413.388671875,
+       "ephemeris": "model"
+      }
+     }
+    }
+   }
+  },
+  "shackleton-floor": {
+   "site": {
+    "name": "Shackleton floor",
+    "kind": "custom",
+    "lat": -89.67,
+    "lon": 129.78,
+    "why": "IAU centre of Shackleton: permanently shadowed floor."
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 0.0,
+     "min3x3": 0.0,
+     "median3x3": 0.0,
+     "max3x3": 0.0,
+     "col": 2657,
+     "row": 2635
+    },
+    "earth": {
+     "pixel": 0.0,
+     "min3x3": 0.0,
+     "median3x3": 0.0,
+     "max3x3": 0.0,
+     "col": 2657,
+     "row": 2635
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 0.0,
+      "sunDiscPct": 0.0,
+      "earthCentrePct": 0.0,
+      "earthAnyPct": 0.0
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 0.0,
+      "sunDiscPct": 0.0,
+      "earthCentrePct": 0.0,
+      "earthAnyPct": 0.0
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 0,
+       "illuminationPct": 0,
+       "earthVisiblePct": 0,
+       "sunAnyMinusOwn": 0.0,
+       "illuminationMinusOwn": 0.0,
+       "earthMinusOwn": 0.0,
+       "longestDarknessH": 163044,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 0,
+       "illuminationPct": 0,
+       "earthVisiblePct": 0,
+       "sunAnyMinusOwn": 0.0,
+       "illuminationMinusOwn": 0.0,
+       "earthMinusOwn": 0.0,
+       "longestDarknessH": 163044,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 0.0,
+      "sunDiscPct": 0.0,
+      "earthCentrePct": 0.0,
+      "earthAnyPct": 0.0
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 0.0,
+      "sunDiscPct": 0.0,
+      "earthCentrePct": 0.0,
+      "earthAnyPct": 0.0
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 0,
+       "illuminationPct": 0,
+       "earthVisiblePct": 0,
+       "sunAnyMinusOwn": 0.0,
+       "illuminationMinusOwn": 0.0,
+       "earthMinusOwn": 0.0,
+       "longestDarknessH": 163044,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 0,
+       "illuminationPct": 0,
+       "earthVisiblePct": 0,
+       "sunAnyMinusOwn": 0.0,
+       "illuminationMinusOwn": 0.0,
+       "earthMinusOwn": 0.0,
+       "longestDarknessH": 163044,
+       "ephemeris": "model"
+      }
+     }
+    }
+   }
+  },
+  "shackleton-rim": {
+   "site": {
+    "name": "Shackleton rim pin",
+    "kind": "custom",
+    "lat": -89.78,
+    "lon": -155.73,
+    "why": "On the rim crest of Shackleton (IAU centre 89.67 S 129.78 E, 21 km across): 10.4 km from that centre, 1730 m high."
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 6.256,
+     "min3x3": 0.0,
+     "median3x3": 55.616,
+     "max3x3": 85.19200000000001,
+     "col": 2483,
+     "row": 2630
+    },
+    "earth": {
+     "pixel": 29.308,
+     "min3x3": 15.676,
+     "median3x3": 49.972,
+     "max3x3": 55.028,
+     "col": 2483,
+     "row": 2630
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 1.3640406022877118,
+      "sunDiscPct": 0.7366510912375519,
+      "earthCentrePct": 18.03244503051305,
+      "earthAnyPct": 25.23107117666902
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 1.3652672575055966,
+      "sunDiscPct": 0.7365317704038352,
+      "earthCentrePct": 18.02999172007728,
+      "earthAnyPct": 25.232297831886903
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 1.6618896298698511,
+       "illuminationPct": 0.8719369542067485,
+       "earthVisiblePct": 19.534063897245527,
+       "sunAnyMinusOwn": 0.29784902758213927,
+       "illuminationMinusOwn": 0.13528586296919665,
+       "earthMinusOwn": 1.5016188667324784,
+       "longestDarknessH": 6358.552734375,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 1.370865092398371,
+       "illuminationPct": 0.7436445395580171,
+       "earthVisiblePct": 18.116578433199013,
+       "sunAnyMinusOwn": 0.006824490110659109,
+       "illuminationMinusOwn": 0.006993448320465223,
+       "earthMinusOwn": 0.08413340268596414,
+       "longestDarknessH": 6362.53515625,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 13.062651415253457,
+      "sunDiscPct": 9.894301122711962,
+      "earthCentrePct": 30.766352847373422,
+      "earthAnyPct": 35.99006409273514
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 13.06081143242663,
+      "sunDiscPct": 9.894300956161937,
+      "earthCentrePct": 30.766966174982368,
+      "earthAnyPct": 35.98945076512619
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 13.848351518608474,
+       "illuminationPct": 10.767921453491635,
+       "earthVisiblePct": 32.831529444314114,
+       "sunAnyMinusOwn": 0.7857001033550173,
+       "illuminationMinusOwn": 0.8736203307796728,
+       "earthMinusOwn": 2.0651765969406917,
+       "longestDarknessH": 4221.46484375,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 13.072779625438532,
+       "illuminationPct": 9.918552608271456,
+       "earthVisiblePct": 30.803653485600513,
+       "sunAnyMinusOwn": 0.010128210185074593,
+       "illuminationMinusOwn": 0.024251485559494412,
+       "earthMinusOwn": 0.03730063822709084,
+       "longestDarknessH": 4895.982421875,
+       "ephemeris": "model"
+      }
+     }
+    }
+   },
+   "neighbours3x3": {
+    "ownSunAnyPct": [
+     31.431199975466896,
+     22.67656168542427,
+     35.62697414824128,
+     0.0,
+     9.042288938636572,
+     48.84786408660186,
+     12.80934711276028,
+     28.853384035082343,
+     52.754147627955476
+    ],
+    "pgdaSunPct": [
+     68.264,
+     43.176,
+     68.38,
+     0.0,
+     6.256,
+     85.19200000000001,
+     47.372,
+     55.616,
+     80.024
+    ]
+   }
+  },
+  "connecting-ridge": {
+   "site": {
+    "name": "Connecting ridge pin",
+    "kind": "custom",
+    "lat": -89.45,
+    "lon": -137.2,
+    "why": "On the ridge between Shackleton and de Gerlache, 1956 m high; the pin @analysis used."
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 86.42,
+     "min3x3": 0.0,
+     "median3x3": 65.244,
+     "max3x3": 86.42,
+     "col": 2340,
+     "row": 2732
+    },
+    "earth": {
+     "pixel": 57.94,
+     "min3x3": 0.0,
+     "median3x3": 54.424,
+     "max3x3": 57.94,
+     "col": 2340,
+     "row": 2732
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 44.20681406973535,
+      "sunDiscPct": 39.46418680651676,
+      "earthCentrePct": 34.55242417737435,
+      "earthAnyPct": 39.48787144653317
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 44.20742739734429,
+      "sunDiscPct": 39.46430336350713,
+      "earthCentrePct": 34.55303750498329,
+      "earthAnyPct": 39.48787144653317
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 58.703475820752374,
+       "illuminationPct": 53.52596150457951,
+       "earthVisiblePct": 41.71288753438489,
+       "sunAnyMinusOwn": 14.496661751017022,
+       "illuminationMinusOwn": 14.061774698062756,
+       "earthMinusOwn": 7.160463357010542,
+       "longestDarknessH": 346.83203125,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 48.92667489297368,
+       "illuminationPct": 44.24197806186742,
+       "earthVisiblePct": 34.633699458620065,
+       "sunAnyMinusOwn": 4.719860823238328,
+       "illuminationMinusOwn": 4.777791255350664,
+       "earthMinusOwn": 0.08127528124571626,
+       "longestDarknessH": 403.876953125,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 87.62611548958876,
+      "sunDiscPct": 82.75854279068575,
+      "earthCentrePct": 53.59685976264221,
+      "earthAnyPct": 58.25324296973228
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 87.623662179153,
+      "sunDiscPct": 82.75931862569385,
+      "earthCentrePct": 53.59256646937962,
+      "earthAnyPct": 58.24956300407863
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 88.00372953389882,
+       "illuminationPct": 83.11021052291514,
+       "earthVisiblePct": 53.58458644599004,
+       "sunAnyMinusOwn": 0.3776140443100644,
+       "illuminationMinusOwn": 0.3516677322293873,
+       "earthMinusOwn": -0.012273316652169797,
+       "longestDarknessH": 144.8671875,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 87.61915039996872,
+       "illuminationPct": 82.72984768698339,
+       "earthVisiblePct": 53.57738459403597,
+       "sunAnyMinusOwn": -0.006965089620038611,
+       "illuminationMinusOwn": -0.02869510370236128,
+       "earthMinusOwn": -0.019475168606241766,
+       "longestDarknessH": 144.91015625,
+       "ephemeris": "model"
+      }
+     }
+    }
+   },
+   "neighbours3x3": {
+    "ownSunAnyPct": [
+     47.94136588058511,
+     47.480756846269436,
+     54.23840044159588,
+     44.594437118586896,
+     54.10285504001963,
+     45.91677144346652,
+     40.79487258118924,
+     35.68094697782821,
+     47.38446441166549
+    ],
+    "pgdaSunPct": [
+     58.012,
+     68.484,
+     73.888,
+     45.36,
+     86.42,
+     73.5,
+     55.532000000000004,
+     0.0,
+     65.244
+    ]
+   }
+  },
+  "ridge-top": {
+   "site": {
+    "name": "Connecting ridge, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.4749,
+    "lon": -137.4431,
+    "why": "Brightest pixel of AVGVISIB_85S_060M_201608 (88.44 %)."
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 88.444,
+     "min3x3": 39.768,
+     "median3x3": 74.156,
+     "max3x3": 88.444,
+     "col": 2349,
+     "row": 2724
+    },
+    "earth": {
+     "pixel": 58.084,
+     "min3x3": 50.376,
+     "median3x3": 58.068,
+     "max3x3": 58.092,
+     "col": 2349,
+     "row": 2724
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 48.976049556870805,
+      "sunDiscPct": 43.10209869915912,
+      "earthCentrePct": 53.02646508632586,
+      "earthAnyPct": 57.66812843080131
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 48.96807629795455,
+      "sunDiscPct": 43.10192797742801,
+      "earthCentrePct": 53.02769174154375,
+      "earthAnyPct": 57.66444846514766
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 64.74999535209821,
+       "illuminationPct": 57.49021617107206,
+       "earthVisiblePct": 53.095744572784035,
+       "sunAnyMinusOwn": 15.773945795227405,
+       "illuminationMinusOwn": 14.388117471912942,
+       "earthMinusOwn": 0.0692794864581785,
+       "longestDarknessH": 404.3203125,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 50.63222964353181,
+       "illuminationPct": 44.511406620790915,
+       "earthVisiblePct": 53.04920685712139,
+       "sunAnyMinusOwn": 1.6561800866610028,
+       "illuminationMinusOwn": 1.4093079216317932,
+       "earthMinusOwn": 0.022741770795533967,
+       "longestDarknessH": 455.388671875,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 89.01407586862523,
+      "sunDiscPct": 84.14546848138872,
+      "earthCentrePct": 53.50056732803827,
+      "earthAnyPct": 58.1679904320893
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 89.01591585145205,
+      "sunDiscPct": 84.15080326785554,
+      "earthCentrePct": 53.498114017602504,
+      "earthAnyPct": 58.16492379404459
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 89.0810221282292,
+       "illuminationPct": 84.20702674803974,
+       "earthVisiblePct": 53.50122968148169,
+       "sunAnyMinusOwn": 0.0669462596039665,
+       "illuminationMinusOwn": 0.06155826665101927,
+       "earthMinusOwn": 0.0006623534434169187,
+       "longestDarknessH": 132.73828125,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 88.99938077489819,
+       "illuminationPct": 84.10832571335327,
+       "earthVisiblePct": 53.49395355893194,
+       "sunAnyMinusOwn": -0.014695093727041808,
+       "illuminationMinusOwn": -0.03714276803545147,
+       "earthMinusOwn": -0.0066137691063303805,
+       "longestDarknessH": 133.16796875,
+       "ephemeris": "model"
+      }
+     }
+    }
+   },
+   "neighbours3x3": {
+    "ownSunAnyPct": [
+     34.795301910515505,
+     49.39863227943206,
+     46.36695390843018,
+     48.40381489772762,
+     48.931889969026955,
+     49.29865987917446,
+     41.87494250053666,
+     49.87641448679812,
+     45.25805759146248
+    ],
+    "pgdaSunPct": [
+     39.768,
+     74.156,
+     63.74,
+     86.304,
+     88.444,
+     74.172,
+     70.988,
+     76.656,
+     60.684000000000005
+    ]
+   }
+  },
+  "rim-top": {
+   "site": {
+    "name": "Shackleton rim, brightest PGDA pixel",
+    "kind": "custom",
+    "lat": -89.7843,
+    "lon": -155.9041,
+    "why": "Brightest pixel of AVGVISIB_85S_060M_201608 on Shackleton's rim (85.46 %)."
+   },
+   "pgda": {
+    "sun": {
+     "pixel": 85.456,
+     "min3x3": 43.176,
+     "median3x3": 65.736,
+     "max3x3": 85.456,
+     "col": 2484,
+     "row": 2628
+    },
+    "earth": {
+     "pixel": 56.68,
+     "min3x3": 42.316,
+     "median3x3": 56.528,
+     "max3x3": 56.684000000000005,
+     "col": 2484,
+     "row": 2628
+    }
+   },
+   "masts": {
+    "0": {
+     "own": {
+      "sunAnyPct": 39.52283112024288,
+      "sunDiscPct": 34.776843310003656,
+      "earthCentrePct": 49.282100033733016,
+      "earthAnyPct": 53.827470943604524
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 39.52037780980711,
+      "sunDiscPct": 34.776247638635844,
+      "earthCentrePct": 49.28148670612408,
+      "earthAnyPct": 53.827470943604524
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 70.27282512695959,
+       "illuminationPct": 63.508725279971166,
+       "earthVisiblePct": 49.46655743618287,
+       "sunAnyMinusOwn": 30.74999400671671,
+       "illuminationMinusOwn": 28.73188196996751,
+       "earthMinusOwn": 0.18445740244985132,
+       "longestDarknessH": 347.919921875,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 40.279197304485294,
+       "illuminationPct": 35.41815383816664,
+       "earthVisiblePct": 49.355388729422735,
+       "sunAnyMinusOwn": 0.7563661842424168,
+       "illuminationMinusOwn": 0.6413105281629825,
+       "earthMinusOwn": 0.07328869568971896,
+       "longestDarknessH": 663.185546875,
+       "ephemeris": "model"
+      }
+     }
+    },
+    "2": {
+     "own": {
+      "sunAnyPct": 86.83124290839952,
+      "sunDiscPct": 82.00175912707869,
+      "earthCentrePct": 52.146953295102584,
+      "earthAnyPct": 56.79842988132111
+     },
+     "ownSkylineEvery0p5deg": {
+      "sunAnyPct": 86.83308289122634,
+      "sunDiscPct": 82.00419522852785,
+      "earthCentrePct": 52.14940660553835,
+      "earthAnyPct": 56.79842988132111
+     },
+     "apps": {
+      "integration": {
+       "commit": "375f816",
+       "sunAnyPct": 87.00824001113196,
+       "illuminationPct": 82.18929616888693,
+       "earthVisiblePct": 52.15468341751306,
+       "sunAnyMinusOwn": 0.17699710273244307,
+       "illuminationMinusOwn": 0.18753704180824116,
+       "earthMinusOwn": 0.007730122410478657,
+       "longestDarknessH": 189.75,
+       "ephemeris": "model"
+      },
+      "analysis": {
+       "commit": "ecc9793",
+       "sunAnyPct": 86.8126879285653,
+       "illuminationPct": 81.96793833771775,
+       "earthVisiblePct": 52.14530376002797,
+       "sunAnyMinusOwn": -0.01855497983422083,
+       "illuminationMinusOwn": -0.0338207893609308,
+       "earthMinusOwn": -0.0016495350746126292,
+       "longestDarknessH": 191.279296875,
+       "ephemeris": "model"
+      }
+     }
+    }
+   },
+   "neighbours3x3": {
+    "ownSunAnyPct": [
+     38.98616946241835,
+     47.255665613787606,
+     46.517219172621054,
+     34.976233555153485,
+     39.72584255880278,
+     47.27651875249164,
+     22.640375356496673,
+     35.64046735563801,
+     43.27455610414303
+    ],
+    "pgdaSunPct": [
+     48.756,
+     80.21600000000001,
+     65.736,
+     66.76,
+     85.456,
+     53.692,
+     43.176,
+     68.38,
+     43.584
+    ]
+   }
+  }
+ }
+}
