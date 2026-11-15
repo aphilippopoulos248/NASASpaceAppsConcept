@@ -13,6 +13,9 @@
 //              renderer); the shots pair with the software-rendered ones in docs/lunyx/handover.
 //   assistant  the drawer in deterministic mode: requests whose numbers are checked against
 //              the analysis and the panels.
+//   extras     (T-8) a mission preset played to its end, a zoomed Earth, the window table with
+//              its CSV and JSON downloads against the analysis, the outlook, the Country filter,
+//              country flags, ownership rows and the explored area on the card.
 //
 // Every step is done through the real controls (mouse and keyboard) unless the build has no
 // control for it; such steps say so and run through the action registry. Values on screen
@@ -26,7 +29,7 @@
 // browser would, and the report lists every host it contacted. E2E_GL=swiftshader forces
 // software rendering. Writes <out>/report.json, <out>/log.txt, <out>/shots/<profile>/NN-<name>.jpg.
 import { execSync } from 'node:child_process';
-import { appendFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ask } from '../lib/app.mjs';
 import { compareRowsAgainst, firstNumber, requirementLinesAgainst } from '../lib/read.mjs';
@@ -847,6 +850,129 @@ async function partAssistant(app, step) {
   });
 }
 
+// ------------------------------------------------------------------ part 4: release-candidate extras (T-8)
+
+async function backToGlobe(page) {
+  if ((await page.evaluate(() => window.lunyx.store.get().view)) !== 'surface') return;
+  await page.getByRole('button', { name: 'Close the surface view and return to the globe' }).click();
+  await page.waitForFunction(() => window.lunyx.store.get().view === 'globe', null, { timeout: 15_000 });
+}
+
+async function partExtras(app, step) {
+  const { page } = app;
+  const HOUR = 3_600_000;
+
+  await step('Missions to replay: "IM-2 Athena, Mons Mouton" (Filters) loads and plays to the end of its window', 'control', async ({ check, note }) => {
+    await backToGlobe(page);
+    if (await page.evaluate(() => window.lunyx.store.get().comparing)) await closeCompare(page);
+    const preset = await page.evaluate(() => fetch('/data/presets.json').then((r) => r.json()).then((d) => d.presets.find((x) => x.id === 'im-2-landing')));
+    await page.locator('.pl-button', { hasText: 'IM-2 Athena' }).click();
+    await page.waitForFunction(() => window.lunyx.store.get().site?.id === 'im-2' && window.lunyx.store.get().view === 'surface', null, { timeout: 60_000 });
+    const s0 = await appState(page);
+    const start = Date.parse(preset.windowStartUtc), end = start + preset.windowDurationH * HOUR;
+    check('Preset site, window start and length', `${s0.site.id} ${new Date(s0.windowStartMs).toISOString()} ${s0.windowDurationH} h`, `${preset.siteId} ${new Date(start).toISOString()} ${preset.windowDurationH} h`, s0.site.id === preset.siteId && s0.windowStartMs === start && s0.windowDurationH === preset.windowDurationH);
+    check('Preset plays at its rate', `${s0.playing} ${s0.rate}`, `true ${preset.rateSecondsPerSecond}`, s0.playing === true && s0.rate === preset.rateSecondsPerSecond);
+    await analysisSettled(page);
+    const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
+    const a = await getAnalysis(page);
+    note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
+    check('Sun and Earth from the bundled Horizons table', a.provenance?.ephemeris, 'horizons', a.provenance?.ephemeris === 'horizons');
+    const t0 = Date.now();
+    await page.waitForFunction(() => !window.lunyx.store.get().playing, null, { timeout: 240_000, polling: 500 });
+    const s1 = await appState(page);
+    note(`Played for ${Date.now() - t0} ms after the analysis was ready.`);
+    check('The clock stops at the end of the window', new Date(s1.timeMs).toISOString(), new Date(end).toISOString(), s1.timeMs === end);
+  }, { shot: 'preset-im2-end', timeout: 300_000 });
+
+  await step('Zoomed Earth at IM-2 touchdown ("Face Earth", then + until about 8° field of view)', 'keyboard', async ({ check, note }) => {
+    await page.locator('.ts-date').fill('2025-03-06T17:28');
+    await page.locator('.ts-date').press('Enter');
+    await page.waitForFunction(() => window.lunyx.store.get().timeMs === Date.UTC(2025, 2, 6, 17, 28), null, { timeout: 15_000 }).catch(() => note('The date field did not move the clock to touchdown.'));
+    await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
+    await page.locator('#scene').focus();
+    for (let i = 0; i < 25 && (await appState(page)).look.fovDeg > 8.5; i++) await page.keyboard.press('+');
+    await sleep(800);
+    const v = await surfaceView(page);
+    note(`Field of view ${v.look.fovDeg}°, Earth ${v.sky.earth.litPct} % lit, diameter ${v.sky.earth.angularDiameterDeg}°.`);
+    check('Zoomed in by keyboard', v.look.fovDeg, '<= 8.5', v.look.fovDeg <= 8.5);
+    check('Still facing Earth', `${v.look.azDeg} / ${v.look.elDeg}`, `${v.sky.earth.azDeg} / ${v.sky.earth.elDeg}`, close(v.look.azDeg, v.sky.earth.azDeg, 0.5) && close(v.look.elDeg, v.sky.earth.elDeg, 0.5));
+  }, { shot: 'im2-surface-earth-zoomed' });
+
+  await step('Window table and downloads (compare panel): the JSON file equals the analysis, the CSV has one row per spell', 'control', async ({ check, note }) => {
+    await page.locator('#scene').focus();
+    for (let i = 0; i < 25 && (await appState(page)).look.fovDeg < 69; i++) await page.keyboard.press('-');
+    await openComparePanel(page);
+    await page.getByRole('tab', { name: 'Window table' }).click();
+    await page.getByRole('button', { name: 'The scenario on screen' }).click();
+    await page.waitForFunction(() => document.querySelector('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)'), null, { timeout: 60_000 });
+    const shown = await page.evaluate(() => [...document.querySelectorAll('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)')].length);
+    const a = await getAnalysis(page);
+    const [dlJson] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as JSON' }).click()]);
+    const json = JSON.parse(readFileSync(await dlJson.path(), 'utf8'));
+    const sc = json.scenarios?.[0];
+    const m = sc?.metrics ?? {};
+    note(`JSON: ${dlJson.suggestedFilename()}, ${sc?.spells?.length} spells, ${sc?.events?.length} events.`);
+    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.001));
+    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.001));
+    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.001));
+    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.001));
+    check('JSON spells = rows in the table on screen', sc?.spells?.length, shown, sc?.spells?.length === shown);
+    check('JSON says whether a solar band was set', sc?.requirements?.sunElevationBandSet, 'a boolean', typeof sc?.requirements?.sunElevationBandSet === 'boolean');
+    const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
+    const csv = readFileSync(await dlCsv.path(), 'utf8').trim().split(/\r?\n/);
+    note(`CSV: ${dlCsv.suggestedFilename()}, ${csv.length} lines; header: ${csv[0].slice(0, 160)}`);
+    check('CSV: one row per spell after the header', csv.length - 1, sc?.spells?.length, csv.length - 1 === sc?.spells?.length);
+  }, { shot: 'window-table', timeout: 180_000 });
+
+  await step('Outlook (compare panel): the table equals what showOutlook returned', 'control', async ({ check, note }) => {
+    await page.getByRole('tab', { name: 'Outlook' }).click();
+    const seq = await page.evaluate(() => window.lunyx.actions.actionLog().at(-1)?.seq ?? 0);
+    await page.getByRole('button', { name: 'Show the outlook' }).click();
+    await page.waitForFunction((from) => window.lunyx.actions.actionLog().some((e) => e.seq > from && e.name === 'showOutlook'), seq, { timeout: 240_000, polling: 500 });
+    const res = await page.evaluate((from) => window.lunyx.actions.actionLog().filter((e) => e.seq > from && e.name === 'showOutlook').at(-1), seq);
+    check('showOutlook succeeded', res?.ok, true, res?.ok === true, res?.ok ? {} : { error: res?.error });
+    await sleep(500);
+    const rows = await page.evaluate(() => [...document.querySelectorAll('[aria-label="Sunlight and Earth\'s centre in view per lunar day"] tr, [aria-label="Sunlight and Earth\'s centre in view per lunar day"] [role="row"]')].map((r) => r.textContent.trim().replace(/\s+/g, ' ')).filter(Boolean));
+    const days = res?.result?.lunarDays ?? [];
+    note(`${days.length} lunar days returned; ${rows.length} rows in the table (header included). First day: ${JSON.stringify(days[0]).slice(0, 200)}`);
+    check('Table rows = lunar days (plus the header)', rows.length, days.length + 1, rows.length === days.length + 1 || rows.length === days.length);
+    if (days[0]) {
+      const sun = Object.entries(days[0]).find(([k]) => /sunlight|illumination/i.test(k))?.[1];
+      if (Number.isFinite(sun)) check('First lunar day: sunlight in the table = result', rows[1]?.slice(0, 120), sun, rows.slice(1, 3).some((r) => r.includes(sun.toFixed(1))));
+    }
+  }, { shot: 'outlook', timeout: 300_000 });
+
+  await step('Globe: Country filter (India), country flags, ownership rows and the explored area on the card', 'control', async ({ check, note }) => {
+    await closeCompare(page);
+    await backToGlobe(page);
+    const missions = page.locator('.fp-missions');
+    if (!(await missions.evaluate((d) => d.open))) await missions.locator('summary').click();
+    const before = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).length);
+    await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
+    await sleep(500);
+    const after = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).map((m) => m.landing.id));
+    note(`Markers shown: ${before} before, ${after.length} after the India toggle (${after.join(', ')}).`);
+    check('The Country toggle changes the markers shown', `${before} -> ${after.length}`, 'a change', after.length !== before);
+    await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
+    await page.getByLabel('Show country flags').check();
+    await page.waitForFunction(() => window.lunyx.store.get().showFlags === true, null, { timeout: 10_000 });
+    check('Flags on in the store', true, true, true);
+    const card = await readCard(page);
+    note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
+    check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
+    check('Explored area says how much larger it is drawn', card?.facts.Explored, '"drawn N× larger on the globe"', /drawn \d+(\.\d+)?× larger on the globe/.test(card?.facts.Explored ?? ''));
+    await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
+    await globeSettled(page);
+  }, { shot: 'globe-flags' });
+}
+
+async function closeCompare(page) {
+  if (await page.evaluate(() => document.querySelector('.cmp-sheet')?.hidden !== false)) return;
+  await page.locator('.cmp-sheet').focus();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('.cmp-sheet')?.hidden, null, { timeout: 10_000 });
+}
+
 // ------------------------------------------------------------------ main
 
 async function openApp(app, step) {
@@ -904,6 +1030,7 @@ try {
       if (mine.has('search')) await partSearch(app, step);
       if (mine.has('surface')) await partSurface(app, step);
       if (mine.has('assistant')) await partAssistant(app, step);
+      if (mine.has('extras')) await partExtras(app, step);
     } catch (err) {
       log(`walk aborted: ${err?.stack ?? err}`);
       pr.aborted = String(err?.message ?? err);
