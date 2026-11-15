@@ -265,6 +265,21 @@ would run past 2100 or the slot is empty.
 
 `earthVisiblePct` is Earth's centre (D-8); `illuminationPct` the time-averaged visible disc.
 
+## The whole flow, checked in a browser (final)
+
+Headless Chromium on the GPU (`--use-gl=angle --use-angle=gl-egl`, under /tmp/lunyx-gpu.lock),
+dev server, 1280x720, IM-2 (south polar, bundled terrain and Horizons table), 14-day window from
+touchdown, every step through the panel's own controls: save A -> "Compare arrivals" (+24 h; on
+screen in 0.9 s) -> the `compare` action returns the same B - A (sunlight -7.14 points, longest
+darkness +24.0 h, Earth's centre -7.14 points) -> "Nearby sites", 1 km every 200 m, scan of 81
+points in 8.8 s on a loaded machine (22 alternatives score higher than the site) -> "Compare as B"
+on rank 1 (632 m SSW: sunlight 98.8 % against 92.4 %, longest darkness 2.8 h against 18.4 h) ->
+"Window table" of B, CSV download, then A and B together as JSON (with B - A) -> "Outlook", 12
+lunar months, read with the arrow keys. 35 s in all, no console errors, every control logged its
+action with origin "ui". The panel says "No requirement" for the default 0-90 deg Sun band. Screens:
+`t11-ab-1280.png`, `t11-ab-table-1280.png`, `t11-nearby-1280.png`, `t11-candidate-as-b-1280.png`,
+`t11-window-table-1280.png`, `t11-outlook-1280.png`. (IM-2 here is the LROC position of T-38.)
+
 ## Slice 2 checked in a browser (headless Chromium on the GPU, dev server, IM-2, 24 h from touchdown)
 
 Save A → "Nearby sites" tab by keyboard (ArrowRight on the tab list) → radius 1000, spacing 200
