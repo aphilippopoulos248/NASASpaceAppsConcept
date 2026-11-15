@@ -651,25 +651,30 @@ async function partSurface(app, step) {
       return st.state === 'ready' ? st.value.events.filter((e) => e.timeMs >= start && e.timeMs <= end).map((e) => ({ type: e.type, utc: new Date(e.timeMs).toISOString().slice(0, 16), azDeg: Math.round(e.azDeg * 10) / 10 })) : null;
     });
     app.report.values.push({ profile: app.profile, where: 'IM-2 29.5-day window events', events: ev, scrubber: sc });
-    check('Scrubber marks = analysis events in the window', sc.marks.length, ev?.length, ev && sc.marks.length === ev.length);
+    // Since T-47 the marks also carry the passes of Earth in front of the Sun (◐); count the event glyphs.
+    const eventMarks = await page.evaluate(() => [...document.querySelectorAll('.time-scrubber .ts-mark')].filter((m) => /^(☀↑|☀↓|⊕↑|⊕↓)$/.test(m.textContent.trim())).length);
+    const eclipseMarks = await page.evaluate(() => [...document.querySelectorAll('.time-scrubber .ts-mark')].filter((m) => m.textContent.trim() === '◐').length);
+    check('Scrubber event marks = analysis events in the window', eventMarks, ev?.length, ev && eventMarks === ev.length);
+    note(`Marks: ${eventMarks} rise and set, ${eclipseMarks} Earth in front of the Sun.`);
     check('Jump buttons shown', sc.jumpsShown, true, sc.jumpsShown);
     note(`Events: ${ev?.map((e) => `${e.type} ${e.utc}`).join('; ')}`);
     note(`Jump buttons: ${sc.jumps.map((j) => `"${j.text}"${j.disabled ? ' (disabled)' : ''}`).join(', ')}`);
   }, { timeout: 360_000 });
 
-  await step('Countdown button "Sun fully set" (Key metrics) moves the clock to the event', 'control', async ({ check, note }) => {
-    const a = await getAnalysis(page);
-    const e = a.nextEvents?.sunset;
-    if (!e) {
-      note('No sunset ahead in the window.');
+  await step('Countdown button for the Sun setting (Key metrics) moves the clock to the instant it names', 'control', async ({ check, note }) => {
+    await sleep(400);
+    const at = await page.evaluate(() => document.querySelector('.km .km-count li .km-count-at')?.textContent.trim() ?? '');
+    const named = /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC/.exec(at);
+    if (!named) {
+      note(`No time on the first countdown ("${at}").`);
       return;
     }
     const s0 = await appState(page);
     await page.locator('.km .km-count-btn').first().click();
-    await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
+    await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 10_000 });
     const s = await appState(page);
-    check('Clock = analysis nextEvents.sunset', new Date(s.timeMs).toISOString(), e.timeUtc, Math.abs(s.timeMs - Date.parse(e.timeUtc)) <= 60_000);
-    note(`"${e.label}" at ${e.timeUtc}, azimuth ${e.azDeg}°.`);
+    check('Clock = the instant the countdown names (to the minute)', fmtUtc(s.timeMs), `${named[1]} ${named[2]} UTC`, fmtUtc(s.timeMs) === `${named[1]} ${named[2]} UTC`);
+    note(`Countdown: "${at}".`);
   });
 
   await step('Scrub: click the slider at 40 %', 'control', async ({ check, note }) => {
@@ -685,34 +690,28 @@ async function partSurface(app, step) {
     note(`Scrubbed to ${new Date(s.timeMs).toISOString()}.`);
   });
 
-  await step('Jump to the next "Sun fully set", then "Sun starts rising" (scrubber buttons)', 'control', async ({ check, note }) => {
-    for (const [type, text] of [['sunset', 'Sun fully set'], ['sunrise', 'Sun starts rising']]) {
-      const s0 = await appState(page);
-      const expected = await page.evaluate(([t, now]) => {
-        const st = window.lunyx.analysis.get('current');
-        if (st.state !== 'ready') return null;
-        const hit = st.value.events.filter((e) => e.type === t).sort((a, b) => a.timeMs - b.timeMs).find((e) => e.timeMs > now + 30_000);
-        return hit ? hit.timeMs : null;
-      }, [type, s0.timeMs]);
-      const button = page.locator('.ts-jump', { hasText: text });
-      const disabled = await button.isDisabled();
-      if (expected === null) {
-        check(`${text}: button disabled when no such event lies ahead`, disabled, true, disabled);
-        note(`No ${type} after ${new Date(s0.timeMs).toISOString()} in the window.`);
-        continue;
-      }
-      await button.click();
-      await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
-      const s = await appState(page);
-      check(`Jump to the next "${text}" = analysis event time`, new Date(s.timeMs).toISOString(), new Date(expected).toISOString(), s.timeMs === expected);
-      if (type === 'sunset') {
-        const a = await getAnalysis(page);
-        note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}° (the last limb, decision D-8).`);
-        await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
-        await sleep(800);
-        const f = `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`;
-        app.extraShots.push(await shot(page, f));
-        note(`Screenshot at the sunset: ${f}`);
+  await step('Scrubber jumps: each press of the Sun-setting and Sun-rising buttons goes to the instant its label names', 'control', async ({ check, note }) => {
+    let sunsetShot = false;
+    for (const [cls, presses] of [['.ts-jump.ts-sun', 3]]) {
+      for (let k = 0; k < presses; k++) {
+        await sleep(400); // the labels follow the clock within 250 ms
+        const buttons = await page.evaluate((c) => [...document.querySelectorAll(`.time-scrubber ${c}`)].map((b, i) => ({ i, text: b.textContent.trim(), label: b.getAttribute('aria-label') ?? '', disabled: b.disabled })), cls);
+        const b = buttons.find((x) => !x.disabled && /setting|set/.test(x.text)) ?? buttons.find((x) => !x.disabled);
+        if (!b) break;
+        const named = /^Jump to (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC: ([^(]+)\(/.exec(b.label);
+        const s0 = await appState(page);
+        await page.locator(`.time-scrubber ${cls}`).nth(b.i).click();
+        await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
+        const s = await appState(page);
+        check(`"${b.text}" lands on the instant its label names`, fmtUtc(s.timeMs), named ? `${named[1]} UTC (${named[2].trim()})` : b.label.slice(0, 80), Boolean(named) && fmtUtc(s.timeMs) === `${named[1]} UTC`);
+        if (!sunsetShot && /fully set/i.test(b.text)) {
+          sunsetShot = true;
+          const a = await getAnalysis(page);
+          note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}°.`);
+          await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+          await sleep(800);
+          app.extraShots.push(await shot(page, `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`));
+        }
       }
     }
   });
@@ -867,8 +866,8 @@ async function partExtras(app, step) {
   const HOUR = 3_600_000;
 
   await step('Missions to replay: "IM-2 Athena, Mons Mouton" (Filters) loads and plays to the end of its window', 'control', async ({ check, note }) => {
+    await closeCompare(page);
     await backToGlobe(page);
-    if (await page.evaluate(() => window.lunyx.store.get().comparing)) await closeCompare(page);
     const preset = await page.evaluate(() => fetch('/data/presets.json').then((r) => r.json()).then((d) => d.presets.find((x) => x.id === 'im-2-landing')));
     await page.locator('.pl-button', { hasText: 'IM-2 Athena' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().site?.id === 'im-2' && window.lunyx.store.get().view === 'surface', null, { timeout: 60_000 });
@@ -939,7 +938,8 @@ async function partExtras(app, step) {
     const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
     const csv = readFileSync(await dlCsv.path(), 'utf8').trim().split(/\r?\n/);
     note(`CSV: ${dlCsv.suggestedFilename()}, ${csv.length} lines; header: ${csv[0].slice(0, 160)}`);
-    check('CSV: one row per spell after the header', csv.length - 1, sc?.spells?.length, csv.length - 1 === sc?.spells?.length);
+    const rowsExpected = (sc?.spells?.length ?? 0) + (sc?.passages?.length ?? 0);
+    check('CSV: one row per spell and per passage after the header', csv.length - 1, rowsExpected, csv.length - 1 === rowsExpected);
   }, { shot: 'window-table', timeout: 180_000 });
 
   await step('Outlook (compare panel): the table equals what showOutlook returned', 'control', async ({ check, note }) => {

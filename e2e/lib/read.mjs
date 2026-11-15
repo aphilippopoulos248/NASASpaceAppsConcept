@@ -84,7 +84,7 @@ export function compareRowsAgainst(view, pub) {
     [['Any Sun above the skyline'], (x) => x.metrics.sunAnyPct, firstNumber, 0.051],
     [['Longest darkness in the window'], (x) => x.metrics.longestDarknessH, hoursOf, 0.051],
     [["Earth's centre in view", 'Earth in view'], (x) => x.metrics.earthVisiblePct, firstNumber, 0.051],
-    [['Longest Earth gap in the window'], (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
+    [['Longest Earth gap (centre hidden)', 'Longest Earth gap in the window'], (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
     [['Ground slope', 'Slope'], (x) => x.slope.slopeDeg, firstNumber, 0.051],
     [['Site elevation'], (x) => x.horizon.siteElevationM, firstNumber, 0.51],
   ];
