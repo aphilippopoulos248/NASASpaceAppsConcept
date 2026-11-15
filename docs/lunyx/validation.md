@@ -302,6 +302,16 @@ so the last limb goes at 19:30 UTC, while on a smooth sphere the Sun's centre wo
 horizontal at about 20:11 UTC (independent fixture README). 0.1 deg of skyline is worth about
 12 minutes here.
 
+**Both ends of each rise and set (decision D-8).** Since lunyx-science's T-45 delivery every
+event carries its passage through the skyline (`SkyEvent.span`, `SiteAnalysis.transitions`): a
+set runs from the first cut (the skyline starts to cut into the disc) to the last limb, a rise
+from the first limb to the whole disc clear, and Earth's centre crossings lie in between. The
+compare panel, its window table and its exports give both ends, each named ("starts setting
+2025-03-16 18:24, fully set 19:30 UTC" at Blue Ghost, 2 m, at the current catalogue pin on
+integration b6f7392).
+How the instants are found and their checks: `docs/lunyx/handover/T-31-event-spans.md`
+section 6, and section 8b below.
+
 **Eclipses seen from the surface** (Earth in front of the Sun; geometric discs, Earth's
 atmosphere ignored). They are part of the illumination series (`sunEclipsed`,
 `eclipseIntervals`), and `blockageAt` says so in words.
@@ -354,8 +364,13 @@ Three outside checks:
    https://www.eclipsewise.com/lunar/LEprime/1901-2000/LE1971Aug06Tprime.html
 
 **Blue Ghost's sunset, 16 March 2025: not a clean check.** Computed over the real skyline (2 m
-above the ground): the skyline starts to cut the Sun's disc at 18:25 UTC, half of it is gone at
-18:57, the last limb at 19:30:00. The skyline there (+0.59 deg at azimuth 270) is a real rise
+above the ground, at the catalogue pin before T-38, 18.562 N, 61.81 E): the skyline starts to
+cut the Sun's disc at 18:25 UTC, half of it is gone at 18:57, the last limb at 19:30:00. At the
+current catalogue pin (LROC's position, 18.5622 N, 61.8102 E, 8.4 m away) the app gives first cut
+18:24:14 and last limb 19:30:47 UTC (integration b6f7392, with T-50's fine skyline), and the
+validator's times on the 3 m model, which is the app's ground there, are 18:24:16 and 19:30:50;
+the 60 m window alone gives 18:30:27 and 19:38:22. The two elevation products put this sunset 3.5 to 7.5 min
+apart, depending on where within 8 m the lander stood (section 8b). The skyline there (+0.59 deg at azimuth 270) is a real rise
 of about 10 m, 0.75-0.85 km west of the lander, present in both the 3 m LROC model and the
 60 m SLDEM2015 window (which agree to 3.3 m rms over the model's extent). Being so near, it
 makes the time depend on the eye height: 19:16 for 0.5 m, 19:58 for 5 m. Firefly's release of
@@ -457,17 +472,21 @@ Moon's surface in MEAN_ME; observers -14@399, -43@399, -63@399; apparent, airles
 | Elevation of the lunar site at the station (Blue Ghost, IM-2 and a west-limb point; 2025-03-06/07 hourly, 2025-03-13 around the limits, 1971-07-31, 2034-09-10) | 1154 | 0.00115 deg |
 | Azimuth (as arc) | 1154 | 0.00128 deg |
 | Rise and set times through 6.0 and 10.2 / 10.4 deg (2025-03-13, Horizons at 1 min) | 24 crossings | 0.27 s |
-| The same on three other dates (2023-08-23, 2025-03-17, 2031-04-10; Horizons both ways; independent, @ephemeris-check T-34, `tests/fixtures/validation/ephemeris-check/dsn/`) | 84 crossings | 5.3 s |
+| The same on three other dates (2023-08-23, 2025-03-17, 2031-04-10; Horizons both ways; independent, @ephemeris-check T-34, re-run by lunyx-science T-3 after T-9, `tests/fixtures/validation/ephemeris-check/dsn/results-af1b499.txt`) | 84 crossings | 0.9 s (5.3 s before T-9) |
 
-**Precision of the crossing times: about 5 s, not 0.3 s.** The crossings are refined by
-bisection to 10 s (`EVENT_PRECISION_MS`), so each is within 5 s of where the geometry puts it;
-the 0.27 s of the first check was that day's luck. The independent check confirms it: the
-elevations agree to 0.001 deg (0.3 s at the horizon) while the edges scatter by up to ±5 s with
-both signs, whatever the series step (3.8 s at 1 min, 5.3 s at 10 min). An earlier version of
-`analysis.dsn.assumptions` said "within 0.3 s"; it now says about 5 s. Edges set by the lunar
-terrain (the station going behind the site's skyline) agree within 1.5 min, because the
-station's elevation there changes by only about 0.001 deg per minute. Station coordinates equal
-Horizons' DSN sites within 0.01 m.
+**Precision of the crossing times: placed by bisection to 0.25 s, within 0.9 s of Horizons.**
+Until lunyx-science T-9 the edges were where the window's own search left them, refined by
+bisection to 10 s (`EVENT_PRECISION_MS`), so each was within 5 s of where the geometry puts it:
+the 0.27 s of the first check was that day's luck, round 2's independent check found up to 5.3 s
+with both signs, and an earlier "within 0.3 s" in `analysis.dsn.assumptions` did not hold. Since
+T-9 (delivered with af1b499) `refineEdges()` in `src/analysis/dsn.ts` continues the bisection
+inside that 10 s bracket to `DSN_EDGE_PRECISION_MS` (250 ms), and `analysis.dsn.assumptions`
+says only how the edges are placed: it claims no accuracy figure. The same 84 edges now agree
+with the independent reference within 0.9 s, which is that reference's own 1 s precision
+(`tests/fixtures/validation/ephemeris-check/dsn/results-af1b499.txt`); the shares of time are
+within 0.03 points. Edges set by the lunar terrain (the station going behind the site's
+skyline) agree within 1.5 min, because the station's elevation there changes by only about
+0.001 deg per minute. Station coordinates equal Horizons' DSN sites within 0.01 m.
 
 The geometry takes UT1 = UTC (they differ by at most 0.9 s, so about a second in rise and set
 times in general) and ignores polar motion and the 1.3 s of light-time; no refraction. The
@@ -662,15 +681,16 @@ against T-31's change.
   2027-01-01, 2 m): rows within 0.11 points of SPICE against their own skyline, except row 9 at
   the rim pin (2027-08-25, +0.57 any-Sun points). With the app's own skyline and SPICE the row
   gives 21.40 % against the app's 21.41 %, so the excess is the cc736f8 skyline, up to 0.05 deg
-  low at that pin. The skyline of section 3a is within 0.004 deg of their reference there; the
-  row has not been re-run on it. Arrival scores within 0.15 and 0.20 points (4253 arrivals 2 h
+  low at that pin. The skyline of section 3a is within 0.004 deg of their reference there;
+  re-run on it in round 3 the row reads 20.76 % against their 20.84 % (section 8b). Arrival scores within 0.15 and 0.20 points (4253 arrivals 2 h
   apart); best and worst arrival at the same instants, except a flat minimum at IM-2 (app
   2027-12-20 06:00, 31.79; theirs 8 h earlier, 31.80). Longest darkness of the year: IM-2
   411.7 h both; rim pin 4213.3 against 4213.5 h. The in-app model over the year: Sun within
   0.0038 deg and Earth within 0.0030 deg of SPICE.
 - *Darkness and Earth gap in full* (section 7, `metrics.longestDarknessFull`): five windows,
   every end found by both, ends within 3.1 min (IM-2 night 379.78 h against 379.79 h).
-- *DSN geometry* (section 6): as above, crossing times within 5.3 s, now stated as about 5 s.
+- *DSN geometry* (section 6): crossing times within 5.3 s in this round; since lunyx-science T-9
+  the edges are bisected to 0.25 s and agree within 0.9 s (section 8b).
 - *Slope*: recomputed from the files with the app's stated measure, identical to 0.0000 deg at
   all 28 sites and at the ten best-ranked scan candidates at IM-2. Against published landing
   tilts the baseline decides: Surveyor 3 "came to rest on a 14 degree slope" (NSSDC 1967-035A),
@@ -679,3 +699,60 @@ against T-31's change.
   to what a lander stands on; sites without a 3 m model, and every nearby candidate, get the
   120 m measure, which cannot see lander-scale slope (the slope basis sentence of every result
   names the baseline and the grid).
+
+### 8b. Round 3 (lunyx-science T-3; fixtures in the repository since T-51)
+
+`tests/fixtures/validation/science-validation/README.md` indexes the scripts and results; the
+results files named below are under `tests/fixtures/validation/`. Each item names the build it
+was run on.
+
+- *Skyline with the observer at 0, 0.5 and 2 m* (section 3a; build 1289083, whose analysis and
+  terrain code am/lunyx/integration carries): nine pins, the seven of round 1 and two fresh pins
+  chosen by a fixed rule before any app output. Worst 0.017 deg over the 27 runs (fresh pin A at
+  2 m, a grid crease 8.6 m from the observer), no azimuth over 0.02 deg; where the skyline is the
+  ground at the observer's feet, the app and the reference count the same number of such
+  azimuths at all six sites where that happens. `science-validation/skyline-masts/results.txt`.
+  Apollo 15, left out of the 2 m test while the T-32 easing changed its ground, is back in
+  `src/analysis/horizon.test.ts` now that the easing is off by default (lunyx-science D-13, which replaced D-10 and D-12):
+  worst 0.0038 deg.
+- *Both ends of every rise and set* (section 4; build 9bc4878 of lunyx-science): 141 instants in
+  48 passages of the Sun and Earth (first cut, centre, last limb; first limb, centre, whole disc
+  clear) at Blue Ghost (0.5, 2 and 5 m), IM-2 (14 days), Chandrayaan-3 (33 days) and five polar and
+  limb sites over 60 days, against Horizons and the validator's own skylines. Blue Ghost within
+  4 s at all three eye heights (2 m, at the catalogue pin before T-38: 18:23:41 / 18:56:49 /
+  19:30:04 against 18:23:40 / 18:56:51 / 19:30:03 UTC). The worst instant, scored as the skyline
+  error that explains it, is 0.0185 deg (the Sun's centre rising at IM-2 on 6 March, 7.7 min
+  late), then 0.0140 deg (an Earthrise's first limb at the connecting-ridge pin, 13.9 min): near
+  the poles the Sun and Earth cross the skyline so slowly that hundredths of a degree are minutes.
+  With the validator's skyline read only every 0.5 deg, as the app kept it, the worst is
+  0.0040 deg, so the passage logic agreed and what remained was the 0.5 deg azimuth step meeting
+  narrow skyline notches. `ephemeris-check/transitions/results-9bc4878.txt` and
+  `results-9bc4878-sky0.5.txt`. Since T-50 (@globe, integration b6f7392) the analysis reads the
+  skyline again every 0.05 deg wherever the Sun's or Earth's disc comes within 0.25 deg of it, and
+  the worst cases collapse: the Sun's centre rising at IM-2 from +464 s to -5 s, Earth's first limb
+  at the connecting-ridge pin from +835 s to +47 s (same pins, 2 m, 60 days). What is left, a few
+  minutes on Earth's slow passages, is about 0.003 deg of skyline, the difference between the two
+  ray marches. The cost is +9 to +21 % for 14 days at IM-2 and the Shackleton-rim pin, up to
+  +143 % for a polar pin over 60 days. The seasonal outlook and the nearby scan stay on the
+  0.5 deg profile. `docs/lunyx/handover/T-50-fine-skyline.md` and `T-50-worst-cases.txt`.
+- *Earth by any part of its disc* (the figure beside Earth's centre since T-45): within 0.04 points
+  of the validator over 60-day windows at five sites and IM-2's 14 days, the longest spell wholly
+  hidden within 0.3 h; over 18.6 years within 0.03 points in all twelve point and eye-height
+  cases. Against PGDA product 69, which counts any part of the disc, +0.07 to +1.05 points at the
+  four smooth polar points at 2 m, where the centre figure reads 4.4 to 11.1 points lower; single
+  pixels on crests prove nothing (neighbouring PGDA pixels differ by tens of points).
+  `ephemeris-check/illumination/results-9bc4878.txt`.
+- *Seasonal outlook*: row 9 at the Shackleton-rim pin 20.76 % any Sun against 20.84 % (it read
+  +0.57 points before the skyline of 1289083); every row at both sites within 0.11 points, any part
+  of Earth's disc per lunar day within 0.20 points. `ephemeris-check/outlook/results-9bc4878.txt`.
+- *DSN geometry* (section 6; build af1b499): the 84 edges set by a station's elevation limit within
+  0.9 s, the reference's own precision; edges set by the lunar skyline within 1.5 min.
+  `ephemeris-check/dsn/results-af1b499.txt`.
+- *Blue Ghost's sunset by elevation product* (16 March 2025, 2 m), each product used throughout:
+  at the catalogue pin before T-38 (18.562 N, 61.81 E) first cut 18:23:40 (3 m model) / 18:27:22
+  (60 m window) and last limb 19:30:03 / 19:33:31 UTC, 3.5-3.7 min apart; at the current pin
+  (18.5622 N, 61.8102 E) 18:24:16 / 18:30:27 and 19:30:50 / 19:38:22 UTC, 6.2-7.5 min apart. So the
+  products put this sunset 3.5 to 7.5 min apart, depending on where within 8 m the lander stood.
+  The app stands on the 3 m model, as stored (lunyx-science D-13). IM-2 and Chandrayaan-3 were not
+  recomputed at their new pins. `science-validation/blue-ghost-products/results.txt` and
+  `new-pin.txt`.

@@ -3,11 +3,12 @@
 // UTC start, end and duration. A spell that runs past an edge of the window is given in full
 // (followed to its real start or end by edgeSpells()) and says so; the part inside the window is
 // kept beside it. Pure: tested without a browser; the panel and exportResults both use it.
+import { eventText, TRANSITION_WORDS, transitionSummary, transitionText } from '../../analysis/api';
 import { edgeSpells, type SpellList } from '../../analysis/edges';
-import type { FullSpan, Interval, SiteAnalysis } from '../../analysis/types';
+import type { FullSpan, Interval, SiteAnalysis, SkyTransition, TransitionKind } from '../../analysis/types';
 import { checkRequirements, reportDiff, scenarioFacts } from '../../core/analysisReport';
 import { rounded } from '../../core/analysisStore';
-import { EVENT_INFO } from '../../core/skyEvents';
+import { EVENT_INFO, edgeLabel } from '../../core/skyEvents';
 import type { AppState } from '../../core/types';
 import { formatUtc } from '../../core/time';
 import type { ComparisonDiff } from '../../analysis/types';
@@ -89,6 +90,95 @@ export function spellRows(a: SiteAnalysis): SpellRow[] {
   return rows;
 }
 
+// ---------- passages: both ends of every rise and set (decision D-8) ----------
+
+/** One end of a passage: the instant it is, and when (null when that end was not found). */
+export interface PassageEnd {
+  /** Which edge of the disc this end is ('unresolved': not found within the search). */
+  edge: SkyTransition['start']['edge'] | SkyTransition['end']['edge'];
+  /** The app's one name for it (edgeLabel in src/core/skyEvents.ts, as in getAnalysis): "Sun starts setting", "Sun's whole disc clear again", ... or that the end was not found. */
+  instant: string;
+  timeMs: number | null;
+  inWindow: boolean;
+  azDeg: number;
+}
+
+/** A passage of the Sun's or Earth's disc through the terrain skyline, with both ends named. */
+export interface PassageRow {
+  body: 'sun' | 'earth';
+  kind: TransitionKind;
+  /** What the disc does: "Sun setting", "Earth rising", "Sun partly hidden, never fully set", ... */
+  state: string;
+  start: PassageEnd;
+  end: PassageEnd;
+  /** end - start; a lower bound when an end was not found. */
+  hours: number;
+  /** The part inside the mission window. */
+  windowStartMs: number;
+  windowEndMs: number;
+  windowHours: number;
+  runsPastStart: boolean;
+  runsPastEnd: boolean;
+  /** Earth's centre crossing the skyline during the passage ("Earth's centre sets"): Earth only. */
+  centre: { instant: string; timeMs: number; inWindow: boolean }[];
+  /** The D-8 short form: "starts setting 2025-03-16 18:23, fully set 19:30 UTC". */
+  summary: string;
+  /** One sentence naming each instant. */
+  text: string;
+  /** How much of the disc a graze hides or a peek shows; empty otherwise. */
+  note: string;
+}
+
+const BODY_NAME = { sun: 'Sun', earth: 'Earth' } as const;
+
+function passageState(tr: SkyTransition): string {
+  const body = BODY_NAME[tr.body];
+  switch (tr.kind) {
+    case 'set': return `${body} setting`;
+    case 'rise': return `${body} rising`;
+    case 'graze': return `${body} partly hidden, never fully set`;
+    case 'peek': return `${body} partly visible, never fully risen`;
+    default: return `${body} ${tr.start.edge === 'first-cut' || tr.end.edge === 'last-limb' ? 'setting' : 'rising'} (an end not found)`;
+  }
+}
+
+function endOf(tr: SkyTransition, which: 'start' | 'end'): PassageEnd {
+  const x = tr[which];
+  const instant = edgeLabel(tr, which) ?? (which === 'start' ? 'start not found' : 'end not found');
+  return { edge: x.edge, instant, timeMs: x.edge === 'unresolved' ? null : x.timeMs, inWindow: x.inWindow, azDeg: x.azDeg };
+}
+
+/** How much of the disc a graze hides or a peek shows (the summary already says what an end not found means). */
+function passageNote(tr: SkyTransition): string {
+  const pct = (f: number) => `${Math.round(f * 100)} %`;
+  if (tr.kind === 'graze' && Number.isFinite(tr.minVisibleFraction)) return `At most ${pct(1 - tr.minVisibleFraction)} of the disc is hidden at the analysis' samples.`;
+  if (tr.kind === 'peek' && Number.isFinite(tr.maxVisibleFraction)) return `At most ${pct(tr.maxVisibleFraction)} of the disc shows at the analysis' samples.`;
+  return '';
+}
+
+/** Every passage of the Sun and Earth through the skyline that overlaps the window, in time order (empty without a skyline). */
+export function passageRows(a: SiteAnalysis): PassageRow[] {
+  const w0 = a.scenario.startMs, w1 = w0 + a.scenario.durationH * HOUR_MS;
+  return (a.transitions ?? []).map((tr) => {
+    const windowStartMs = Math.max(tr.start.timeMs, w0), windowEndMs = Math.min(tr.end.timeMs, w1);
+    return {
+      body: tr.body,
+      kind: tr.kind,
+      state: passageState(tr),
+      start: endOf(tr, 'start'),
+      end: endOf(tr, 'end'),
+      hours: tr.hours,
+      windowStartMs, windowEndMs, windowHours: Math.max(0, (windowEndMs - windowStartMs) / HOUR_MS),
+      runsPastStart: !tr.start.inWindow || tr.start.edge === 'unresolved',
+      runsPastEnd: !tr.end.inWindow || tr.end.edge === 'unresolved',
+      centre: tr.body === 'earth' ? tr.centre.map((c) => ({ instant: c.up ? "Earth's centre rises" : "Earth's centre sets", timeMs: c.timeMs, inWindow: c.inWindow })) : [],
+      summary: transitionSummary(tr),
+      text: transitionText(tr),
+      note: passageNote(tr),
+    } satisfies PassageRow;
+  });
+}
+
 // ---------- exports ----------
 
 export interface ExportSide {
@@ -100,6 +190,8 @@ const CSV_COLUMNS = [
   'slot', 'scenario', 'site_id', 'site_name', 'lat_deg', 'lon_deg_east', 'mast_height_m', 'window_start_utc', 'window_end_utc',
   'group', 'state', 'start_utc', 'end_utc', 'duration_h', 'start_found', 'end_found',
   'in_window_start_utc', 'in_window_end_utc', 'in_window_h', 'runs_past_window_start', 'runs_past_window_end', 'note',
+  // Passages only (rises and sets with both ends, D-8): which instant each end is, and Earth's centre crossings.
+  'start_instant', 'end_instant', 'earth_centre_crossings',
 ] as const;
 
 /** One CSV field: quoted when it holds a comma, a quote or a line break (RFC 4180). */
@@ -108,17 +200,29 @@ const field = (v: string | number | boolean | null): string => {
   return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 };
 
-/** The table as CSV: one row per spell, the scenario repeated on each row so A and B can sit in one file. */
+/** The table as CSV: one row per spell, then one per passage, the scenario repeated on each row so A and B can sit in one file. */
 export function toCsv(sides: readonly ExportSide[]): string {
   const lines = [CSV_COLUMNS.join(',')];
   for (const { slot, analysis: a } of sides) {
     const sc = a.scenario;
     const end = sc.startMs + sc.durationH * HOUR_MS;
+    const scenario = [slot, sc.label, sc.site.id, sc.site.name, sc.site.lat, sc.site.lon, sc.mastHeightM, isoSeconds(sc.startMs), isoSeconds(end)];
     for (const r of spellRows(a)) {
       const values: (string | number | boolean | null)[] = [
-        slot, sc.label, sc.site.id, sc.site.name, sc.site.lat, sc.site.lon, sc.mastHeightM, isoSeconds(sc.startMs), isoSeconds(end),
+        ...scenario,
         r.group, KIND_TEXT[r.kind], isoSeconds(r.startMs), isoSeconds(r.endMs), rounded(r.hours, 4), r.startFound, r.endFound,
         isoSeconds(r.windowStartMs), isoSeconds(r.windowEndMs), rounded(r.windowHours, 4), r.runsPastStart, r.runsPastEnd, r.note,
+        '', '', '',
+      ];
+      lines.push(values.map(field).join(','));
+    }
+    for (const p of passageRows(a)) {
+      // An end that was not found gets no time (D-8): its column stays empty and *_found says why.
+      const values: (string | number | boolean | null)[] = [
+        ...scenario,
+        p.body, p.state, p.start.timeMs === null ? '' : isoSeconds(p.start.timeMs), p.end.timeMs === null ? '' : isoSeconds(p.end.timeMs), rounded(p.hours, 4), p.start.timeMs !== null, p.end.timeMs !== null,
+        isoSeconds(p.windowStartMs), isoSeconds(p.windowEndMs), rounded(p.windowHours, 4), p.runsPastStart, p.runsPastEnd, [p.summary, p.note].filter(Boolean).join('. '),
+        p.start.instant, p.end.instant, p.centre.map((c) => `${c.instant} ${isoSeconds(c.timeMs)}`).join('; '),
       ];
       lines.push(values.map(field).join(','));
     }
@@ -128,10 +232,11 @@ export function toCsv(sides: readonly ExportSide[]): string {
 
 const CONVENTIONS =
   'Times UTC (ISO 8601). Latitude north-positive, longitude east-positive (Moon Mean Earth / Polar Axis frame), heights in metres above the 1737.4 km sphere, azimuth clockwise from north, elevation above the local horizontal with no refraction (airless). ' +
-  "Sunlight: time-averaged visible part of the Sun's disc against the terrain skyline. Earth in view: Earth's centre above the terrain skyline, geometric line of sight only (not a radio link). " +
-  'A spell that runs past an edge of the mission window is given in full, followed with the in-app model up to 60 days beyond the edge; start_found / end_found false means the search stopped there and the duration is a lower bound.';
+  "Sunlight: time-averaged visible part of the Sun's disc against the terrain skyline. Earth in view: Earth's centre above the terrain skyline, geometric line of sight only (not a radio link); the figures for any part of Earth's disc (PGDA product 69's definition) are named so. " +
+  'A spell that runs past an edge of the mission window is given in full, followed with the in-app model up to 60 days beyond the edge; start_found / end_found false means the search stopped there and the duration is a lower bound. ' +
+  "A passage is a rise or a set with both ends (the disc neither wholly clear of the terrain skyline nor wholly behind it): start_instant and end_instant say which instant each end is (for example \"Sun starts setting\" and \"Sun fully set\"); an end not found within the search has no time.";
 
-/** Everything behind the table as JSON: scenario, metrics, events, every spell, requirements, data sources, assumptions and warnings. */
+/** Everything behind the table as JSON: scenario, metrics, events, every spell and passage, requirements, data sources, assumptions and warnings. */
 export function toJson(sides: readonly ExportSide[], s: Pick<AppState, 'sunElMinDeg' | 'sunElMaxDeg' | 'maxEarthGapH' | 'slopeLimitDeg'>, sunElNowDeg: (a: SiteAnalysis) => number, diff: ComparisonDiff | null, nowMs: number): string {
   const r3 = (v: number) => rounded(v, 3);
   const doc = {
@@ -139,6 +244,8 @@ export function toJson(sides: readonly ExportSide[], s: Pick<AppState, 'sunElMin
     exportedUtc: isoSeconds(nowMs),
     conventions: CONVENTIONS,
     eventDefinitions: Object.fromEntries(Object.entries(EVENT_INFO).map(([type, info]) => [type, `${info.label}: ${info.instant}.`])),
+    // The two ends of each passage (a set runs from "starts setting" to "fully set", a rise from "starts rising" to "fully risen").
+    passageInstantDefinitions: Object.fromEntries(Object.values(TRANSITION_WORDS).flatMap((edges) => Object.values(edges).map((w) => [w.label, `${w.instant}.`]))),
     scenarios: sides.map(({ slot, analysis: a }) => {
       const m = a.metrics;
       return {
@@ -148,11 +255,24 @@ export function toJson(sides: readonly ExportSide[], s: Pick<AppState, 'sunElMin
           illuminationPct: r3(m.illuminationPct), sunAnyPct: r3(m.sunAnyPct),
           longestDarknessH: r3(m.longestDarknessH), darknessRunsIntoWindowEdge: m.darknessOpenEnded,
           earthCentreVisiblePct: r3(m.earthVisiblePct), longestEarthGapH: r3(m.longestEarthGapH), earthGapRunsIntoWindowEdge: m.earthGapOpenEnded,
+          // Any part of Earth's disc above the skyline (PGDA product 69's definition), beside the centre figures, under getAnalysis' names; null where the analysis has none.
+          earthAnyPct: r3(m.earthAnyPct ?? NaN), longestEarthAnyGapH: r3(m.longestEarthAnyGapH ?? NaN), earthAnyGapRunsIntoWindowEdge: m.earthAnyGapOpenEnded ?? null,
           minSunElDeg: r3(m.minSunElDeg), maxSunElDeg: r3(m.maxSunElDeg),
         },
         slope: { slopeDeg: r3(a.slope.slopeDeg), downhillAzDeg: rounded(a.slope.aspectDeg, 1), baselineM: rounded(a.slope.baselineM, 1), elevationData: a.slope.demName },
         siteElevationM: rounded(a.horizon.siteElevationM, 1),
-        events: a.events.map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoSeconds(e.timeMs), azDeg: rounded(e.azDeg, 2) })),
+        // As in getAnalysis: each event with its D-8 sentence, and every passage in the shape of its SpanReport (times here to the second).
+        events: a.events.map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoSeconds(e.timeMs), azDeg: rounded(e.azDeg, 2), summary: eventText(e) })),
+        passages: passageRows(a).map((p) => {
+          const end = (x: PassageEnd) => (x.timeMs === null ? { edge: x.edge, label: null, timeUtc: null, inWindow: x.inWindow } : { edge: x.edge, label: x.instant, timeUtc: isoSeconds(x.timeMs), azDeg: rounded(x.azDeg, 2), inWindow: x.inWindow });
+          return {
+            body: p.body, kind: p.kind, state: p.state,
+            start: end(p.start), end: end(p.end),
+            hours: rounded(p.hours, 4), hoursIsLowerBound: p.start.timeMs === null || p.end.timeMs === null,
+            ...(p.centre.length && { centre: p.centre.map((c) => ({ label: c.instant, timeUtc: isoSeconds(c.timeMs), inWindow: c.inWindow })) }),
+            summary: p.summary, text: p.text, ...(p.note && { note: p.note }),
+          };
+        }),
         spells: spellRows(a).map((r) => ({
           group: r.group, state: KIND_TEXT[r.kind],
           startUtc: isoSeconds(r.startMs), endUtc: isoSeconds(r.endMs), hours: rounded(r.hours, 4), startFound: r.startFound, endFound: r.endFound,

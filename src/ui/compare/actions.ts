@@ -18,7 +18,7 @@ import { SCIENCE, type Science } from './model';
 import { nearbyRow, nearbyView } from './nearbyView';
 import { outlookResult } from './outlookView';
 import { COMPARE_TABS, TABLE_SLOTS, type CompareTab, type PanelStore, type TableSlot } from './state';
-import { exportFilename, spellRows, toCsv, toJson, type ExportSide } from './windowTable';
+import { exportFilename, passageRows, spellRows, toCsv, toJson, type ExportSide } from './windowTable';
 import { MAX_NAME_LENGTH, MAX_SAVED, type CompareStorage, type SavedComparison } from './storage';
 
 export interface CompareContext {
@@ -350,8 +350,8 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
       name: 'exportResults',
       title: 'Download the mission-window results',
       description:
-        'Downloads the mission-window results as a file. "csv": the window table, one row per spell (sunlit, dark, Earth in front of the Sun, Earth\'s centre in view, hidden) with UTC start and end, duration, the part inside the window and a note; a spell that runs past an edge of the window is given in full. ' +
-        '"json": everything behind it: scenario, metrics, events with which instant each is, every spell, the requirements checked, elevation data, ephemeris, assumptions and warnings, and the differences B minus A when both slots are exported. ' +
+        'Downloads the mission-window results as a file. "csv": the window table, one row per spell (sunlit, dark, Earth in front of the Sun, Earth\'s centre in view, hidden) with UTC start and end, duration, the part inside the window and a note; a spell that runs past an edge of the window is given in full. Then one row per rise or set of the Sun and Earth with both ends, each named in start_instant / end_instant (for example "Sun starts setting" and "Sun fully set"), and Earth\'s centre crossings. ' +
+        '"json": everything behind it: scenario, metrics (Earth by its centre and by any part of its disc), events with which instant each is and their passage, every spell, every rise and set with both ends, the requirements checked, elevation data, ephemeris, assumptions and warnings, and the differences B minus A when both slots are exported. ' +
         '`slot`: "current" (the scenario on screen), "A", "B", or "AB" for both in one file; default: the scenario the window table shows (normally the one on screen). Waits for the analyses. Returns the file name and size.',
       effect: 'command',
       params: {
@@ -392,6 +392,8 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
           bytes: new TextEncoder().encode(text).length,
           scenarios: sides.map((x) => ({ slot: x.slot, label: x.analysis.scenario.label })),
           spells: sides.reduce((n, x) => n + spellRows(x.analysis).length, 0),
+          // Rises and sets with both ends (D-8): one row each in the CSV, `passages` in the JSON.
+          passages: sides.reduce((n, x) => n + passageRows(x.analysis).length, 0),
           downloaded: true,
         };
       },

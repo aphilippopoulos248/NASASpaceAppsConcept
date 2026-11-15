@@ -189,6 +189,31 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     await until(page, () => /% of the window/.test(document.querySelector('.site-card .sc-window')?.textContent ?? ''));
   });
 
+  test('A-1: open a catalogued landing from the globe with the keyboard ("Go to a landing site")', SLOW, async () => {
+    await tabTo(page, /^select#.*\|Go to a landing site/);
+    // End picks the last landing in the list (the newest); a closed select changes on the arrow keys.
+    await page.keyboard.press('End');
+    await until(page, () => window.lunyx.store.get().site?.kind === 'landing');
+    const site = await page.evaluate(() => window.lunyx.store.get().site);
+    await until(page, (name) => document.querySelector('.site-card .sc-title')?.textContent.trim() === name, site.name);
+    // The rest of the walk continues from this landing (its card is open).
+  });
+
+  test('F-4 (A-4): the "Arrival delay" field keeps its explanation after an edit', SLOW, async () => {
+    await tabTo(page, /\|Arrival delay/);
+    const before = await page.evaluate(() => document.activeElement.title);
+    assert.match(before, /late arrival/i);
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('24');
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().delayH === 24);
+    assert.equal(await page.evaluate(() => document.activeElement.title), before);
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('0');
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().delayH === 0);
+  });
+
   test('A-2: enter the surface view, look around with the arrow keys from wherever the focus is, leave with Escape', SLOW, async () => {
     await tabTo(page, /\|Enter surface view$/);
     await page.keyboard.press('Enter');
@@ -200,10 +225,17 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 1, az0);
     // From a HUD button too (not a field): the arrows still turn the view.
-    await tabTo(page, /\|(Face Sun|Fold|Open)$/);
+    await tabTo(page, /\|Face Sun$/, { max: 60 });
     const az1 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
     await page.keyboard.press('ArrowLeft');
-    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1);
+    const turned = await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1, 15_000).catch(() => false);
+    if (!turned) {
+      const where = await page.evaluate(() => {
+        const el = document.activeElement;
+        return { focus: `${el?.tagName.toLowerCase()}#${el?.id}.${el?.className} "${(el?.getAttribute('aria-label') || el?.textContent || '').trim().slice(0, 60)}"`, look: window.lunyx.store.get().look, view: document.body.dataset.view, site: window.lunyx.store.get().site?.id };
+      });
+      assert.fail(`ArrowLeft on a HUD button did not turn the view (azimuth ${az1} before): ${JSON.stringify(where)}`);
+    }
     const el0 = await page.evaluate(() => window.lunyx.store.get().look.elDeg);
     await page.keyboard.press('ArrowUp');
     await until(page, (e) => window.lunyx.store.get().look.elDeg > e, el0);
@@ -242,10 +274,9 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
   });
 
-  // Finding Q-4 (docs/lunyx/qa-findings.md), owner @analysis: "Compare as B" switches the panel to
-  // its "A and B" tab, which hides the button that had the focus, so the focus falls to the page;
-  // the next Escape then closes the panel without giving the focus back to the launcher.
-  test('after "Compare as B" the focus stays in the compare dialog, and Escape returns it to the launcher', { ...SLOW, todo: 'Q-4 (@analysis): the focus falls out of the dialog when "Compare as B" switches the tab' }, async () => {
+  // Finding Q-4 (docs/lunyx/qa-findings.md): "Compare as B" used to drop the focus out of the dialog.
+  // Fixed upstream (original T-46); kept as a regression test.
+  test('after "Compare as B" the focus stays in the compare dialog, and Escape returns it to the launcher', SLOW, async () => {
     await tabTo(page, /cmp-launcher/);
     await page.keyboard.press('Enter');
     await until(page, () => !document.querySelector('.cmp-sheet').hidden && document.querySelector('.cmp-sheet').contains(document.activeElement));
@@ -320,9 +351,9 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     assert.ok(!labels.some((l) => l.includes('Close the assistant') || l.includes('Message to the assistant')), 'the closed drawer is in the tab order');
   });
 
-  // Finding A-5 (docs/lunyx/accessibility.md): the site-science section has two disclosures both
-  // named "Source and limits" (long-term averages and Diviner temperatures).
-  test('controls in one round of Tab have distinct names', { ...SLOW, todo: 'A-5 (site science, T-30): two disclosures are both named "Source and limits"' }, async () => {
+  // Findings A-5 (two "Source and limits" disclosures) and A-6 (three presets' "Timing and data
+  // sources" disclosures) were fixed upstream (original T-46 and T-57); kept as a regression test.
+  test('controls in one round of Tab have distinct names', SLOW, async () => {
     const stops = await tabStops(page);
     const byName = new Map();
     for (const st of stops) byName.set(st.name, (byName.get(st.name) ?? 0) + 1);

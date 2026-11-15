@@ -3,9 +3,10 @@
 //
 //   search     site search and comparison: open, type coordinates in Filters > Centre of view,
 //              drop a pin, the pin's card against the analysis, search criteria (mission
-//              window, slope and Earth-gap limits), save A, scan nearby sites, a ranked
-//              alternative as B (or, in a build without the scan, B = A arriving 24 h later),
-//              and the compare table against the analysis.
+//              window, slope and Earth-gap limits), save A, scan nearby sites with a typed
+//              radius and spacing that must survive a change of the slope limit (Q-7, T-16),
+//              a ranked alternative as B (or, in a build without the scan, B = A arriving 24 h
+//              later), and the compare table against the analysis.
 //   surface    IM-2 from its globe marker, looking around, its card and surface view at the
 //              landing time, Face Earth / Face Sun / sky paths, the 29.5-day window, scrubbing
 //              and event jumps, Escape; Apollo 11 at its landing time. On a GPU the surface is
@@ -13,6 +14,9 @@
 //              renderer); the shots pair with the software-rendered ones in docs/lunyx/handover.
 //   assistant  the drawer in deterministic mode: requests whose numbers are checked against
 //              the analysis and the panels.
+//   scenario   (T-8 item 3) the T-6 request in three follow-ups through the drawer, with the
+//              panels open: reply, Nearby list, compare table, Key metrics and the explanation
+//              against the actions' results and the analysis.
 //   extras     (T-8) a mission preset played to its end, a zoomed Earth, the window table with
 //              its CSV and JSON downloads against the analysis, the outlook, the Country filter,
 //              country flags, ownership rows and the explored area on the card.
@@ -32,7 +36,8 @@ import { execSync } from 'node:child_process';
 import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { ask } from '../lib/app.mjs';
-import { compareRowsAgainst, firstNumber, requirementLinesAgainst } from '../lib/read.mjs';
+import { compareRowsAgainst, firstNumber, keyMetricsAgainst, requirementLinesAgainst } from '../lib/read.mjs';
+import { PIN as SCENARIO_PIN, STEPS as SCENARIO_STEPS, WINDOW as SCENARIO_WINDOW } from '../scenario/setup.mjs';
 import { ROOT, servers } from '../lib/servers.mjs';
 import { analysisSettled, fps, GL, globeSettled, launch, makeStepper, mouseDrag, numbers, openPage, parseDurationH, PROFILES, rendering, shot, sleep, surfaceReady } from './lib.mjs';
 
@@ -60,6 +65,9 @@ const IM2 = { id: 'im-2', name: 'IM-2 Athena', lat: -84.79, lon: 29.2, landingUt
 const APOLLO11 = { id: 'apollo-11', lat: 0.6741, lon: 23.4730, landingUtc: Date.UTC(1969, 6, 20, 20, 17) };
 const PIN = { lat: -89.45, lon: -137.2, latText: '-89.45', lonText: '-137.2' };
 const CRITERIA = { windowH: 168, slopeLimitDeg: 8, maxEarthGapH: 48 };
+// The nearby scan as the operator checked Q-7: a typed radius and spacing, then the slope limit
+// changed (to the detour value and back), which redraws the tab; the scan must cover what was typed.
+const SCAN = { radiusM: 900, spacingM: 150, slopeDetourDeg: 10 };
 const kmPerDeg = (1737.4 * Math.PI) / 180;
 
 // ------------------------------------------------------------------ reading the app
@@ -209,6 +217,8 @@ const fmtUtc = (ms) => `${new Date(ms).toISOString().slice(0, 10)} ${new Date(ms
 const close = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
 const durTol = (h) => (h >= 24 ? 0.051 : h < 0.05 ? 0.05 : 0.051);
 /** "18.2 h", "379.8 h (15.8 d)", "none", "18.2 h or more" -> hours. */
+/** As the assistant writes hours: "none" below 0.05 h, else one decimal and "h". */
+const hoursText = (h) => (h < 0.05 ? 'none' : `${h.toFixed(1)} h`);
 const hoursOf = (text) => (/^none\b/.test(text ?? '') ? 0 : firstNumber(text ?? ''));
 
 /** One body on the card, "2.5° elevation, azimuth 66°; 1.2° above the skyline", as numbers. */
@@ -225,8 +235,11 @@ function checkCard(check, card, a, st) {
   check('Card: sky heading time = simulated time', card.skyTitle, `Sky at ${fmtUtc(st.timeMs)}`, card.skyTitle === `Sky at ${fmtUtc(st.timeMs)}`);
   check('Card: Sunlight % vs metrics.illuminationPct', card.window.Sunlight, m.illuminationPct, close(firstNumber(card.window.Sunlight), m.illuminationPct, 0.051));
   check('Card: Longest darkness vs metrics.longestDarknessH', card.window['Longest darkness'], m.longestDarknessH, close(parseDurationH(card.window['Longest darkness'] ?? ''), m.longestDarknessH, tolH(m.longestDarknessH)));
-  check('Card: Earth in view % vs metrics.earthVisiblePct', card.window['Earth in view'], m.earthVisiblePct, close(firstNumber(card.window['Earth in view']), m.earthVisiblePct, 0.051));
-  check('Card: Longest Earth gap vs metrics.longestEarthGapH', card.window['Longest Earth gap'], m.longestEarthGapH, close(parseDurationH(card.window['Longest Earth gap'] ?? ''), m.longestEarthGapH, tolH(m.longestEarthGapH)));
+  const earthIn = card.window["Earth's centre in view"] ?? card.window['Earth in view'];
+  const earthGap = card.window["Longest gap, Earth's centre"] ?? card.window['Longest Earth gap'];
+  check("Card: Earth's centre in view % vs metrics.earthVisiblePct", earthIn, m.earthVisiblePct, close(firstNumber(earthIn), m.earthVisiblePct, 0.051));
+  if (card.window['Any part of Earth in view'] && Number.isFinite(m.earthAnyPct)) check('Card: any part of Earth in view % vs metrics.earthAnyPct', card.window['Any part of Earth in view'], m.earthAnyPct, close(firstNumber(card.window['Any part of Earth in view']), m.earthAnyPct, 0.051));
+  check("Card: longest gap, Earth's centre vs metrics.longestEarthGapH", earthGap, m.longestEarthGapH, close(parseDurationH(earthGap ?? ''), m.longestEarthGapH, tolH(m.longestEarthGapH)));
   check('Card: Slope vs slope.slopeDeg', card.window.Slope, a.slope.slopeDeg, close(firstNumber(card.window.Slope), a.slope.slopeDeg, 0.051));
   for (const [key, body] of [['Sun', 'sun'], ['Earth', 'earth']]) {
     const shown = parseBody(card.sky[key] ?? '');
@@ -371,12 +384,29 @@ async function partSearch(app, step) {
   const canScan = await hasAction(page, 'rankNearby');
   app.report.build.scan = canScan;
   if (canScan) {
-    await step('Scan nearby sites (Nearby sites tab, default radius and spacing, slope limit as set)', 'control', async ({ check, note }) => {
+    await step(`Scan nearby sites (Nearby sites tab): type Radius ${SCAN.radiusM} m and Spacing ${SCAN.spacingM} m, change "Slope at most" to ${SCAN.slopeDetourDeg}° and back to ${CRITERIA.slopeLimitDeg}°, then scan (Q-7)`, 'control', async ({ check, note }) => {
       await page.getByRole('tab', { name: 'Nearby sites' }).click();
       const scan = page.getByRole('button', { name: 'Scan nearby sites' });
       await scan.waitFor({ state: 'visible', timeout: 10_000 });
-      const settings = await page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`));
-      note(`Scan settings: ${settings.join(', ')}.`);
+      const group = page.getByRole('group', { name: 'Scan settings' });
+      const [radius, spacing, slope] = [group.getByLabel('Radius'), group.getByLabel('Spacing'), group.getByLabel('Slope at most')];
+      const settingsNow = () => page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`).join(', '));
+      note(`Scan settings before: ${await settingsNow()}.`);
+      // Typed, then left with Tab (Enter in these fields starts the scan).
+      await typeInto(radius, String(SCAN.radiusM));
+      await radius.press('Tab');
+      await typeInto(spacing, String(SCAN.spacingM));
+      await spacing.press('Tab');
+      // Each change of the slope limit redraws the tab, which used to put the last scan's radius and spacing back (Q-7).
+      for (const v of [SCAN.slopeDetourDeg, CRITERIA.slopeLimitDeg]) {
+        await typeInto(slope, String(v));
+        await slope.press('Tab');
+        await page.waitForFunction((x) => window.lunyx.store.get().slopeLimitDeg === x, v, { timeout: 10_000 });
+      }
+      const kept = [await radius.inputValue(), await spacing.inputValue()];
+      check('Radius keeps the typed value after the slope limit changed twice', kept[0], String(SCAN.radiusM), kept[0] === String(SCAN.radiusM), { finding: 'Q-7' });
+      check('Spacing keeps the typed value after the slope limit changed twice', kept[1], String(SCAN.spacingM), kept[1] === String(SCAN.spacingM), { finding: 'Q-7' });
+      note(`Scan settings at the scan: ${await settingsNow()}.`);
       const t0 = Date.now();
       await scan.click();
       await page.waitForFunction(() => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), null, { polling: 250, timeout: 600_000 });
@@ -389,6 +419,12 @@ async function partSearch(app, step) {
       const view = await readNearby(page);
       app.report.values.push({ profile: app.profile, where: 'nearby scan', nearby: st, table: view });
       note(`Summary: ${view?.summary}`);
+      const grid = `${SCAN.radiusM} / ${SCAN.spacingM} / ${CRITERIA.slopeLimitDeg}`;
+      check('The scan ran on the typed grid (options radius / spacing / slope limit)', `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}`, grid, `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}` === grid, { finding: 'Q-7' });
+      const says = `within ${SCAN.radiusM} m, every ${SCAN.spacingM} m, slope at most ${CRITERIA.slopeLimitDeg}°`;
+      check('The summary names the typed grid', view?.summary, says, Boolean(view?.summary?.includes(says)), { finding: 'Q-7' });
+      const after = [await radius.inputValue(), await spacing.inputValue()];
+      check('After the scan the fields show the grid it covered', after.join(' / '), `${SCAN.radiusM} / ${SCAN.spacingM}`, after.join(' / ') === `${SCAN.radiusM} / ${SCAN.spacingM}`);
       const ranked = (st.value ?? []).filter((c) => !c.ref && Number.isFinite(c.score) && c.slope <= CRITERIA.slopeLimitDeg).sort((a, b) => b.score - a.score);
       const first = view?.rows.find((r) => r.Rank === '1');
       if (first && ranked[0]) {
@@ -569,12 +605,7 @@ async function partSurface(app, step) {
       const at = fmtUtc(Date.parse(e.timeUtc));
       check(`Countdown "${c?.label}": instant and time = analysis nextEvents.${type}`, c?.at, `${e.label} · ${at}`, c?.at === `${e.label} · ${at}`);
     }
-    const m = a.metrics;
-    check('Key metrics: Sunlight = metrics.illuminationPct', km.win.Sunlight, m.illuminationPct, close(firstNumber(km.win.Sunlight), m.illuminationPct, 0.051));
-    check('Key metrics: Longest darkness = metrics.longestDarknessH', km.win['Longest darkness'], m.longestDarknessH, close(hoursOf(km.win['Longest darkness']), m.longestDarknessH, durTol(m.longestDarknessH)));
-    check("Key metrics: Earth's centre in sight = metrics.earthVisiblePct", km.win["Earth's centre in sight"], m.earthVisiblePct, close(firstNumber(km.win["Earth's centre in sight"]), m.earthVisiblePct, 0.051));
-    check('Key metrics: Longest Earth gap = metrics.longestEarthGapH', km.win['Longest Earth gap'], m.longestEarthGapH, close(hoursOf(km.win['Longest Earth gap']), m.longestEarthGapH, durTol(m.longestEarthGapH)));
-    check('Key metrics: Slope = slope.slopeDeg', km.win.Slope, a.slope.slopeDeg, close(firstNumber(km.win.Slope), a.slope.slopeDeg, 0.051));
+    for (const c of keyMetricsAgainst(km, a).filter((x) => /Sunlight|darkness|Earth's centre in sight|any part|Earth gap|Slope/.test(x.what))) check(c.what, c.shown, c.expected, c.pass);
     note(`States: ${km.states.join(' | ')}. Flags: ${km.flags.join(' | ') || 'none'}.`);
   }, { shot: 'im2-surface-key-metrics' });
 
@@ -647,25 +678,29 @@ async function partSurface(app, step) {
       return st.state === 'ready' ? st.value.events.filter((e) => e.timeMs >= start && e.timeMs <= end).map((e) => ({ type: e.type, utc: new Date(e.timeMs).toISOString().slice(0, 16), azDeg: Math.round(e.azDeg * 10) / 10 })) : null;
     });
     app.report.values.push({ profile: app.profile, where: 'IM-2 29.5-day window events', events: ev, scrubber: sc });
-    check('Scrubber marks = analysis events in the window', sc.marks.length, ev?.length, ev && sc.marks.length === ev.length);
+    // Since T-47 the marks also carry the passes of Earth in front of the Sun (◐); count the event glyphs.
+    const eventMarks = await page.evaluate(() => [...document.querySelectorAll('.time-scrubber .ts-mark')].filter((m) => /^(☀↑|☀↓|⊕↑|⊕↓)$/.test(m.textContent.trim())).length);
+    const eclipseMarks = await page.evaluate(() => [...document.querySelectorAll('.time-scrubber .ts-mark')].filter((m) => m.textContent.trim() === '◐').length);
+    check('Scrubber event marks = analysis events in the window', eventMarks, ev?.length, ev && eventMarks === ev.length);
+    note(`Marks: ${eventMarks} rise and set, ${eclipseMarks} Earth in front of the Sun.`);
     check('Jump buttons shown', sc.jumpsShown, true, sc.jumpsShown);
     note(`Events: ${ev?.map((e) => `${e.type} ${e.utc}`).join('; ')}`);
     note(`Jump buttons: ${sc.jumps.map((j) => `"${j.text}"${j.disabled ? ' (disabled)' : ''}`).join(', ')}`);
   }, { timeout: 360_000 });
 
-  await step('Countdown button "Sun fully set" (Key metrics) moves the clock to the event', 'control', async ({ check, note }) => {
-    const a = await getAnalysis(page);
-    const e = a.nextEvents?.sunset;
-    if (!e) {
-      note('No sunset ahead in the window.');
-      return;
-    }
+  await step('Countdown button for the Sun setting (Key metrics) moves the clock to the instant it names', 'control', async ({ check, note }) => {
+    await sleep(400);
+    // The button's title says where it goes: '... Clicking moves the clock to "Sun starts setting" (2025-03-19 16:36 UTC).'
+    const [at, title] = await page.evaluate(() => [document.querySelector('.km .km-count li .km-count-at')?.textContent.trim() ?? '', document.querySelector('.km .km-count-btn')?.title ?? '']);
+    const named = /Clicking moves the clock to "[^"]+" \((\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC\)/.exec(title) ?? /(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}) UTC/.exec(at);
+    check('The first countdown names where its button goes', title.slice(-90) || at, 'an instant with its time', Boolean(named));
+    if (!named) return;
     const s0 = await appState(page);
     await page.locator('.km .km-count-btn').first().click();
-    await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
+    await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 10_000 });
     const s = await appState(page);
-    check('Clock = analysis nextEvents.sunset', new Date(s.timeMs).toISOString(), e.timeUtc, Math.abs(s.timeMs - Date.parse(e.timeUtc)) <= 60_000);
-    note(`"${e.label}" at ${e.timeUtc}, azimuth ${e.azDeg}°.`);
+    check('Clock = the instant the countdown names (to the minute)', fmtUtc(s.timeMs), `${named[1]} ${named[2]} UTC`, fmtUtc(s.timeMs) === `${named[1]} ${named[2]} UTC`);
+    note(`Countdown: "${at}".`);
   });
 
   await step('Scrub: click the slider at 40 %', 'control', async ({ check, note }) => {
@@ -681,34 +716,28 @@ async function partSurface(app, step) {
     note(`Scrubbed to ${new Date(s.timeMs).toISOString()}.`);
   });
 
-  await step('Jump to the next "Sun fully set", then "Sun starts rising" (scrubber buttons)', 'control', async ({ check, note }) => {
-    for (const [type, text] of [['sunset', 'Sun fully set'], ['sunrise', 'Sun starts rising']]) {
-      const s0 = await appState(page);
-      const expected = await page.evaluate(([t, now]) => {
-        const st = window.lunyx.analysis.get('current');
-        if (st.state !== 'ready') return null;
-        const hit = st.value.events.filter((e) => e.type === t).sort((a, b) => a.timeMs - b.timeMs).find((e) => e.timeMs > now + 30_000);
-        return hit ? hit.timeMs : null;
-      }, [type, s0.timeMs]);
-      const button = page.locator('.ts-jump', { hasText: text });
-      const disabled = await button.isDisabled();
-      if (expected === null) {
-        check(`${text}: button disabled when no such event lies ahead`, disabled, true, disabled);
-        note(`No ${type} after ${new Date(s0.timeMs).toISOString()} in the window.`);
-        continue;
-      }
-      await button.click();
-      await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
-      const s = await appState(page);
-      check(`Jump to the next "${text}" = analysis event time`, new Date(s.timeMs).toISOString(), new Date(expected).toISOString(), s.timeMs === expected);
-      if (type === 'sunset') {
-        const a = await getAnalysis(page);
-        note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}° (the last limb, decision D-8).`);
-        await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
-        await sleep(800);
-        const f = `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`;
-        app.extraShots.push(await shot(page, f));
-        note(`Screenshot at the sunset: ${f}`);
+  await step('Scrubber jumps: each press of the Sun-setting and Sun-rising buttons goes to the instant its label names', 'control', async ({ check, note }) => {
+    let sunsetShot = false;
+    for (const [cls, presses] of [['.ts-jump.ts-sun', 3]]) {
+      for (let k = 0; k < presses; k++) {
+        await sleep(400); // the labels follow the clock within 250 ms
+        const buttons = await page.evaluate((c) => [...document.querySelectorAll(`.time-scrubber ${c}`)].map((b, i) => ({ i, text: b.textContent.trim(), label: b.getAttribute('aria-label') ?? '', disabled: b.disabled })), cls);
+        const b = buttons.find((x) => !x.disabled && /setting|set/.test(x.text)) ?? buttons.find((x) => !x.disabled);
+        if (!b) break;
+        const named = /^Jump to (\d{4}-\d{2}-\d{2} \d{2}:\d{2}) UTC: ([^(]+)\(/.exec(b.label);
+        const s0 = await appState(page);
+        await page.locator(`.time-scrubber ${cls}`).nth(b.i).click();
+        await page.waitForFunction((t) => window.lunyx.store.get().timeMs !== t, s0.timeMs, { timeout: 15_000 });
+        const s = await appState(page);
+        check(`"${b.text}" lands on the instant its label names`, fmtUtc(s.timeMs), named ? `${named[1]} UTC (${named[2].trim()})` : b.label.slice(0, 80), Boolean(named) && fmtUtc(s.timeMs) === `${named[1]} UTC`);
+        if (!sunsetShot && /fully set/i.test(b.text)) {
+          sunsetShot = true;
+          const a = await getAnalysis(page);
+          note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}°.`);
+          await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+          await sleep(800);
+          app.extraShots.push(await shot(page, `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`));
+        }
       }
     }
   });
@@ -863,16 +892,19 @@ async function partExtras(app, step) {
   const HOUR = 3_600_000;
 
   await step('Missions to replay: "IM-2 Athena, Mons Mouton" (Filters) loads and plays to the end of its window', 'control', async ({ check, note }) => {
+    await closeCompare(page);
     await backToGlobe(page);
-    if (await page.evaluate(() => window.lunyx.store.get().comparing)) await closeCompare(page);
     const preset = await page.evaluate(() => fetch('/data/presets.json').then((r) => r.json()).then((d) => d.presets.find((x) => x.id === 'im-2-landing')));
     await page.locator('.pl-button', { hasText: 'IM-2 Athena' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().site?.id === 'im-2' && window.lunyx.store.get().view === 'surface', null, { timeout: 60_000 });
     const s0 = await appState(page);
     const start = Date.parse(preset.windowStartUtc), end = start + preset.windowDurationH * HOUR;
     check('Preset site, window start and length', `${s0.site.id} ${new Date(s0.windowStartMs).toISOString()} ${s0.windowDurationH} h`, `${preset.siteId} ${new Date(start).toISOString()} ${preset.windowDurationH} h`, s0.site.id === preset.siteId && s0.windowStartMs === start && s0.windowDurationH === preset.windowDurationH);
-    check('Preset plays at its rate', `${s0.playing} ${s0.rate}`, `true ${preset.rateSecondsPerSecond}`, s0.playing === true && s0.rate === preset.rateSecondsPerSecond);
     await analysisSettled(page);
+    // The preset starts playing once its site analysis is ready.
+    await page.waitForFunction(() => window.lunyx.store.get().playing, null, { timeout: 60_000 }).catch(() => {});
+    const s0b = await appState(page);
+    check('Preset plays at its rate', `${s0b.playing || s0b.timeMs > start} ${s0b.rate}`, `true ${preset.rateSecondsPerSecond}`, (s0b.playing || s0b.timeMs > start) && s0b.rate === preset.rateSecondsPerSecond);
     const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
     const a = await getAnalysis(page);
     note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
@@ -895,6 +927,11 @@ async function partExtras(app, step) {
     const v = await surfaceView(page);
     note(`Field of view ${v.look.fovDeg}°, Earth ${v.sky.earth.litPct} % lit, diameter ${v.sky.earth.angularDiameterDeg}°.`);
     check('Zoomed in by keyboard', v.look.fovDeg, '<= 8.5', v.look.fovDeg <= 8.5);
+    // Q-5: with the default solar band (0° to 90°) nothing is required, so Key metrics raises no band flag.
+    const st5 = await appState(page);
+    const km5 = await readKeyMetrics(page);
+    const bandFlags = (km5?.flags ?? []).filter((f) => /required band/i.test(f));
+    if (st5.sunElMinDeg === 0 && st5.sunElMaxDeg === 90) check('Q-5: no band flag in Key metrics with the default band', bandFlags.join(' | ') || 'none', 'none', bandFlags.length === 0, { finding: 'Q-5' });
     check('Still facing Earth', `${v.look.azDeg} / ${v.look.elDeg}`, `${v.sky.earth.azDeg} / ${v.sky.earth.elDeg}`, close(v.look.azDeg, v.sky.earth.azDeg, 0.5) && close(v.look.elDeg, v.sky.earth.elDeg, 0.5));
   }, { shot: 'im2-surface-earth-zoomed' });
 
@@ -906,22 +943,29 @@ async function partExtras(app, step) {
     await page.getByRole('button', { name: 'The scenario on screen' }).click();
     await page.waitForFunction(() => document.querySelector('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)'), null, { timeout: 60_000 });
     const shown = await page.evaluate(() => [...document.querySelectorAll('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)')].length);
-    const a = await getAnalysis(page);
+    const a = await page.evaluate(() => {
+      const st = window.lunyx.analysis.get('current');
+      return st.state === 'ready' ? JSON.parse(JSON.stringify({ metrics: st.value.metrics, slope: { slopeDeg: st.value.slope.slopeDeg } })) : null;
+    });
     const [dlJson] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as JSON' }).click()]);
     const json = JSON.parse(readFileSync(await dlJson.path(), 'utf8'));
     const sc = json.scenarios?.[0];
     const m = sc?.metrics ?? {};
     note(`JSON: ${dlJson.suggestedFilename()}, ${sc?.spells?.length} spells, ${sc?.events?.length} events.`);
-    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.001));
-    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.001));
-    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.001));
-    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.001));
+    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.0006));
+    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.0006));
+    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.0006));
+    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.0006));
     check('JSON spells = rows in the table on screen', sc?.spells?.length, shown, sc?.spells?.length === shown);
-    check('JSON says whether a solar band was set', sc?.requirements?.sunElevationBandSet, 'a boolean', typeof sc?.requirements?.sunElevationBandSet === 'boolean');
+    const band = sc?.requirements?.sunElevationBand;
+    const bandSet = band?.required ?? sc?.requirements?.sunElevationBandSet;
+    check('JSON says whether a solar band is required', bandSet, 'a boolean', typeof bandSet === 'boolean');
+    if (bandSet === false && band) check('JSON: no verdict on a band nobody set (Q-5)', band.metForWholeWindow, null, band.metForWholeWindow === null, { finding: 'Q-5' });
     const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
     const csv = readFileSync(await dlCsv.path(), 'utf8').trim().split(/\r?\n/);
     note(`CSV: ${dlCsv.suggestedFilename()}, ${csv.length} lines; header: ${csv[0].slice(0, 160)}`);
-    check('CSV: one row per spell after the header', csv.length - 1, sc?.spells?.length, csv.length - 1 === sc?.spells?.length);
+    const rowsExpected = (sc?.spells?.length ?? 0) + (sc?.passages?.length ?? 0);
+    check('CSV: one row per spell and per passage after the header', csv.length - 1, rowsExpected, csv.length - 1 === rowsExpected);
   }, { shot: 'window-table', timeout: 180_000 });
 
   await step('Outlook (compare panel): the table equals what showOutlook returned', 'control', async ({ check, note }) => {
@@ -947,12 +991,14 @@ async function partExtras(app, step) {
     await backToGlobe(page);
     const missions = page.locator('.fp-missions');
     if (!(await missions.evaluate((d) => d.open))) await missions.locator('summary').click();
-    const before = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).length);
+    const listed = () => page.evaluate(() => [...(document.querySelector('.lp select')?.options ?? [])].filter((o) => o.value).map((o) => o.value));
+    const before = await listed();
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await sleep(500);
-    const after = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).map((m) => m.landing.id));
-    note(`Markers shown: ${before} before, ${after.length} after the India toggle (${after.join(', ')}).`);
-    check('The Country toggle changes the markers shown', `${before} -> ${after.length}`, 'a change', after.length !== before);
+    const after = await listed();
+    const india = await page.getByRole('button', { name: /^India, \d+ landings?$/ }).getAttribute('aria-pressed');
+    note(`"Go to a landing site" lists ${before.length} landings before and ${after.length} after the India toggle (India pressed: ${india}).`);
+    check('The Country toggle changes the landings shown', `${before.length} -> ${after.length}`, 'a change', after.length !== before.length);
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await page.getByLabel('Show country flags').check();
     await page.waitForFunction(() => window.lunyx.store.get().showFlags === true, null, { timeout: 10_000 });
@@ -960,10 +1006,99 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says how much larger it is drawn', card?.facts.Explored, '"drawn N× larger on the globe"', /drawn \d+(\.\d+)?× larger on the globe/.test(card?.facts.Explored ?? ''));
+    check('Explored area says how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?× larger/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
+}
+
+// ------------------------------------------------------------------ part 5: the T-6 scenario with the panels open (T-8 item 3)
+
+async function partScenario(app, step) {
+  const { page } = app;
+  const replyOf = async (text) => {
+    const from = await page.evaluate(() => window.lunyx.actions.actionLog().at(-1)?.seq ?? 0);
+    const reply = await ask(page, text);
+    const entries = await page.evaluate((f) => window.lunyx.actions.actionLog().filter((e) => e.seq > f && e.origin === 'assistant').map(({ name, ok, result }) => ({ name, ok, result: result === undefined ? null : JSON.parse(JSON.stringify(result)) })), from);
+    app.report.replies.push({ profile: app.profile, text, reply: { text: reply.text, label: reply.shownLabel, actions: entries.map((e) => `${e.name}:${e.ok ? 'ok' : 'failed'}`) } });
+    return { reply, entries, of: (name) => entries.find((e) => e.name === name && e.ok)?.result ?? null };
+  };
+  let pick = null;
+
+  await step(`Scenario set-up through the controls: arrival ${SCENARIO_WINDOW.startUtc}, window ${SCENARIO_WINDOW.durationH} h, pin at ${SCENARIO_PIN.lat}, ${SCENARIO_PIN.lon}`, 'control', async ({ check }) => {
+    await backToGlobe(page);
+    await closeCompare(page);
+    const date = page.getByLabel('Arrival date and time (UTC)');
+    await date.fill(SCENARIO_WINDOW.startUtc.replace('Z', ''));
+    await date.press('Enter');
+    await page.getByLabel('Mission window', { exact: true }).selectOption(String(SCENARIO_WINDOW.durationH));
+    await typeCentre(page, String(SCENARIO_PIN.lat), String(SCENARIO_PIN.lon));
+    await page.getByRole('button', { name: 'Drop pin at centre' }).click();
+    await page.waitForFunction(() => window.lunyx.store.get().site?.kind === 'custom', null, { timeout: 15_000 });
+    const st = await appState(page);
+    check('Pin, arrival and window as set', `${st.site.lat}, ${st.site.lon}; ${new Date(st.windowStartMs).toISOString().slice(0, 16)}Z; ${st.windowDurationH} h`, `${SCENARIO_PIN.lat}, ${SCENARIO_PIN.lon}; ${SCENARIO_WINDOW.startUtc}; ${SCENARIO_WINDOW.durationH} h`, close(st.site.lat, SCENARIO_PIN.lat, 1e-5) && close(st.site.lon, SCENARIO_PIN.lon, 1e-5) && st.windowStartMs === Date.parse(SCENARIO_WINDOW.startUtc) && st.windowDurationH === SCENARIO_WINDOW.durationH);
+    await analysisSettled(page, 'current', 300_000);
+    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await page.locator('#assistant-button').click();
+  }, { timeout: 360_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[0]}": the reply, the Nearby list and the scan agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[0]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 500)}`);
+    const scan = r.of('rankNearby');
+    check('rankNearby ran', Boolean(scan), true, Boolean(scan));
+    if (!scan) return;
+    const ref = scan.reference;
+    pick = scan.candidates.find((c) => c.slopeDeg < ref.slopeDeg && c.longestDarknessH < ref.longestDarknessH) ?? null;
+    check('A flatter candidate with a shorter blackout exists', pick?.name ?? 'none', 'a candidate', Boolean(pick));
+    if (!pick) return;
+    check('The reply names it with its slope and darkness', r.reply.text.match(/slope [\d.]+°[^.]*?longest darkness (none|[\d.]+ h)/)?.[0], `${pick.name}: slope ${pick.slopeDeg.toFixed(1)}°, darkness ${pick.longestDarknessH.toFixed(1)} h`, r.reply.text.includes(pick.name) && r.reply.text.includes(`slope ${pick.slopeDeg.toFixed(1)}°`) && r.reply.text.includes(`longest darkness ${hoursText(pick.longestDarknessH)}`));
+    await page.waitForFunction(() => document.querySelector('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)'), null, { timeout: 60_000 });
+    const row = await page.evaluate((id) => {
+      const rows = [...document.querySelectorAll('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)')];
+      const tr = rows.find((x) => x.textContent.includes(id.split(':')[1]?.split(',')[0] ?? '§'));
+      return tr ? Object.fromEntries([...tr.children].map((c) => [c.dataset.label, c.textContent.trim().replace(/\s+/g, ' ')])) : null;
+    }, pick.id);
+    const listRow = row ?? (await page.evaluate((rank) => {
+      const tr = [...document.querySelectorAll('[role="table"][aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)')].find((x) => x.firstElementChild?.textContent.trim() === String(rank));
+      return tr ? Object.fromEntries([...tr.children].map((c) => [c.dataset.label, c.textContent.trim().replace(/\s+/g, ' ')])) : null;
+    }, pick.rank));
+    check('The Nearby list shows the same candidate figures', listRow ? `${listRow.Slope}, ${listRow.Sunlight}, ${listRow['Longest darkness']}` : 'not listed', `${pick.slopeDeg}°, ${pick.illuminationPct} %, ${pick.longestDarknessH} h`, Boolean(listRow) && close(firstNumber(listRow.Slope), pick.slopeDeg, 0.051) && close(firstNumber(listRow.Sunlight), pick.illuminationPct, 0.051) && close(hoursOf(listRow['Longest darkness']), pick.longestDarknessH, 0.051));
+  }, { shot: 'scenario-1-nearby', timeout: 600_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[1]}": the reply, the compare table and the analyses agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[1]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 600)}`);
+    const pub = await comparisonSettled(page);
+    check('Comparison ready', pub.state, 'ready', pub.state === 'ready');
+    if (pub.state !== 'ready') return;
+    const st = await appState(page);
+    check('B is the candidate of step 1, A the pin, same dates', `${st.compareB?.site.id} / ${st.compareA?.site.kind} / ${st.compareA?.startMs === st.compareB?.startMs}`, `${pick?.id} / custom / true`, st.compareB?.site.id === pick?.id && st.compareA?.site.kind === 'custom' && st.compareA?.startMs === st.compareB?.startMs);
+    await sleep(500);
+    const view = await readCompare(page);
+    checkCompareTable(check, view, pub);
+    for (const [tag, x] of [['A', pub.a], ['B', pub.b]]) {
+      const line = r.reply.text.split('\n').find((l) => l.startsWith(`${tag}: `)) ?? '';
+      check(`Reply ${tag}: illumination = analysis`, line.match(/illumination [\d.]+ %/)?.[0], x.metrics.illuminationPct, line.includes(`illumination ${x.metrics.illuminationPct.toFixed(1)} %`));
+      check(`Reply ${tag}: Earth's centre in view = analysis`, line.match(/Earth's centre in view [\d.]+ %/)?.[0], x.metrics.earthVisiblePct, line.includes(`Earth's centre in view ${x.metrics.earthVisiblePct.toFixed(1)} %`));
+    }
+  }, { shot: 'scenario-2-compare', timeout: 600_000 });
+
+  await step(`Assistant: "${SCENARIO_STEPS[2]}": the clock, Key metrics, the explanation and the reply agree`, 'assistant', async ({ check, note }) => {
+    const r = await replyOf(SCENARIO_STEPS[2]);
+    note(`Reply: ${r.reply.text.replace(/\s+/g, ' ').slice(0, 600)}`);
+    const jump = r.of('jumpToEvent'), ridge = r.of('explainBlockage');
+    check('jumpToEvent and explainBlockage ran', `${Boolean(jump)} ${Boolean(ridge)}`, 'true true', Boolean(jump && ridge));
+    if (!jump || !ridge) return;
+    await surfaceReady(page).catch(() => {});
+    const st = await appState(page);
+    check('Clock at the Earthset', new Date(st.timeMs).toISOString().slice(0, 16), jump.timeUtc?.slice(0, 16), new Date(st.timeMs).toISOString().slice(0, 16) === jump.timeUtc?.slice(0, 16));
+    const shown = await page.evaluate(() => document.querySelector('.skc-explain-text')?.textContent.trim() ?? null);
+    check('Explanation on screen = explainBlockage', shown?.slice(0, 160), ridge.explanation?.slice(0, 160), shown === ridge.explanation);
+    check('Reply quotes the ridge distance', r.reply.text.match(/[\d.]+ (km|m) away/)?.[0], ridge.ridgeDistanceM, r.reply.text.includes(ridge.ridgeDistanceM >= 1000 ? `${(ridge.ridgeDistanceM / 1000).toFixed(1)} km` : `${ridge.ridgeDistanceM} m`) || r.reply.text.includes(ridge.explanation ?? '§'));
+    await page.waitForTimeout(400);
+    const [km, a] = [await readKeyMetrics(page), await getAnalysis(page)];
+    for (const c of keyMetricsAgainst(km, a).filter((x) => /Earth/.test(x.what))) check(c.what, c.shown, c.expected, c.pass);
+  }, { shot: 'scenario-3-earthset', timeout: 600_000 });
 }
 
 async function closeCompare(page) {
@@ -1031,6 +1166,15 @@ try {
       if (mine.has('surface')) await partSurface(app, step);
       if (mine.has('assistant')) await partAssistant(app, step);
       if (mine.has('extras')) await partExtras(app, step);
+      if (mine.has('scenario')) await partScenario(app, step);
+      await step('Elevation downloads (T-40, Q-6): every .lxg file arrived, nothing "could not be loaded"', 'control', async ({ check, note }) => {
+        const failed = app.diag.failed.filter((f) => /\.lxg\b/.test(f.url));
+        const said = await app.page.evaluate(() => (document.body.innerText.match(/[^.\n]*could not be loaded[^.\n]*/gi) ?? []).slice(0, 5));
+        const logged = app.diag.console.filter((c) => /could not be loaded/i.test(c.text));
+        check('No elevation file failed to download', failed.map((f) => `${f.url.split('/').pop()} ${f.error}`).join(', ') || 'none', 'none', failed.length === 0, { finding: 'Q-6' });
+        check('Nothing on screen says "could not be loaded"', said.join(' | ') || 'none', 'none', said.length === 0, { finding: 'Q-6' });
+        if (logged.length) note(`Console: ${logged.map((c) => c.text).join(' | ').slice(0, 400)}`);
+      });
     } catch (err) {
       log(`walk aborted: ${err?.stack ?? err}`);
       pr.aborted = String(err?.message ?? err);

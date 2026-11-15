@@ -48,7 +48,7 @@ focus (the test fails if it never does), then Enter, the arrow keys or typing. N
 | Step | Keyboard path | Works? |
 | --- | --- | --- |
 | Pin typed coordinates | Tab to Filters > Latitude, type, Enter; Longitude, type, Enter; Tab to "Drop pin at centre", Enter | yes (near the poles the pin is off the typed point: F-3; while the globe flies, see Q-1, Q-2) |
-| Open a catalogued landing from the globe | no direct path when no site is selected (markers answer to the pointer only); the assistant, a link (`?site=`) or Earlier / Later on an open card | not checked again: A-1 is with @globe (their m450) |
+| Open a catalogued landing from the globe | Tab to Filters > "Go to a landing site", choose with the arrow keys (or End, Home) | yes, since 0c15435 (A-1 fixed) |
 | Go down to the surface | "Enter surface view" on the card; focus then lands on the scene, which has `role="application"` | yes |
 | Look around on the surface | arrow keys, from the scene and from a HUD button ("Face Sun"); ArrowUp tilts up | yes: A-2 is fixed |
 | Leave the surface | Escape, once; the site stays selected | yes: F-1 is fixed |
@@ -59,14 +59,15 @@ focus (the test fails if it never does), then Enter, the arrow keys or typing. N
 
 | # | Finding | Owner | Severity | Status |
 | --- | --- | --- | --- | --- |
-| A-1 | A keyboard or screen-reader user cannot open a catalogued landing from the globe when no site is selected: markers are pointer targets inside the canvas, and Enter on the globe drops a pin. A list of the landings shown that calls `selectSite` would close it. | @globe | high for keyboard users | open; requested by @surface for T-37 (Lunyx m450) |
+| A-1 | A keyboard or screen-reader user could not open a catalogued landing from the globe when no site was selected: markers are pointer targets inside the canvas. | @globe | high for keyboard users | fixed upstream (0c15435): Filters > "Go to a landing site", a list that runs `selectSite`; verified with the keyboard only on c366a06 (`e2e/a11y.test.mjs`, A-1 test) |
 | A-2 | The look direction in the surface view could only be changed by dragging. | @surface | high for keyboard users | fixed in T-37; verified in round 2 with the keyboard only |
 | A-3 | The jump buttons' names included their glyphs ("☀↑ Sunrise"). | @globe | low | fixed: the buttons carry glyph-free names, for example "Jump to 2025-04-04 19:03 UTC: Sun starts rising (the first part of the Sun's disc appears above the terrain skyline)" (walkthrough, round 2) |
-| A-4 | The "Arrival delay" field's tooltip, its only explanation, disappears after the first edit (F-4 in `actions.md`). | @globe | low | open (not re-checked in round 2; the field's code is unchanged) |
+| A-4 | The "Arrival delay" field's tooltip, its only explanation, disappeared after the first edit (F-4 in `actions.md`). | @globe | low | fixed upstream (a59162f); verified on c366a06 (`e2e/a11y.test.mjs`, F-4 test) |
 | F-1 | One Escape in the surface view also deselected the site. | @surface, @globe | medium | fixed by T-33; verified in round 2 |
-| A-5 | The site-science section has two disclosures both named "Source and limits" (under the long-term averages and under the Diviner temperatures): a screen-reader user who lists the controls cannot tell them apart. Naming each after its block would close it. | owner of the site-science section (T-30; its author @ice-targets is retired) | low | open, sent to @coordinator; e2e todo test |
-| Q-4 | After "Compare as B" in a ranked row of the nearby list, the panel switches to "A and B" and the focused button disappears: the focus falls to the page and the next Escape does not return it to the launcher. | @analysis | medium for keyboard users | open, sent to @coordinator; e2e todo test (`docs/lunyx/qa-findings.md`) |
-| F-3 | Near the poles the view stops short of a typed latitude, so the keyboard way to pin coordinates is inexact there (up to 1.7 km at 85°). | @globe | medium | open (see also Q-1 and Q-2 in `qa-findings.md`) |
+| A-5 | The site-science section had two disclosures both named "Source and limits" (under the long-term averages and under the Diviner temperatures). | site science (T-30) | low | fixed upstream (original T-46, 11f60b4); verified on 8988bd0 |
+| A-6 | The three mission presets of Filters > "Missions to replay" each have a disclosure named "Timing and data sources": a screen-reader user who lists the controls hears the same name three times. Naming each after its preset ("Timing and data sources, IM-2 Athena") would close it. | @globe (`src/ui/globe/presetList.ts`, T-22) | low | fixed upstream (original T-57, e9d0189: each disclosure says which preset it belongs to); the e2e regression test passes on a tree with it (2026-11-15 05:43Z) |
+| Q-4 | After "Compare as B" in a ranked row of the nearby list, the focus fell out of the compare dialog. | @analysis | medium for keyboard users | fixed upstream (T-46, 11f60b4); the e2e regression test passes on 8988bd0 |
+| F-3 | Near the poles the view stopped short of a typed latitude, so the keyboard way to pin coordinates was inexact there. | @globe | medium | fixed upstream (T-43, a59162f), with Q-1 and Q-2 (dbc6c59); exact on c366a06 (`qa-findings.md`) |
 
 ## What is good and should stay
 

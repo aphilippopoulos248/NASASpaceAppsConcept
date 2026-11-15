@@ -14,6 +14,23 @@ export function firstNumber(text) {
 /** "18.2 h", "379.8 h (15.8 d)", "18.2 h or more", "none" -> hours. */
 export const hoursOf = (text) => (/^none\b/.test(String(text ?? '').trim()) ? 0 : firstNumber(text));
 
+/**
+ * A duration as the surface HUD writes it (formatDuration: "14 d 07 h", "5 h 12 min", "8 min",
+ * "none") or as the panels do ("18.2 h", "379.8 h (15.8 d)"): { hours, tol }, tol being what the
+ * format can show (whole hours under "d h" are cut, not rounded).
+ */
+export function durationOf(text) {
+  const t = String(text ?? '').trim();
+  if (/^none\b/.test(t)) return { hours: 0, tol: 0.05 };
+  let m = /^(\d+) d (\d+) h\b/.exec(t);
+  if (m) return { hours: Number(m[1]) * 24 + Number(m[2]), tol: 1 };
+  m = /^(\d+) h (\d+) min\b/.exec(t);
+  if (m) return { hours: Number(m[1]) + Number(m[2]) / 60, tol: 1 / 60 + 0.001 };
+  m = /^(\d+) min\b/.exec(t);
+  if (m) return { hours: Number(m[1]) / 60, tol: 1 / 60 + 0.001 };
+  return { hours: hoursOf(t), tol: 0.051 };
+}
+
 export const close = (a, b, tol) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a - b) <= tol;
 
 /** "2025-03-06 17:28 UTC" for a time in ms, as the app writes it (truncated to the minute). */
@@ -67,7 +84,7 @@ export function compareRowsAgainst(view, pub) {
     [['Any Sun above the skyline'], (x) => x.metrics.sunAnyPct, firstNumber, 0.051],
     [['Longest darkness in the window'], (x) => x.metrics.longestDarknessH, hoursOf, 0.051],
     [["Earth's centre in view", 'Earth in view'], (x) => x.metrics.earthVisiblePct, firstNumber, 0.051],
-    [['Longest Earth gap in the window'], (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
+    [['Longest Earth gap (centre hidden)', 'Longest Earth gap in the window'], (x) => x.metrics.longestEarthGapH, hoursOf, 0.051],
     [['Ground slope', 'Slope'], (x) => x.slope.slopeDeg, firstNumber, 0.051],
     [['Site elevation'], (x) => x.horizon.siteElevationM, firstNumber, 0.51],
   ];
@@ -188,10 +205,17 @@ export function keyMetricsAgainst(km, a) {
   }
   const m = a.metrics;
   const tolH = (h) => (h < 0.05 ? 0.05 : 0.051);
+  // Since T-46 the Earth lines give both definitions: "centre 88.9 % · any part of the disc 92.0 %"
+  // and "centre 18.4 h · whole disc none". Older builds: "Earth's centre in sight" with one figure.
+  const centrePart = (text) => (/^centre\s/.test(text ?? '') ? text.replace(/^centre\s+/, '').split(' · ')[0] : text);
+  const earthSight = km?.win?.['Earth in sight'] ?? km?.win?.["Earth's centre in sight"];
   out.push({ what: 'key metrics: Sunlight', shown: km?.win?.Sunlight, expected: m.illuminationPct, pass: close(firstNumber(km?.win?.Sunlight), m.illuminationPct, 0.051) });
-  out.push({ what: 'key metrics: Longest darkness', shown: km?.win?.['Longest darkness'], expected: m.longestDarknessH, pass: close(hoursOf(km?.win?.['Longest darkness']), m.longestDarknessH, tolH(m.longestDarknessH)) });
-  out.push({ what: "key metrics: Earth's centre in sight", shown: km?.win?.["Earth's centre in sight"], expected: m.earthVisiblePct, pass: close(firstNumber(km?.win?.["Earth's centre in sight"]), m.earthVisiblePct, 0.051) });
-  out.push({ what: 'key metrics: Longest Earth gap', shown: km?.win?.['Longest Earth gap'], expected: m.longestEarthGapH, pass: close(hoursOf(km?.win?.['Longest Earth gap']), m.longestEarthGapH, tolH(m.longestEarthGapH)) });
+  const dark = durationOf(km?.win?.['Longest darkness']);
+  out.push({ what: 'key metrics: Longest darkness', shown: km?.win?.['Longest darkness'], expected: m.longestDarknessH, pass: close(dark.hours, m.longestDarknessH, Math.max(dark.tol, tolH(m.longestDarknessH))) });
+  out.push({ what: "key metrics: Earth's centre in sight", shown: earthSight, expected: m.earthVisiblePct, pass: close(firstNumber(centrePart(earthSight)), m.earthVisiblePct, 0.051) });
+  if (/any part of the disc/.test(earthSight ?? '') && Number.isFinite(m.earthAnyPct)) out.push({ what: 'key metrics: any part of Earth in sight', shown: earthSight, expected: m.earthAnyPct, pass: close(firstNumber(earthSight.split('any part of the disc')[1]), m.earthAnyPct, 0.051) });
+  const gap = durationOf(centrePart(km?.win?.['Longest Earth gap']));
+  out.push({ what: "key metrics: Longest Earth gap (Earth's centre)", shown: km?.win?.['Longest Earth gap'], expected: m.longestEarthGapH, pass: close(gap.hours, m.longestEarthGapH, Math.max(gap.tol, tolH(m.longestEarthGapH))) });
   out.push({ what: 'key metrics: Slope', shown: km?.win?.Slope, expected: a.slope.slopeDeg, pass: close(firstNumber(km?.win?.Slope), a.slope.slopeDeg, 0.051) });
   return out;
 }
