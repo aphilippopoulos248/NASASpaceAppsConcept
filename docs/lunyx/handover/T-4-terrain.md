@@ -11,7 +11,7 @@ frame, east-positive longitude.
 ```ts
 import { loadTerrainFor, loadGlobalGrid, coverageRegions, sourceFromDescriptor, demLayers } from './terrain/api';
 
-const stack = await loadTerrainFor(site);          // { sources: HeightSource[], notes: string[] }
+const stack = await loadTerrainFor(site);          // { sources: HeightSource[], notes: string[], seams?: TerrainSeam[] }
 for (const s of stack.sources) if (s.covers(lat, lon)) { h = s.sample(lat, lon); break; }   // finest first
 
 const relief = await loadGlobalGrid(4);            // 1440 x 720, 1.5 MB download: quick first drawing
@@ -113,19 +113,31 @@ degrees where the others meet. Same recipe as the bundled windows.
   layers in about 1.5 s (localhost). End to end through `server/plugin.ts` from @globe's branch:
   a custom pin at 89.45S 137.2W got its window in 9.4 s, 1 ms on the second call.
 
-## Hand-overs between grids (added after the independent check, T-26)
+## Hand-overs between grids (T-26, T-32)
 
-Where a site's finer grid ends and the next takes over, the heights do not match exactly.
-`loadTerrainFor` measures this for each site along every edge the stack really crosses, states
-it in one sentence of `notes`, and returns the figures as `stack.seams` (`inner`, `outer`,
-`distanceM`, `minM`, `maxM`, `rmsM`, `degPerMetre`). Examples: Apollo 17, 3 m model to 60 m
-window at 0.77 km: -7.4 to +21.1 m, 3.6 m RMS (the independent check found -7.38 to +21.63 m);
-60 m to 480 m window at 3.84 km: -14.2 to +29.5 m; 480 m window to the whole-Moon grid at
-30.7 km: -376 to +249 m, 86 m RMS. IM-2: 60 m window to the 80 m polar layer, -2.9 to +4.1 m.
+Where a site's finer grid ends and the next takes over, the stored heights do not match
+exactly. `loadTerrainFor` measures this for each site along every edge the stack really
+crosses, says it in `notes`, and returns the figures as `stack.seams` (`inner`, `outer`,
+`distanceM`, `minM`, `maxM`, `rmsM`, `degPerMetre`, and `eased` where the edge was eased).
+
+- **3 m model to 60 m window (19 sites): eased.** Two different measurements meet there
+  (a stereo model tied to the window by one vertical shift), several metres apart: Apollo 17
+  -7.4 to +21.1 m, 3.6 m RMS. Over its outer 129 m the model is eased onto the window, with
+  the surface view's own rule, so the stack has no step; `seams[0].eased` keeps the figures
+  from before. `loadTerrainFor(site, { easeEdges: false })` and `storedGrid(source)` give the
+  grids as stored. Table for all 19 sites, the effect on skylines and sunset times, and the
+  reasons: `docs/lunyx/handover/T-32-edge-easing.md`.
+- **60 m to 480 m window, 60 m window to a polar layer, 480 m window to the whole-Moon grid:
+  not eased.** One frame at two samplings; the mismatch is relief the coarser grid misses
+  (Apollo 17: -14.1 to +29.4 m at 3.84 km; -374 to +250 m, 86 m RMS at 30.7 km; IM-2: 60 m
+  window to the 80 m polar layer, -2.6 to +4.2 m). Easing the finer grid would lower real
+  ridges, so it is left right up to its edge and the hand-over is stated in `notes`
+  ("Hand-overs left as stored: ...").
+
 One metre of height is 0.075 degrees of skyline at 0.77 km, 0.015 at 3.84 km and 0.002 at
-30.7 km, so a skyline point formed right at such an edge, and the time of a sunset behind it,
-carry that uncertainty. Nothing is smoothed over: two measurements disagree there, and which
-is right is not known.
+30.7 km. A skyline point formed in an eased band or at an uneased edge, and the time of a
+sunset behind it, carry that uncertainty. `node scripts/terrain-seams.mjs [--all]` prints the
+figures for every site.
 
 ## Honest limits worth showing
 

@@ -114,6 +114,7 @@ export function clearTerrainCache(): void {
   layerSources.clear();
   siteWindows.clear();
   remoteWindows.clear();
+  handOverCache.clear();
 }
 
 async function optionalJson<T>(path: string): Promise<T | null> {
@@ -203,6 +204,13 @@ const LOLA_POLAR_PROVENANCE: HeightProvenance = {
   processing: 'Resampled bilinearly onto a square east/north grid centred on the site; coarser grids skip source samples.',
   citation: 'Smith, D. E., et al. (2017). Summary of the results from the Lunar Orbiter Laser Altimeter after seven years in lunar orbit. Icarus, 283, 70-91.',
 };
+/**
+ * Grids that are a measurement of their own rather than a finer sampling of the grids around
+ * them: the 3 m stereo models, each tied to its 60 m window by one vertical shift only
+ * (scripts/fetch-apollo-terrain.mjs). These are the grids whose edges are eased (easeStack).
+ */
+const separateSurveys = new WeakSet<HeightSource>();
+
 const NAC_PROVENANCE: HeightProvenance = {
   product: 'LROC NAC digital terrain model (NASA/GSFC/Arizona State University), PDS',
   url: 'https://wms.lroc.asu.edu/lroc/rdr_product_select',
@@ -246,12 +254,12 @@ function loadSiteWindows(id: string, index: SiteWindowIndex): Promise<HeightSour
         // "LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG (5.0 m), orthophoto ...": keep the model, drop the photo.
         const model = f.source.split(', orthophoto')[0];
         const native = Number(/\(([\d.]+) m\)/.exec(model)?.[1] ?? NaN);
-        sources.push(
-          createSource(
-            { kind: 'local', name: `${model}, ${f.spacing} m site window`, resolutionM: Number.isFinite(native) ? Math.max(native, f.spacing) : f.spacing, lat0: entry.lat, lon0: entry.lon, n: f.size, spacingM: f.spacing, data: new Float32Array(fineBuf) },
-            NAC_PROVENANCE,
-          ),
+        const survey = createSource(
+          { kind: 'local', name: `${model}, ${f.spacing} m site window`, resolutionM: Number.isFinite(native) ? Math.max(native, f.spacing) : f.spacing, lat0: entry.lat, lon0: entry.lon, n: f.size, spacingM: f.spacing, data: new Float32Array(fineBuf) },
+          NAC_PROVENANCE,
         );
+        separateSurveys.add(survey);
+        sources.push(survey);
       }
       index.levels.forEach((level, k) => {
         sources.push(
@@ -311,6 +319,12 @@ export interface LoadTerrainOptions {
    * the reason is reported in `notes`. Catalogued landings never need it.
    */
   remote?: boolean;
+  /**
+   * Ease each 3 m survey model onto the grid that takes over outside it, so the ground has
+   * no step where two different measurements meet (default true; see easeStack). False
+   * returns the grids as stored, for comparison and validation.
+   */
+  easeEdges?: boolean;
 }
 
 /** A polar layer earns its download when the site is inside it or its edge is this many pixels away at most. */
@@ -445,17 +459,171 @@ export async function loadTerrainFor(site: SiteRef, options: LoadTerrainOptions 
     const anyReach = Math.max(...here.map((s) => reachFrom(s, site.lat, site.lon)));
     notes.push(`The whole-Moon grid is not installed, so terrain farther than about ${km(anyReach)} from the site is not taken into account.`);
   }
-  // 5. Where one grid hands over to the next: how well they agree there, measured for this site.
-  const seams = measureSeams(sources, site);
-  if (seams.length) {
-    const m = (v: number): string => `${v > 0 ? '+' : ''}${Math.abs(v) >= 99.5 ? v.toFixed(0) : v.toFixed(1)}`;
-    notes.push(
-      `Where one grid hands over to the next, the heights do not match exactly. Around this site the outer grid differs from the inner one by: ` +
-        seams.map((x) => `${m(x.minM)} to ${m(x.maxM)} m (${x.rmsM >= 99.5 ? x.rmsM.toFixed(0) : x.rmsM.toFixed(1)} m RMS) at ${km(x.distanceM)}, where the ${x.inner} ends`).join('; ') +
-        `. A skyline point formed right at such an edge is uncertain by about that much: 1 m of height is ${seams.map((x) => `${x.degPerMetre.toFixed(3)}° at ${km(x.distanceM)}`).join(', ')}.`,
-    );
+  // 5. Where one grid hands over to the next: ease a separately measured model onto the grid around it, and say what was done and what was not.
+  const edges = handOvers(sources, site, options.easeEdges !== false);
+  notes.push(...edges.notes);
+  return { sources: edges.stack, notes, ...(edges.seams.length ? { seams: edges.seams } : {}) };
+}
+
+// ---------------------------------------------------------------- easing grids onto each other
+
+/** The band of a grid that is eased, in samples from its edge: the surface view's rule (blendEdge in src/scene/surface/ground.ts), a twelfth of the grid. */
+const easeBand = (n: number): number => Math.max(10, Math.round(n / 12));
+
+/** For an eased grid: the grid it was made from, and how far inside its edge it was changed. */
+const easedFrom = new WeakMap<HeightSource, { raw: HeightSource; overM: number }>();
+
+/**
+ * The grid as stored, for a source that loadTerrainFor eased at its edge (any other source
+ * is returned as it is). For code that does its own edge blending, such as the surface view,
+ * and for comparisons: easing a grid twice moves it further than once.
+ */
+export function storedGrid(source: HeightSource): HeightSource {
+  return easedFrom.get(source)?.raw ?? source;
+}
+
+interface HandOvers {
+  raw: HeightSource[];
+  stack: HeightSource[];
+  seams: TerrainSeam[];
+  notes: string[];
+}
+/** The last few sites asked for: the result is the same every time, and the eased grids should stay the same objects. */
+const handOverCache = new Map<string, HandOvers>();
+const HAND_OVERS_KEPT = 8;
+
+/** A seam as measured, with the grid it belongs to. */
+interface MeasuredSeam extends TerrainSeam {
+  source: HeightSource;
+  /** The grid is centred on the site, so its edge is equally far in the four cardinal directions. */
+  centred: boolean;
+}
+
+/** The stack to hand out (eased, or as stored), its hand-overs measured, and the sentences that say so. */
+function handOvers(sources: HeightSource[], site: { lat: number; lon: number }, ease: boolean): HandOvers {
+  const key = `${site.lat},${site.lon},${ease}`;
+  const known = handOverCache.get(key);
+  if (known && known.raw.length === sources.length && known.raw.every((x, i) => x === sources[i])) {
+    handOverCache.delete(key);
+    handOverCache.set(key, known); // most recently used last
+    return known;
   }
-  return { sources, notes, ...(seams.length ? { seams } : {}) };
+  const before = measureSeams(sources, site);
+  const stack = ease ? easeStack(sources) : sources;
+  const measured =
+    stack === sources
+      ? before
+      : measureSeams(stack, site).map((x): MeasuredSeam => {
+          const from = easedFrom.get(x.source);
+          const was = from && before.find((r) => r.source === from.raw);
+          return from && was ? { ...x, eased: { overM: from.overM, minM: was.minM, maxM: was.maxM, rmsM: was.rmsM } } : x;
+        });
+
+  const notes: string[] = [];
+  const metres = (v: number): string => (Math.abs(v) >= 99.5 ? Math.abs(v).toFixed(0) : Math.abs(v).toFixed(1));
+  const side = (v: number): string => `${metres(v)} m ${v < 0 ? 'below' : 'above'}`;
+  const lay = (x: { minM: number; maxM: number; rmsM: number }): string => `between ${side(x.minM)} and ${side(x.maxM)} it, ${metres(x.rmsM)} m RMS`;
+  const where = (x: MeasuredSeam): string => `${km(x.distanceM)} from the site${x.centred ? '' : ' at the nearest'}`;
+  const handOver = (x: MeasuredSeam): string => `${where(x)} the ${x.inner} ends and the ${x.outer} takes over, lying ${lay(x)} (1 m of height is ${x.degPerMetre.toFixed(3)}° of skyline there)`;
+  const eased = measured.filter((x) => x.eased);
+  const open = measured.filter((x) => !x.eased);
+  if (!ease) {
+    if (open.length) notes.push(`Edge easing was switched off for this request, so the grids are as stored and step against each other: ${open.map(handOver).join('; ')}.`);
+  } else {
+    if (eased.length) {
+      notes.push(
+        `Where a separately measured model ends, its heights are eased onto the grid that continues outside it, as in the surface view, so the ground has no step: ` +
+          eased.map((x) => `the ${x.inner} onto the ${x.outer} over its outer ${Math.round(x.eased!.overM)} m (${where(x)}, where the ${x.outer} lay ${lay(x.eased!)})`).join('; ') +
+          `. The model is a stereo survey tied to the grid around it by a single vertical shift; that grid is the reference at the edge because the ground beyond comes from it. The two still disagree by that much: inside the eased band the heights are a blend of both, and a skyline point formed there is uncertain by about ` +
+          eased.map((x, i) => `${x.degPerMetre.toFixed(3)}°${i === 0 ? ' per metre of height' : ''} at ${km(x.distanceM)}`).join(' and ') +
+          `.`,
+      );
+    }
+    if (open.length) {
+      notes.push(
+        `Hand-overs left as stored: ${open.map(handOver).join('; ')}. These grids share one frame (LOLA) and differ in sampling: the finer grid is right up to its edge, the difference is relief the coarser grid misses from there on, and easing the finer grid onto it would flatten real relief.`,
+      );
+    }
+  }
+
+  const result: HandOvers = { raw: sources.slice(), stack, seams: measured.map(({ source: _source, centred: _centred, ...seam }) => seam), notes };
+  handOverCache.delete(key);
+  handOverCache.set(key, result);
+  if (handOverCache.size > HAND_OVERS_KEPT) handOverCache.delete(handOverCache.keys().next().value as string);
+  return result;
+}
+
+/**
+ * Returns the stack with every separately measured model (the 3 m stereo models) eased onto
+ * the ground that continues outside it: within a twelfth of the grid from its edge the
+ * heights move, along a smooth step, from the model's own to those of the next coarser
+ * source with data there, and at the edge they are that source's. This is what the surface
+ * view does to the grids it draws (blendEdge), with the same band and the same weights, so
+ * the picture and the analysis rest on the same ground there.
+ *
+ * Which grid is the reference: the coarser one. The 60 m and 480 m windows, the polar layers
+ * and the whole-Moon grid are all in the LOLA frame, and all the ground beyond the model's
+ * edge comes from them; the model was tied to its 60 m window by one constant shift (the mean
+ * difference), which leaves tilts and local offsets of several metres between the two.
+ *
+ * Only such models are eased. Where a 60 m window meets a 480 m window or a polar layer, or a
+ * 480 m window meets the whole-Moon grid, both sides are the same frame at different sampling:
+ * the mismatch is relief the coarser grid misses, the finer grid is right up to its edge, and
+ * easing it would replace real ridges by the coarser grid's chords (measured on the computed
+ * skyline: up to 0.4 degrees lower at Apollo 15; docs/lunyx/handover/T-32-edge-easing.md).
+ *
+ * The stored grids are not changed; an eased grid is a copy (see storedGrid).
+ */
+function easeStack(sources: HeightSource[]): HeightSource[] {
+  const stack = sources.slice();
+  let changed = false;
+  stack.forEach((inner, at) => {
+    const d = inner.descriptor;
+    if (d.kind !== 'local' || !separateSurveys.has(inner)) return;
+    const band = easeBand(d.n);
+    const c = (d.n - 1) / 2;
+    const data = d.data.slice();
+    const onto = new Set<string>();
+    let moved = 0;
+    for (let j = 0; j < d.n; j++) {
+      for (let i = 0; i < d.n; i++) {
+        const fromEdge = Math.min(i, j, d.n - 1 - i, d.n - 1 - j);
+        if (fromEdge >= band) continue;
+        const k = j * d.n + i;
+        if (Number.isNaN(data[k])) continue;
+        const p = offsetPoint(d.lat0, d.lon0, (i - c) * d.spacingM, (j - c) * d.spacingM);
+        // The ground that continues outside: the first coarser source of the stack with data here.
+        let outer: HeightSource | null = null;
+        let h = NaN;
+        for (const other of sources) {
+          if (other === inner || other.resolutionM <= inner.resolutionM) continue;
+          h = other.sample(p.lat, p.lon);
+          if (Number.isNaN(h)) continue;
+          outer = other;
+          break;
+        }
+        // (A model with nothing but the whole-Moon grid around it is left alone: 1.9 km cells say nothing about its edge.)
+        if (!outer || outer.descriptor.kind === 'equirect') continue;
+        const t = 1 - fromEdge / band;
+        data[k] += (h - data[k]) * t * t * (3 - 2 * t);
+        onto.add(shortName(outer));
+        moved++;
+      }
+    }
+    if (moved === 0) return;
+    const overM = band * d.spacingM;
+    const eased = createSource(
+      { ...d, data },
+      inner.provenance && {
+        ...inner.provenance,
+        processing: `${inner.provenance.processing} When loaded: within ${Math.round(overM)} m of its edge the heights are eased onto the ${[...onto].join(' / ')}, which continues outside it, so the two meet without a step (at the edge they are that grid's, in between a blend of both).`,
+      },
+    );
+    easedFrom.set(eased, { raw: inner, overM });
+    stack[at] = eased;
+    changed = true;
+  });
+  return changed ? stack : sources;
 }
 
 /** Short name of a grid for the seam sentence: "3 m model", "60 m window", "whole-Moon grid". */
@@ -467,12 +635,12 @@ function shortName(s: HeightSource): string {
 }
 
 /**
- * Along the edge of each grid centred on the site: where that grid is the one in use just
- * inside the edge (the first source of the stack with a value there), compares it with the
- * source in use just outside. Edges that are never a hand-over (a finer layer covers both
- * sides) are left out.
+ * Along the edge of each square grid the site stands on: where that grid is the one in use
+ * just inside the edge (the first source of the stack with a value there), compares it, at
+ * that same point, with the source in use just outside. Edges that are never a hand-over
+ * (a finer layer covers both sides) are left out.
  */
-function measureSeams(sources: HeightSource[], site: { lat: number; lon: number }): TerrainSeam[] {
+function measureSeams(sources: HeightSource[], site: { lat: number; lon: number }): MeasuredSeam[] {
   /** The source the stack uses at a point, and its height there. */
   const inUse = (lat: number, lon: number): { source: HeightSource; h: number } | null => {
     for (const source of sources) {
@@ -481,41 +649,54 @@ function measureSeams(sources: HeightSource[], site: { lat: number; lon: number 
     }
     return null;
   };
-  const seams: TerrainSeam[] = [];
+  const seams: MeasuredSeam[] = [];
   for (const inner of sources) {
     const d = inner.descriptor;
-    if (d.kind !== 'local' || surfaceDistanceM(d.lat0, d.lon0, site.lat, site.lon) > 1) continue;
+    if (d.kind !== 'local') continue;
     const half = ((d.n - 1) / 2) * d.spacingM;
+    // The site's own windows are centred on it; a neighbouring site's window is not, and its edge is nearer on one side.
+    const at = localOffset(d.lat0, d.lon0, site.lat, site.lon);
+    const nearest = half - Math.max(Math.abs(at.eastM), Math.abs(at.northM));
+    if (!(nearest >= 0)) continue;
+    const centred = Math.hypot(at.eastM, at.northM) <= 1;
     const outerNames = new Map<string, number>();
-    let min = Infinity, max = -Infinity, sum2 = 0, n = 0;
+    let min = Infinity, max = -Infinity, sum2 = 0, n = 0, nearestM = Infinity;
     for (let k = 0; k < d.n - 1; k++) {
       const t = -half + k * d.spacingM;
       for (const [east, north] of [[t, -half], [half, t], [-t, half], [-half, -t]]) {
-        // A hair inside the edge and a hair outside it: the same ground to within a few centimetres.
+        // A hair inside the edge and a hair outside it, to see which source is in use on each side.
         const pIn = offsetPoint(d.lat0, d.lon0, east * 0.9999, north * 0.9999);
         const pOut = offsetPoint(d.lat0, d.lon0, east * 1.0001, north * 1.0001);
         const a = inUse(pIn.lat, pIn.lon);
         if (a?.source !== inner) continue;
         const b = inUse(pOut.lat, pOut.lon);
         if (!b) continue;
+        // Both grids at the same point, so that the slope of the ground does not count as a step.
+        const there = b.source.sample(pIn.lat, pIn.lon);
+        const diff = (Number.isNaN(there) ? b.h : there) - a.h;
         const name = shortName(b.source);
         outerNames.set(name, (outerNames.get(name) ?? 0) + 1);
-        const diff = b.h - a.h;
         if (diff < min) min = diff;
         if (diff > max) max = diff;
         sum2 += diff * diff;
         n++;
+        nearestM = Math.min(nearestM, Math.hypot(east - at.eastM, north - at.northM));
       }
     }
     if (n < d.n) continue; // this edge is a hand-over along less than a quarter of its length: not worth a line
+    // How far from the site the hand-over is at its nearest: half the width for a centred grid.
+    const distanceM = centred ? half : Math.round(Math.max(nearestM, d.spacingM) * 10) / 10;
+    const tenth = (v: number): number => Math.round(v * 10) / 10 + 0; // + 0: no negative zero
     seams.push({
+      source: inner,
+      centred,
       inner: shortName(inner),
       outer: [...outerNames].sort((x, y) => y[1] - x[1]).map(([name]) => name).join(' / '),
-      distanceM: half,
-      minM: Math.round(min * 10) / 10,
-      maxM: Math.round(max * 10) / 10,
-      rmsM: Math.round(Math.sqrt(sum2 / n) * 10) / 10,
-      degPerMetre: Math.atan(1 / half) * (180 / Math.PI),
+      distanceM,
+      minM: tenth(min),
+      maxM: tenth(max),
+      rmsM: tenth(Math.sqrt(sum2 / n)),
+      degPerMetre: Math.atan(1 / distanceM) * (180 / Math.PI),
     });
   }
   return seams.sort((a, b) => a.distanceM - b.distanceM);
