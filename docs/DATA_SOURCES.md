@@ -195,7 +195,8 @@ without downloading again.
   currently shown, so neighbouring sites of one country share one continuous territory and borders run halfway
   between sites of different countries. Hiding sites with the mission filters redivides the Moon among the rest.
   The colouring is off by default: "Show country territories" in Filters (the `showTerritories` action) switches it
-  on, and it is drawn only while the landing markers are shown.
+  on, and it is drawn only while the landing markers are shown. It is not drawn over the south-polar close-up or the
+  close-up around a selected site, so their shading and Sun shadows keep their true grey.
   **The territories are a display of who landed nearest, derived only from the landing coordinates; they are
   not data and not a boundary of any kind. No country owns any lunar ground** — the Outer Space Treaty (1967,
   Article II) forbids national claims. What a country does keep is ownership of its hardware, and that hardware

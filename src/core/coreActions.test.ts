@@ -51,16 +51,23 @@ describe('core actions', () => {
     const def = getAction('showTerritories')!;
     expect(def.description).toMatch(/the whole Moon tinted by the country of the nearest landing shown/);
     expect(def.description).toMatch(/who landed nearest, not ownership: no country owns lunar ground \(Outer Space Treaty, Article II\)/);
-    expect(getAction('showMissions')!.description).toMatch(/^Shows or hides the markers of catalogued landings on the globe\. The territory colouring \(showTerritories\) is drawn only while they are shown/);
+    expect(getAction('showMissions')!.description).toMatch(/^Shows or hides the markers of catalogued landings on the globe\. The territory colouring \(showTerritories\) and the country flags \(showFlags\) are drawn only while the markers are shown/);
     const rule = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
     expect(TERRITORY_RULE).toBe(rule);
     // Off by default.
     expect(store.get()).toMatchObject({ showMissions: true, showTerritories: false });
     expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: true, territoryRule: rule } });
     // Hiding the markers hides the colouring; showing them brings it back.
-    expect(await runAction('showMissions', { show: false })).toEqual({ ok: true, result: { showMissions: false, territoriesShown: false } });
+    expect(await runAction('showMissions', { show: false })).toEqual({ ok: true, result: { showMissions: false, territoriesShown: false, flagsShown: false } });
     expect(await runAction('showTerritories', { show: true })).toEqual({ ok: true, result: { showTerritories: true, territoriesShown: false, territoryRule: rule } });
-    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true } });
+    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true, flagsShown: false } });
+    expect(getAction('showTerritories')!.description).toMatch(/not drawn over the south-polar close-up or the close-up around a selected site/);
+    // Flags the same way (lunyx-experience batch 16): switched on while the markers are hidden, nothing is drawn, and the result says so.
+    expect(getAction('showFlags')!.description).toMatch(/drawn only while the landing markers are shown \(showMissions\)/);
+    await runAction('showMissions', { show: false });
+    expect(await runAction('showFlags', { show: true })).toEqual({ ok: true, result: { showFlags: true, flagsShown: false } });
+    expect(await runAction('showMissions', { show: true })).toEqual({ ok: true, result: { showMissions: true, territoriesShown: true, flagsShown: true } });
+    expect(await runAction('showFlags', { show: false })).toEqual({ ok: true, result: { showFlags: false, flagsShown: false } });
     // Filters that hide every landing leave nothing to colour by.
     await runAction('setFilters', { countries: [] });
     expect(await runAction('showTerritories', { show: true })).toMatchObject({ ok: true, result: { territoriesShown: false } });

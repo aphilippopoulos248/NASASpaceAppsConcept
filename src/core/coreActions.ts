@@ -259,8 +259,10 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     return ctx.analysis;
   };
 
-  /** Whether the territory colouring is drawn now: switched on, with the markers shown and at least one landing left by the filters. */
-  const territoriesShown = () => state().showTerritories && state().showMissions && filterResult().shown > 0;
+  /** Whether the territory colouring and the flags are drawn now: switched on, with the markers shown and at least one landing left by the filters. */
+  const withMarkers = (on: boolean) => on && state().showMissions && filterResult().shown > 0;
+  const territoriesShown = () => withMarkers(state().showTerritories);
+  const flagsShown = () => withMarkers(state().showFlags);
 
   const filterResult = () => {
     const all = ctx.landings();
@@ -665,13 +667,13 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'showMissions',
       title: 'Show previous missions',
       description:
-        'Shows or hides the markers of catalogued landings on the globe. The territory colouring (showTerritories) is drawn only while they are shown: hiding them hides it too, and it comes back with them if it is switched on. ' +
-        'The result says whether the colouring is on now (territoriesShown).',
+        'Shows or hides the markers of catalogued landings on the globe. The territory colouring (showTerritories) and the country flags (showFlags) are drawn only while the markers are shown: hiding the markers hides them too, and they come back with the markers if they are switched on. ' +
+        'The result says whether each is drawn now (territoriesShown, flagsShown).',
       effect: 'command',
       params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the landing markers.' } }, required: ['show'] },
       run: ({ show }) => {
         store.set({ showMissions: show });
-        return { showMissions: state().showMissions, territoriesShown: territoriesShown() };
+        return { showMissions: state().showMissions, territoriesShown: territoriesShown(), flagsShown: flagsShown() };
       },
     }),
     defineAction<{ show: boolean }, unknown>({
@@ -681,7 +683,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         'Shows or hides the territory colouring on the globe (off by default): the whole Moon tinted by the country of the nearest landing shown, with a light line where two countries meet, ' +
         'so neighbouring landings of one country share one territory. It is drawn only while the landing markers are shown (showMissions), which it does not change; the mission filters (setFilters) choose which landings count, and hiding one hands its ground to the nearest landings still shown. ' +
         'The colours show who landed nearest, not ownership: no country owns lunar ground (Outer Space Treaty, Article II). ' +
-        'The result says whether the colouring is on now (territoriesShown: false while the markers are hidden or the filters hide every landing) and what it means (territoryRule).',
+        'It is not drawn over the south-polar close-up or the close-up around a selected site, so their shading and Sun shadows keep their true grey. ' +
+        'The result says whether the colouring is drawn now (territoriesShown: false while it is off, the markers are hidden or the filters hide every landing) and what it means (territoryRule).',
       effect: 'command',
       params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the territory colouring.' } }, required: ['show'] },
       run: ({ show }) => {
@@ -693,12 +696,13 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'showFlags',
       title: 'Show country flags',
       description:
-        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state).',
+        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state). ' +
+        'The flags are drawn only while the landing markers are shown (showMissions), which this does not change. The result says whether they are drawn now (flagsShown: false while they are off, the markers are hidden or the filters hide every landing).',
       effect: 'command',
       params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the flags.' } }, required: ['show'] },
       run: ({ show }) => {
         store.set({ showFlags: show });
-        return { showFlags: state().showFlags };
+        return { showFlags: state().showFlags, flagsShown: flagsShown() };
       },
     }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: MissionType; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({

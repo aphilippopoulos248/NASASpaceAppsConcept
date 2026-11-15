@@ -89,6 +89,16 @@ describe('surface shader switches', () => {
     expect(tiles.defines).toMatchObject({ LUNYX_OVERLAY: 1, LUNYX_COVERAGE: 1, LUNYX_TERRITORY: 1 });
     setSurfaceFeatures(1, true);
     expect(tiles.defines).toMatchObject({ LUNYX_TERRITORY: 0 });
+    // The polar close-up and the site close-ups never draw it: their shading and shadows keep their true grey.
+    const closeUp = new MeshStandardMaterial();
+    patchSurfaceMaterial(closeUp, u, { territory: false });
+    setSurfaceFeatures(1, true, true);
+    expect(closeUp.defines).toMatchObject({ LUNYX_OVERLAY: 1, LUNYX_COVERAGE: 1, LUNYX_TERRITORY: 0 });
+    expect(tiles.defines).toMatchObject({ LUNYX_TERRITORY: 1 });
+    const closeUpLater = new MeshStandardMaterial();
+    patchSurfaceMaterial(closeUpLater, u, { lift: 0.0001, territory: false });
+    expect(closeUpLater.defines).toMatchObject({ LUNYX_TERRITORY: 0 });
+    setSurfaceFeatures(1, true);
     // A disposed material is forgotten.
     patch.dispose();
     setSurfaceFeatures(0, false);

@@ -288,6 +288,12 @@ export interface SurfacePatch {
   lift?: number;
   /** Base relief tiles: leave a hole where the polar close-up is drawn. */
   hole?: boolean;
+  /**
+   * Draw the country territory colouring on this layer (default true). The south-polar close-up
+   * and the site close-ups leave it out (false): their shading and Sun shadows are what a reader
+   * studies there, and they must keep their true grey, the shadows black.
+   */
+  territory?: boolean;
   /** Polar close-up: shadow map, fade towards the edge of the data. Its uniforms. */
   polar?: {
     uShadowMap: IUniform<Texture | null>;
@@ -306,7 +312,10 @@ export interface SurfacePatch {
 }
 
 const patched = new Set<Material>();
+/** Patched layers that never draw the territory colouring (SurfacePatch.territory false). */
+const withoutTerritory = new WeakSet<Material>();
 let features = { overlay: 0, coverage: 0, territory: 0 };
+const territoryDefine = (m: Material) => (withoutTerritory.has(m) ? 0 : features.territory);
 
 /**
  * Switches the overlay code in every patched material (0 = none, 1 = Sun band, 2 = average
@@ -318,7 +327,7 @@ export function setSurfaceFeatures(overlay: number, coverage: boolean, territori
   if (next.overlay === features.overlay && next.coverage === features.coverage && next.territory === features.territory) return;
   features = next;
   for (const m of patched) {
-    m.defines = { ...m.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: features.territory };
+    m.defines = { ...m.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: territoryDefine(m) };
     m.needsUpdate = true;
   }
 }
@@ -329,7 +338,8 @@ export function setSurfaceFeatures(overlay: number, coverage: boolean, territori
  */
 export function patchSurfaceMaterial(material: Material, shared: SurfaceUniforms, options: SurfacePatch = {}): void {
   const lift: IUniform<number> = { value: options.lift ?? 0 };
-  material.defines = { ...material.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: features.territory, ...(options.hole && { LUNYX_HOLE: '' }), ...(options.polar && { LUNYX_POLAR: '' }) };
+  if (options.territory === false) withoutTerritory.add(material);
+  material.defines = { ...material.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: territoryDefine(material), ...(options.hole && { LUNYX_HOLE: '' }), ...(options.polar && { LUNYX_POLAR: '' }) };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, shared, { uLift: lift }, options.polar ?? {});
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${VERTEX_PARS}`).replace('#include <begin_vertex>', VERTEX_BEGIN);

@@ -24,6 +24,20 @@ export function presetTiming(p: MissionPreset): string {
   return `${from}, played in about ${seconds} s`;
 }
 
+/** What in a preset is uncertain or computed rather than reported: its caveat and, for an eclipse, what was reported. */
+export function presetCaveats(p: Pick<MissionPreset, 'caveat' | 'sunBehindEarth'>): string[] {
+  return [p.caveat, p.sunBehindEarth?.reported].filter((s): s is string => Boolean(s));
+}
+
+/**
+ * The status line once a preset has loaded: that it plays (or is loaded), then its caveats, so
+ * they are on screen and read out (role="status") although the list no longer shows the sources.
+ */
+export function loadedText(p: Pick<MissionPreset, 'title' | 'caveat' | 'sunBehindEarth'>, r: { playing: boolean; note?: string }): string {
+  const done = r.note ?? (r.playing ? `Playing "${p.title}". It stops at the end of the window; pause or scrub at any time.` : `"${p.title}" is loaded.`);
+  return [done, ...presetCaveats(p)].join(' ');
+}
+
 export function mountPresetList(parent: HTMLElement): void {
   const box = el('details', 'pl');
   box.open = true;
@@ -54,7 +68,7 @@ export function mountPresetList(parent: HTMLElement): void {
     syncActive();
     const r = await runAction<{ playing: boolean; note?: string }>('loadPreset', { id: p.id });
     loading = null;
-    status.textContent = r.ok ? (r.result.note ?? '') : `Could not load "${p.title}": ${r.error}`;
+    status.textContent = r.ok ? loadedText(p, r.result) : `Could not load "${p.title}": ${r.error}`;
     syncActive();
   };
 
@@ -73,7 +87,7 @@ export function mountPresetList(parent: HTMLElement): void {
         const text = el('span', 'pl-text');
         text.append(el('span', 'pl-name', p.title), el('span', 'pl-desc', p.description));
         b.append(mark, text);
-        b.title = `${presetTiming(p)}. Opens the ${p.view} view.`;
+        b.title = [`${presetTiming(p)}. Opens the ${p.view} view.`, ...presetCaveats(p)].join(' ');
         b.addEventListener('click', () => void load(p));
         buttons.set(p.id, b);
         li.append(b);
