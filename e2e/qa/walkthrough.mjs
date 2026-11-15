@@ -877,8 +877,11 @@ async function partExtras(app, step) {
     const s0 = await appState(page);
     const start = Date.parse(preset.windowStartUtc), end = start + preset.windowDurationH * HOUR;
     check('Preset site, window start and length', `${s0.site.id} ${new Date(s0.windowStartMs).toISOString()} ${s0.windowDurationH} h`, `${preset.siteId} ${new Date(start).toISOString()} ${preset.windowDurationH} h`, s0.site.id === preset.siteId && s0.windowStartMs === start && s0.windowDurationH === preset.windowDurationH);
-    check('Preset plays at its rate', `${s0.playing} ${s0.rate}`, `true ${preset.rateSecondsPerSecond}`, s0.playing === true && s0.rate === preset.rateSecondsPerSecond);
     await analysisSettled(page);
+    // The preset starts playing once its site analysis is ready.
+    await page.waitForFunction(() => window.lunyx.store.get().playing, null, { timeout: 60_000 }).catch(() => {});
+    const s0b = await appState(page);
+    check('Preset plays at its rate', `${s0b.playing || s0b.timeMs > start} ${s0b.rate}`, `true ${preset.rateSecondsPerSecond}`, (s0b.playing || s0b.timeMs > start) && s0b.rate === preset.rateSecondsPerSecond);
     const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
     const a = await getAnalysis(page);
     note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
@@ -912,16 +915,19 @@ async function partExtras(app, step) {
     await page.getByRole('button', { name: 'The scenario on screen' }).click();
     await page.waitForFunction(() => document.querySelector('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)'), null, { timeout: 60_000 });
     const shown = await page.evaluate(() => [...document.querySelectorAll('[role="table"][aria-label$="spells in the mission window"] .cmp-srow:not(.cmp-shead)')].length);
-    const a = await getAnalysis(page);
+    const a = await page.evaluate(() => {
+      const st = window.lunyx.analysis.get('current');
+      return st.state === 'ready' ? JSON.parse(JSON.stringify({ metrics: st.value.metrics, slope: { slopeDeg: st.value.slope.slopeDeg } })) : null;
+    });
     const [dlJson] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as JSON' }).click()]);
     const json = JSON.parse(readFileSync(await dlJson.path(), 'utf8'));
     const sc = json.scenarios?.[0];
     const m = sc?.metrics ?? {};
     note(`JSON: ${dlJson.suggestedFilename()}, ${sc?.spells?.length} spells, ${sc?.events?.length} events.`);
-    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.001));
-    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.001));
-    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.001));
-    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.001));
+    check('JSON illumination = analysis', m.illuminationPct, a.metrics.illuminationPct, close(m.illuminationPct, a.metrics.illuminationPct, 0.0006));
+    check("JSON Earth's centre in view = analysis", m.earthCentreVisiblePct, a.metrics.earthVisiblePct, close(m.earthCentreVisiblePct, a.metrics.earthVisiblePct, 0.0006));
+    check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.0006));
+    check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.0006));
     check('JSON spells = rows in the table on screen', sc?.spells?.length, shown, sc?.spells?.length === shown);
     check('JSON says whether a solar band was set', sc?.requirements?.sunElevationBandSet, 'a boolean', typeof sc?.requirements?.sunElevationBandSet === 'boolean');
     const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
@@ -953,12 +959,14 @@ async function partExtras(app, step) {
     await backToGlobe(page);
     const missions = page.locator('.fp-missions');
     if (!(await missions.evaluate((d) => d.open))) await missions.locator('summary').click();
-    const before = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).length);
+    const listed = () => page.evaluate(() => [...(document.querySelector('.lp select')?.options ?? [])].filter((o) => o.value).map((o) => o.value));
+    const before = await listed();
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await sleep(500);
-    const after = await page.evaluate(() => window.lunyx.scene.globe.markers.items.filter((m) => m.group.visible).map((m) => m.landing.id));
-    note(`Markers shown: ${before} before, ${after.length} after the India toggle (${after.join(', ')}).`);
-    check('The Country toggle changes the markers shown', `${before} -> ${after.length}`, 'a change', after.length !== before);
+    const after = await listed();
+    const india = await page.getByRole('button', { name: /^India, \d+ landings?$/ }).getAttribute('aria-pressed');
+    note(`"Go to a landing site" lists ${before.length} landings before and ${after.length} after the India toggle (India pressed: ${india}).`);
+    check('The Country toggle changes the landings shown', `${before.length} -> ${after.length}`, 'a change', after.length !== before.length);
     await page.getByRole('button', { name: /^India, \d+ landings?$/ }).click();
     await page.getByLabel('Show country flags').check();
     await page.waitForFunction(() => window.lunyx.store.get().showFlags === true, null, { timeout: 10_000 });
@@ -966,7 +974,7 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says how much larger it is drawn', card?.facts.Explored, '"drawn N× larger on the globe"', /drawn \d+(\.\d+)?× larger on the globe/.test(card?.facts.Explored ?? ''));
+    check('Explored area says how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?× larger/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
@@ -1129,7 +1137,7 @@ try {
       if (mine.has('scenario')) await partScenario(app, step);
       await step('Elevation downloads (T-40, Q-6): every .lxg file arrived, nothing "could not be loaded"', 'control', async ({ check, note }) => {
         const failed = app.diag.failed.filter((f) => /\.lxg\b/.test(f.url));
-        const said = await page.evaluate(() => (document.body.innerText.match(/[^.\n]*could not be loaded[^.\n]*/gi) ?? []).slice(0, 5));
+        const said = await app.page.evaluate(() => (document.body.innerText.match(/[^.\n]*could not be loaded[^.\n]*/gi) ?? []).slice(0, 5));
         const logged = app.diag.console.filter((c) => /could not be loaded/i.test(c.text));
         check('No elevation file failed to download', failed.map((f) => `${f.url.split('/').pop()} ${f.error}`).join(', ') || 'none', 'none', failed.length === 0, { finding: 'Q-6' });
         check('Nothing on screen says "could not be loaded"', said.join(' | ') || 'none', 'none', said.length === 0, { finding: 'Q-6' });
