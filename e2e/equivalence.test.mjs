@@ -308,20 +308,24 @@ describe('equivalence: layers and filters', () => {
     const open = async () => {
       if (!(await page.locator('.fp-missions').evaluate((d) => d.open))) await page.locator('.fp-missions > summary').click();
     };
-    const programs = await page.evaluate(() => [...document.querySelectorAll('.mf-programs .mf-label')].map((e) => e.textContent));
-    assert.ok(programs.includes('Apollo'));
+    // Since GitHub main 282249d: country rows (the marker colours; USSR hardware shown as "Russia",
+    // while the filter keeps the catalogue's "USSR") and program chips. The action replays the filter
+    // the control left, and the test checks that it is the one asked for.
+    const programs = await page.evaluate(() => [...document.querySelectorAll('.fp-mission-body .ly-chips .ly-btn')].map((e) => e.textContent));
+    assert.ok(programs.includes('Apollo'), JSON.stringify(programs));
     const noApollo = await equivalent({
       prepare: open,
-      ui: () => page.getByRole('button', { name: /^Apollo, \d+ landings$/ }).click(),
+      ui: () => page.locator('.fp-mission-body .ly-chips').getByRole('button', { name: 'Apollo', exact: true }).click(),
       expect: 'setFilters',
-      action: ['setFilters', { programs: programs.filter((p) => p !== 'Apollo') }],
+      action: (ui) => [['setFilters', { programs: ui.filter.programs }]],
     });
-    assert.ok(!noApollo.filter.programs.includes('Apollo'));
+    assert.ok(Array.isArray(noApollo.filter.programs) && !noApollo.filter.programs.includes('Apollo'), JSON.stringify(noApollo.filter));
+    assert.equal(noApollo.filter.programs.length, programs.length - 1);
     assert.ok(noApollo.shown < 28);
     const crewed = await equivalent({ prepare: open, ui: () => page.getByRole('group', { name: 'Mission type' }).getByRole('button', { name: 'Crewed' }).click(), expect: 'setFilters', action: ['setFilters', { type: 'crewed' }] });
     assert.equal(crewed.filter.type, 'crewed');
-    const countries = await page.evaluate(() => [...document.querySelectorAll('.fp-mission-body .ly-chips .ly-btn')].map((e) => e.textContent));
-    await equivalent({ prepare: open, ui: () => page.locator('.fp-mission-body .ly-chips').getByRole('button', { name: countries[0], exact: true }).click(), expect: 'setFilters', action: ['setFilters', { countries: countries.slice(1) }] });
+    const noUsa = await equivalent({ prepare: open, ui: () => page.locator('.mf-programs').getByRole('button', { name: /^USA, \d+ landings?$/ }).click(), expect: 'setFilters', action: (ui) => [['setFilters', { countries: ui.filter.countries }]] });
+    assert.ok(Array.isArray(noUsa.filter.countries) && !noUsa.filter.countries.includes('USA'), JSON.stringify(noUsa.filter));
     const years = await equivalent({
       prepare: open,
       ui: async () => {

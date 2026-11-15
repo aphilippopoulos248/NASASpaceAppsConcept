@@ -72,7 +72,9 @@ describe('assistant: deterministic mode (server without a model)', () => {
     const entries = (await log(page, from)).filter((e) => e.origin === 'assistant');
     assert.deepEqual(entries.map((e) => [e.name, e.ok]), [['selectSite', true]]);
     assert.deepEqual(reply.shownActions, ['Select landing site']);
-    assert.match(reply.shownText, /Selected IM-2 Athena \(latitude -84\.7900°, longitude 29\.2000° \(east-positive\)/);
+    // The coordinates are the catalogue's, as the action returned them (the catalogue's positions were corrected upstream).
+    const site = reply.actions[0].result.site;
+    assert.ok(reply.shownText.includes(`Selected IM-2 Athena (latitude ${site.latDeg.toFixed(4)}°, longitude ${site.lonDegEast.toFixed(4)}° (east-positive)`), reply.shownText);
   });
 
   test('numbers in a reply are the numbers the app computed', SLOW, async () => {

@@ -132,8 +132,12 @@ export const LIMITS = {
   maxMessages: 400,
   maxTools: 256,
   maxUserTextChars: 8_000,
-  /** One tool result (JSON text). Longer results are cut with an explicit marker. */
-  maxToolResultChars: 24_000,
+  /**
+   * One tool result (JSON text). Longer results are cut with an explicit marker. The largest
+   * result in the app is listSites (28 landings with ownership and explored area, about 35 kB);
+   * it must reach the model whole.
+   */
+  maxToolResultChars: 64_000,
   /** Model steps per user message (each step may hold several tool calls). */
   maxStepsPerTurn: 24,
 } as const;
