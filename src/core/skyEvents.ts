@@ -1,6 +1,7 @@
 // Sunrise, sunset, Earthrise and Earthset events of an analysis: picking one for the scrubber
 // and jumpToEvent, and saying which instant each of them is.
 import type { SkyEvent } from '../analysis/types';
+import { formatUtc } from './time';
 
 export type EventType = SkyEvent['type'];
 
@@ -45,4 +46,31 @@ export function findEvent(events: readonly SkyEvent[], type: SkyEvent['type'], w
   const list = events.filter((e) => e.type === type).sort((a, b) => a.timeMs - b.timeMs);
   const hit = which === 'next' ? list.find((e) => e.timeMs > timeMs + 30_000) : [...list].reverse().find((e) => e.timeMs < timeMs - 30_000);
   return hit ?? null;
+}
+
+interface Span {
+  startMs: number;
+  endMs: number;
+}
+
+/** Earth in front of the Sun during the window: each passage, and the part of it with the Sun entirely hidden. */
+export function eclipseSpans(a: { metrics: { eclipseIntervals?: readonly Span[]; darkIntervals: readonly Span[] } }): { startMs: number; endMs: number; hidden: { startMs: number; endMs: number }[] }[] {
+  return (a.metrics.eclipseIntervals ?? []).map((iv) => ({
+    startMs: iv.startMs,
+    endMs: iv.endMs,
+    hidden: a.metrics.darkIntervals.map((d) => ({ startMs: Math.max(d.startMs, iv.startMs), endMs: Math.min(d.endMs, iv.endMs) })).filter((d) => d.endMs > d.startMs),
+  }));
+}
+
+/** "05:00 to 09:51 UTC", with the date on the second time only when it differs. */
+const spanUtc = (startMs: number, endMs: number): string => {
+  const a = formatUtc(startMs), b = formatUtc(endMs);
+  return a.slice(0, 10) === b.slice(0, 10) ? `${a.slice(0, 16)} to ${b.slice(11)}` : `${a} to ${b}`;
+};
+
+/** In words: "Earth passes in front of the Sun 2025-03-14 05:00 to 09:51 UTC; the Sun is entirely hidden 06:17 to 08:34 UTC." */
+export function eclipseText(spans: ReturnType<typeof eclipseSpans>): string {
+  return spans
+    .map((e) => `Earth passes in front of the Sun ${spanUtc(e.startMs, e.endMs)}${e.hidden.length ? `; the Sun is entirely hidden ${e.hidden.map((h) => spanUtc(h.startMs, h.endMs).slice(11)).join(' and ')}` : ''}.`)
+    .join(' ');
 }

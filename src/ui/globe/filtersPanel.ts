@@ -18,6 +18,7 @@ import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
+import { mountPresetList } from './presetList';
 import './filtersPanel.css';
 
 let uid = 0;
@@ -68,6 +69,9 @@ const set = (input: HTMLInputElement, value: string) => {
 export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
+
+  // ---- Missions to replay: a real site, date and window in one step ----
+  mountPresetList(panel);
 
   // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
