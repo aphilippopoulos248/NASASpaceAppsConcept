@@ -105,8 +105,9 @@ part of Earth's disc".
    between ("centre sets HH:MM"), because `earthset` is that instant.
 2. A single instant is quoted only with its label: "Sun fully set 19:30 UTC", never "sunset 19:30".
 3. Grazes and peeks are not sets or rises: "partly hidden from ... to ..., never fully set".
-4. An end outside the window says so ("after the analysed window"); an unresolved end is "not found
-   within 60 days", never a time.
+4. An end outside the window says so ("after the analysed window"); an unresolved end gets no time:
+   "began more than 60 days before the analysed window", "not over within 60 days after the analysed
+   window" (or, where nothing was followed, "already under way when the analysed window starts").
 5. Earth figures say which definition: "Earth's centre in view 88.9 %" and "any part of Earth's disc
    in view ..." (the IM-2 centre figure is from `docs/lunyx/validation.md`, section 4).
 

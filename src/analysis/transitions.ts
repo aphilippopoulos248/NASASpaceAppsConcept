@@ -205,13 +205,17 @@ export function buildTransitions(s: Scenario, p: HorizonProfile, eph: Ephemeris,
         const az = x.event ? x.event.azDeg : inWindow ? azIn(x.t) : outside ? beyond(x.t).az : azIn(x.t);
         return { timeMs: x.t, azDeg: az, inWindow };
       };
+      // Samples strictly inside the passage: those of the regular grid in its span, and the window's last instant.
       let minF = Infinity, maxF = -Infinity;
-      for (let i = 0; i < count; i++) {
+      const i0 = Math.max(0, Math.floor((start.t - startMs) / stepMs)), i1 = Math.min(n - 1, Math.ceil((end.t - startMs) / stepMs));
+      const take = (i: number) => {
         const t = timeAt(i);
-        if (t <= start.t || t >= end.t) continue;
+        if (t <= start.t || t >= end.t) return;
         if (fraction[i] < minF) minF = fraction[i];
         if (fraction[i] > maxF) maxF = fraction[i];
-      }
+      };
+      for (let i = i0; i <= i1; i++) take(i);
+      if (count > n) take(n);
       const tr: SkyTransition = {
         body,
         kind: kindOf(start.edge!, end.edge!),
@@ -350,9 +354,13 @@ export function transitionSummary(tr: SkyTransition): string {
   const START: Record<TransitionKind, string> = { set: 'starts setting', rise: 'starts rising', graze: 'partly hidden from', peek: 'partly visible from', unresolved: tr.start.edge === 'first-cut' ? 'starts setting' : 'starts rising' };
   const END: Record<TransitionKind, string> = { set: 'fully set', rise: 'fully risen', graze: 'whole disc clear again', peek: 'last part gone again', unresolved: tr.end.edge === 'last-limb' ? 'fully set' : 'fully risen' };
   const parts: string[] = [];
-  parts.push(tr.start.edge === 'unresolved' ? `under way since more than ${tr.limitDays} days before the analysed window` : `${START[tr.kind]} ${time(tr.start, 'before the analysed window')}`);
+  // An unresolved end inside the window was not searched for (no ephemeris to follow it with); outside it, the search ran out.
+  const days = `${tr.limitDays} day${tr.limitDays === 1 ? '' : 's'}`;
+  const startUnresolved = tr.start.inWindow ? 'already under way when the analysed window starts' : `began more than ${days} before the analysed window`;
+  const endUnresolved = tr.end.inWindow ? 'still under way when the analysed window ends' : `not over within ${days} after the analysed window`;
+  parts.push(tr.start.edge === 'unresolved' ? startUnresolved : `${START[tr.kind]} ${time(tr.start, 'before the analysed window')}`);
   if (tr.body === 'earth') for (const c of tr.centre) parts.push(`centre ${c.up ? 'rises' : 'sets'} ${time(c, 'outside the analysed window')}`);
-  const endPart = tr.end.edge === 'unresolved' ? `not over within ${tr.limitDays} days after the analysed window` : `${END[tr.kind]} ${time(tr.end, 'after the analysed window')}`;
+  const endPart = tr.end.edge === 'unresolved' ? endUnresolved : `${END[tr.kind]} ${time(tr.end, 'after the analysed window')}`;
   // "UTC" closes the last time written; an unresolved end carries no time.
   let text = tr.end.edge === 'unresolved' ? `${parts.join(', ')}${timed ? ' UTC' : ''}, ${endPart}` : `${[...parts, endPart].join(', ')} UTC`;
   if (tr.kind === 'graze') text += '; never fully set';

@@ -114,7 +114,20 @@ describe('passages on a flat skyline (exact times)', () => {
     expect(cut.kind).toBe('unresolved');
     expect(cut.start.edge).toBe('unresolved');
     expect(cut.start.timeMs).toBe(mid);
-    expect(transitionSummary(cut)).toMatch(/^under way since more than 60 days before the analysed window, fully set \d{4}-\d\d-\d\d \d\d:\d\d UTC$/);
+    expect(transitionSummary(cut)).toMatch(/^already under way when the analysed window starts, fully set \d{4}-\d\d-\d\d \d\d:\d\d UTC$/);
+  });
+
+  it('a disc that stays cut by the skyline beyond the search limit: both ends unresolved, no time quoted for them', () => {
+    const parked = stub((h) => ({ sunAz: 90 + 0.5 * h, sunEl: 0 }));
+    const s = scen(T0, 12);
+    const w = evaluateWindow(s, flat, parked);
+    const [tr] = buildTransitions(s, flat, parked, w, { outside: parked, limitDays: 1 });
+    expect(tr.kind).toBe('unresolved');
+    expect([tr.start.edge, tr.end.edge]).toEqual(['unresolved', 'unresolved']);
+    expect([tr.start.inWindow, tr.end.inWindow]).toEqual([false, false]);
+    expect(tr.hours).toBeCloseTo(12 + 2 * 24, 6);
+    expect(transitionSummary(tr)).toBe('began more than 1 day before the analysed window, not over within 1 day after the analysed window');
+    expect(transitionText(tr)).toMatch(/one end of this passage lies beyond the searched span/);
   });
 
   it('a window that ends while the Sun is rising: the whole-disc-clear instant is found after it', () => {
@@ -138,6 +151,24 @@ describe('passages on a flat skyline (exact times)', () => {
     expect(nextTransitions(a, T0).earth).toBeNull();
     // nextEvents keeps its meaning and now hands out the span with the event.
     expect(nextEvents(a, T0).sunset?.span).toBe(set);
+  });
+});
+
+describe('a ridge in the west (exact times)', () => {
+  it('the Sun sets behind a ridge 1.5 deg high: both ends earlier than over the flat horizon, as the ridge height says', () => {
+    const A = 3, P = 48;
+    const eph = stub((h) => ({ sunAz: 270, sunEl: A * Math.cos((2 * Math.PI * h) / P) }));
+    const ridge = profile((az) => (az >= 250 && az <= 290 ? 1.5 : 0));
+    const at = (el: number) => T0 + (P / (2 * Math.PI)) * Math.acos(el / A) * H;
+    const r = run(ridge, eph, scen(T0, 24));
+    const set = r.transitions.find((t) => t.body === 'sun')!;
+    expect(set.kind).toBe('set');
+    expect(Math.abs(set.start.timeMs - at(1.5 + C_SUN))).toBeLessThan(10_000);
+    expect(Math.abs(set.end.timeMs - at(1.5 - C_SUN))).toBeLessThan(10_000);
+    expect(Math.abs(set.centre[0].timeMs - at(1.5))).toBeLessThan(10_000);
+    const overFlat = run(flat, eph, scen(T0, 24)).transitions.find((t) => t.body === 'sun')!;
+    expect(overFlat.start.timeMs - set.start.timeMs).toBeGreaterThan(3 * H);
+    expect(r.events.find((e) => e.type === 'sunset')!.span).toBe(set);
   });
 });
 
