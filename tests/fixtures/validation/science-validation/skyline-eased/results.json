@@ -1,0 +1,256 @@
+{
+ "build": "af1b499",
+ "root": "/tmp/lsv-validation/exports/integration-af1b499",
+ "limitDeg": 0.1,
+ "referenceMode": "as stored",
+ "sites": {
+  "blue-ghost-1@2m": {
+   "site": {
+    "id": "blue-ghost-1",
+    "name": "Blue Ghost Mission 1",
+    "kind": "landing",
+    "lat": 18.562,
+    "lon": 61.81
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 7,
+     "largestRaiseDeg": 0.00015679511352359454,
+     "atAzDeg": 23.0,
+     "seconds": 4.7
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.002240000000000006,
+     "signedAtMaxDeg": -0.002240000000000006,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here (47 s, two marches)",
+    "referenceConvergenceDeg": 0.0012786269830623379,
+    "referenceGroundM": -3651.160400390625,
+    "appGroundM": -3651.160400390625,
+    "maxAbsDeg": 0.002240000000000006,
+    "atAzDeg": 176.0,
+    "signedAtMaxDeg": -0.002240000000000006,
+    "meanDeg": -0.00011251642455765987,
+    "rmsDeg": 0.0003785618135079838,
+    "appLowestDeg": -0.002240000000000006,
+    "appHighestDeg": 0.0011499999999999982,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -0.17487,
+     2.35246
+    ],
+    "worst": [
+     {
+      "azDeg": 176.0,
+      "diffDeg": -0.002240000000000006,
+      "refElevDeg": 0.12041,
+      "refDistM": 1323.2,
+      "refHeightM": -3645.88,
+      "appElevDeg": 0.11817,
+      "appDistM": 1324.2,
+      "appHeightM": -3645.93
+     },
+     {
+      "azDeg": 202.0,
+      "diffDeg": -0.0022000000000000353,
+      "refElevDeg": 0.34476,
+      "refDistM": 905.9,
+      "refHeightM": -3643.49,
+      "appElevDeg": 0.34256,
+      "appDistM": 906.6,
+      "appHeightM": -3643.52
+     },
+     {
+      "azDeg": 173.5,
+      "diffDeg": -0.0020799999999999985,
+      "refElevDeg": 0.08723,
+      "refDistM": 1328.6,
+      "refHeightM": -3646.64,
+      "appElevDeg": 0.08515,
+      "appDistM": 1329.4,
+      "appHeightM": -3646.68
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly; the grids are used as stored, so the ground steps there: 0.77 km from the site the 3 m model ends and the 60 m window takes over, lying between 6.1 m below and 7.7 m above it, 2.9 m RMS (1 m of height is 0.075\u00b0 of skyline there); 3.8 km from the site the 60 m window ends and the 480 m window takes over, lying between 26.8 m below and 29.2 m above it, 5.5 m RMS (1 m of height is 0.015\u00b0 of skyline there); 31 km from the site the 480 m window ends and the whole-Moon grid takes over, lying between 33.4 m below and 23.3 m above it, 5.8 m RMS (1 m of height is 0.002\u00b0 of skyline there). A skyline point formed right at such an edge is uncertain by about that much. The 3 m model is kept as measured up to its edge: where the bundled models were checked against laser altimetry (LOLA), they are closer to the ground there than the 60 m windows.",
+     "Near the horizon the Sun climbs at most 0.0080\u00b0 per minute at this latitude, so 1 m of height at the 3 m model's edge (0.77 km from the site) moves a sunrise or sunset formed there by about 9 minutes."
+    ]
+   }
+  },
+  "apollo-12@2m": {
+   "site": {
+    "id": "apollo-12",
+    "name": "Apollo 12",
+    "kind": "landing",
+    "lat": -3.0128,
+    "lon": -23.4219
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 25,
+     "largestRaiseDeg": 0.00027808189950885576,
+     "atAzDeg": 102.0,
+     "seconds": 6.0
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0021300000000000208,
+     "signedAtMaxDeg": -0.0021300000000000208,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here (48 s, two marches)",
+    "referenceConvergenceDeg": 0.0005893586044738996,
+    "referenceGroundM": -1422.8900146484375,
+    "appGroundM": -1422.8900146484375,
+    "maxAbsDeg": 0.0021300000000000208,
+    "atAzDeg": 183.0,
+    "signedAtMaxDeg": -0.0021300000000000208,
+    "meanDeg": -6.004015603109973e-05,
+    "rmsDeg": 0.00024808771491472516,
+    "appLowestDeg": -0.0021300000000000208,
+    "appHighestDeg": 0.0005000000000000004,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -0.57571,
+     0.63016
+    ],
+    "worst": [
+     {
+      "azDeg": 183.0,
+      "diffDeg": -0.0021300000000000208,
+      "refElevDeg": -0.41617,
+      "refDistM": 9612.8,
+      "refHeightM": -1464.09,
+      "appElevDeg": -0.4183,
+      "appDistM": 9602.1,
+      "appHeightM": -1464.42
+     },
+     {
+      "azDeg": 123.0,
+      "diffDeg": -0.002029999999999997,
+      "refElevDeg": -0.05118,
+      "refDistM": 1001.7,
+      "refHeightM": -1421.5,
+      "appElevDeg": -0.05321,
+      "appDistM": 1002.4,
+      "appHeightM": -1421.53
+     },
+     {
+      "azDeg": 182.5,
+      "diffDeg": -0.0019100000000000228,
+      "refElevDeg": -0.4104,
+      "refDistM": 11051.4,
+      "refHeightM": -1464.86,
+      "appElevDeg": -0.41231,
+      "appDistM": 11058.1,
+      "appHeightM": -1465.24
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly; the grids are used as stored, so the ground steps there: 0.77 km from the site the 3 m model ends and the 60 m window takes over, lying between 4.9 m below and 9.7 m above it, 1.8 m RMS (1 m of height is 0.075\u00b0 of skyline there); 3.8 km from the site the 60 m window ends and the 480 m window takes over, lying between 33.6 m below and 36.8 m above it, 5.7 m RMS (1 m of height is 0.015\u00b0 of skyline there); 31 km from the site the 480 m window ends and the whole-Moon grid takes over, lying between 106 m below and 99.0 m above it, 14.5 m RMS (1 m of height is 0.002\u00b0 of skyline there). A skyline point formed right at such an edge is uncertain by about that much. The 3 m model is kept as measured up to its edge: where the bundled models were checked against laser altimetry (LOLA), they are closer to the ground there than the 60 m windows.",
+     "Near the horizon the Sun climbs at most 0.0085\u00b0 per minute at this latitude, so 1 m of height at the 3 m model's edge (0.77 km from the site) moves a sunrise or sunset formed there by about 9 minutes."
+    ]
+   }
+  },
+  "luna-23@2m": {
+   "site": {
+    "id": "luna-23",
+    "name": "Luna 23",
+    "kind": "landing",
+    "lat": 12.6669,
+    "lon": 62.1511
+   },
+   "mastHeightM": 2,
+   "app": {
+    "nearFieldExact": {
+     "rangeM": 500.0,
+     "azimuthsRaised": 0,
+     "largestRaiseDeg": 0.0,
+     "atAzDeg": 234.5,
+     "seconds": 9.0
+    },
+    "againstMarchOnly": {
+     "maxAbsDeg": 0.0037900000000000156,
+     "signedAtMaxDeg": -0.0037900000000000156,
+     "over0p02": 0
+    },
+    "referenceOrigin": "computed here (39 s, two marches)",
+    "referenceConvergenceDeg": 0.0015668355739368867,
+    "referenceGroundM": -3670.792236328125,
+    "appGroundM": -3670.792236328125,
+    "maxAbsDeg": 0.0037900000000000156,
+    "atAzDeg": 282.5,
+    "signedAtMaxDeg": -0.0037900000000000156,
+    "meanDeg": -0.00017109722222222195,
+    "rmsDeg": 0.0004675207957347414,
+    "appLowestDeg": -0.0037900000000000156,
+    "appHighestDeg": 0.0008700000000000374,
+    "over0p01": 0,
+    "over0p02": 0,
+    "over0p05": 0,
+    "overLimit": 0,
+    "refAtFeet": 0,
+    "appAtFeet": 0,
+    "refSkylineDeg": [
+     -0.32955,
+     2.04126
+    ],
+    "worst": [
+     {
+      "azDeg": 282.5,
+      "diffDeg": -0.0037900000000000156,
+      "refElevDeg": -0.28702,
+      "refDistM": 1413.5,
+      "refHeightM": -3675.28,
+      "appElevDeg": -0.29081,
+      "appDistM": 1414.2,
+      "appHeightM": -3675.38
+     },
+     {
+      "azDeg": 284.5,
+      "diffDeg": -0.003420000000000034,
+      "refElevDeg": -0.27235,
+      "refDistM": 1425.6,
+      "refHeightM": -3674.97,
+      "appElevDeg": -0.27577,
+      "appDistM": 1424.7,
+      "appHeightM": -3675.05
+     },
+     {
+      "azDeg": 268.0,
+      "diffDeg": -0.002150000000000013,
+      "refElevDeg": -0.22535,
+      "refDistM": 1380.7,
+      "refHeightM": -3673.66,
+      "appElevDeg": -0.2275,
+      "appDistM": 1381.4,
+      "appHeightM": -3673.72
+     }
+    ],
+    "warnings": [
+     "Beyond about 31 km from the site only the whole-Moon grid is available (1.9 km per sample), which smooths ridges narrower than that; distant skyline peaks can read slightly low.",
+     "Where one grid hands over to the next, the heights do not match exactly; the grids are used as stored, so the ground steps there: 0.77 km from the site the 3 m model ends and the 60 m window takes over, lying between 5.9 m below and 16.2 m above it, 4.2 m RMS (1 m of height is 0.075\u00b0 of skyline there); 3.8 km from the site the 60 m window ends and the 480 m window takes over, lying between 19.7 m below and 26.8 m above it, 4.3 m RMS (1 m of height is 0.015\u00b0 of skyline there); 31 km from the site the 480 m window ends and the whole-Moon grid takes over, lying between 391 m below and 108 m above it, 53.0 m RMS (1 m of height is 0.002\u00b0 of skyline there). A skyline point formed right at such an edge is uncertain by about that much. The 3 m model is kept as measured up to its edge: where the bundled models were checked against laser altimetry (LOLA), they are closer to the ground there than the 60 m windows.",
+     "Near the horizon the Sun climbs at most 0.0083\u00b0 per minute at this latitude, so 1 m of height at the 3 m model's edge (0.77 km from the site) moves a sunrise or sunset formed there by about 9 minutes.",
+     "The longest darkness runs into the edge of the window: it is a lower bound.",
+     "The longest darkness that touches this window lasts 355.0 h in full, from 1974-11-02 00:03 to 1974-11-16 19:00 UTC; the window itself holds 1.0 h of it at most in one stretch."
+    ]
+   }
+  }
+ }
+}

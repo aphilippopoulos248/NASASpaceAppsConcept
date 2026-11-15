@@ -30,11 +30,13 @@ import spice_sky  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument('--write', action='store_true')
 ap.add_argument('--make-series-input', action='store_true', help='write outlook/model-series-input.json for app_skyat.mjs --series and stop')
+ap.add_argument('--app', default='app-now.json', help='app dump under outlook/ to test')
+ap.add_argument('--tag', default='', help='write results-<tag>.* instead of results.* (keeps the earlier record)')
 args = ap.parse_args()
 DIR = os.path.join(common.BASE, 'outlook')
 with open(os.path.join(DIR, 'scenarios.json')) as fh:
     scenarios = json.load(fh)
-with open(os.path.join(DIR, 'app-now.json')) as fh:
+with open(os.path.join(DIR, args.app)) as fh:
     app = json.load(fh)
 by_id = {r['id']: r for r in app['results']}
 hm = lambda t: sg.to_iso(t)[:16].replace('T', ' ')
@@ -68,9 +70,10 @@ if os.path.exists(p):
 
 
 def measures(t, step, sun, earth, sky):
-    """Per-sample visible fraction of the Sun, any-Sun flag and Earth-centre flag."""
+    """Per-sample visible fraction of the Sun, any-Sun flag, Earth-centre flag and any-part-of-Earth flag."""
     frac, top = sg.disc(sun[:, 0], sun[:, 1], sun[:, 2], sky)
-    return frac, (top > 0).astype(np.float64), (sg.centre_clearance(earth[:, 0], earth[:, 1], sky) > 0).astype(np.float64)
+    _, e_top = sg.disc(earth[:, 0], earth[:, 1], earth[:, 2], sky)
+    return frac, (top > 0).astype(np.float64), (sg.centre_clearance(earth[:, 0], earth[:, 1], sky) > 0).astype(np.float64), (e_top > 0).astype(np.float64)
 
 
 def window_mean(c, i0, i1):
@@ -88,8 +91,9 @@ for s in scenarios:
     site = spice_sky.Site(s['site']['lat'], s['site']['lon'], sky.extra['groundM'] + s['mastHeightM'])
     t0, step, t = grid(o, r)
     series = site.series(t, cache_key='outlook.%s.%d.%d.%d' % (s['siteKey'], int(t0), int(step), t.size))
-    frac, any_sun, earth_c = measures(t, step, series['sun'], series['earth'], sky)
-    cum = {k: np.concatenate([[0.0], np.cumsum(v)]) for k, v in (('frac', frac), ('any', any_sun), ('earth', earth_c))}
+    frac, any_sun, earth_c, earth_any = measures(t, step, series['sun'], series['earth'], sky)
+    cum = {k: np.concatenate([[0.0], np.cumsum(v)]) for k, v in (('frac', frac), ('any', any_sun), ('earth', earth_c), ('earthAny', earth_any))}
+    any_rows = []
     # Spells in full, from the continuous functions (not from the samples), searched 60 days beyond the span.
     lo, hi = t[0] - 60 * 86400.0, t[-1] + 60 * 86400.0
     dark = sg.hidden_spans(lambda x: sg.disc_edges(*site.body('sun', x), sky)[1], lo, hi)
@@ -121,9 +125,16 @@ for s in scenarios:
         out('  %2d %s  %6.2f  %6.2f  %+5.2f   %6.2f  %6.2f  %+5.2f   %6.2f  %6.2f  %+5.2f   %7.1f   %7.1f   %+6.2f%s       %7.1f   %7.1f   %+6.2f%s'
             % (row['index'], hm(a), row['illuminationPct'], own['illum'], d['illum'], row['sunAnyPct'], own['any'], d['any'], row['earthVisiblePct'], own['earth'], d['earth'],
                row['longestDarknessH'], own['dark'], d['dark'], '' if row['darknessComplete'] else '*', row['longestEarthGapH'], own['gap'], d['gap'], '' if row['earthGapComplete'] else '*'))
+        if row.get('earthAnyPct') is not None:  # T-31 item 3
+            own['earthAny'] = 100 * window_mean(cum['earthAny'], i0, i1)
+            d['earthAny'] = row['earthAnyPct'] - own['earthAny']
+            any_rows.append((row['index'], row['earthAnyPct'], own['earthAny'], d['earthAny']))
         rows.append({'index': row['index'], 'start': sg.to_iso(a), 'own': own, 'appMinusOwn': d})
     out('  worst app - own over the %d rows: sunlight %.2f, any Sun %.2f, Earth %.2f points; darkness in full %.2f h (inside the row %.2f h); Earth gap in full %.2f h (inside the row %.2f h)'
         % (len(rows), w['illum'], w['any'], w['earth'], w['dark'], w['darkIn'], w['gap'], w['gapIn']))
+    if any_rows:
+        out('  any part of Earth\'s disc (T-31 item 3), app / own / diff per lunar day: ' + '; '.join('%d: %.2f / %.2f / %+.2f' % x for x in any_rows))
+        out('  worst any-part Earth difference over the rows: %.2f points' % max(abs(x[3]) for x in any_rows))
 
     # ---- arrivals: a mission of missionH hours starting every stepMs
     arr = o['arrivals']
@@ -165,7 +176,7 @@ for s in scenarios:
         mearth = np.stack([m['earthAz'], m['earthEl'], m['earthRadius']], axis=-1)
         sep = lambda a, b: sg.separation(a[:, 0], a[:, 1], b[:, 0], b[:, 1])
         d_sun, d_earth = sep(msun, series['sun']), sep(mearth, series['earth'])
-        mfrac, many, mearth_c = measures(t, step, msun, mearth, sky)
+        mfrac, many, mearth_c, _ = measures(t, step, msun, mearth, sky)
         mc = {k: np.concatenate([[0.0], np.cumsum(v)]) for k, v in (('frac', mfrac), ('any', many), ('earth', mearth_c))}
         cost = {'illum': 0.0, 'any': 0.0, 'earth': 0.0}
         for row in o['rows']:
@@ -184,8 +195,9 @@ for s in scenarios:
 text = '\n'.join(lines).lstrip('\n')
 print(text)
 if args.write:
-    with open(os.path.join(DIR, 'results.json'), 'w') as fh:
+    stem = 'results-%s' % args.tag if args.tag else 'results'
+    with open(os.path.join(DIR, stem + '.json'), 'w') as fh:
         json.dump(report, fh, indent=1)
         fh.write('\n')
-    with open(os.path.join(DIR, 'results.txt'), 'w') as fh:
+    with open(os.path.join(DIR, stem + '.txt'), 'w') as fh:
         fh.write(text + '\n')

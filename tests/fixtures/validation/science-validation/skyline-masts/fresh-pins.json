@@ -1,0 +1,30 @@
+{
+ "rule": "Round 1 (T-26) and @analysis's T-31 tests use five polar pins, and the app was checked against\ntheir stored reference skylines. To see whether the T-31 ground-observer fix generalises, the\nskyline check is also run at two points chosen here by a fixed rule, before any app output exists:",
+ "layer": "LOLA south pole, 87.5S square at 40 m",
+ "pins": {
+  "fresh-a": {
+   "lat": -88.46586,
+   "lon": 94.25475,
+   "groundM": -747.3,
+   "node": {
+    "lat": -88.466327,
+    "lon": 94.266426,
+    "heightM": -740.0,
+    "convexity80M": 21.781
+   },
+   "kmFromPole": 46.52
+  },
+  "fresh-b": {
+   "lat": -89.50713,
+   "lon": -177.52577,
+   "groundM": 1059.76,
+   "node": {
+    "lat": -89.506833,
+    "lon": -177.470506,
+    "heightM": 1062.0,
+    "convexity80M": 19.125
+   },
+   "kmFromPole": 14.95
+  }
+ }
+}
