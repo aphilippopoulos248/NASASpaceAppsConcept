@@ -1,6 +1,6 @@
 // What the edge easing of the 3 m site models (src/terrain/api.ts, T-32) changes in the results:
 // the skyline and the sunrise / sunset times computed by the app's own analysis code, once on
-// the stack the app uses (the grids as stored, decision D-7) and once on the stack eased on
+// the stack the app uses (the grids as stored, decision D-10) and once on the stack eased on
 // request ({ easeEdges: true }).
 //
 //   node scripts/terrain-seams-skyline.mjs [--sites a,b] [--mast 2] [--az 1440] [--days 30] [--json OUT.json]
@@ -9,8 +9,9 @@
 //       every sunrise / sunset (last limb) in the `days` after the landing that moves; and how far
 //       the two stacks can move a sunrise or a sunset on any date: the largest skyline change over
 //       the azimuths where the Sun can rise (90 deg) or set (270 deg), give or take 2 deg over the
-//       cosine of the latitude, divided by the Sun's fastest climb there (SEAM_EVENT_MINUTES in
-//       src/terrain/api.ts lists the sites above a minute).
+//       cosine of the latitude, divided by the Sun's fastest climb there. That is the effect of
+//       the rejected easing, not an uncertainty (decision D-10: the eased stack lies outside
+//       both products).
 //   node scripts/terrain-seams-skyline.mjs --sunset blue-ghost-1 --from 2025-03-16T16:00:00Z --hours 6 [--masts 2,3.5]
 //       One-minute samples of the visible part of the Sun's disc: when the skyline starts to cut
 //       the Sun and when the last limb is gone, stored against eased, for each observer height.

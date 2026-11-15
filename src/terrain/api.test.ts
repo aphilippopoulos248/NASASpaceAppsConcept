@@ -480,7 +480,7 @@ describe('where one grid hands over to the next', () => {
     );
     expect(notes).toContain('The 3 m model is kept as measured up to its edge: where the bundled models were checked against laser altimetry (LOLA), they are closer to the ground there than the 60 m windows.');
     expect(a17.notes.some((n) => /eased|easing/.test(n))).toBe(false);
-    expect(notes).not.toMatch(/sunrises|sunsets/); // Apollo 17's sunrises and sunsets are not seen over the model's edge
+    expect(notes).toContain("Near the horizon the Sun climbs at most 0.0079° per minute at this latitude, so 1 m of height at the 3 m model's edge (0.77 km from the site) moves a sunrise or sunset formed there by about 9 minutes.");
     // These are the stored grids themselves: the same objects every time, and the same as with easeEdges: false.
     const off = await loadTerrainFor(landing('apollo-17'), { easeEdges: false });
     expect(off.sources).toEqual(a17.sources);
@@ -580,40 +580,22 @@ describe('where one grid hands over to the next', () => {
     expect(first.sources[0].sample(p.lat, p.lon)).not.toBe(storedGrid(first.sources[0]).sample(p.lat, p.lon));
   });
 
-  it('says how far the seam can move a sunrise or a sunset where they are seen over the 3 m edge (Blue Ghost, Luna 23), and the figures hold', async () => {
-    const bg = (await loadTerrainFor(landing('blue-ghost-1'))).notes.join(' ');
-    expect(bg).toContain(
-      "For an observer 2 m up, sunsets here are seen over the 3 m model's edge, 0.77 km west of the site, so the two grids' disagreement there moves a computed sunset by up to about 20 minutes (near the horizon the Sun climbs at most 0.0080° per minute at this latitude, so 1 m of height at 0.77 km is about 9 minutes).",
-    );
-    const l23 = (await loadTerrainFor(landing('luna-23'))).notes.join(' ');
-    expect(l23).toContain("For an observer 2 m up, sunrises here are seen over the 3 m model's edge, 0.77 km east of the site, so the two grids' disagreement there moves a computed sunrise by up to about 12 minutes (near the horizon the Sun climbs at most 0.0083° per minute at this latitude, so 1 m of height at 0.77 km is about 9 minutes).");
-    expect((await loadTerrainFor(landing('blue-ghost-1'), { easeEdges: true })).notes.join(' ')).toContain('moves a computed sunset by up to about 20 minutes');
-    // Recomputed: the skyline on the stored grids against the eased ones, over the azimuths where the
-    // Sun can rise (90 deg) or set (270 deg), give or take 2 deg over the cosine of the latitude.
-    const minutes = async (id: string): Promise<{ rise: number; set: number }> => {
-      const site = landing(id);
-      const a = computeHorizon(await loadTerrainFor(site), site, 2, { azStepDeg: 0.25 });
-      const b = computeHorizon(await loadTerrainFor(site, { easeEdges: true }), site, 2, { azStepDeg: 0.25 });
-      const cos = Math.cos((index.sites[id].lat * Math.PI) / 180);
-      const rate = (360 / (29.530589 * 1440)) * cos; // the Sun's fastest climb, degrees per minute
-      let rise = 0, set = 0;
-      for (let i = 0; i < a.elevDeg.length; i++) {
-        const az = i * a.azStepDeg, moved = Math.abs(b.elevDeg[i] - a.elevDeg[i]) / rate;
-        if (Math.abs(az - 90) <= 2 / cos) rise = Math.max(rise, moved);
-        if (Math.abs(az - 270) <= 2 / cos) set = Math.max(set, moved);
-      }
-      return { rise, set };
-    };
-    const g = await minutes('blue-ghost-1'); // measured 20.2 min (sunsets), 0 (sunrises)
-    expect(g.set).toBeGreaterThan(18);
-    expect(g.set).toBeLessThan(22);
-    expect(g.rise).toBeLessThan(1);
-    const l = await minutes('luna-23'); // measured 11.8 min (sunrises), 0.2 (sunsets)
-    expect(l.rise).toBeGreaterThan(10);
-    expect(l.rise).toBeLessThan(14);
-    expect(l.set).toBeLessThan(1);
-    // A pin is not told this (its observer is elsewhere), and neither are sites whose sunrises and sunsets are not seen over the edge.
-    for (const id of ['apollo-17', 'apollo-15']) expect((await loadTerrainFor(landing(id))).notes.join(' '), id).not.toMatch(/sunrises here|sunsets here/);
+  it('states, per site, how far 1 m of height at the 3 m edge moves a sunrise or sunset formed there (D-10)', async () => {
+    const sentence = (rate: string, where: string, minutes: number): string =>
+      `Near the horizon the Sun climbs at most ${rate}° per minute at this latitude, so 1 m of height at the 3 m model's edge (${where}) moves a sunrise or sunset formed there by about ${minutes} minutes.`;
+    // 1 m at 768 m is 0.0746 deg; the Sun climbs at most 0.0085 deg per minute times the cosine of the latitude.
+    expect((await loadTerrainFor(landing('blue-ghost-1'))).notes).toContain(sentence('0.0080', '0.77 km from the site', 9)); // 18.6 N
+    expect((await loadTerrainFor(landing('luna-23'))).notes).toContain(sentence('0.0083', '0.77 km from the site', 9)); // 12.7 N
+    expect((await loadTerrainFor(landing('change-4'))).notes).toContain(sentence('0.0059', '0.77 km from the site', 13)); // 45.4 S
+    // The same in the comparison mode, where the edge itself no longer steps but the two grids still disagree there.
+    expect((await loadTerrainFor(landing('blue-ghost-1'), { easeEdges: true })).notes).toContain(sentence('0.0080', '0.77 km from the site', 9));
+    // A pin that borrows Apollo 11's model 368 m from its edge: twice as close, twice as sensitive.
+    const a11 = index.sites['apollo-11'];
+    const p = offsetPoint(a11.lat, a11.lon, 400, -300);
+    expect((await loadTerrainFor(pin(p.lat, p.lon))).notes).toContain(sentence('0.0085', '0.37 km from the site at the nearest', 18));
+    // No 3 m model, no such sentence; and no stored-against-eased difference is quoted as an uncertainty anywhere.
+    expect((await loadTerrainFor(landing('im-2'))).notes.join(' ')).not.toContain('Near the horizon the Sun climbs');
+    for (const id of ['blue-ghost-1', 'luna-23']) expect((await loadTerrainFor(landing(id))).notes.join(' '), id).not.toMatch(/up to about \d+ minutes/);
   });
 
   it('follows what the stack really uses on each side of an edge, and leaves grids of one frame alone', async () => {
@@ -679,7 +661,7 @@ describe('where one grid hands over to the next', () => {
     expect(nac.degPerMetre).toBeCloseTo(0.1557, 3);
     expect(w60).toMatchObject({ inner: '60 m window', outer: '480 m window', distanceM: 3440 });
     expect(stack.notes.join(' ')).toContain('0.37 km from the site at the nearest the 3 m model ends and the 60 m window takes over, lying between 7.4 m below and 17.6 m above it');
-    expect(stack.notes.join(' ')).not.toMatch(/sunrises here|sunsets here/);
+    expect(stack.notes.join(' ')).toContain("1 m of height at the 3 m model's edge (0.37 km from the site at the nearest) moves a sunrise or sunset formed there by about 18 minutes.");
     // Eased on request: the same eased ground as at Apollo 11 itself.
     const easedPin = await loadTerrainFor(pin(p.lat, p.lon), { easeEdges: true });
     expect(easedPin.seams![0]).toMatchObject({ inner: '3 m model', outer: '60 m window', distanceM: 368, minM: 0, maxM: 0, eased: { overM: 129, minM: -7.4, maxM: 17.6, rmsM: 3.6 } });

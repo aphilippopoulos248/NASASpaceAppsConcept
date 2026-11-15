@@ -1,5 +1,5 @@
 // Where the grids of a site's terrain stack hand over to each other: the height mismatch
-// along each edge in the grids as stored, which is the stack the app uses (decision D-7), and
+// along each edge in the grids as stored, which is the stack the app uses (decision D-10), and
 // in the stack with each 3 m model eased onto the 60 m window around it, which loadTerrainFor
 // gives on request ({ easeEdges: true }, src/terrain/api.ts) for comparison.
 //
@@ -81,7 +81,7 @@ try {
       const three = (x) => `${m(x.minM).padStart(7)} ${m(x.maxM).padStart(7)} ${x.rmsM.toFixed(1).padStart(6)}`;
       console.log(all ? 'Every hand-over between the grids of each catalogued site.' : "The 3 m model against the 60 m window along the model's edge, 768 m from the site.");
       console.log('Metres, the grid that continues outside minus the grid that ends; lowest, highest and RMS along the edge.');
-      console.log('"As stored" is the stack the app uses (D-7); "eased" the stack with easeEdges: true, for comparison.\n');
+      console.log('"As stored" is the stack the app uses (D-10); "eased" the stack with easeEdges: true, for comparison.\n');
       console.log(`${'site'.padEnd(14)}${all ? 'hand-over'.padEnd(38) + 'at'.padStart(8) + '  ' : ''}${'as stored, in use'.padStart(22)}  ${'eased (on request)'.padStart(22)}   eased over`);
       console.log(`${''.padEnd(14)}${all ? ''.padEnd(48) : ''}${' lowest highest    RMS'.padStart(22)}  ${' lowest highest    RMS'.padStart(22)}`);
       for (const r of rows) {

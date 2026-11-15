@@ -322,7 +322,7 @@ export interface LoadTerrainOptions {
   /**
    * Ease each 3 m survey model onto the 60 m window that takes over outside it, over the
    * model's outer 129 m, so the ground has no step there (see easeStack). Off by default
-   * (decision D-7): checked against laser altimetry (LOLA), the stored 3 m models are closer
+   * (decision D-10): checked against laser altimetry (LOLA), the stored 3 m models are closer
    * to the ground at their edges than the eased ones, and the step is the 60 m window's error
    * (docs/lunyx/handover/T-32-verification.md). True gives the eased stack, for comparison.
    */
@@ -465,45 +465,31 @@ export async function loadTerrainFor(site: SiteRef, options: LoadTerrainOptions 
   //    (only when asked for) a separately measured model eased onto the grid around it.
   const edges = handOvers(sources, site, options.easeEdges === true);
   notes.push(...edges.notes);
-  // 6. Where that disagreement moves a sunrise or a sunset by more than a minute, say by how much.
-  const modelEdge = edges.seams.find((x) => x.inner === '3 m model' && x.distanceM === MODEL_EDGE_M);
-  const events = own && modelEdge ? SEAM_EVENT_MINUTES[own] : undefined;
-  if (events) notes.push(seamEventNote(events, site.lat, modelEdge!));
+  // 6. What the step at a 3 m model's edge means for the time of a sunrise or sunset formed there.
+  const modelEdge = edges.seams.find((x) => x.inner === '3 m model');
+  if (modelEdge) notes.push(seamSensitivityNote(site.lat, modelEdge));
   return { sources: edges.stack, notes, ...(edges.seams.length ? { seams: edges.seams } : {}) };
 }
 
 /** Half the width of the bundled 3 m site models (513 samples at 3 m), metres: where their edge is from the site. */
 const MODEL_EDGE_M = 768;
 
-/**
- * Sites where a sunrise or a sunset is seen over the edge of the site's own 3 m model, so that
- * the two grids' disagreement there moves it by more than a minute: the largest difference
- * between the skyline on the stored grids and on the eased ones (easeEdges: true), over the
- * azimuths where the Sun can rise or set (90 or 270 degrees, give or take 2 degrees divided by
- * the cosine of the latitude), divided by the Sun's fastest climb at that latitude; observer
- * 2 m up. Measured with `node scripts/terrain-seams-skyline.mjs` (docs/lunyx/handover/
- * T-32-verification.md); at the other 17 sites with a 3 m model it is under a minute.
- * src/terrain/api.test.ts recomputes the two entries.
- */
-const SEAM_EVENT_MINUTES: Record<string, { sunrise?: number; sunset?: number }> = {
-  'blue-ghost-1': { sunset: 20 },
-  'luna-23': { sunrise: 12 },
-};
-
 /** The Sun's motion across the lunar sky, degrees per minute (360 degrees per synodic month of 29.530589 days). */
 const SUN_DEG_PER_MIN = 360 / (29.530589 * 1440);
 
-/** "Sunsets here are seen over the 3 m model's edge ...": the event-time uncertainty that the seam implies at this site. */
-function seamEventNote(events: { sunrise?: number; sunset?: number }, lat: number, seam: TerrainSeam): string {
+/**
+ * How far one metre of height at the 3 m model's edge moves a sunrise or sunset formed there:
+ * a metre at that distance is `degPerMetre` of skyline, and near the horizon the Sun's
+ * elevation changes by at most SUN_DEG_PER_MIN times the cosine of the latitude per minute
+ * (less where it rises or sets obliquely, so this is the smallest effect). Decision D-10: the
+ * notes state this sensitivity per site. The spread between the two measured products at a
+ * dated event (Blue Ghost, 16 March 2025: 3.5 to 3.7 minutes) is quoted in the documents
+ * (docs/lunyx/handover/T-32-verification.md), not here.
+ */
+function seamSensitivityNote(lat: number, seam: TerrainSeam): string {
   const rate = SUN_DEG_PER_MIN * Math.cos((lat * Math.PI) / 180);
-  const kinds = (['sunrise', 'sunset'] as const).filter((k) => events[k] !== undefined);
-  const which = kinds.map((k) => `${k}s`).join(' and ');
-  const side = kinds.map((k) => (k === 'sunrise' ? 'east' : 'west')).join(' and ');
-  const upTo = kinds.map((k) => `${kinds.length > 1 ? `${k}s ` : ''}by up to about ${events[k]} minutes`).join(', ');
-  return (
-    `For an observer 2 m up, ${which} here are seen over the 3 m model's edge, ${km(seam.distanceM)} ${side} of the site, so the two grids' disagreement there moves a computed ${kinds.length > 1 ? 'event' : kinds[0]} ${upTo}` +
-    ` (near the horizon the Sun climbs at most ${rate.toFixed(4)}° per minute at this latitude, so 1 m of height at ${km(seam.distanceM)} is about ${Math.round(seam.degPerMetre / rate)} minutes).`
-  );
+  const where = `${km(seam.distanceM)} from the site${seam.distanceM === MODEL_EDGE_M ? '' : ' at the nearest'}`;
+  return `Near the horizon the Sun climbs at most ${rate.toFixed(4)}° per minute at this latitude, so 1 m of height at the 3 m model's edge (${where}) moves a sunrise or sunset formed there by about ${Math.round(seam.degPerMetre / rate)} minutes.`;
 }
 
 // ---------------------------------------------------------------- easing grids onto each other
@@ -621,7 +607,7 @@ function handOvers(sources: HeightSource[], site: { lat: number; lon: number }, 
  * The stored grids are not changed; an eased grid is a copy (see storedGrid).
  *
  * Used only when loadTerrainFor is asked for it (easeEdges: true), for comparison: by default
- * the stack keeps the stored grids (decision D-7). Checked against laser altimetry (LOLA) at 17
+ * the stack keeps the stored grids (decision D-10). Checked against laser altimetry (LOLA) at 17
  * sites, the stored 3 m model is closer to the ground in this band than the eased one at 16,
  * and the step at the edge follows the 60 m window's error, not the model's
  * (docs/lunyx/handover/T-32-verification.md).

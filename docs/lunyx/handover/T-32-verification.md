@@ -146,7 +146,8 @@ stronger test: it measures the ground itself, where the published time only brac
 
 ## 4. The decision this raised (for @coordinator)
 
-**Decided: option A, recorded as D-7** (Lunyx Science, 2026-11-15). The stack keeps the stored
+**Decided: option A**, recorded as D-7 and restated as D-10 (Lunyx Science, 2026-11-15), which
+states the uncertainty as the two products' spread (section 5). The stack keeps the stored
 grids; easing is opt-in (`easeEdges: true`) for comparison. Option B is quantified first (T-8,
 `docs/lunyx/handover/T-32-option-b.md`). The options as put to the decision:
 
@@ -202,21 +203,33 @@ change to what consumers already have.
   +13 min); Luna 23's sunrise of 16 November 1974, -0.9 min. Nothing else in the 30 days after
   any landing moves by more than 0.05 min.
 
-**Event-time uncertainty from the two grids' disagreement.** One metre of height at the
+**Event times: the sensitivity, and the two products' spread.** One metre of height at the
 model's edge (0.77 km) is 0.075 deg of skyline, which at a sunrise or sunset is 8.8 min/m at the
 equator, 9.3 at Blue Ghost and 12.6 at Chang'e 4 (the Sun climbs 0.0085 deg/min times the cosine
-of the latitude, at most). Over the azimuths where the Sun can rise or set (90 and 270 deg, plus
-or minus 2 deg over the cosine of the latitude) the two stacks' skylines differ by up to 0.162
-deg at Blue Ghost (sunsets up to 20 min apart) and 0.097 deg at Luna 23 (sunrises up to 12 min),
-and nowhere at the other 17 sites. The notes state the 0.075 deg per metre but not what it means
-in minutes; whichever option is chosen, I propose to add, per site: "Near the horizon the Sun
-moves about 0.008 deg per minute here, so 1 m of height at that edge moves a sunrise or sunset
-formed there by about 9 minutes."
+of the latitude, at most). That sensitivity is what the notes state, per site (decision D-10).
+Over the azimuths where the Sun can rise or set (90 and 270 deg, plus or minus 2 deg over the
+cosine of the latitude), the stored and the eased stacks differ by up to 0.162 deg at Blue Ghost
+(sunsets up to 20 min apart) and 0.097 deg at Luna 23 (sunrises up to 12 min), and nowhere at the
+other 17 sites. That is the effect of the rejected easing, not an uncertainty: the eased stack
+lies outside both measured products. Their own spread, each product used throughout, has been
+computed independently for Blue Ghost on 16 March 2025, observer 2 m up (@validation,
+`tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` on
+am/lunyx-science/agent/validation @ af49a12; first cut / half hidden / last limb, UTC):
+
+| Ground | First cut | Half hidden | Last limb |
+| --- | --- | --- | --- |
+| 3 m model throughout (= the stored stack) | 18:23:40 | 18:56:53 | 19:30:03 |
+| 60 m window alone (observer on its own ground, 1.11 m below the model's) | 18:27:22 | 19:00:29 | 19:33:31 |
+| T-32's eased stack | 18:36:44 | 19:09:53 | 19:42:53 |
+
+So the products are 3.5 to 3.7 minutes apart at 2 m (9.3 at 0.5 m, 1.0 to 1.2 at 5 m), and the
+eased time falls outside that range at every height. The validator's reading is that the eased
+stack is a 60 m skyline seen from the 3 m model's ground; it agrees with the LOLA finding.
 
 ## 6. With @analysis's ground-observer fix (1289083)
 
 (Since then 1289083 and 5ad5d1f arrived through integration, and this branch merged
-am/lunyx-science/integration 64b7e5d cleanly as d7ee94f. Under D-7 the default stack is the
+am/lunyx-science/integration 64b7e5d cleanly as d7ee94f. Under D-10 the default stack is the
 stored grids, equal to cc736f8's to the bit (section 8), so on the real combination the analysis
 numbers are integration's own; the figures below compare the opt-in eased stack.)
 
@@ -265,7 +278,7 @@ window: -14.2 / +29.5 m becomes -14.1 / +29.4 m). Nothing for @surface or @valid
 **Under B**: to be measured once built; by construction nothing changes inside the models, and
 skylines formed beyond an edge rise where the 60 m window lies below the model there.
 
-## 8. What was delivered under D-7
+## 8. What was delivered under D-10 (D-7 at first)
 
 On top of the verified slice (e4b06ef, this report 0d27f2c / 6f0a20d, merge of
 am/lunyx-science/integration d7ee94f):
@@ -279,12 +292,13 @@ am/lunyx-science/integration d7ee94f):
   right at such an edge is uncertain by about that much. The 3 m model is kept as measured up
   to its edge: where the bundled models were checked against laser altimetry (LOLA), they are
   closer to the ground there than the 60 m windows." (Apollo 17; the figures are per site.)
-- Where the event-time uncertainty exceeds a minute (`SEAM_EVENT_MINUTES`), one more sentence.
-  Blue Ghost: "For an observer 2 m up, sunsets here are seen over the 3 m model's edge, 0.77 km
-  west of the site, so the two grids' disagreement there moves a computed sunset by up to about
-  20 minutes (near the horizon the Sun climbs at most 0.0080° per minute at this latitude, so
-  1 m of height at 0.77 km is about 9 minutes)." Luna 23: the same for sunrises, east, about
-  12 minutes. A test recomputes both figures from the two stacks (20.2 and 11.8 min).
+- At every site with a 3 m model, the sensitivity, per site (D-10): "Near the horizon the Sun
+  climbs at most 0.0080° per minute at this latitude, so 1 m of height at the 3 m model's edge
+  (0.77 km from the site) moves a sunrise or sunset formed there by about 9 minutes." (Blue Ghost;
+  9 to 10 minutes at the low-latitude sites, 12 to 13 at Surveyor 7 and the Chang'e sites, 18 for a
+  pin 0.37 km from Apollo 11's edge.) The first commit under D-7 (30389f2) quoted the
+  stored-against-eased figures (20 and 12 min) as an uncertainty; D-10 withdrew that, and they
+  are gone from the code. The products' spread at Blue Ghost is quoted in section 5.
 - Tests for both modes in `src/terrain/api.test.ts` ("where one grid hands over to the next"):
   the default is the stored grids (the same objects, equal to the files at all 19 sites), the
   eased mode is T-32's (no step, the surface view's own rule, 19 sites), and the notes of both.

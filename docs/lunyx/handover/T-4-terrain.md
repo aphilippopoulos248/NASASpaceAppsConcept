@@ -113,10 +113,10 @@ degrees where the others meet. Same recipe as the bundled windows.
   layers in about 1.5 s (localhost). End to end through `server/plugin.ts` from @globe's branch:
   a custom pin at 89.45S 137.2W got its window in 9.4 s, 1 ms on the second call.
 
-## Hand-overs between grids (T-26, T-32, D-7)
+## Hand-overs between grids (T-26, T-32, D-10)
 
 Where a site's finer grid ends and the next takes over, the stored heights do not match
-exactly. `loadTerrainFor` uses every grid as stored (decision D-7), measures the mismatch for
+exactly. `loadTerrainFor` uses every grid as stored (decision D-10, which replaced D-7), measures the mismatch for
 each site along every edge the stack really crosses, says it in `notes`, and returns the
 figures as `stack.seams` (`inner`, `outer`, `distanceM`, `minM`, `maxM`, `rmsM`, `degPerMetre`,
 and `eased` where an edge was eased on request).
@@ -126,10 +126,13 @@ and `eased` where an edge was eased on request).
   Apollo 17 -7.4 to +21.1 m, 3.6 m RMS, 0.77 km from the site. Checked against LRO LOLA laser
   altimetry at 17 of the 19 sites, the model is the closer of the two to the ground at its
   edge, and the step is the 60 m window's error, so the model is kept up to its edge
-  (`docs/lunyx/handover/T-32-verification.md`). Where a sunrise or a sunset is seen over that
-  edge, the notes say how far the seam can move it: Blue Ghost sunsets up to about 20 minutes,
-  Luna 23 sunrises up to about 12 minutes (observer 2 m up); at the other 17 sites it is under
-  a minute. `loadTerrainFor(site, { easeEdges: true })` gives T-32's eased stack for
+  (`docs/lunyx/handover/T-32-verification.md`). The notes state what the seam means for event
+  times there: near the horizon, 1 m of height at that edge moves a sunrise or sunset formed
+  there by about 9 minutes (12 to 13 at 41 to 45 degrees of latitude). Where a dated event is
+  formed at that edge, the measure is the spread between the two products, each used
+  throughout: Blue Ghost's sunset of 16 March 2025 at 2 m, first cut / last limb, is 18:23:40 / 19:30:03 UTC on the 3 m model (the stored stack) and 18:27:22 / 19:33:31 on the 60 m window alone, so the two products are 3.5 to 3.7 minutes apart (@validation,
+  `tests/fixtures/validation/science-validation/blue-ghost-products/results.txt` on
+  am/lunyx-science/agent/validation @ af49a12). T-32's eased stack lies outside both (19:42:53). `loadTerrainFor(site, { easeEdges: true })` gives T-32's eased stack for
   comparison: over its outer 129 m the model is eased onto the window with the surface view's
   own rule, `seams[0].eased` keeps the figures from before, and `storedGrid(source)` returns
   the stored grid behind an eased one (`docs/lunyx/handover/T-32-edge-easing.md`).
