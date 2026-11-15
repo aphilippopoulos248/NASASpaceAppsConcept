@@ -156,6 +156,8 @@ describe('core actions', () => {
     expect(all.result.sites[1]).toEqual({
       id: 'apollo-11', name: 'Apollo 11', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA',
       landedUtc: '1969-07-20T12:00Z', crewed: true, region: 'r', positionApproximate: false, summary: 's', shown: true,
+      // No GCAT record or explored areas are loaded in this setup (see siteRecords.test.ts for real ones).
+      ownership: null, exploredArea: null,
     });
     // A query: nothing on screen changed.
     expect(JSON.stringify(store.get())).toBe(before);
