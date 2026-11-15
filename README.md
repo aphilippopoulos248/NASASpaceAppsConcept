@@ -192,7 +192,7 @@ round, by the science project; STATUS.md quotes them, and their records (now on
 | Sun and Earth azimuth and elevation at a site | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035 | Worst difference 0.0036°. After 2035 it grows (0.006° in 2060, 0.021° in 2099); dates are limited to 1950 to 2100 |
 | Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, GitHub `main`'s version on 14 November 2026 until `595fe28` brought the fix, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
-| Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 3.7 min apart at a 2 m mast (first cut 18:23:40 on the 3 m model and 18:27:22 on the 60 m window; last limb 19:30:03 and 19:33:31 UTC). The site windows themselves were not compared with their PDS sources |
+| Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min at Blue Ghost, Chandrayaan-3 and Apollo 15. Near the poles the Sun and Earth cross the skyline slowly, and the same 0.01° of skyline agreement means times that agree to within a few minutes |
 | Both ends of every rise and set (computed, not yet shown on screen) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s. Near the poles an instant can be several minutes off, up to 14 min for one Earthrise's first limb, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lies under the disc |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
@@ -207,8 +207,8 @@ round, by the science project; STATUS.md quotes them, and their records (now on
 | Landing positions and touchdown times | LROC's measured lander positions and published times (NSSDCA, Siddiqi 2018, the space agencies, Firefly), task T-38 | Every row now names its sources (SOURCES.md, S16). Luna 9 and Luna 13 have not been found in LRO images: approximate, uncertain by kilometres. Three times are not confirmed to the minute shown: Luna 23's time of day, Chandrayaan-3's and IM-2's minutes |
 | Assistant with a real language model; the Jev router | — | **Never run** (see [The assistant](#the-assistant)) |
 
-The figures above were computed at the catalogue positions used before T-38 moved the landers to
-LROC's measured positions (IM-2 by 22 m, Blue Ghost 1 by 8 m, Chang'e 4 by 417 m). At IM-2 the
+Unless a row says otherwise, the figures above were computed at the catalogue positions used
+before T-38 moved the landers to LROC's measured positions (IM-2 by 22 m, Blue Ghost 1 by 8 m, Chang'e 4 by 417 m). At IM-2 the
 change is 0.1 point of sunlight and 0.2 h of darkness (validation.md).
 
 **Sunset means "Sun fully set".** Wherever the app reports a sunset or sunrise it means the
@@ -216,10 +216,11 @@ instant the last of the Sun's disc goes behind the terrain (or the first of it a
 start of setting, when the skyline first cuts the disc and power begins to fall, is computed by
 the analysis since the science project's delivery (decision D-8), but the screens and the
 assistant do not show it yet, and some panels still give the time without the words "fully
-set". This matters: at Blue Ghost on 16 March 2025, with a 2 m mast, the app gives **Sun fully
-set 19:30 UTC**, while setting started at 18:23 UTC (computed by the analysis, and by the
-science project's validator), which falls inside Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not
-define the term). With a 3.5 m mast the validator's instants are 18:37:36 and 19:44:00 UTC. At
+set". This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the catalogue's current
+position, the app gives **Sun fully set 19:30 UTC**, while setting starts at 18:24 UTC (the
+science project's computation: 18:24:16 and 19:30:50 UTC), which falls inside Firefly's reported
+start of night (about 18:15 to 18:35 UTC; Firefly does not define the term). A higher mast
+moves both instants later. At
 the poles the Sun can take far longer than an hour to set.
 
 ## What needs the network
