@@ -5,6 +5,15 @@ Conventions: UTC; latitude north-positive; longitude east-positive (ME frame); h
 metres above the 1737.4 km sphere; azimuth clockwise from north; elevation above the local
 horizontal, airless (no refraction).
 
+**Site positions.** Results for a landing site below were computed at the catalogue position of
+the time, which the tests pin explicitly (IM-2 at 84.79 S, 29.2 E; Blue Ghost 1 at 18.562 N,
+61.81 E; Chang'e 4 at 45.4446 S, 177.5991 E). Task T-38 (2026-11-15) replaced the catalogue
+positions in `public/data/landings.json` with LROC's measured lander positions, which moved
+IM-2 by 22 m, Blue Ghost 1 by 8 m and Chang'e 4 by 417 m, so the app now analyses slightly
+different points. At IM-2, 14 days from the landing with a 2 m mast, the new pin gives sunlight
+92.4 % (92.5 % at the old pin), longest darkness 18.4 h (18.2 h), Earth's centre in view
+88.9 % (unchanged) and a slope of 2.2 deg (2.1 deg) over 120 m.
+
 ## 1. Sun and Earth in a site's sky (`skyAt`, `src/astro/topocentric.ts`)
 
 **Model.** astronomy-engine heliocentric Earth and Moon states (VSOP87 / its lunar theory),
