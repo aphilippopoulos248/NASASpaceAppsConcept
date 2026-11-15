@@ -499,7 +499,7 @@ describe('the mission-window table and its export', () => {
     await ok('dropPin', { lat: 0, lon: 0 });
     await ok('setMissionWindow', { startUtc: '2025-03-13T00:00Z', durationH: 48 });
     const r = await ok('exportResults', { format: 'csv' });
-    expect(r).toMatchObject({ format: 'csv', filename: 'lunyx_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m.csv', mimeType: 'text/csv;charset=utf-8', scenarios: [{ slot: 'current' }], spells: 5, downloaded: true });
+    expect(r).toMatchObject({ format: 'csv', filename: 'lunyx_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m.csv', mimeType: 'text/csv;charset=utf-8', scenarios: [{ slot: 'current' }], spells: 5, passages: 0, downloaded: true });
     expect(files).toHaveLength(1);
     expect(r.bytes).toBe(new TextEncoder().encode(files[0].text).length);
     const lines = files[0].text.trimEnd().split('\r\n');
@@ -570,6 +570,8 @@ describe('the seasonal outlook', () => {
       expect(d.illuminationPct).toBeGreaterThan(45);
       expect(d.illuminationPct).toBeLessThan(55);
       expect(d.earthVisiblePct).toBe(100);
+      // Any part of Earth's disc, beside its centre (D-8).
+      expect(d.earthAnyPct).toBe(100);
     }
     expect(r.planned).toMatchObject({ arrivalUtc: '2025-03-10T00:00Z', slipDays: 0 });
     expect(r.best.score).toBeGreaterThanOrEqual(r.planned.score);
