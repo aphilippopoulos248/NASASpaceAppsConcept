@@ -50,7 +50,8 @@ Check columns:
 | `showMissions` | core | `show` | Filters: "Show previous missions" | C D E |
 | `setFilters` | core | `programs?`, `countries?`, `type?`, `fromYear?`, `toYear?`, `reset?` | "Mission filters" | C D E |
 | `saveScenario` | core | `slot`, `label?` | compare panel "Save as A / B" | C D |
-| `compare`, `stopCompare` | core | | compare panel close, Escape | C D |
+| `compare` | core | | no control of its own: the launcher opens the same A/B view (`openCompare`), and the panel analyses a pair as soon as both slots are saved. `compare` is the assistant's one step that opens it and waits for both analyses | C D |
+| `stopCompare` | core | | compare panel close, Escape | C D |
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
 | `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30) | Filters: Terrain relief, Exaggeration | C D E |
