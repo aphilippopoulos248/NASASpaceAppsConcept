@@ -7,9 +7,9 @@
 // frames) and all timeouts are generous.
 import { chromium } from 'playwright';
 
-export const TIMEOUT = Number(process.env.E2E_TIMEOUT_MS ?? 180_000);
+export const TIMEOUT = Number(process.env.E2E_TIMEOUT_MS ?? 120_000);
 /** node:test options for a test that drives the browser. */
-export const SLOW = { timeout: 6 * TIMEOUT };
+export const SLOW = { timeout: 5 * TIMEOUT };
 
 let browserPromise = null;
 
@@ -106,11 +106,18 @@ export async function click(page, selector, opts = {}) {
   await page.locator(selector).first().click({ timeout: TIMEOUT, ...opts });
 }
 
-/** Types into a field and commits it the way a person does (change fires on blur / Enter). */
-export async function setField(page, selector, value) {
-  const field = page.locator(selector).first();
+/**
+ * Types into a field and commits it the way a person does: type, then leave the field.
+ * `target` is a selector or a locator. Leaving the field matters: the panels do not
+ * overwrite a field that has the focus, so a field left focused would keep showing (and
+ * later commit) a value the app has since replaced.
+ */
+export async function setField(page, target, value) {
+  // Resolved once: a control may change the attributes a selector matched while it commits.
+  const field = await (typeof target === 'string' ? page.locator(target).first() : target).elementHandle({ timeout: TIMEOUT });
   await field.fill(String(value));
   await field.dispatchEvent('change');
+  await field.evaluate((el) => el.blur());
 }
 
 // ---------------------------------------------------------------- assistant drawer

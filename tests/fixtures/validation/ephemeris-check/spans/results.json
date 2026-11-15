@@ -1,0 +1,168 @@
+{
+ "im-2.landing": {
+  "window": {
+   "start": "2025-03-06T17:28:00Z",
+   "durationH": 336
+  },
+  "reference": {
+   "darkness": {
+    "inWindowH": 18.179768880208332,
+    "fullStart": "2025-03-19T23:17:13Z",
+    "fullEnd": "2025-04-04T19:04:43Z",
+    "fullH": 379.7918294270833,
+    "startFound": true,
+    "endFound": true
+   },
+   "earthGap": {
+    "inWindowH": 37.337809244791664,
+    "fullStart": "2025-03-19T04:07:44Z",
+    "fullEnd": "2025-03-25T08:15:58Z",
+    "fullH": 148.13736979166666,
+    "startFound": true,
+    "endFound": true
+   }
+  },
+  "apps": {
+   "now": {
+    "commit": "cc736f8",
+    "ephemeris": "model",
+    "darkness": {
+     "inWindowH": 18.186197916666668,
+     "inWindowMinusReferenceH": 0.006429036458335702,
+     "fullStart": "2025-03-19T23:16:50Z",
+     "fullEnd": "2025-04-04T19:03:42Z",
+     "fullH": 379.78125,
+     "startMinusReferenceMin": -0.3885416666666667,
+     "endMinusReferenceMin": -1.0135416666666666,
+     "startFound": true,
+     "endFound": true
+    },
+    "earthGap": {
+     "inWindowH": 37.37109375,
+     "inWindowMinusReferenceH": 0.0332845052083357,
+     "fullStart": "2025-03-19T04:05:44Z",
+     "fullEnd": "2025-03-25T08:19:02Z",
+     "fullH": 148.2216796875,
+     "startMinusReferenceMin": -1.9989583333333334,
+     "endMinusReferenceMin": 3.068489583333333,
+     "startFound": true,
+     "endFound": true
+    }
+   }
+  }
+ },
+ "chandrayaan-3.landing": {
+  "window": {
+   "start": "2023-08-23T12:33:00Z",
+   "durationH": 336
+  },
+  "reference": {
+   "darkness": {
+    "inWindowH": 52.510172526041664,
+    "fullStart": "2023-09-04T08:02:23Z",
+    "fullEnd": "2023-09-19T23:57:08Z",
+    "fullH": 375.9124348958333,
+    "startFound": true,
+    "endFound": true
+   },
+   "earthGap": null
+  },
+  "apps": {
+   "now": {
+    "commit": "cc736f8",
+    "ephemeris": "model",
+    "darkness": {
+     "inWindowH": 52.514322916666664,
+     "inWindowMinusReferenceH": 0.004150390625,
+     "fullStart": "2023-09-04T08:02:08Z",
+     "fullEnd": "2023-09-19T23:56:40Z",
+     "fullH": 375.9088541666667,
+     "startMinusReferenceMin": -0.24270833333333333,
+     "endMinusReferenceMin": -0.46145833333333336,
+     "startFound": true,
+     "endFound": true
+    },
+    "earthGap": {
+     "inWindowH": 0,
+     "full": null
+    }
+   }
+  }
+ },
+ "chandrayaan-3.from-night": {
+  "window": {
+   "start": "2023-09-10T00:00:00Z",
+   "durationH": 336
+  },
+  "reference": {
+   "darkness": {
+    "inWindowH": 239.952392578125,
+    "fullStart": "2023-09-04T08:02:23Z",
+    "fullEnd": "2023-09-19T23:57:09Z",
+    "fullH": 375.91259765625,
+    "startFound": true,
+    "endFound": true
+   },
+   "earthGap": null
+  },
+  "apps": {
+   "now": {
+    "commit": "cc736f8",
+    "ephemeris": "model",
+    "darkness": {
+     "inWindowH": 239.94401041666666,
+     "inWindowMinusReferenceH": -0.008382161458342807,
+     "fullStart": "2023-09-04T08:02:07Z",
+     "fullEnd": "2023-09-19T23:56:38Z",
+     "fullH": 375.9088541666667,
+     "startMinusReferenceMin": -0.27395833333333336,
+     "endMinusReferenceMin": -0.509375,
+     "startFound": true,
+     "endFound": true
+    },
+    "earthGap": {
+     "inWindowH": 0,
+     "full": null
+    }
+   }
+  }
+ },
+ "apollo-11.landing": {
+  "window": {
+   "start": "1969-07-20T20:17:00Z",
+   "durationH": 336
+  },
+  "reference": {
+   "darkness": {
+    "inWindowH": 4.612711588541667,
+    "fullStart": "1969-08-03T15:40:14Z",
+    "fullEnd": "1969-08-18T08:56:25Z",
+    "fullH": 353.2696940104167,
+    "startFound": true,
+    "endFound": true
+   },
+   "earthGap": null
+  },
+  "apps": {
+   "now": {
+    "commit": "cc736f8",
+    "ephemeris": "model",
+    "darkness": {
+     "inWindowH": 4.610677083333333,
+     "inWindowMinusReferenceH": -0.0020345052083339255,
+     "fullStart": "1969-08-03T15:40:22Z",
+     "fullEnd": "1969-08-18T08:56:37Z",
+     "fullH": 353.2708333333333,
+     "startMinusReferenceMin": 0.12604166666666666,
+     "endMinusReferenceMin": 0.19270833333333334,
+     "startFound": true,
+     "endFound": true
+    },
+    "earthGap": {
+     "inWindowH": 0,
+     "full": null
+    }
+   }
+  }
+ }
+}

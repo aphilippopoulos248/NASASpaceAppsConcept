@@ -238,3 +238,33 @@ def stack_for(root, lat, lon, site_id=None):
     if site_id:
         layers += site_windows(root, site_id)[1]
     return Stack(layers)
+
+
+def offset_point(lat0, lon0, east_m, north_m):
+    """Latitude and longitude reached from a point by an azimuthal-equidistant offset: distance hypot(east, north) along the great circle of initial bearing atan2(east, north)."""
+    east, north, up = frame(lat0, lon0)
+    east_m = np.asarray(east_m, dtype=np.float64)
+    north_m = np.asarray(north_m, dtype=np.float64)
+    d = np.hypot(east_m, north_m) / R_M
+    safe = np.maximum(d * R_M, 1e-12)
+    u = np.cos(d)[..., None] * up + np.sin(d)[..., None] * ((east_m / safe)[..., None] * east + (north_m / safe)[..., None] * north)
+    return np.degrees(np.arcsin(np.clip(u[..., 2], -1, 1))), np.degrees(np.arctan2(u[..., 1], u[..., 0]))
+
+
+def plane_slope(stack, lat, lon, baseline_m):
+    """Slope of the least-squares plane through a 3 x 3 pattern of points baseline_m / 2 apart, from the finest layer with data at all nine.
+
+    Returns (slope deg, aspect deg = compass direction the ground falls towards, layer name), or (nan, nan, None).
+    """
+    half = baseline_m / 2.0
+    e, n = np.meshgrid(np.array([-half, 0.0, half]), np.array([-half, 0.0, half]))
+    e, n = e.ravel(), n.ravel()
+    la, lo = offset_point(lat, lon, e, n)
+    for layer in stack.layers:
+        z = layer.sample(la, lo)
+        if np.all(np.isfinite(z)):
+            # For this symmetric pattern the least-squares plane has dz/de = sum(e z) / sum(e^2), and likewise for n.
+            ge = float((e * z).sum() / (e * e).sum())
+            gn = float((n * z).sum() / (n * n).sum())
+            return math.degrees(math.atan(math.hypot(ge, gn))), math.degrees(math.atan2(-ge, -gn)) % 360.0, layer.name
+    return float('nan'), float('nan'), None

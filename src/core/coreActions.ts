@@ -2,14 +2,15 @@
 // filters and comparison. UI controls call these through runAction; the assistant gets the
 // same list as tools. Every result is a small JSON object read back from real state.
 import { findLanding, landingSite } from '../data/catalog';
-import { formatCoords, Landing, landingDate } from '../data/landings';
+import { formatCoords, Landing, landingDate, quickmapUrl, trekUrl } from '../data/landings';
 import { ActionError, ActionDef, defineAction } from './actions';
 import { reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
 import { rounded, type AnalysisSlot, type AnalysisStore } from './analysisStore';
 import { emitCommand } from './bus';
 import { ALL_MISSIONS, matchesFilter, MissionFilter, MissionFilterStore, MissionType } from './missionFilter';
+import { moonPhaseAt } from './moonPhase';
 import { effectiveStartMs, labelPair, scenarioFromState } from './scenario';
-import { findEvent } from './skyEvents';
+import { EVENT_INFO, EVENT_TYPES, findEvent, type EventType } from './skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, Store } from './store';
 import { isoUtc, parseUtc } from './time';
 import { AppState, LightMode, MOON_RADIUS_KM, OverlayMode, pinId, SiteRef, wrapLon } from './types';
@@ -42,12 +43,38 @@ export interface CoreContext {
   science?: ReportScience;
   /** How the globe is being drawn (relief exaggeration, coverage outlines, polar close-up), for getState. */
   display?: () => Record<string, unknown>;
+  /** What the shell shows that is not in AppState (zoom of the locator map, which panels are open), for getState. */
+  shell?: () => ShellState;
 }
 
+export interface ShellState {
+  /** Zoom of the small whole-Moon locator map: 1 = the whole Moon. */
+  locatorZoom: number;
+  /** Open (true) or folded away, by the names showPanel takes. */
+  panels: Record<string, boolean>;
+}
+
+/** Vertical field of view lookAt accepts, degrees: the range of the surface scene (its setFieldOfView). */
+export const MIN_LOOK_FOV_DEG = 4;
+export const MAX_LOOK_FOV_DEG = 100;
+
 const OVERLAYS: readonly OverlayMode[] = ['off', 'sun-band', 'avg-illumination', 'avg-earth-visibility'];
-export const EVENT_TYPES = ['sunrise', 'sunset', 'earthrise', 'earthset'] as const;
-export type EventType = (typeof EVENT_TYPES)[number];
+export { EVENT_TYPES, type EventType } from './skyEvents';
 const NO_PARAMS = { type: 'object', properties: {} } as const;
+
+/** What the catalogue says about a landing: the facts on the site card. */
+function landingFacts(l: Landing) {
+  return {
+    program: l.program,
+    country: l.country,
+    landedUtc: isoUtc(landingDate(l).getTime()),
+    crewed: l.crewed,
+    region: l.region,
+    positionApproximate: Boolean(l.approx),
+    /** The catalogue's one-paragraph account of the mission, as on the site card. */
+    summary: l.summary,
+  };
+}
 
 function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
   if (!site) return null;
@@ -59,12 +86,9 @@ function siteSummary(site: SiteRef | null, landings: readonly Landing[]) {
     latDeg: site.lat,
     lonDegEast: site.lon,
     ...(l && {
-      program: l.program,
-      country: l.country,
-      landedUtc: isoUtc(landingDate(l).getTime()),
-      crewed: l.crewed,
-      region: l.region,
-      positionApproximate: Boolean((l as Landing & { approx?: boolean }).approx),
+      ...landingFacts(l),
+      /** The card's two outside links: the same place in LROC QuickMap and in NASA Moon Trek (they open in a new tab; nothing is loaded from them). */
+      links: { quickMap: quickmapUrl(l), moonTrek: trekUrl(l) },
     }),
   };
 }
@@ -224,7 +248,9 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'jumpToEvent',
       title: 'Jump to sunrise / sunset / Earthrise / Earthset',
       description:
-        'Moves the clock to the next (or previous) sunrise, sunset, Earthrise or Earthset at the selected site and pauses it. The times come from the site analysis, so they are measured against the terrain skyline, and only events inside the analysed mission window can be reached (lengthen the window with setMissionWindow to look further). Waits for the analysis if it is still running.',
+        'Moves the clock to the next (or previous) sunrise, sunset, Earthrise or Earthset at the selected site and pauses it. ' +
+        `A rise or set takes time, so each is one defined instant, named in the result's \`instant\`: sunrise = ${EVENT_INFO.sunrise.instant} ("${EVENT_INFO.sunrise.label}"); sunset = ${EVENT_INFO.sunset.instant} ("${EVENT_INFO.sunset.label}"); Earthrise and Earthset = the centre of Earth's disc crossing the skyline. Say which instant a time is when you quote it. ` +
+        'The times come from the site analysis, so they are measured against the terrain skyline, and only events inside the analysed mission window can be reached (lengthen the window with setMissionWindow to look further). Waits for the analysis if it is still running.',
       effect: 'command',
       params: {
         type: 'object',
@@ -241,10 +267,10 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         const hit = findEvent(st.value.events, type, which, state().timeMs);
         if (!hit) {
           const from = isoUtc(st.scenario.startMs), to = isoUtc(st.scenario.startMs + st.scenario.durationH * 3_600_000);
-          throw new ActionError(`There is no ${which} ${type} ${which === 'next' ? 'after' : 'before'} the simulated time inside the analysed mission window (${from} to ${to}).`);
+          throw new ActionError(`There is no ${which} ${type} ${which === 'next' ? 'after' : 'before'} the simulated time inside the analysed mission window (${from} to ${to}). Here "${type}" is the instant ${EVENT_INFO[type].instant}.`);
         }
         store.set({ timeMs: hit.timeMs, playing: false });
-        return { event: type, timeUtc: isoUtc(hit.timeMs), azDeg: rounded(hit.azDeg, 1), playing: false };
+        return { event: type, label: EVENT_INFO[type].label, instant: EVENT_INFO[type].instant, timeUtc: isoUtc(hit.timeMs), azDeg: rounded(hit.azDeg, 1), playing: false };
       },
     }),
 
@@ -373,14 +399,14 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     defineAction<{ azDeg: number; elDeg?: number; fovDeg?: number }, unknown>({
       name: 'lookAt',
       title: 'Look towards',
-      description: 'In the surface view, turns the camera to an azimuth (degrees clockwise from north) and optional elevation (degrees above horizontal) and field of view (degrees). Tip: use the Sun or Earth azimuth from the analysis results.',
+      description: `In the surface view, turns the camera to an azimuth (degrees clockwise from north) and optional elevation (degrees above horizontal) and vertical field of view (${MIN_LOOK_FOV_DEG} to ${MAX_LOOK_FOV_DEG} degrees: 70 is the normal view, about 5 fills the screen with the Sun or Earth). Tip: use the Sun or Earth azimuth from the analysis results.`,
       effect: 'command',
       params: {
         type: 'object',
         properties: {
           azDeg: { type: 'number', description: 'Azimuth, degrees clockwise from north.', minimum: -360, maximum: 720 },
           elDeg: { type: 'number', description: 'Elevation, degrees above horizontal.', minimum: -85, maximum: 85 },
-          fovDeg: { type: 'number', description: 'Vertical field of view, degrees.', minimum: 20, maximum: 90 },
+          fovDeg: { type: 'number', description: 'Vertical field of view, degrees.', minimum: MIN_LOOK_FOV_DEG, maximum: MAX_LOOK_FOV_DEG },
         },
         required: ['azDeg'],
       },
@@ -641,11 +667,34 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     }),
 
     // ---------- query ----------
+    defineAction<{ shownOnly?: boolean }, unknown>({
+      name: 'listSites',
+      title: 'List the landing catalogue',
+      description:
+        'Lists the catalogued Moon landings (the markers on the globe), oldest first: id, name, latitude and longitude (degrees, longitude east-positive), touchdown time (UTC), program, country, crewed or robotic, region and the catalogue\'s short account of the mission. Each row says whether the current mission filters show it (`shown`); with `shownOnly: true` only those rows are returned. Changes nothing. Pass an `id` or `name` to selectSite to go there.',
+      effect: 'query',
+      params: { type: 'object', properties: { shownOnly: { type: 'boolean', description: 'Only the landings the current filters show (default: all of them, each marked).' } } },
+      run: ({ shownOnly }) => {
+        const f = ctx.filters.get();
+        const rows = ctx.landings().map((l) => ({ id: l.id, name: l.name, latDeg: l.lat, lonDegEast: l.lon, ...landingFacts(l), shown: matchesFilter(f, l) }));
+        const sites = shownOnly ? rows.filter((r) => r.shown) : rows;
+        return {
+          total: rows.length,
+          shown: rows.filter((r) => r.shown).length,
+          listed: sites.length,
+          filter: f,
+          /** False when "Show previous missions" is off: no marker is drawn, whatever the filters say. */
+          markersOnGlobe: state().showMissions,
+          selectedId: state().site?.kind === 'landing' ? state().site!.id : null,
+          sites,
+        };
+      },
+    }),
     defineAction<{ slot?: AnalysisSlot }, unknown>({
       name: 'getAnalysis',
       title: 'Read the site analysis',
       description:
-        'Waits until the analysis of the scenario on screen (default), or of comparison slot "A" or "B", has finished, then returns it: window metrics (illumination %, longest darkness, Earth line of sight %, longest Earth gap), ground slope, where the Sun and Earth are at the simulated time (azimuth, elevation, clearance above the terrain skyline, the terrain that forms the skyline there), the next sunrise / sunset / Earthrise / Earthset in the window, darkness and Earth-gap intervals, the user\'s requirements checked against it, data sources, assumptions and warnings. ' +
+        'Waits until the analysis of the scenario on screen (default), or of comparison slot "A" or "B", has finished, then returns it: window metrics (illumination %, longest darkness, Earth line of sight %, longest Earth gap), ground slope, where the Sun and Earth are at the simulated time (azimuth, elevation, clearance above the terrain skyline, the terrain that forms the skyline there), the next sunrise / sunset / Earthrise / Earthset in the window (each a defined instant: see `eventDefinitions` in the result, and say which instant a time is when you quote it), darkness and Earth-gap intervals, the user\'s requirements checked against it, data sources, assumptions and warnings. ' +
         'Use this after selecting a site or changing the window, mast or delay. `state` is "ready", or "error" / "idle" with the reason in `error`. Earth figures are geometric line of sight, not a radio link.',
       effect: 'query',
       params: { type: 'object', properties: { slot: { type: 'string', description: 'Which analysis: the scenario on screen, or a saved comparison slot.', enum: ['current', 'A', 'B'] } } },
@@ -655,15 +704,18 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'getState',
       title: 'Current state',
       description:
-        'Reads what is on screen now, without waiting: view, simulated time (UTC), site, globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up) and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
+        'Reads what is on screen now, without waiting: view, simulated time (UTC) with the Moon\'s phase as seen from Earth, site (for a catalogued landing with its facts, summary and outside links), globe camera, surface look direction, mission window, mast, delay, requirements, overlay, filters, comparison slots, how the globe is drawn (relief exaggeration, coverage outlines, polar close-up), the zoom of the locator map, which panels are open, and the status of the current analysis (which may still be "loading": use getAnalysis for results).',
       effect: 'query',
       params: NO_PARAMS,
       run: () => {
         const s = state();
         const f = filterResult();
+        const shell = ctx.shell?.();
         return {
           view: s.view,
           ...timeSummary(s),
+          /** The line under the time scrubber: the Moon's phase as seen from Earth at the simulated time (in-app ephemeris model). */
+          moonPhase: moonPhaseAt(s.timeMs),
           lightMode: s.lightMode,
           site: siteSummary(s.site, ctx.landings()),
           globeCenter: { latDeg: s.globeCenter.lat, lonDegEast: s.globeCenter.lon, altitudeKm: s.globeCenter.altitudeKm },
@@ -678,6 +730,8 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },
           globeDisplay: ctx.display?.() ?? null,
+          locatorZoom: shell?.locatorZoom ?? null,
+          panels: shell?.panels ?? null,
           analysis: ctx.analysis?.summary('current') ?? null,
         };
       },

@@ -49,7 +49,9 @@ inside the grey box; the Earth / street / city photos are stand-ins that show th
 Typography and layout are deliberate: use the tokens and component classes in
 `src/styles/` (added with the app shell) instead of ad-hoc sizes and colours. Everything
 must work with keyboard only, carry accessible names, respect `prefers-reduced-motion`,
-and stay usable at 1280x720, 1920x1080 and a 390 px wide phone.
+and stay usable at 1280x720 and 1920x1080. Acceptance, screenshots and the submission
+walkthrough are for the desktop website only (decision D-9, 2026-11-15); the responsive code
+already written stays, but phone widths are not a release criterion.
 
 ## 2. Science rules
 
@@ -91,6 +93,14 @@ replay, DEM-cached walking, historical mission trajectories where real data exis
 landing error ellipse is struck out in the design and is lowest priority.
 
 ## 3. Who owns what
+
+Since 2026-11-15 the work is split over three hub projects on this repository (operator,
+Lunyx m318): this project, `lunyx` (globe, surface, compare panel, science core, and the
+final integration and publishing), `lunyx-experience` (assistant verification, browser QA,
+submission documents) and `lunyx-science` (terrain seams, two-ended sunrise/sunset events,
+independent validation). The other two projects deliver through @upstream-sync as
+gate-passed SHAs of their own `am/<project>/integration`; only @coordinator of `lunyx`
+publishes. Their paths are listed in their own briefs; the table below is this project's.
 
 Edit only your own paths. If you need a change elsewhere, ask the owner (or @coordinator)
 in a hub message; do not patch around it. New files go inside your own directories.

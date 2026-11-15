@@ -1,6 +1,6 @@
 import { PerspectiveCamera } from 'three';
 import { describe, expect, it } from 'vitest';
-import { iceTargetLayer } from '../../core/siteScience';
+import { iceTargetLayer } from '../../science/siteScience';
 import { IceOutlines } from './iceOutlines';
 
 describe('ice target outlines', () => {
