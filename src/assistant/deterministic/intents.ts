@@ -21,17 +21,28 @@ const WHOLE_MOON_ALTITUDE_KM = 2.4 * MOON_RADIUS_KM;
 
 // ---------------------------------------------------------------- reply wording
 
-/** The headline metrics of an analysis result (either the getState summary or a getAnalysis result). */
+/**
+ * The headline metrics of an analysis result (either the getState summary or a getAnalysis result).
+ * Earth comes in two definitions that are never mixed up: its centre above the skyline
+ * (earthVisiblePct, longestEarthGapH) and, where the result gives it (getAnalysis from T-47 on),
+ * any part of its disc (earthAnyPct, longestEarthAnyGapH: the PGDA long-term map's definition).
+ */
 function metricsText(a: Json): string {
   const slope = num(a, 'slopeDeg', 'slope.slopeDeg');
+  const anyPct = num(a, 'earthAnyPct', 'metrics.earthAnyPct'), anyGap = num(a, 'longestEarthAnyGapH', 'metrics.longestEarthAnyGapH');
   return [
     `illumination ${percent(num(a, 'illuminationPct', 'metrics.illuminationPct'))}`,
     `longest darkness ${hours(num(a, 'longestDarknessH', 'metrics.longestDarknessH'))}`,
     `Earth's centre in view ${percent(num(a, 'earthVisiblePct', 'metrics.earthVisiblePct'))}`,
     `longest Earth-centre gap ${hours(num(a, 'longestEarthGapH', 'metrics.longestEarthGapH'))}`,
+    ...(anyPct !== undefined ? [`any part of Earth's disc in view ${percent(anyPct)}`] : []),
+    ...(anyGap !== undefined ? [`longest spell with Earth's whole disc hidden ${hours(anyGap)}`] : []),
     `slope ${degrees(slope)}`,
   ].join(', ');
 }
+
+/** The Filters panel's solar band when nobody has changed it (src/core/requirements.ts DEFAULT_SUN_BAND): no requirement. For builds before T-46's `required`. */
+const defaultSunBand = (band: Json): boolean => num(band, 'minDeg') === 0 && num(band, 'maxDeg') === 90;
 
 function warningsText(a: Json): string {
   const w = a.warnings;
@@ -69,6 +80,7 @@ function comparisonText(r: Json): string {
     add('longest darkness', diff('longestDarknessH', 'metrics.longestDarknessH'), ' h');
     add("Earth's centre in view", diff('earthVisiblePct', 'metrics.earthVisiblePct'), ' percentage points');
     add('longest Earth-centre gap', diff('longestEarthGapH', 'metrics.longestEarthGapH'), ' h');
+    add("any part of Earth's disc in view", diff('earthAnyPct', 'metrics.earthAnyPct'), ' percentage points');
     add('slope', diff('slopeDeg', 'slope.slopeDeg'), '°');
     if (parts.length) lines.push(`B minus A: ${parts.join(', ')}.`);
     const highlights = given && Array.isArray(given.highlights) ? given.highlights.filter((h): h is string => typeof h === 'string') : [];
@@ -386,7 +398,70 @@ const EVENT_NAME: Record<string, string> = { sunrise: 'sunrise', sunset: 'sunset
  * (the last part of the Sun's disc goes behind the terrain skyline)" when the result names it;
  * builds before the labels give the time alone.
  */
-const whenText = (j: Json): string => `${str(j, 'label') ? `${str(j, 'label')} ` : ''}${utc(str(j, 'timeUtc'))}${str(j, 'instant') ? ` (${str(j, 'instant')})` : ''}`;
+const whenText = (j: Json): string =>
+  `${str(j, 'label') ? `${str(j, 'label')} ` : ''}${utc(str(j, 'timeUtc'))}${str(j, 'instant') ? ` (${str(j, 'instant')})` : ''}${j.outsideAnalysedWindow === true ? ', just outside the analysed mission window' : ''}`;
+
+/** Times in order, as the science core writes them: the date only when it differs from the time before. */
+function clockText(): (iso: string) => string {
+  let day = '';
+  return (iso) => {
+    const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso);
+    if (!m) return iso;
+    const text = m[1] === day ? m[2] : `${m[1]} ${m[2]}`;
+    day = m[1];
+    return text;
+  };
+}
+
+/**
+ * The whole passage of a disc through the skyline (decision D-8: both ends of a set), from the
+ * `span` that jumpToEvent and getAnalysis give (T-47): "The Sun starts setting 2025-03-16 18:23
+ * and is fully set 19:30 UTC." Earth's centre crossings are named in between; a graze is "partly
+ * hidden ... until its whole disc is clear again ...; it never fully sets". An end that was not
+ * found or lies outside the analysed window is worded by the science core's own `summary`.
+ * Without a span it says plainly that only the one labelled instant is available.
+ */
+function passageText(span: unknown, eventName?: string): string {
+  if (!isObject(span)) return `Only this one instant${eventName ? ` of the ${eventName}` : ''} is available here, not the start and end of its passage through the skyline.`;
+  const The = str(span, 'body') === 'earth' ? 'Earth' : 'The Sun';
+  const kind = str(span, 'kind');
+  const start = str(span, 'start.timeUtc'), end = str(span, 'end.timeUtc');
+  // Earth's centre crossings are part of its passage (Earthset and Earthrise are the centre); the science core names none for the Sun.
+  const centre = The === 'Earth' && Array.isArray(span.centre) ? span.centre.filter(isObject) : [];
+  const allInside = at(span, 'start.inWindow') === true && at(span, 'end.inWindow') === true && centre.every((c) => c.inWindow === true && str(c, 'timeUtc'));
+  if (start && end && allInside && (kind === 'set' || kind === 'rise' || kind === 'graze' || kind === 'peek')) {
+    const t = clockText();
+    const from = t(start);
+    // "Earth's centre sets" -> "its centre sets 2025-03-19 04:08"
+    const mids = centre.map((c) => `${(str(c, 'label') ?? '').replace(/^.*?centre\b/, 'its centre')} ${t(str(c, 'timeUtc')!)}`);
+    const between = mids.length ? ` (${mids.join(', ')})` : '';
+    const to = t(end);
+    if (kind === 'set') return `${The} starts setting ${from}${between} and is fully set ${to} UTC.`;
+    if (kind === 'rise') return `${The} starts rising ${from}${between} and is fully risen ${to} UTC.`;
+    if (kind === 'graze') return `${The} is partly hidden from ${from}${between} until its whole disc is clear again ${to} UTC; it never fully sets.`;
+    return `Part of ${The === 'Earth' ? 'Earth' : 'the Sun'} shows from ${from}${between} until it is gone again ${to} UTC; it never fully rises.`;
+  }
+  const summary = str(span, 'summary');
+  return summary ? `${The}: ${summary}.` : `The start and end of this passage are not available, only the instant above.`;
+}
+
+/** Which instant of an event a request asks for (jumpToEvent `instant`, T-47): the event itself, or an end of its passage. */
+type InstantChoice = 'event' | 'start' | 'end';
+
+/**
+ * The event and instant named by an end of a passage: "the Sun starts setting" is the start of a
+ * sunset, "Earth fully risen" the end of an Earthrise. A sunset is itself the last limb and a
+ * sunrise the first limb, so those ends are the events themselves (and work on every build).
+ */
+function edgeEvent(body: string, starts: string | undefined, fully: string | undefined): { type: string; instant: InstantChoice } {
+  const setting = starts ? /^set/.test(starts) : fully === 'set';
+  const type = `${body}${setting ? 'set' : 'rise'}`;
+  if (starts) return { type, instant: type === 'sunrise' ? 'event' : 'start' };
+  return { type, instant: type === 'sunset' ? 'event' : 'end' };
+}
+
+/** "start" of a sunrise and "end" of a sunset are the events themselves. */
+const sameAsEvent = (type: string, instant: InstantChoice): InstantChoice => ((type === 'sunrise' && instant === 'start') || (type === 'sunset' && instant === 'end') ? 'event' : instant);
 
 /** The terrain that forms the skyline under a body, whichever action reported it. */
 interface Blocking {
@@ -445,7 +520,7 @@ const blockage: Intent = (step) => {
     if (event) {
       const j = await ctx.run('jumpToEvent', { type: event, which: eventWhich(ev![1]) });
       eventAz = num(j, 'azDeg');
-      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${whenText(j)}.`);
+      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${whenText(j)}. ${passageText(j.span, EVENT_NAME[event])}`);
     }
     // The blocking terrain comes from the dedicated action when the build has it, otherwise
     // from the analysis readout at the simulated time. Both describe the same skyline.
@@ -475,17 +550,42 @@ const blockage: Intent = (step) => {
   });
 };
 
+const JUMP_VERB = '(?:(?:jump|go|skip|move|advance|fast[- ]?forward|rewind|scrub|take me|set (?:the )?(?:time|clock))\\s+)?(?:to\\s+|at\\s+)?(?:the\\s+)?';
+const WHICH = '(next|previous|last|prior|preceding|following|upcoming)';
+/** An end of a passage by its label (T-47 words): "the Sun starts setting", "Earth fully risen". */
+const EDGE = "(sun|earth)(?:'s)?\\s+(?:(?:starts|begins|start|begin)\\s+(?:to\\s+)?(setting|rising|set|rise)|(?:is\\s+|has\\s+)?fully\\s+(set|risen|rose|up))";
+const INSTANT_WORDS: Record<InstantChoice, string> = { event: '', start: 'start of the ', end: 'end of the ' };
+
 const events: Intent = (step) => {
-  const jump = new RegExp(`^(?:(?:jump|go|skip|move|advance|fast[- ]?forward|rewind|scrub|take me|set (?:the )?(?:time|clock))\\s+)?(?:to\\s+|at\\s+)?(?:the\\s+)?(next|previous|last|prior|preceding|following|upcoming)?\\s*${EVENT}$`).exec(step);
-  if (jump) {
-    const type = eventType(jump[2]);
-    const which = eventWhich(jump[1]);
-    return plan(`move the clock to the ${which} ${EVENT_NAME[type]}`, async (ctx) => {
+  const jump = new RegExp(`^${JUMP_VERB}${WHICH}?\\s*${EVENT}$`).exec(step);
+  const part = jump ? null : new RegExp(`^${JUMP_VERB}(start|beginning|end)\\s+of\\s+(?:the\\s+)?${WHICH}?\\s*${EVENT}$`).exec(step);
+  const edge = jump || part ? null : new RegExp(`^${JUMP_VERB}(?:${WHICH}\\s+)?(?:(?:moment|time|point)\\s+)?(?:when\\s+)?(?:the\\s+)?${EDGE}$`).exec(step);
+  if (jump || part || edge) {
+    let type: string, which: 'next' | 'previous', instant: InstantChoice;
+    if (jump) {
+      type = eventType(jump[2]);
+      which = eventWhich(jump[1]);
+      instant = 'event';
+    } else if (part) {
+      type = eventType(part[3]);
+      which = eventWhich(part[2]);
+      instant = part[1] === 'end' ? 'end' : 'start';
+    } else {
+      ({ type, instant } = edgeEvent(edge![2], edge![3], edge![4]));
+      which = eventWhich(edge![1]);
+    }
+    instant = sameAsEvent(type, instant);
+    const what = `${INSTANT_WORDS[instant]}${which} ${EVENT_NAME[type]}`;
+    return plan(`move the clock to the ${what}`, async (ctx) => {
+      // jumpToEvent goes to an end of the passage from T-47 on; earlier builds only to the event itself.
+      if (instant !== 'event' && !ctx.api.def('jumpToEvent')?.params.properties.instant) {
+        throw new Halt(`This build can move the clock to the ${which} ${EVENT_NAME[type]} itself (say "jump to ${which} ${type}"), not to the ${instant} of its passage through the skyline.`);
+      }
       // Older builds fail while the analysis is running; newer ones (with getAnalysis) wait themselves.
       if (!ctx.has('getAnalysis')) await ctx.analysis();
-      const j = await ctx.run('jumpToEvent', { type, which });
+      const j = await ctx.run('jumpToEvent', { type, which, ...(instant !== 'event' && { instant }) });
       const az = num(j, 'azDeg');
-      return `Moved the clock to the ${which} ${EVENT_NAME[type]}: ${whenText(j)}${az !== undefined ? `, at azimuth ${degrees(az)}` : ''}. Rise and set times are measured against the terrain skyline.`;
+      return `Moved the clock to the ${what}: ${whenText(j)}${az !== undefined ? `, at azimuth ${degrees(az)}` : ''}. ${passageText(j.span, EVENT_NAME[type])} Rise and set times are measured against the terrain skyline.`;
     });
   }
   const ask = new RegExp(`^(?:when|what time)\\b.*?\\b(next|previous|last)?\\s*${EVENT}\\b`).exec(step);
@@ -495,10 +595,17 @@ const events: Intent = (step) => {
       if (!ctx.has('getAnalysis')) throw new Halt(`I can move the clock there: say "jump to next ${type}". Reading the time without moving the clock is not available in this build.`);
       const a = await ctx.analysis();
       const e = at(a, `nextEvents.${type}`);
-      if (!isObject(e)) return `There is no ${EVENT_NAME[type]} after the simulated time inside the analysed mission window.`;
+      if (!isObject(e)) {
+        // No such event in the window, but a passage may be under way, end beyond the window or be a graze (no event at all).
+        const p = at(a, `nextPassages.${type.startsWith('sun') ? 'sun' : 'earth'}`);
+        // After "Next passage of the Sun through the skyline:", the sentence goes on without naming the body twice.
+        const words = isObject(p) ? passageText(p).replace(/^(?:The Sun|Earth): /, '').replace(/^(The|Part) /, (w) => w.toLowerCase()) : '';
+        const next = words ? ` Next passage of ${type.startsWith('sun') ? 'the Sun' : 'Earth'} through the skyline: ${words}` : '';
+        return `There is no ${EVENT_NAME[type]} after the simulated time inside the analysed mission window.${next}`;
+      }
       const definition = str(a, `eventDefinitions.${type}`);
       const instant = definition && str(e, 'label') && definition.startsWith(`${str(e, 'label')}: `) ? definition.slice(str(e, 'label')!.length + 2).replace(/\.$/, '') : undefined;
-      return `The next ${EVENT_NAME[type]}: ${whenText({ ...e, ...(instant && { instant }) })}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline).`;
+      return `The next ${EVENT_NAME[type]}: ${whenText({ ...e, ...(instant && { instant }) })}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline). ${passageText(e.span, EVENT_NAME[type])}`;
     });
   }
   return null;
@@ -601,13 +708,16 @@ const mission: Intent = (step) => {
   if (/\b(mission )?window\b|\bmission (length|duration)\b|^(arrive|arrival|land|landing|touch ?down)\b/.test(step) && !/^(what|how|why|is|does|when)\b/.test(step)) {
     const dt = findDateTime(step);
     const fromNow = /\b(start\w*|begin\w*|from)\s+(at\s+|from\s+)?(now|here|the current time|the simulated time)\b/.test(step);
+    // "Real" now is the scrubber's "Now" button: the computer's clock, not the simulated time.
+    const fromRealNow = /\b(real[- ]?time|real now|actual time|today|the real date|right now in the real world)\b/.test(step) && /\b(start\w*|begin\w*|from|at|now)\b/.test(step);
     const atLanding = /\b(start\w*|begin\w*|from|at|on)\s+(the\s+)?(landing|touchdown)\b/.test(step);
     const rest = dt ? step.replace(dt.match, ' ') : step;
     const d = /\b(window|length|duration|for|lasting|long)\b/.test(rest) ? findDuration(rest) : null;
-    if (!dt && !fromNow && !atLanding && !d) return null;
+    if (!dt && !fromNow && !fromRealNow && !atLanding && !d) return null;
     const params: Json = {};
     if (dt) params.startUtc = dt.utc;
     else if (atLanding) params.startUtc = 'landing';
+    else if (fromRealNow) Object.assign(params, { startUtc: 'real-now', moveClock: true });
     else if (fromNow) params.startUtc = 'now';
     if (d && d.hours > 0) params.durationH = d.hours;
     return plan('set the mission window', async (ctx) => {
@@ -769,6 +879,18 @@ const views: Intent = (step) => {
 };
 
 /** The field-of-view range an action accepts, from its own schema. */
+/**
+ * The point the globe view is on: where it was last asked to centre (getState
+ * globeDisplay.viewTarget, exactly as asked, also while the camera is still flying there), else
+ * the centre drawn now (globeCenter: mid-flight a point on the way, and over a pole 0.1° short).
+ * viewTarget is null once the globe was turned by hand; the drawn centre is then the view.
+ */
+function viewPoint(s: Json): { lat?: number; lon?: number } {
+  const t = at(s, 'globeDisplay.viewTarget');
+  if (isObject(t) && num(t, 'latDeg') !== undefined && num(t, 'lonDegEast') !== undefined) return { lat: num(t, 'latDeg'), lon: num(t, 'lonDegEast') };
+  return { lat: num(s, 'globeCenter.latDeg'), lon: num(s, 'globeCenter.lonDegEast') };
+}
+
 function fovRange(ctx: Ctx, action: string): [number, number] {
   const p = ctx.api.def(action)?.params.properties.fovDeg;
   return [p && 'minimum' in p && typeof p.minimum === 'number' ? p.minimum : 20, p && 'maximum' in p && typeof p.maximum === 'number' ? p.maximum : 90];
@@ -851,7 +973,8 @@ const look: Intent = (step) => {
         const r = await ctx.run(action, action === 'setFieldOfView' ? { fovDeg } : { azDeg, fovDeg });
         return `Field of view: ${degrees(num(r, 'look.fovDeg'))}.`;
       }
-      const lat = num(s, 'globeCenter.latDeg'), lon = num(s, 'globeCenter.lonDegEast'), alt = num(s, 'globeCenter.altitudeKm');
+      const { lat, lon } = viewPoint(s);
+      const alt = num(s, 'globeCenter.altitudeKm');
       if (lat === undefined || lon === undefined || alt === undefined) throw new Halt('The current globe camera is not available.');
       const altitudeKm = Math.max(10, Math.min(8 * MOON_RADIUS_KM, inward ? alt / 2 : alt * 2));
       await ctx.run('setGlobeCamera', { lat, lon, altitudeKm });
@@ -864,8 +987,8 @@ const look: Intent = (step) => {
 const globe: Intent = (step) => {
   if (/^(show|see|view|display|zoom out to|back to|go to)?\s*(the\s+)?(whole|entire|full) (moon|globe)$/.test(step) || /^zoom (all the way|fully) out$/.test(step)) {
     return plan('show the whole Moon', async (ctx) => {
-      const s = await ctx.state();
-      await ctx.run('setGlobeCamera', { lat: num(s, 'globeCenter.latDeg') ?? 0, lon: num(s, 'globeCenter.lonDegEast') ?? 0, altitudeKm: WHOLE_MOON_ALTITUDE_KM });
+      const { lat, lon } = viewPoint(await ctx.state());
+      await ctx.run('setGlobeCamera', { lat: lat ?? 0, lon: lon ?? 0, altitudeKm: WHOLE_MOON_ALTITUDE_KM });
       return 'Showing the whole Moon.';
     });
   }
@@ -962,8 +1085,18 @@ const questions: Intent = (step) => {
       const lines = [`${str(s, 'site.name') ?? 'The selected site'}, mission window from ${utc(str(s, 'missionWindow.startUtc'))} for ${hours(num(s, 'missionWindow.durationH'))}, mast ${num(s, 'mastHeightM') ?? 'unavailable'} m:`, `${metricsText(a)}.`];
       // Requirements the user set, when the analysis checked them and they are not met.
       const band = at(a, 'requirements.sunElevationBand');
-      if (isObject(band) && band.metForWholeWindow === false) {
-        lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(num(band, 'windowMinSunElDeg'))} to ${degrees(num(band, 'windowMaxSunElDeg'))}.`);
+      if (isObject(band)) {
+        const lo = num(band, 'windowMinSunElDeg'), hi = num(band, 'windowMaxSunElDeg');
+        // The default 0 to 90 deg is no requirement (finding Q-5). From T-46 the core says so itself
+        // (`required: false`, with a `note`); before it, it reported that default band as left
+        // whenever the Sun went below the horizontal, so the band's values decide there.
+        const unset = band.required === false || (band.required === undefined && defaultSunBand(band));
+        if (unset) {
+          const range = lo !== undefined && hi !== undefined ? ` The Sun's elevation ranges from ${degrees(lo)} to ${degrees(hi)} during the window${lo < 0 ? ', so it goes below the horizontal' : ''}.` : '';
+          lines.push(`${str(band, 'note') ?? 'No solar elevation band is set (the Filters default, 0° to 90°, means no requirement).'}${range}`);
+        } else if (band.metForWholeWindow === false) {
+          lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(lo)} to ${degrees(hi)}.`);
+        }
       }
       const gap = at(a, 'requirements.maxEarthGap');
       if (isObject(gap) && gap.met === false) lines.push(`The longest Earth-centre gap (${hours(num(gap, 'longestEarthGapH'))}) is longer than the tolerated ${hours(num(gap, 'limitH'))}.`);
@@ -1029,7 +1162,8 @@ const INTENTS: Intent[] = [
   views,
   later.fieldOfView,
   look, globe, pin, exportResults,
-  later.surfaceStatus, later.listSites, later.outlook,
+  later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags,
+  later.siteRecords, later.realClock,
   questions, site,
 ];
 

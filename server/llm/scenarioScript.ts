@@ -135,7 +135,7 @@ function compareText(k: Known): string {
   const sa = isObject(c.scenarioA) ? c.scenarioA : {};
   return [
     `Compared over the same mission window (${v(sa.startUtc)}, ${v(sa.durationH, ' h')}): A = ${v(c.A)}: ${side(c.analysisA)}; B = ${v(c.B)}: ${side(c.analysisB)}.`,
-    d ? `B minus A: sunlight ${v(d.illuminationPct, ' points')}, longest darkness ${v(d.longestDarknessH, ' h')}, Earth's centre in view ${v(d.earthVisiblePct, ' points')}, longest Earth-centre gap ${v(d.longestEarthGapH, ' h')}, slope ${v(d.slopeDeg, '°')}.` : `No difference could be computed: ${v(c.error)}`,
+    d ? `B minus A: sunlight ${v(d.illuminationPct, ' points')}, longest darkness ${v(d.longestDarknessH, ' h')}, Earth's centre in view ${v(d.earthVisiblePct, ' points')}${typeof d.earthAnyPct === 'number' ? `, any part of Earth's disc in view ${v(d.earthAnyPct, ' points')}` : ''}, longest Earth-centre gap ${v(d.longestEarthGapH, ' h')}, slope ${v(d.slopeDeg, '°')}.` : `No difference could be computed: ${v(c.error)}`,
   ].join(' ');
 }
 
@@ -145,8 +145,10 @@ function ridgeText(k: Known): string {
   const look = k.get('lookAt');
   const at = isObject(look) && isObject(look.look) ? look.look : null;
   const when = isObject(j) ? `${v(j.timeUtc)}${typeof j.label === 'string' ? ` (${j.label}${typeof j.instant === 'string' ? `: ${j.instant}` : ''})` : ''}` : 'unavailable';
+  // Both ends of Earth's passage through the skyline, when the result gives them (D-8, T-47).
+  const passage = isObject(j) && isObject(j.span) && typeof j.span.summary === 'string' ? ` Earth's whole passage through the skyline: ${j.span.summary}.` : '';
   return (
-    `Earthset is at ${when}. There the skyline is formed by terrain ${v(b.distanceM, ' m')} away, ${v(b.heightM, ' m')} above the reference sphere (${v(b.demName)}, ${v(b.demResolutionM, ' m')}); Earth's centre is at ${v(b.elDeg, '°')} elevation against a skyline of ${v(b.skylineElDeg, '°')} (clearance ${v(b.clearanceDeg, '°')}). ` +
+    `Earthset is at ${when}.${passage} There the skyline is formed by terrain ${v(b.distanceM, ' m')} away, ${v(b.heightM, ' m')} above the reference sphere (${v(b.demName)}, ${v(b.demResolutionM, ' m')}); Earth's centre is at ${v(b.elDeg, '°')} elevation against a skyline of ${v(b.skylineElDeg, '°')} (clearance ${v(b.clearanceDeg, '°')}). ` +
     `The surface view faces azimuth ${v(at?.azDeg, '°')}. Earth figures are geometric line of sight to Earth's centre, not a radio link.`
   );
 }
