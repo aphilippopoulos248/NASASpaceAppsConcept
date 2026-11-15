@@ -1,11 +1,16 @@
 // What the edge easing of the 3 m site models (src/terrain/api.ts, T-32) changes in the results:
 // the skyline and the sunrise / sunset times computed by the app's own analysis code, once on
-// the grids as stored ({ easeEdges: false }) and once on the stack the app uses.
+// the stack the app uses (the grids as stored, decision D-7) and once on the stack eased on
+// request ({ easeEdges: true }).
 //
 //   node scripts/terrain-seams-skyline.mjs [--sites a,b] [--mast 2] [--az 1440] [--days 30] [--json OUT.json]
 //       For each site with a 3 m model: largest and RMS skyline change, share of azimuths moved by
 //       more than 0.01 deg, share of the skyline formed on the model's edge before and after, and
-//       every sunrise / sunset (last limb) in the `days` after the landing that moves.
+//       every sunrise / sunset (last limb) in the `days` after the landing that moves; and how far
+//       the two stacks can move a sunrise or a sunset on any date: the largest skyline change over
+//       the azimuths where the Sun can rise (90 deg) or set (270 deg), give or take 2 deg over the
+//       cosine of the latitude, divided by the Sun's fastest climb there (SEAM_EVENT_MINUTES in
+//       src/terrain/api.ts lists the sites above a minute).
 //   node scripts/terrain-seams-skyline.mjs --sunset blue-ghost-1 --from 2025-03-16T16:00:00Z --hours 6 [--masts 2,3.5]
 //       One-minute samples of the visible part of the Sun's disc: when the skyline starts to cut
 //       the Sun and when the last limb is gone, stored against eased, for each observer height.
@@ -44,7 +49,7 @@ try {
   const { siteEphemeris } = await vite.ssrLoadModule('/src/analysis/engine.ts');
   const { findBundledTable } = await vite.ssrLoadModule('/src/analysis/sky.ts');
 
-  const stacks = async (site) => ({ stored: await loadTerrainFor(site, { remote: false, easeEdges: false }), eased: await loadTerrainFor(site, { remote: false }) });
+  const stacks = async (site) => ({ stored: await loadTerrainFor(site, { remote: false }), eased: await loadTerrainFor(site, { remote: false, easeEdges: true }) });
   const analyse = async (site, stack, startMs, durationH, stepMin, mastHeightM) => {
     const scenario = { id: `${site.id}|${startMs}|${durationH}|${stepMin}|${mastHeightM}`, label: site.name, site, mastHeightM, startMs, durationH, stepMin };
     const table = await findBundledTable(site, startMs, startMs + durationH * 3_600_000);
@@ -79,7 +84,7 @@ try {
     const days = Number(opt('--days', '30'));
     const ids = opt('--sites') ? opt('--sites').split(',') : Object.keys(index.sites).filter((id) => index.sites[id].fine);
     const rows = [];
-    console.log(`Skyline of an observer ${mast} m up, ${nAz} azimuths: the stack in use (3 m model eased onto the 60 m window) minus the grids as stored.`);
+    console.log(`Skyline of an observer ${mast} m up, ${nAz} azimuths: the stack eased on request (3 m model eased onto the 60 m window) minus the stack in use (the grids as stored).`);
     console.log(`Sunrise and sunset (last limb) in the ${days} days after each landing, with the analysis as the app runs it.\n`);
     console.log(`${'site'.padEnd(14)}${'largest change'.padStart(15)}${'at az'.padStart(8)}${'RMS'.padStart(8)}${'moved > 0.01 deg'.padStart(18)}${'on the edge: before'.padStart(21)}${'after'.padStart(8)}   sunrise / sunset`);
     for (const id of ids) {
@@ -115,11 +120,19 @@ try {
         const shifted = events.filter((e) => Math.abs(e.shiftMin) >= 0.05);
         eventNote = shifted.length ? shifted.map((e) => `${e.type} ${iso(e.storedMs)} -> ${iso(e.easedMs)} (${e.shiftMin > 0 ? '+' : ''}${e.shiftMin.toFixed(1)} min)`).join('; ') : `unchanged (${events.length} events)`;
       }
+      // On any date: the largest skyline change where the Sun can rise or set, in minutes of its fastest climb.
+      const cos = Math.cos((site.lat * Math.PI) / 180), rate = (360 / (29.530589 * 1440)) * cos;
+      let riseMin = 0, setMin = 0;
+      for (let i = 0; i < nAz; i++) {
+        const az = i * before.azStepDeg, m = Math.abs(after.elevDeg[i] - before.elevDeg[i]) / rate;
+        if (Math.abs(az - 90) <= 2 / cos) riseMin = Math.max(riseMin, m);
+        if (Math.abs(az - 270) <= 2 / cos) setMin = Math.max(setMin, m);
+      }
       // What forms the skyline at that azimuth, before and after: distance, height and grid.
       const former = (h, i) => ({ elevDeg: h.elevDeg[i], distM: h.distM[i], heightM: h.heightM[i], layer: h.layers[h.skylineLayer[i]]?.name ?? null });
       const row = {
         site: id, mastM: mast, azimuths: nAz, largestChangeDeg: worst, atAzDeg: worstAt, formedBy: { stored: former(before, worstI), eased: former(after, worstI) }, rmsChangeDeg: Math.sqrt(sum2 / nAz), movedOver001Share: moved / nAz, onEdgeStoredShare: edgeBefore / nAz, onEdgeEasedShare: edgeAfter / nAz,
-        ephemeris: a.series.source, events, eventNote,
+        ephemeris: a.series.source, events, eventNote, anyDate: { sunriseUpToMin: riseMin, sunsetUpToMin: setMin },
         stored: { elevDeg: Array.from(before.elevDeg, (v) => Math.round(v * 1e5) / 1e5), distM: Array.from(before.distM, (v) => Math.round(v * 10) / 10) },
         eased: { elevDeg: Array.from(after.elevDeg, (v) => Math.round(v * 1e5) / 1e5), distM: Array.from(after.distM, (v) => Math.round(v * 10) / 10) },
       };
@@ -128,6 +141,7 @@ try {
       const short = (f) => `${f.elevDeg.toFixed(3)} deg at ${Math.round(f.distM)} m on the ${/NAC/.test(f.layer ?? '') ? '3 m model' : /, (\d+) m site window/.exec(f.layer ?? '')?.[1] ? `${/, (\d+) m site window/.exec(f.layer)[1]} m window` : f.layer}`;
       console.log(`${id.padEnd(14)}${`${worst >= 0 ? '+' : ''}${worst.toFixed(3)} deg`.padStart(15)}${worstAt.toFixed(2).padStart(8)}${row.rmsChangeDeg.toFixed(3).padStart(8)}${pct(row.movedOver001Share).padStart(18)}${pct(row.onEdgeStoredShare).padStart(21)}${pct(row.onEdgeEasedShare).padStart(8)}   ${eventNote}`);
       console.log(`${''.padEnd(14)}at az ${worstAt.toFixed(2)}: as stored ${short(row.formedBy.stored)}; eased ${short(row.formedBy.eased)}`);
+      console.log(`${''.padEnd(14)}on any date: sunrises up to ${riseMin.toFixed(1)} min, sunsets up to ${setMin.toFixed(1)} min apart`);
     }
     if (opt('--json')) await writeFile(resolve(opt('--json')), JSON.stringify(rows) + '\n');
   }

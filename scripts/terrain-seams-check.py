@@ -14,7 +14,9 @@ other). It shares no code with src/terrain, src/analysis or src/scene.
         Writes test points for `node scripts/terrain-seams.mjs --heights IN.json --out APP.json`.
 
     python3 -I scripts/terrain-seams-check.py compare --in IN.json --app APP.json
-        Compares the heights the app returned at those points with this file's own.
+        Compares the heights the app returned at those points with this file's own: the stack in
+        use (the stored grids, D-7) with the files, and the eased stack (easeEdges: true) with the
+        rule as implemented here.
 
     python3 -I scripts/terrain-seams-check.py skyline [--sites a,b] [--az 1440] [--mast 2] [--json OUT.json]
         Skyline of an observer `mast` metres up, from the stored grids and from the eased
@@ -249,6 +251,8 @@ def cmd_compare(args):
     mine_eased = np.where(in_model, eased.at(e, n), w60.at(e, n))
     app_in_use = np.array([h['inUse'] for h in app['heights']], dtype=np.float64)
     app_stored = np.array([h['stored'] for h in app['heights']], dtype=np.float64)
+    # Since D-7 the stack in use is the stored one, and the eased stack is asked for (easeEdges: true).
+    app_eased = np.array([h.get('eased', h['inUse']) for h in app['heights']], dtype=np.float64)
     from_edge = fine.half - np.maximum(np.abs(e), np.abs(n))
     # A point within a micrometre of the model's edge can fall on either side of it after the round trip through latitude and longitude.
     sure = np.abs(from_edge) > 1e-3
@@ -257,11 +261,12 @@ def cmd_compare(args):
     out = {
         'site': sid, 'points': int(en.shape[0]), 'inBand': int(band.sum()), 'inCore': int(core.sum()), 'outsideModel': int((~in_model).sum()),
         'storedWorstM': float(np.abs(app_stored - mine_stored)[sure].max()),
-        'inUseWorstM': float(np.abs(app_in_use - mine_eased)[sure].max()),
-        'inUseWorstInBandM': float(np.abs(app_in_use - mine_eased)[band].max()),
-        'coreMovedByAppM': float(np.abs(app_in_use - app_stored)[core].max()),
-        'outsideMovedByAppM': float(np.abs(app_in_use - app_stored)[~in_model & sure].max()),
-        'bandLargestMoveByAppM': float(np.abs(app_in_use - app_stored)[band].max()),
+        'inUseWorstM': float(np.abs(app_in_use - mine_stored)[sure].max()),
+        'easedWorstM': float(np.abs(app_eased - mine_eased)[sure].max()),
+        'easedWorstInBandM': float(np.abs(app_eased - mine_eased)[band].max()),
+        'coreMovedByAppM': float(np.abs(app_eased - app_stored)[core].max()),
+        'outsideMovedByAppM': float(np.abs(app_eased - app_stored)[~in_model & sure].max()),
+        'bandLargestMoveByAppM': float(np.abs(app_eased - app_stored)[band].max()),
     }
     print(json.dumps(out))
     return out

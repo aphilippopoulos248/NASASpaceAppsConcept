@@ -144,7 +144,11 @@ this check (@ephemeris-check, a9bc640, `tests/fixtures/validation/ephemeris-chec
 support", and asks for an eased mode in its reader so that both are reported. LOLA is the
 stronger test: it measures the ground itself, where the published time only brackets an event.
 
-## 4. The decision this raises (for @coordinator)
+## 4. The decision this raised (for @coordinator)
+
+**Decided: option A, recorded as D-7** (Lunyx Science, 2026-11-15). The stack keeps the stored
+grids; easing is opt-in (`easeEdges: true`) for comparison. Option B is quantified first (T-8,
+`docs/lunyx/handover/T-32-option-b.md`). The options as put to the decision:
 
 1. **A. Ease nothing by default** (`easeEdges` off unless asked for): the stack is the stored
    grids again, with T-32's measurement of every hand-over (`stack.seams`, the notes) kept.
@@ -162,7 +166,7 @@ stronger test: it measures the ground itself, where the published time only brac
 3. **C. Take e4b06ef as it is**: no step and the picture matches the analysis (after the one
    line for @surface below), at the cost measured in section 3.
 
-My recommendation: A now, B as a follow-up if the step should go. A is also the smallest
+My recommendation was A now, B as a follow-up if the step should go. A is also the smallest
 change to what consumers already have.
 
 ## 5. Consumers
@@ -211,6 +215,11 @@ formed there by about 9 minutes."
 
 ## 6. With @analysis's ground-observer fix (1289083)
 
+(Since then 1289083 and 5ad5d1f arrived through integration, and this branch merged
+am/lunyx-science/integration 64b7e5d cleanly as d7ee94f. Under D-7 the default stack is the
+stored grids, equal to cc736f8's to the bit (section 8), so on the real combination the analysis
+numbers are integration's own; the figures below compare the opt-in eased stack.)
+
 Trial merge only, in a throwaway repository under /tmp (never on this branch): `git merge-tree`
 and a real `git merge --no-commit` both clean, no file in common (analysis: `src/analysis/**`,
 `src/ui/compare/**`, `docs/lunyx/validation.md`, T-11 screens; this branch: `src/terrain/**`,
@@ -255,6 +264,50 @@ window: -14.2 / +29.5 m becomes -14.1 / +29.4 m). Nothing for @surface or @valid
 
 **Under B**: to be measured once built; by construction nothing changes inside the models, and
 skylines formed beyond an edge rise where the 60 m window lies below the model there.
+
+## 8. What was delivered under D-7
+
+On top of the verified slice (e4b06ef, this report 0d27f2c / 6f0a20d, merge of
+am/lunyx-science/integration d7ee94f):
+
+- `loadTerrainFor(site)` uses every grid as stored; `{ easeEdges: true }` gives T-32's eased
+  stack, unchanged, for comparison (`src/terrain/api.ts`, `LoadTerrainOptions.easeEdges`).
+- The seam note for the default stack: "Where one grid hands over to the next, the heights do
+  not match exactly; the grids are used as stored, so the ground steps there: 0.77 km from the
+  site the 3 m model ends and the 60 m window takes over, lying between 7.4 m below and 21.1 m
+  above it, 3.6 m RMS (1 m of height is 0.075° of skyline there); ... A skyline point formed
+  right at such an edge is uncertain by about that much. The 3 m model is kept as measured up
+  to its edge: where the bundled models were checked against laser altimetry (LOLA), they are
+  closer to the ground there than the 60 m windows." (Apollo 17; the figures are per site.)
+- Where the event-time uncertainty exceeds a minute (`SEAM_EVENT_MINUTES`), one more sentence.
+  Blue Ghost: "For an observer 2 m up, sunsets here are seen over the 3 m model's edge, 0.77 km
+  west of the site, so the two grids' disagreement there moves a computed sunset by up to about
+  20 minutes (near the horizon the Sun climbs at most 0.0080° per minute at this latitude, so
+  1 m of height at 0.77 km is about 9 minutes)." Luna 23: the same for sunrises, east, about
+  12 minutes. A test recomputes both figures from the two stacks (20.2 and 11.8 min).
+- Tests for both modes in `src/terrain/api.test.ts` ("where one grid hands over to the next"):
+  the default is the stored grids (the same objects, equal to the files at all 19 sites), the
+  eased mode is T-32's (no step, the surface view's own rule, 19 sites), and the notes of both.
+- `scripts/terrain-seams.mjs` and `scripts/terrain-seams-skyline.mjs` report stored (in use)
+  against eased (on request); `--heights` returns `inUse`, `stored` and `eased`.
+- `docs/lunyx/handover/T-32-edge-easing.md` and `T-4-terrain.md` now say that easing is
+  opt-in, and point here.
+
+Checked: `npx vitest run src/terrain` 3 files, 60 tests passed; `npx tsc --noEmit` clean (both
+under the shared lock, load 6 to 9). The default stack against integration cc736f8's own
+`loadTerrainFor`, run from a throwaway checkout of cc736f8: equal heights at all 597 816 points
+(31 464 at each of the 19 sites, inside the model, in its band and outside it), largest
+difference 0 m. So on am/lunyx/integration nothing that is computed from the terrain changes;
+only the words of the notes do.
+
+**Limitation older than T-32, unchanged by this delivery.** The surface view eases the drawn
+3 m model onto the 60 m window itself (`blendEdge(fine, this.coarse[0])`,
+`src/scene/surface.ts:485`), so in the model's outer 129 m it draws T-32's eased ground while
+the analysis uses the stored ground. The drawn skyline therefore sits up to 0.17 deg below the
+analysed one at Blue Ghost (azimuth 274.5 deg, where the Sun sets), 0.14 deg at Apollo 12
+(352.75) and Luna 23 (86.25), and by the section 2 amounts at the other sites with a model.
+@surface needs no change for this delivery (the `storedGrid` line was needed only with easing
+on). Option B (T-8) is the way to make the two meet without moving the analysis.
 
 ## Reproduce
 

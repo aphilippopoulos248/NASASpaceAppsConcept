@@ -1,13 +1,23 @@
 # T-32 handover: the 3 m site models meet the 60 m windows without a step
 
+> **Status (2026-11-15, Lunyx Science decision D-7): the easing described here is opt-in and
+> off by default.** `loadTerrainFor(site)` returns the grids as stored; `loadTerrainFor(site,
+> { easeEdges: true })` returns the eased stack described below, for comparison. Checked
+> against LRO LOLA laser altimetry, the stored 3 m models are closer to the ground at their
+> edges than the eased ones, and the step is the 60 m window's error; at Blue Ghost the eased
+> sunset is at least about 9 minutes late. Evidence, figures and the decision:
+> `docs/lunyx/handover/T-32-verification.md`. Below, read "now returns" and "in the stack now"
+> as "with easeEdges: true". The seam measurement (`stack.seams`, the notes, `storedGrid`,
+> `scripts/terrain-seams.mjs`) is in use either way.
+
 Owner: @ice-targets. Code in `src/terrain/api.ts` (`easeStack`, `measureSeams`, `handOvers`, `storedGrid`),
 `src/terrain/types.ts` (`TerrainSeam`), tests in `src/terrain/api.test.ts` ("where one grid
 hands over to the next"), report script `scripts/terrain-seams.mjs`. No data file changed.
 
 ## What changed
 
-`loadTerrainFor(site)` now returns a stack in which each 3 m LROC NAC model is eased onto the
-60 m window around it. Within 129 m of the model's edge (43 samples: a twelfth of the grid)
+`loadTerrainFor(site, { easeEdges: true })` returns a stack in which each 3 m LROC NAC model is
+eased onto the 60 m window around it (until D-7 this was the default). Within 129 m of the model's edge (43 samples: a twelfth of the grid)
 its heights move along the smooth step `t*t*(3 - 2t)` from the model's own to the window's; at
 the edge they are the window's. This is the surface view's `blendEdge`, with the same band
 and the same weights. A test applies the view's own function to the stored grids of all 19
@@ -15,7 +25,8 @@ sites and compares: the largest difference is under 2 mm.
 
 - The files in `public/terrain/` are untouched. Easing happens when a stack is loaded; the
   stored grid is kept and an eased grid is a copy (1 MB; kept for the last 8 stacks asked for).
-- `loadTerrainFor(site, { easeEdges: false })` returns the grids as stored.
+- `loadTerrainFor(site)` and `loadTerrainFor(site, { easeEdges: false })` return the grids as
+  stored (the default since D-7).
 - `storedGrid(source)` gives the stored grid behind an eased one (any other source is returned
   as it is).
 - `stack.seams` lists every hand-over the stack really crosses, nearest first: `inner`,
@@ -150,6 +161,10 @@ the whole-Moon grid at 27 sites, 4 to 92 m RMS).
 
 ## For the surface view (@surface)
 
+(Since D-7 none of this applies to the default stack: the view's copy of the 3 m window is the
+stored model, which the view eases once, as before T-32. It applies only to a stack loaded with
+`easeEdges: true`.)
+
 - At the 3 m edge the picture and the analysis now rest on the same ground. That was the
   picture's ground already; the analysis has moved onto it.
 - `groundFromStack` copies the stack's exact windows and `surface.ts` then calls `blendEdge`
@@ -180,7 +195,8 @@ analysis uses:
   `h + (h60 - h) * t*t*(3 - 2t)`, `t = 1 - fromEdge / 43`, `fromEdge` the node's distance in
   samples from the nearest edge of the square, `h60` the 60 m window read bilinearly at the
   node. Nothing else changes.
-- Reference skylines built from the stored files will now differ from the app's at the 10
+- (Since D-7 the app uses the stored files, so these agree again; the following holds for the
+  eased stack only.) Reference skylines built from the stored files will differ from it at the 10
   sites in the table above, by the amounts in it.
 
 ## Limits

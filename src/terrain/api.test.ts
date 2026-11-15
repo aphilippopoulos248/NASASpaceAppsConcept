@@ -461,8 +461,8 @@ function largestDifference(a: ArrayLike<number>, b: ArrayLike<number>): number {
 }
 
 describe('where one grid hands over to the next', () => {
-  it('as stored, the grids step against each other', async () => {
-    const a17 = await loadTerrainFor(landing('apollo-17'), { easeEdges: false });
+  it('by default the grids are used as stored and step against each other (D-7)', async () => {
+    const a17 = await loadTerrainFor(landing('apollo-17'));
     expect(a17.seams!.map((x) => [x.inner, x.outer, x.distanceM, x.eased])).toEqual([
       ['3 m model', '60 m window', 768, undefined],
       ['60 m window', '480 m window', 3840, undefined],
@@ -474,17 +474,26 @@ describe('where one grid hands over to the next', () => {
     expect(nac.degPerMetre).toBeCloseTo(0.0746, 4); // 1 m at 768 m
     expect(w60.degPerMetre).toBeCloseTo(0.01492, 5);
     expect(w480.degPerMetre).toBeCloseTo(0.001865, 6);
-    expect(a17.notes.join(' ')).toContain(
-      'Edge easing was switched off for this request, so the grids are as stored and step against each other: 0.77 km from the site the 3 m model ends and the 60 m window takes over, lying between 7.4 m below and 21.1 m above it, 3.6 m RMS (1 m of height is 0.075° of skyline there)',
+    const notes = a17.notes.join(' ');
+    expect(notes).toContain(
+      'Where one grid hands over to the next, the heights do not match exactly; the grids are used as stored, so the ground steps there: 0.77 km from the site the 3 m model ends and the 60 m window takes over, lying between 7.4 m below and 21.1 m above it, 3.6 m RMS (1 m of height is 0.075° of skyline there); 3.8 km from the site the 60 m window ends and the 480 m window takes over, lying between 14.1 m below and 29.4 m above it, 6.8 m RMS (1 m of height is 0.015° of skyline there); 31 km from the site the 480 m window ends and the whole-Moon grid takes over, lying between 374 m below and 250 m above it, 86.2 m RMS (1 m of height is 0.002° of skyline there). A skyline point formed right at such an edge is uncertain by about that much.',
     );
-    // These are the stored grids themselves, the same objects every time.
-    expect((await loadTerrainFor(landing('apollo-17'), { easeEdges: false })).sources[0]).toBe(a17.sources[0]);
+    expect(notes).toContain('The 3 m model is kept as measured up to its edge: where the bundled models were checked against laser altimetry (LOLA), they are closer to the ground there than the 60 m windows.');
+    expect(a17.notes.some((n) => /eased|easing/.test(n))).toBe(false);
+    expect(notes).not.toMatch(/sunrises|sunsets/); // Apollo 17's sunrises and sunsets are not seen over the model's edge
+    // These are the stored grids themselves: the same objects every time, and the same as with easeEdges: false.
+    const off = await loadTerrainFor(landing('apollo-17'), { easeEdges: false });
+    expect(off.sources).toEqual(a17.sources);
+    for (let k = 0; k < a17.sources.length; k++) expect(off.sources[k]).toBe(a17.sources[k]);
+    expect(off.notes).toEqual(a17.notes);
+    expect((await loadTerrainFor(landing('apollo-17'))).sources[0]).toBe(a17.sources[0]);
     expect(storedGrid(a17.sources[0])).toBe(a17.sources[0]);
+    expect(a17.sources[0].provenance!.processing).not.toMatch(/eased/);
   });
 
-  it('by default the 3 m model is eased onto the 60 m window around it: no step left, the middle untouched, nothing else changed', async () => {
-    const stored = await loadTerrainFor(landing('apollo-17'), { easeEdges: false });
-    const a17 = await loadTerrainFor(landing('apollo-17'));
+  it('with easeEdges: true the 3 m model is eased onto the 60 m window around it (T-32, for comparison): no step, the middle untouched, nothing else changed', async () => {
+    const stored = await loadTerrainFor(landing('apollo-17'));
+    const a17 = await loadTerrainFor(landing('apollo-17'), { easeEdges: true });
     const [nac, w60, w480] = a17.seams!;
     // The model's edge now agrees with the window; the record keeps what the mismatch was.
     expect(nac).toMatchObject({ inner: '3 m model', outer: '60 m window', minM: 0, maxM: 0, rmsM: 0, eased: { overM: 129, minM: -7.4, maxM: 21.1, rmsM: 3.6 } });
@@ -493,7 +502,7 @@ describe('where one grid hands over to the next', () => {
     expect(w480).toEqual(stored.seams![2]);
     const notes = a17.notes.join(' ');
     expect(notes).toContain(
-      'Where a separately measured model ends, its heights are eased onto the grid that continues outside it, as in the surface view, so the ground has no step: the 3 m model onto the 60 m window over its outer 129 m (0.77 km from the site, where the 60 m window lay between 7.4 m below and 21.1 m above it, 3.6 m RMS).',
+      'Edge easing was asked for (a comparison mode; by default the grids are used as stored). Where a separately measured model ends, its heights are eased onto the grid that continues outside it, as in the surface view, so the ground has no step: the 3 m model onto the 60 m window over its outer 129 m (0.77 km from the site, where the 60 m window lay between 7.4 m below and 21.1 m above it, 3.6 m RMS).',
     );
     expect(notes).toContain('The model is a stereo survey tied to the grid around it by a single vertical shift; that grid is the reference at the edge because the ground beyond comes from it.');
     expect(notes).toContain('The two still disagree by that much: inside the eased band the heights are a blend of both, and a skyline point formed there is uncertain by about 0.075° per metre of height at 0.77 km.');
@@ -501,7 +510,7 @@ describe('where one grid hands over to the next', () => {
       'Hand-overs left as stored: 3.8 km from the site the 60 m window ends and the 480 m window takes over, lying between 14.1 m below and 29.4 m above it, 6.8 m RMS (1 m of height is 0.015° of skyline there); 31 km from the site the 480 m window ends and the whole-Moon grid takes over, lying between 374 m below and 250 m above it, 86.2 m RMS (1 m of height is 0.002° of skyline there).',
     );
     expect(notes).toContain('These grids share one frame (LOLA) and differ in sampling: the finer grid is right up to its edge, the difference is relief the coarser grid misses from there on, and easing the finer grid onto it would flatten real relief.');
-    expect(notes).not.toContain('switched off');
+    expect(notes).not.toContain('the ground steps there');
 
     // What changed and what did not: the same grid under the same name; heights identical outside
     // the band, the window's at the very edge, half and half in the middle of the band.
@@ -526,7 +535,7 @@ describe('where one grid hands over to the next', () => {
     const half = offsetPoint(site.lat, site.lon, 768 - 64.5, 100);
     expect(fine.sample(half.lat, half.lon)).toBeCloseTo((fine0.sample(half.lat, half.lon) + mid.sample(half.lat, half.lon)) / 2, 1);
     // Asking again gives the same eased grid, not a new copy; and the stored grid is still what the file holds.
-    expect((await loadTerrainFor(landing('apollo-17'))).sources[0]).toBe(fine);
+    expect((await loadTerrainFor(landing('apollo-17'), { easeEdges: true })).sources[0]).toBe(fine);
     const file = new Float32Array(await readPublicFile('terrain/apollo-17_fine.bin'));
     const kept = fine0.descriptor.kind === 'local' ? fine0.descriptor.data : new Float32Array(0);
     expect(largestDifference(kept, file)).toBe(0);
@@ -535,20 +544,25 @@ describe('where one grid hands over to the next', () => {
     expect(twin.sample(half.lat, half.lon)).toBe(fine.sample(half.lat, half.lon));
   });
 
-  it('all 19 sites with a 3 m model: the step is gone, and the ground is the one the surface view draws', async () => {
+  it('all 19 sites with a 3 m model: stored by default and equal to the files; eased on request without a step, as the surface view draws it', async () => {
     const withModel = Object.entries(index.sites).filter(([, entry]) => entry.fine).map(([id]) => id);
     expect([...withModel].sort()).toEqual(Object.keys(INDEPENDENT_EDGE_STEP).sort());
     for (const id of withModel) {
-      const stored = await loadTerrainFor(landing(id), { easeEdges: false });
-      const stack = await loadTerrainFor(landing(id));
-      // Before: metres to tens of metres, as the independent check found with its own reader and sampling.
+      const stored = await loadTerrainFor(landing(id));
+      const stack = await loadTerrainFor(landing(id), { easeEdges: true });
+      // The default stack holds the model exactly as the file has it.
+      const d0 = stored.sources[0].descriptor;
+      expect(storedGrid(stored.sources[0]), id).toBe(stored.sources[0]);
+      expect(largestDifference(d0.kind === 'local' ? d0.data : [], new Float32Array(await readPublicFile(`terrain/${id}_fine.bin`))), id).toBe(0);
+      // The step: metres to tens of metres, as the independent check found with its own reader and sampling.
       const before = stored.seams![0];
       expect(before.inner, id).toBe('3 m model');
+      expect(before.eased, id).toBeUndefined();
       const [lowest, highest] = INDEPENDENT_EDGE_STEP[id];
       expect(Math.abs(before.minM - lowest), `${id} lowest`).toBeLessThan(1.5);
       expect(Math.abs(before.maxM - highest), `${id} highest`).toBeLessThan(1.5);
       expect(before.maxM - before.minM, id).toBeGreaterThan(8);
-      // After: nothing left at the model's edge; the other hand-overs are untouched.
+      // Eased: nothing left at the model's edge; the other hand-overs are untouched.
       expect(stack.seams![0], id).toEqual({ inner: '3 m model', outer: '60 m window', distanceM: 768, minM: 0, maxM: 0, rmsM: 0, degPerMetre: before.degPerMetre, eased: { overM: 129, minM: before.minM, maxM: before.maxM, rmsM: before.rmsM } });
       expect(stack.seams!.slice(1), id).toEqual(stored.seams!.slice(1));
       // The surface view's own function, applied to the stored grids in the view's order
@@ -560,10 +574,46 @@ describe('where one grid hands over to the next', () => {
       expect(largestDifference(fine.data, d.kind === 'local' ? d.data : []), id).toBeLessThan(0.002);
     }
     // Only the last few sites' eased grids are kept; an earlier site is eased again to the same heights.
-    const first = await loadTerrainFor(landing(withModel[0]));
+    const first = await loadTerrainFor(landing(withModel[0]), { easeEdges: true });
     const p = offsetPoint(index.sites[withModel[0]].lat, index.sites[withModel[0]].lon, 700, -700);
-    expect(first.sources[0].sample(p.lat, p.lon)).toBe((await loadTerrainFor(landing(withModel[0]))).sources[0].sample(p.lat, p.lon));
+    expect(first.sources[0].sample(p.lat, p.lon)).toBe((await loadTerrainFor(landing(withModel[0]), { easeEdges: true })).sources[0].sample(p.lat, p.lon));
     expect(first.sources[0].sample(p.lat, p.lon)).not.toBe(storedGrid(first.sources[0]).sample(p.lat, p.lon));
+  });
+
+  it('says how far the seam can move a sunrise or a sunset where they are seen over the 3 m edge (Blue Ghost, Luna 23), and the figures hold', async () => {
+    const bg = (await loadTerrainFor(landing('blue-ghost-1'))).notes.join(' ');
+    expect(bg).toContain(
+      "For an observer 2 m up, sunsets here are seen over the 3 m model's edge, 0.77 km west of the site, so the two grids' disagreement there moves a computed sunset by up to about 20 minutes (near the horizon the Sun climbs at most 0.0080° per minute at this latitude, so 1 m of height at 0.77 km is about 9 minutes).",
+    );
+    const l23 = (await loadTerrainFor(landing('luna-23'))).notes.join(' ');
+    expect(l23).toContain("For an observer 2 m up, sunrises here are seen over the 3 m model's edge, 0.77 km east of the site, so the two grids' disagreement there moves a computed sunrise by up to about 12 minutes (near the horizon the Sun climbs at most 0.0083° per minute at this latitude, so 1 m of height at 0.77 km is about 9 minutes).");
+    expect((await loadTerrainFor(landing('blue-ghost-1'), { easeEdges: true })).notes.join(' ')).toContain('moves a computed sunset by up to about 20 minutes');
+    // Recomputed: the skyline on the stored grids against the eased ones, over the azimuths where the
+    // Sun can rise (90 deg) or set (270 deg), give or take 2 deg over the cosine of the latitude.
+    const minutes = async (id: string): Promise<{ rise: number; set: number }> => {
+      const site = landing(id);
+      const a = computeHorizon(await loadTerrainFor(site), site, 2, { azStepDeg: 0.25 });
+      const b = computeHorizon(await loadTerrainFor(site, { easeEdges: true }), site, 2, { azStepDeg: 0.25 });
+      const cos = Math.cos((index.sites[id].lat * Math.PI) / 180);
+      const rate = (360 / (29.530589 * 1440)) * cos; // the Sun's fastest climb, degrees per minute
+      let rise = 0, set = 0;
+      for (let i = 0; i < a.elevDeg.length; i++) {
+        const az = i * a.azStepDeg, moved = Math.abs(b.elevDeg[i] - a.elevDeg[i]) / rate;
+        if (Math.abs(az - 90) <= 2 / cos) rise = Math.max(rise, moved);
+        if (Math.abs(az - 270) <= 2 / cos) set = Math.max(set, moved);
+      }
+      return { rise, set };
+    };
+    const g = await minutes('blue-ghost-1'); // measured 20.2 min (sunsets), 0 (sunrises)
+    expect(g.set).toBeGreaterThan(18);
+    expect(g.set).toBeLessThan(22);
+    expect(g.rise).toBeLessThan(1);
+    const l = await minutes('luna-23'); // measured 11.8 min (sunrises), 0.2 (sunsets)
+    expect(l.rise).toBeGreaterThan(10);
+    expect(l.rise).toBeLessThan(14);
+    expect(l.set).toBeLessThan(1);
+    // A pin is not told this (its observer is elsewhere), and neither are sites whose sunrises and sunsets are not seen over the edge.
+    for (const id of ['apollo-17', 'apollo-15']) expect((await loadTerrainFor(landing(id))).notes.join(' '), id).not.toMatch(/sunrises here|sunsets here/);
   });
 
   it('follows what the stack really uses on each side of an edge, and leaves grids of one frame alone', async () => {
@@ -572,20 +622,23 @@ describe('where one grid hands over to the next', () => {
     const im2 = await loadTerrainFor(landing('im-2'));
     expect(im2.seams).toEqual([{ inner: '60 m window', outer: '80 m polar layer', distanceM: 3840, minM: -2.6, maxM: 4.2, rmsM: 0.7, degPerMetre: expect.closeTo(0.01492, 5) }]);
     expect(storedGrid(im2.sources[0])).toBe(im2.sources[0]);
-    expect(im2.sources[0]).toBe((await loadTerrainFor(landing('im-2'), { easeEdges: false })).sources[0]);
+    const im2eased = await loadTerrainFor(landing('im-2'), { easeEdges: true });
+    expect(im2.sources[0]).toBe(im2eased.sources[0]); // nothing to ease
     const notes = im2.notes.join(' ');
-    expect(notes).toContain('Hand-overs left as stored: 3.8 km from the site the 60 m window ends and the 80 m polar layer takes over, lying between 2.6 m below and 4.2 m above it, 0.7 m RMS');
+    expect(notes).toContain('the grids are used as stored, so the ground steps there: 3.8 km from the site the 60 m window ends and the 80 m polar layer takes over, lying between 2.6 m below and 4.2 m above it, 0.7 m RMS');
     expect(notes).not.toContain('separately measured');
+    expect(notes).not.toContain('3 m model is kept');
+    expect(im2eased.notes.join(' ')).toContain('Hand-overs left as stored: 3.8 km from the site the 60 m window ends and the 80 m polar layer takes over');
     // IM-1: the 160 m layer ends 4 km north of the site; beyond it the 480 m window is in use up to its own edge.
     const im1 = await loadTerrainFor(landing('im-1'));
     expect(im1.seams!.map((x) => [x.inner, x.outer, x.eased])).toEqual([['60 m window', '160 m polar layer', undefined], ['480 m window', 'whole-Moon grid', undefined]]);
     // A pin with no grid of its own has no such edge.
     const pinStack = await loadTerrainFor(pin(-89.45, -137.2), { remote: false });
     expect(pinStack.seams).toBeUndefined();
-    expect(pinStack.notes.some((n) => /eased|easing/.test(n))).toBe(false);
+    expect(pinStack.notes.some((n) => /eased|easing|steps there/.test(n))).toBe(false);
   });
 
-  it('why the 60 m window is not eased as well: on the computed skyline that would lower real ridges', async () => {
+  it('why the 60 m window is not eased either: on the computed skyline that would lower real ridges', async () => {
     // Apollo 15, at the foot of the Apennine front. The 480 m window is every 8th sample of the same
     // product, so where the two differ the 60 m window is the one that is right. Ease it anyway,
     // the way the surface view does for drawing, and compute the skyline both ways.
@@ -612,21 +665,28 @@ describe('where one grid hands over to the next', () => {
     expect(moved).toBeGreaterThan(10);
   });
 
-  it('a pin that borrows a neighbouring site\'s 3 m model gets the same ground, with the edge at its true distance', async () => {
+  it("a pin that borrows a neighbouring site's 3 m model gets the same ground, with the edge at its true distance", async () => {
     const a11 = index.sites['apollo-11'];
     const p = offsetPoint(a11.lat, a11.lon, 400, -300);
+    const own = await loadTerrainFor(landing('apollo-11'));
+    // By default: the stored model itself, the same object as at Apollo 11, and the step at its true distance.
     const stack = await loadTerrainFor(pin(p.lat, p.lon));
+    expect(stack.sources[0]).toBe(own.sources[0]);
     const [nac, w60] = stack.seams!;
     // The model's east edge is 368 m from the pin (768 - 400), not 768 m.
-    expect(nac).toMatchObject({ inner: '3 m model', outer: '60 m window', distanceM: 368, minM: 0, maxM: 0, eased: { overM: 129, minM: -7.4, maxM: 17.6, rmsM: 3.6 } });
+    expect(nac).toMatchObject({ inner: '3 m model', outer: '60 m window', distanceM: 368, minM: -7.4, maxM: 17.6, rmsM: 3.6 });
+    expect(nac.eased).toBeUndefined();
     expect(nac.degPerMetre).toBeCloseTo(0.1557, 3);
     expect(w60).toMatchObject({ inner: '60 m window', outer: '480 m window', distanceM: 3440 });
-    expect(w60.eased).toBeUndefined();
-    expect(stack.notes.join(' ')).toContain('the 3 m model onto the 60 m window over its outer 129 m (0.37 km from the site at the nearest, where');
-    // The same eased ground as at Apollo 11 itself.
-    const own = await loadTerrainFor(landing('apollo-11'));
+    expect(stack.notes.join(' ')).toContain('0.37 km from the site at the nearest the 3 m model ends and the 60 m window takes over, lying between 7.4 m below and 17.6 m above it');
+    expect(stack.notes.join(' ')).not.toMatch(/sunrises here|sunsets here/);
+    // Eased on request: the same eased ground as at Apollo 11 itself.
+    const easedPin = await loadTerrainFor(pin(p.lat, p.lon), { easeEdges: true });
+    expect(easedPin.seams![0]).toMatchObject({ inner: '3 m model', outer: '60 m window', distanceM: 368, minM: 0, maxM: 0, eased: { overM: 129, minM: -7.4, maxM: 17.6, rmsM: 3.6 } });
+    expect(easedPin.notes.join(' ')).toContain('the 3 m model onto the 60 m window over its outer 129 m (0.37 km from the site at the nearest, where');
+    const ownEased = await loadTerrainFor(landing('apollo-11'), { easeEdges: true });
     const q = offsetPoint(a11.lat, a11.lon, 740, 10);
-    expect(stack.sources[0].sample(q.lat, q.lon)).toBe(own.sources[0].sample(q.lat, q.lon));
-    expect(stack.sources[0].sample(q.lat, q.lon)).not.toBe(storedGrid(stack.sources[0]).sample(q.lat, q.lon));
+    expect(easedPin.sources[0].sample(q.lat, q.lon)).toBe(ownEased.sources[0].sample(q.lat, q.lon));
+    expect(easedPin.sources[0].sample(q.lat, q.lon)).not.toBe(storedGrid(easedPin.sources[0]).sample(q.lat, q.lon));
   });
 });
