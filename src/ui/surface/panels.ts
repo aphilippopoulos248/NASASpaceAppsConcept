@@ -1,40 +1,33 @@
-// Surface panels share a drag handle and a fold control. Existing panel contents keep
-// their own visibility and state; leaving surface view restores the normal globe layout.
+// Surface panels share a drag handle and a fold control (the teammate's design from GitHub main
+// 48ffb71). Existing panel contents keep their own visibility and state; leaving surface view
+// restores the normal globe layout. The rules for moving and folding are in panelLayout.ts, and
+// every change a user makes goes through the registered actions in panelActions.ts (D-3), so the
+// assistant can do the same: the grip's keys, the Fold buttons and "Reset panels" run them, and
+// a drag shows the panel moving and is recorded as one action when the pointer is let go.
+import { registerActions, runAction } from '../../core/actions';
 import { store } from '../../core/store';
-import { runAction } from '../../core/actions';
 import { button, el } from '../dom';
 import { requestHudLayout } from './hudLayout';
+import { hudState, setHudState } from './hudState';
+import { createPanelActions } from './panelActions';
+import { PanelLayout, SURFACE_PANELS, type PanelHost, type PanelId, type Position } from './panelLayout';
 import './panels.css';
 
-interface Position { x: number; y: number; width: number }
+export { constrainPanel } from './panelLayout';
 
-/** Keep the entire panel within reach, including after resizing or expanding it. */
-export function constrainPanel(p: Position, height: number, viewportW: number, viewportH: number): Position {
-  const width = Math.min(p.width, Math.max(0, viewportW - 16));
-  return {
-    width,
-    x: Math.max(8, Math.min(p.x, viewportW - width - 8)),
-    y: Math.max(8, Math.min(p.y, viewportH - Math.min(height, viewportH - 16) - 8)),
-  };
-}
+/** The one layout of the page (the actions and the controls share it). */
+export const surfacePanels = new PanelLayout();
 
 export function mountSurfacePanels(): void {
-  const definitions = [
-    ['.km', 'Key metrics'], ['.skc', 'Skyline chart'], ['.surface-hud', 'Surface controls'],
-    ['.time-scrubber', 'Time'], ['.locator', 'Locator map'],
-    ['.cmp-sheet', 'Compare'], ['.assistant-drawer', 'Assistant'],
-  ];
   let front = 50;
-  const resets: (() => void)[] = [];
   const refresh: (() => void)[] = [];
+  const isSurface = () => store.get().view === 'surface';
 
-  for (const [selector, title] of definitions) {
+  for (const { id, title, selector } of SURFACE_PANELS) {
     const panel = document.querySelector<HTMLElement>(selector);
     if (!panel) continue;
     const region = panel.closest<HTMLElement>('.region')!;
     panel.classList.add('sp-panel');
-    let position: Position | null = null;
-    let folded = false;
     const toolbar = el('div', 'sp-toolbar');
     const grip = button(`⠿ ${title}`, 'sp-grip');
     grip.setAttribute('aria-label', `Move ${title} panel`);
@@ -43,104 +36,123 @@ export function mountSurfacePanels(): void {
     fold.setAttribute('aria-expanded', 'true');
     fold.setAttribute('aria-label', `Fold ${title}`);
     toolbar.append(grip, fold);
-    // Metrics already has a fold action, including support in the assistant.
-    const metricsHead = panel.querySelector<HTMLElement>('.km-head');
+    // Metrics already has a fold control and action (showKeyMetrics): it keeps it, and gets the grip only.
+    const metricsHead = id === 'key-metrics' ? panel.querySelector<HTMLElement>('.km-head') : null;
     if (metricsHead) {
       metricsHead.prepend(grip);
       grip.classList.add('sp-metrics-grip');
       metricsHead.classList.add('sp-metrics-head');
     } else panel.prepend(toolbar);
 
+    // In front of the other panels; once is enough while it is the front one (a drag raises on every move).
     const raise = () => {
-      if (store.get().view === 'surface') region.style.zIndex = String(++front);
+      if (isSurface() && region.style.zIndex !== String(front)) region.style.zIndex = String(++front);
     };
-    const place = (p: Position) => {
-      position = constrainPanel(p, panel.getBoundingClientRect().height, innerWidth, innerHeight);
-      panel.style.setProperty('--sp-x', `${position.x}px`);
-      panel.style.setProperty('--sp-y', `${position.y}px`);
-      panel.style.setProperty('--sp-width', `${position.width}px`);
-      panel.classList.add('sp-positioned');
-      requestHudLayout();
-    };
-    const current = (): Position => {
-      const r = panel.getBoundingClientRect();
-      return { x: r.x, y: r.y, width: r.width };
-    };
-    const reflow = () => {
-      if (position && store.get().view === 'surface' && panel.getBoundingClientRect().height) {
-        // The chart's own Expand/Shrink control still owns its width after a drag.
-        place(selector === '.skc' ? { ...position, width: panel.getBoundingClientRect().width } : position);
-      }
-    };
-    refresh.push(reflow);
-    fold.addEventListener('click', () => {
-      folded = !folded;
+    const showFolded = (folded: boolean) => {
       panel.classList.toggle('sp-folded', folded);
       fold.textContent = folded ? 'Expand' : 'Fold';
       fold.setAttribute('aria-expanded', String(!folded));
       fold.setAttribute('aria-label', `${folded ? 'Expand' : 'Fold'} ${title}`);
-      reflow();
-      requestHudLayout();
-    });
+    };
+    const host: PanelHost = {
+      shown: () => {
+        if (!isSurface() || panel.getAttribute('aria-hidden') === 'true' || panel.closest('[inert]')) return false;
+        const r = panel.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      },
+      box: () => {
+        const r = panel.getBoundingClientRect();
+        return { x: r.x, y: r.y, width: r.width, height: r.height };
+      },
+      viewport: () => ({ width: innerWidth, height: innerHeight }),
+      place: (p: Position | null) => {
+        if (p) {
+          panel.style.setProperty('--sp-x', `${p.x}px`);
+          panel.style.setProperty('--sp-y', `${p.y}px`);
+          panel.style.setProperty('--sp-width', `${p.width}px`);
+          panel.classList.add('sp-positioned');
+        } else {
+          panel.classList.remove('sp-positioned');
+          for (const key of ['--sp-x', '--sp-y', '--sp-width']) panel.style.removeProperty(key);
+          region.style.removeProperty('z-index');
+        }
+        requestHudLayout();
+      },
+      // The key metrics fold through their own state (the same as showKeyMetrics); the others with the panel's class.
+      setFolded: (folded) => {
+        if (metricsHead) setHudState({ metricsOpen: !folded });
+        else showFolded(folded);
+        requestHudLayout();
+      },
+      folded: () => (metricsHead ? !hudState().metricsOpen : panel.classList.contains('sp-folded')),
+      raise,
+    };
+    surfacePanels.register(id, host);
 
-    let drag: { id: number; x: number; y: number; start: Position } | null = null;
+    // The chart's own Expand/Shrink control still owns its width after a drag.
+    const reflow = () => surfacePanels.reflow(id, id === 'skyline-chart' ? panel.getBoundingClientRect().width : undefined);
+    refresh.push(reflow);
+    fold.addEventListener('click', () => void runAction('setSurfacePanel', { panel: id, folded: !host.folded() }));
+
+    let drag: { id: number; x: number; y: number; start: { x: number; y: number }; moved: boolean } | null = null;
     grip.addEventListener('pointerdown', (e) => {
-      if (store.get().view !== 'surface' || e.button !== 0) return;
+      if (!isSurface() || e.button !== 0) return;
       e.preventDefault();
       grip.focus({ preventScroll: true });
       raise();
-      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, start: current() };
+      const r = panel.getBoundingClientRect();
+      drag = { id: e.pointerId, x: e.clientX, y: e.clientY, start: { x: r.x, y: r.y }, moved: false };
       grip.setPointerCapture(e.pointerId);
       panel.classList.add('sp-dragging');
     });
     grip.addEventListener('pointermove', (e) => {
       if (!drag || e.pointerId !== drag.id) return;
-      place({ ...drag.start, x: drag.start.x + e.clientX - drag.x, y: drag.start.y + e.clientY - drag.y });
+      drag.moved = true;
+      // Shown as it goes; recorded once, as an action, when the pointer is let go.
+      surfacePanels.move(id, { x: drag.start.x + e.clientX - drag.x, y: drag.start.y + e.clientY - drag.y });
     });
-    const finish = () => { drag = null; panel.classList.remove('sp-dragging'); };
+    const finish = () => {
+      if (!drag) return;
+      const moved = drag.moved;
+      drag = null;
+      panel.classList.remove('sp-dragging');
+      const p = surfacePanels.position(id);
+      if (moved && p) void runAction('setSurfacePanel', { panel: id, xPx: Math.round(p.x), yPx: Math.round(p.y) });
+    };
     grip.addEventListener('pointerup', finish);
     grip.addEventListener('pointercancel', finish);
     grip.addEventListener('lostpointercapture', finish);
     grip.addEventListener('keydown', (e) => {
-      if (store.get().view !== 'surface') return;
+      if (!isSurface()) return;
       const delta: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
       if (!delta[e.key]) return;
       e.preventDefault();
       e.stopPropagation();
-      const p = current(), step = e.shiftKey ? 40 : 10;
-      raise();
-      place({ ...p, x: p.x + delta[e.key][0] * step, y: p.y + delta[e.key][1] * step });
+      const r = panel.getBoundingClientRect(), step = e.shiftKey ? 40 : 10;
+      void runAction('setSurfacePanel', { panel: id, xPx: Math.round(r.x + delta[e.key][0] * step), yPx: Math.round(r.y + delta[e.key][1] * step) });
     });
     panel.addEventListener('pointerdown', raise);
-    if (selector === '.assistant-drawer' || selector === '.cmp-sheet') {
-      const key = selector === '.assistant-drawer' ? 'assistantOpen' : 'comparing';
-      store.subscribe([key], () => { if (store.get()[key]) raise(); });
+    if (id === 'assistant' || id === 'compare') {
+      const key = id === 'assistant' ? 'assistantOpen' : 'comparing';
+      store.subscribe([key], () => {
+        if (store.get()[key]) raise();
+      });
     }
-    const observer = new ResizeObserver(reflow);
-    observer.observe(panel);
-    resets.push(() => {
-      position = null;
-      folded = false;
-      panel.classList.remove('sp-positioned', 'sp-folded');
-      for (const key of ['--sp-x', '--sp-y', '--sp-width']) panel.style.removeProperty(key);
-      region.style.removeProperty('z-index');
-      fold.textContent = 'Fold';
-      fold.setAttribute('aria-expanded', 'true');
-      fold.setAttribute('aria-label', `Fold ${title}`);
-    });
+    new ResizeObserver(reflow).observe(panel);
   }
-  const reset = button('Reset panels', 'ly-btn ly-btn--small sp-reset', () => {
-    resets.forEach((fn) => fn());
-    void runAction('showKeyMetrics', { open: true });
-    requestHudLayout();
-  });
+
+  registerActions(createPanelActions({ layout: surfacePanels, isSurface }));
+
+  const reset = button('Reset panels', 'ly-btn ly-btn--small sp-reset', () => void runAction('resetSurfacePanels'));
   reset.title = 'Restore the default surface panel positions and unfold them';
   document.getElementById('region-close')?.append(reset);
   window.addEventListener('resize', () => refresh.forEach((fn) => fn()));
   store.subscribe(['view'], () => {
-    if (store.get().view !== 'surface') {
+    if (!isSurface()) {
       for (const region of document.querySelectorAll<HTMLElement>('.region')) region.style.removeProperty('z-index');
     } else requestAnimationFrame(() => refresh.forEach((fn) => fn()));
     requestHudLayout();
   });
 }
+
+export type { PanelId };
