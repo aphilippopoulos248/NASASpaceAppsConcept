@@ -569,7 +569,12 @@ export class SurfaceView {
       // The grain tiles in ground metres, while UVs span the imagery; scale accordingly.
       grain.repeat.set(repeats / Math.abs(uv[(c * n + n - 1) * 2] - uv[c * n * 2]), repeats / Math.abs(uv[((n - 1) * n + c) * 2 + 1] - uv[c * 2 + 1]));
       grain.needsUpdate = true;
-      grain.anisotropy = this.anisotropy;
+      // Plain (isotropic) filtering on purpose. This mesh starts about 48 m out, where the ground
+      // is seen at a grazing angle; with anisotropic filtering the 1.5 m tile stayed sharp along
+      // the line of sight and its repeat showed as a regular lattice from about 300 m on (seen on
+      // a GPU under a low Sun at IM-2). Filtered plainly the grain fades into its mean with
+      // distance, which is right for detail no data resolves; the near mesh has its own relief.
+      grain.anisotropy = 1;
       material.bumpMap = grain;
       material.bumpScale = this.generated ? 0.15 : 0;
     }

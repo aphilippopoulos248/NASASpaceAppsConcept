@@ -60,6 +60,10 @@ export async function createMoonMaterial(renderer: WebGLRenderer): Promise<MeshS
   return material;
 }
 
+/** What the globe's background stars are, in words: for the relief chip and getState (rule 1 of the brief: generated detail stays labelled). */
+export const BACKGROUND_STARS_NOTE = 'Background stars are decorative: random points, not the real sky.';
+
+/** Decorative background stars: random points on a sphere, not a star catalogue (see BACKGROUND_STARS_NOTE). */
 export function createStars(count = 2500): Points {
   const positions = new Float32Array(count * 3);
   const colors = new Float32Array(count * 3);
