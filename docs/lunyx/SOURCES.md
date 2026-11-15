@@ -5,13 +5,13 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `2bf9ff6`: `am/lunyx-experience/integration` at `350f928`
-  merged with `am/lunyx/integration` at `b6f7392` (T-22 mission presets, T-37 licence notices
-  and the DOI fix, T-38 a source for every landing, T-39 the flags, T-40 the notices header,
-  T-46 to T-48 and T-50, all four of the science project's deliveries), plus this task's
-  documents. Since the published `cc736f8`, `public/` gained `public/data/sources/` (S18 to
-  S20), `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json`
-  gained the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is
+- **State described:** the tree at `08b5cfa` (`am/lunyx-experience/integration`, which contains
+  `am/lunyx/integration` up to `b6f7392`: T-22 mission presets, T-37 licence notices and the
+  DOI fix, T-38 a source for every landing, T-39 the flags, T-40 the notices header, T-46 to
+  T-48 and T-50, all four of the science project's deliveries), plus this task's documents.
+  Since the published `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20),
+  `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json` gained
+  the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is
   unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says

@@ -41,9 +41,9 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   "B = A arriving N hours later"; "B = A with another mast"; named comparisons that reload
   exactly. Nearby alternatives: a scan around the site (radius, spacing, slope limit) ranked
   by sunlight and Earth contact, any candidate taken as B. The mission-window table (every
-  sunlit, dark and Earth-in-view spell), downloadable as CSV or JSON. The seasonal outlook:
-  sunlight and Earth's centre in view for each lunar day over the coming months, as a chart and
-  a table.
+  sunlit, dark and Earth-in-view spell, and every rise and set with both ends), downloadable as
+  CSV or JSON. The seasonal outlook: sunlight and Earth in view (by its centre and by any part of
+  its disc) for each lunar day over the coming months, as a chart and a table.
 - **Assistant.** A drawer (button lower right) where you ask in words. It operates the app
   through the same actions as the on-screen controls and lists what it ran. Without a
   language-model key it answers in a labelled deterministic mode (see
@@ -198,11 +198,11 @@ round, by the science project; its record is `tests/fixtures/validation/science-
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
 | Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min at Blue Ghost, Chandrayaan-3 and Apollo 15. Near the poles the Sun and Earth cross the skyline slowly, and the same 0.01° of skyline agreement means times that agree to within a few minutes |
-| Both ends of every rise and set (on screen in the globe and surface views since T-47 and T-48) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s (at the catalogue's current position the app reads 18:24:14 / 19:30:47 UTC since T-50). Near the poles an instant was up to 14 min off, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lay under the disc. Since the original team's T-50 (`b6f7392`) the app reads the skyline every 0.05° wherever the Sun's or Earth's disc comes near it: the validator's worst cases went from +464 s to -5 s and from +835 s to +47 s; the slowest passages can still differ by a few minutes, about 0.003° of skyline |
+| Both ends of every rise and set (on every screen since T-47 to T-49) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s (at the catalogue's current position the app reads 18:24:14 / 19:30:47 UTC since T-50). Near the poles an instant was up to 14 min off, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lay under the disc. Since the original team's T-50 (`b6f7392`) the app reads the skyline every 0.05° wherever the Sun's or Earth's disc comes near it: the validator's worst cases went from +464 s to -5 s and from +835 s to +47 s; the slowest passages can still differ by a few minutes, about 0.003° of skyline |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
 | 14 March 2025 eclipse at the Blue Ghost site | Reported 05:00, 06:18, 09:52 UTC | Computed 05:00:38, 06:17:21, 09:51:06 UTC |
 | Long-term sunlight, 18.6 years, six polar points | The validator's own computation and PGDA product 69 | Within 0.03 points of the validator at a 2 m mast. On the ground (0 m): up to 4.7 points high at a connecting-ridge pin before `3899cb9` (48.93 % against 44.21 %); 44.21 % since, within 0.05 points (round 3). IM-2 at 2 m: PGDA 46.55 %, validator 46.71 %, app 46.68 % |
-| Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth directions; PGDA product 69 | Earth's centre within 0.05 points. PGDA's map counts any part of Earth's disc and reads 4 to 11 points higher by definition. The analysis now also computes the any-part figure, which the site card and the surface view's key metrics show next to Earth's centre since T-47 and T-48: within 0.04 points over 60 days at five sites and 0.03 points over 18.6 years (round 3) |
+| Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth directions; PGDA product 69 | Earth's centre within 0.05 points. PGDA's map counts any part of Earth's disc and reads 4 to 11 points higher by definition. The analysis now also computes the any-part figure, which the screens show next to Earth's centre since T-47 to T-49: within 0.04 points over 60 days at five sites and 0.03 points over 18.6 years (round 3) |
 | Deep Space Network station geometry | JPL Horizons with each station as the observer, on dates the author did not use | Elevation within 0.001°. Edges set by a station's elevation limit are placed to 0.25 s and agree within 0.9 s with the independent reference (84 edges, round 3); before that fix they were within 5.3 s. Edges set by the lunar skyline: within 1.5 min |
 | Seasonal outlook | The validator's own skyline and SPICE, a year at IM-2 and at a Shackleton-rim pin | Within 0.11 points per lunar day at both. The one row that read 0.57 points high before `3899cb9` now reads 20.76 % against the validator's 20.84 % (round 3) |
 | Longest darkness and Earth gap followed past the window edge | Same, at IM-2, Chandrayaan-3 and Apollo 11 | Ends within 3.1 min |
@@ -219,14 +219,16 @@ change is 0.1 point of sunlight and 0.2 h of darkness (validation.md).
 the instant the last of the Sun's disc goes behind the terrain (or the first of it appears), and
 says so. The start of setting, when the skyline first cuts the disc and power begins to fall, is
 computed by the analysis since the science project's delivery (decision D-8). Since the original
-team's T-47 (`bd46eda`) and T-48 (`8988bd0`) the globe and the surface view show both ends: the
+team's T-47 (`bd46eda`), T-48 (`8988bd0`) and T-49 (`44eb72a`) every screen shows both ends: the
 time scrubber draws each passage from its start to its end and its jump buttons go to each end
 in turn ("Sun starts setting", then "Sun fully set"), the site card gives both ends, the surface
 view's key metrics count down to the next end with both ends below ("Sun starts setting in 12 d
-23 h"), its skyline chart marks each passage in time mode, and the actions `getAnalysis` and
-`jumpToEvent` return them. The compare panel still gives one instant per event, labelled with
-which one it is, until the original team's T-49; the assistant's deterministic replies also give
-one labelled instant. This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the
+23 h") and its skyline chart marks each passage in time mode, and the compare panel's A/B rows,
+its mission-window table ("Rises and sets, both ends") and the CSV and JSON exports give both
+ends. Earth is shown by its centre and by any part of its disc, in the seasonal outlook too. The
+actions `getAnalysis` and `jumpToEvent` return both ends, and the assistant reads them (task
+T-1): "The Sun starts setting ... and is fully set ... UTC"; it gives only the labelled instant
+when a result has no span. This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the
 catalogue's current position, the site card reads "starts setting 2025-03-16 18:24, fully set
 19:30 UTC". Setting starts inside Firefly's reported start of night (about 18:15 to 18:35 UTC;
 Firefly does not define the term); the Sun is fully set about an hour later (to the second, the
