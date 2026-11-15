@@ -118,9 +118,14 @@ export class Ctx {
     return a;
   }
 
-  /** Runs `compare` and waits until both sides have finished analysing. */
-  async comparison(): Promise<Json> {
-    let r = await this.run('compare');
+  /**
+   * Runs `compare` (or another action that opens a comparison and returns what `compare`
+   * returns, such as compareDelayedArrival) and waits until both sides have finished
+   * analysing. Then makes sure the A/B view is the one on screen: a scan of nearby sites
+   * leaves the compare panel on its other tab.
+   */
+  async comparison(action = 'compare', params: Json = {}): Promise<Json> {
+    let r = await this.run(action, params);
     const pending = (v: Json, allowIdle: boolean) =>
       (['A', 'B'] as const).some((tag) => {
         const a = v[`analysis${tag}`];
@@ -133,8 +138,12 @@ export class Ctx {
       });
     for (let i = 0; i < ANALYSIS_POLLS && pending(r, i < IDLE_POLLS); i++) {
       await this.wait(ANALYSIS_POLL_MS);
-      r = (await this.peek('compare')) ?? r;
+      const again = await this.peek('compare');
+      // Keep what the first action added (planned arrival, mast heights) beside the settled sides.
+      r = again ? { ...r, ...again } : r;
     }
+    // A failure here leaves the comparison as it is: it is open, only perhaps not on its A/B tab.
+    if (this.has('openCompare')) await this.api.run('openCompare', { tab: 'compare' });
     return r;
   }
 }

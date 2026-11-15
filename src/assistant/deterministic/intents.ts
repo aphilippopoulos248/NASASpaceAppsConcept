@@ -9,32 +9,17 @@ import { MOON_RADIUS_KM } from '../../core/types';
 import { isoUtc } from '../../core/time';
 import { Halt, type CandidateMemo, type Ctx } from './context';
 import { at, bearing, coordinates, degrees, distance, hours, isObject, num, percent, plural, span, str, utc, type Json } from './format';
+import * as later from './laterIntents';
 import { COMPASS_WORD, compassAzimuth, findCoordinates, findDateTime, findDuration, findNumbers } from './parse';
+import { EARTH_NOTE, plan, siteText, type Intent, type Plan } from './plan';
 
-export interface Plan {
-  /** What the plan will do, in a few words (shown when another part of the request was not understood). */
-  does: string;
-  run(ctx: Ctx): Promise<string>;
-}
-
-type Intent = (step: string, raw: string) => Plan | null;
-
-const plan = (does: string, run: Plan['run']): Plan => ({ does, run });
+export type { Plan } from './plan';
 
 /** Camera altitude of the whole-Moon view, km above the surface (2.4 lunar radii, as the globe uses). */
 const WHOLE_MOON_ALTITUDE_KM = 2.4 * MOON_RADIUS_KM;
 
-const EARTH_NOTE = 'Earth visibility is geometric line of sight over the terrain, not a guarantee of a working radio link.';
 
 // ---------------------------------------------------------------- reply wording
-
-function siteText(site: unknown): string {
-  if (!isObject(site)) return 'no site';
-  const name = str(site, 'name') ?? 'the site';
-  const where = coordinates(num(site, 'latDeg'), num(site, 'lonDegEast'));
-  const landed = str(site, 'landedUtc');
-  return `${name} (${where}${landed ? `, landed ${utc(landed)}` : ''})`;
-}
 
 /** The headline metrics of an analysis result (either the getState summary or a getAnalysis result). */
 function metricsText(a: Json): string {
@@ -139,6 +124,7 @@ const help: Intent = (step) => {
     add(['lookAt'], 'Looking around (surface): "look north", "look at azimuth 120", "turn left", "look at the Sun"');
     add(['setGlobeCamera'], 'Globe: "show the whole Moon", "show the south pole", "zoom in", "turn the globe to 10 N 45 E"');
     add(['getState'], 'Questions: "status", "what time is it", "illumination", "where is the Earth"');
+    for (const [needs, text] of later.LATER_HELP) add(needs, text);
     lines.push('- Anything else by name: "/actions" lists every action, "/setOverlay {"mode":"off"}" runs one.');
     lines.push('It does not understand free-form language: that needs the language model.');
     return lines.join('\n');
@@ -230,6 +216,11 @@ const compareFamily: Intent = (step) => {
     if (heights.length < 2) return null;
     const [a, b] = heights;
     return plan(`compare mast heights ${a} m and ${b} m`, async (ctx) => {
+      // The compare panel's control: B is A with the other mast; the mast on screen is not changed.
+      if (ctx.has('compareMastHeights')) {
+        const r = await ctx.comparison('compareMastHeights', { heightAM: a, heightBM: b, basis: 'current' });
+        return `Comparing mast heights ${num(r, 'mastHeightAM') ?? a} m (A) and ${num(r, 'mastHeightBM') ?? b} m (B) at the same site and over the same mission window. The mast height on screen is not changed.\n${comparisonText(r)}`;
+      }
       await ctx.run('setMastHeight', { metres: a });
       await ctx.run('saveScenario', { slot: 'A' });
       await ctx.run('setMastHeight', { metres: b });
@@ -242,6 +233,11 @@ const compareFamily: Intent = (step) => {
     const d = findDuration(step);
     if (!d || d.hours <= 0) return null;
     return plan(`compare an on-time arrival with a ${hours(d.hours)} delay`, async (ctx) => {
+      // The compare panel's control: B is the scenario on screen arriving later; the scenario on screen is not changed.
+      if (ctx.has('compareDelayedArrival')) {
+        const r = await ctx.comparison('compareDelayedArrival', { delayH: d.hours, basis: 'current' });
+        return `Comparing the scenario on screen (A, arriving ${utc(str(r, 'plannedArrivalUtc'))}) with the same arriving ${hours(num(r, 'delayH') ?? d.hours)} later (B, ${utc(str(r, 'revisedArrivalUtc'))}). The scenario on screen and its own arrival delay are not changed.\n${comparisonText(r)}`;
+      }
       await ctx.run('setDelay', { hours: 0 });
       await ctx.run('saveScenario', { slot: 'A' });
       await ctx.run('setDelay', { hours: d.hours });
@@ -347,14 +343,16 @@ const nearby: Intent = (step) => {
     );
     const wanted = criteria.map((c) => c.words).join(' and ');
     const refValues = criteria.map((c) => `${c.label} ${c.unit(num(reference, c.key))}`).join(', ');
+    const rankedCount = num(r, 'rankedCount');
+    const among = rankedCount !== undefined && rankedCount > rows.length ? `${rows.length} best-ranked alternatives (of ${rankedCount} ranked)` : plural(rows.length, 'ranked alternative');
     if (!better.length) {
-      return `None of the ${plural(rows.length, 'ranked alternative')} has ${wanted} than this pin (${refValues}). The best-ranked alternative is ${rowText(rows[0])}.${tail}`;
+      return `None of the ${among} has ${wanted} than this pin (${refValues}). The best-ranked alternative is ${rowText(rows[0])}.${tail}`;
     }
     const pick = better[0];
     const memo = memoOf(pick);
     if (memo) ctx.memory.candidate = memo;
     const versus = criteria.map((c) => `${c.label} ${c.unit(num(pick, c.key))} (this pin: ${c.unit(num(reference, c.key))})`).join(', ');
-    return `Found a site with ${wanted}: ${rowText(pick)}.\nAgainst this pin: ${versus}. ${plural(better.length, 'alternative')} of ${rows.length} met the condition; this is the best-ranked of them.\nSay "compare it against this pin" or "go there".${tail}`;
+    return `Found a site with ${wanted}: ${rowText(pick)}.\nAgainst this pin: ${versus}. ${plural(better.length, 'alternative')} of the ${among} met the condition; this is the best-ranked of them.\nSay "compare it against this pin" or "go there".${tail}`;
   });
 };
 
@@ -383,6 +381,8 @@ const EVENT = '(sunrise|sunset|earthrise|earthset|sun rise|sun set|earth rise|ea
 const eventType = (word: string): string => word.replace(' ', '');
 const eventWhich = (word: string | undefined): 'next' | 'previous' => (word && /previous|last|prior|preceding/.test(word) ? 'previous' : 'next');
 const EVENT_NAME: Record<string, string> = { sunrise: 'sunrise', sunset: 'sunset', earthrise: 'Earthrise', earthset: 'Earthset' };
+/** " That is the instant "Sun fully set": the last part of the Sun's disc goes behind the terrain skyline." when the result names it (decision D-8). */
+const instantText = (j: Json): string => (str(j, 'label') ? ` That is the instant "${str(j, 'label')}"${str(j, 'instant') ? `: ${str(j, 'instant')}` : ''}.` : '');
 
 /** The terrain that forms the skyline under a body, whichever action reported it. */
 interface Blocking {
@@ -441,7 +441,7 @@ const blockage: Intent = (step) => {
     if (event) {
       const j = await ctx.run('jumpToEvent', { type: event, which: eventWhich(ev![1]) });
       eventAz = num(j, 'azDeg');
-      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${utc(str(j, 'timeUtc'))}.`);
+      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${utc(str(j, 'timeUtc'))}.${instantText(j)}`);
     }
     // The blocking terrain comes from the dedicated action when the build has it, otherwise
     // from the analysis readout at the simulated time. Both describe the same skyline.
@@ -481,7 +481,7 @@ const events: Intent = (step) => {
       if (!ctx.has('getAnalysis')) await ctx.analysis();
       const j = await ctx.run('jumpToEvent', { type, which });
       const az = num(j, 'azDeg');
-      return `Moved the clock to the ${which} ${EVENT_NAME[type]}: ${utc(str(j, 'timeUtc'))}${az !== undefined ? ` (at azimuth ${degrees(az)})` : ''}. Rise and set times are measured against the terrain skyline.`;
+      return `Moved the clock to the ${which} ${EVENT_NAME[type]}: ${utc(str(j, 'timeUtc'))}${az !== undefined ? ` (at azimuth ${degrees(az)})` : ''}.${instantText(j)} Rise and set times are measured against the terrain skyline.`;
     });
   }
   const ask = new RegExp(`^(?:when|what time)\\b.*?\\b(next|previous|last)?\\s*${EVENT}\\b`).exec(step);
@@ -492,7 +492,8 @@ const events: Intent = (step) => {
       const a = await ctx.analysis();
       const e = at(a, `nextEvents.${type}`);
       if (!isObject(e)) return `There is no ${EVENT_NAME[type]} after the simulated time inside the analysed mission window.`;
-      return `The next ${EVENT_NAME[type]} is at ${utc(str(e, 'timeUtc'))}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline).`;
+      const definition = str(a, `eventDefinitions.${type}`);
+      return `The next ${EVENT_NAME[type]} is at ${utc(str(e, 'timeUtc'))}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline).${definition ? ` ${definition}` : str(e, 'label') ? ` That is the instant "${str(e, 'label')}".` : ''}`;
     });
   }
   return null;
@@ -761,6 +762,12 @@ const views: Intent = (step) => {
   return null;
 };
 
+/** The field-of-view range an action accepts, from its own schema. */
+function fovRange(ctx: Ctx, action: string): [number, number] {
+  const p = ctx.api.def(action)?.params.properties.fovDeg;
+  return [p && 'minimum' in p && typeof p.minimum === 'number' ? p.minimum : 20, p && 'maximum' in p && typeof p.maximum === 'number' ? p.maximum : 90];
+}
+
 const look: Intent = (step) => {
   const dir = new RegExp(`^(?:look|face|turn|point|pan|rotate)\\s+(?:due\\s+)?(?:(?:to|toward|towards|at)\\s+)?(?:the\\s+)?${COMPASS_WORD}$`).exec(step);
   if (dir) {
@@ -779,11 +786,25 @@ const look: Intent = (step) => {
       return `Looking towards azimuth ${degrees(num(r, 'look.azDeg'))}, elevation ${degrees(num(r, 'look.elDeg'))}.`;
     });
   }
-  const body = /^(?:look|face|turn|point)\s+(?:at|to|toward|towards)\s+(?:the\s+)?(sun|earth)$/.exec(step) ?? /^show (?:me )?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^find (?:the\s+)?(sun|earth)$/.exec(step);
+  const body = /^(?:look|face|turn|point)\s+(?:(?:at|to|toward|towards)\s+)?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^show (?:me )?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^find (?:the\s+)?(sun|earth)$/.exec(step);
   if (body) {
     const which = body[1];
     const name = which === 'sun' ? 'the Sun' : 'Earth';
     return plan(`look at ${name}`, async (ctx) => {
+      if (ctx.has('lookAtBody')) {
+        const st = await ctx.state();
+        if (str(st, 'view') !== 'surface') await ctx.run('enterSurface');
+        const outcome = await ctx.api.run('lookAtBody', { body: which });
+        if (outcome.ok && isObject(outcome.result)) {
+          const r = outcome.result;
+          let clearance: number | undefined;
+          if (ctx.has('getAnalysis')) clearance = num(await ctx.analysis(), `now.${which}.clearanceDeg`);
+          const below = r.belowHorizontal === true ? ' It is below the horizontal, so the view looks at the horizon at its azimuth.' : '';
+          return `Facing ${name}: azimuth ${degrees(num(r, 'azDeg'))}, elevation ${degrees(num(r, 'elDeg'))}${clearance !== undefined ? `, ${degrees(Math.abs(clearance), 2)} ${clearance >= 0 ? 'above' : 'below'} the terrain skyline` : ''}.${below}${which === 'earth' ? ` ${EARTH_NOTE}` : ''}`;
+        }
+        // The sky can be a moment behind a site that has just been entered: fall back to the analysis readout below.
+        if (!ctx.has('getAnalysis')) throw new Halt(outcome.ok ? `Could not face ${name}.` : outcome.error);
+      }
       if (!ctx.has('getAnalysis')) throw new Halt(`Turning to ${name} needs its direction from the site analysis, which this build does not expose to me. Its azimuth and elevation are shown in the key metrics; you can say "look at azimuth <number>".`);
       const a = await ctx.analysis();
       const azDeg = num(a, `now.${which}.azDeg`), elDeg = num(a, `now.${which}.elDeg`);
@@ -816,7 +837,12 @@ const look: Intent = (step) => {
       if (str(s, 'view') === 'surface') {
         const fov = num(s, 'look.fovDeg'), azDeg = num(s, 'look.azDeg');
         if (fov === undefined || azDeg === undefined) throw new Halt('The current field of view is not available.');
-        const r = await ctx.run('lookAt', { azDeg, fovDeg: Math.max(20, Math.min(90, inward ? fov * 0.7 : fov / 0.7)) });
+        const want = inward ? fov * 0.7 : fov / 0.7;
+        // The surface scene's own zoom (the same as scrolling); older builds only had lookAt.
+        const action = ctx.has('setFieldOfView') ? 'setFieldOfView' : 'lookAt';
+        const [min, max] = fovRange(ctx, action);
+        const fovDeg = Math.round(Math.max(min, Math.min(max, want)) * 10) / 10;
+        const r = await ctx.run(action, action === 'setFieldOfView' ? { fovDeg } : { azDeg, fovDeg });
         return `Field of view: ${degrees(num(r, 'look.fovDeg'))}.`;
       }
       const lat = num(s, 'globeCenter.latDeg'), lon = num(s, 'globeCenter.lonDegEast'), alt = num(s, 'globeCenter.altitudeKm');
@@ -981,7 +1007,24 @@ const site: Intent = (step) => {
   });
 };
 
-const INTENTS: Intent[] = [help, listAll, rawCall, assistantUi, compareFamily, nearby, pickCandidate, blockage, events, delay, clock, mission, timeShift, timeSet, overlays, missions, lighting, views, look, globe, pin, exportResults, questions, site];
+// Order matters: the first match wins. The science queries sit early because their words
+// ("ice near here", "average sunlight here") would otherwise read as a nearby scan or as the
+// mission-window metrics; walking sits before the clock commands, whose "m" means minutes.
+const INTENTS: Intent[] = [
+  help, listAll, rawCall, assistantUi,
+  later.iceNearest, later.siteScience,
+  compareFamily, later.comparePanel, nearby, pickCandidate, blockage, events, delay, clock, mission,
+  later.walk,
+  timeShift, timeSet,
+  later.relief, later.coverage, later.iceOutlines,
+  overlays, missions, lighting,
+  later.skyPaths,
+  views,
+  later.fieldOfView,
+  look, globe, pin, exportResults,
+  later.surfaceStatus, later.listSites,
+  questions, site,
+];
 
 /** The plan for one step of a request, or null when no intent matches it. */
 export function matchIntent(step: string, raw: string): Plan | null {

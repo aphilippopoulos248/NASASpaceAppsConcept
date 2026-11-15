@@ -56,6 +56,19 @@ export interface FakeState {
   compareB: { label: string; metrics: FakeMetrics } | null;
   comparing: boolean;
   filter: { programs: string[] | null; countries: string[] | null; type: string; fromYear: number | null; toYear: number | null };
+  /** Globe drawing (displayActions). */
+  reliefFactor: number;
+  coverage: boolean;
+  iceTargets: boolean;
+  locatorZoom: number;
+  assistantOpen: boolean;
+  /** Surface view (surfaceActions). */
+  generated: boolean;
+  position: { eastM: number; northM: number; liftM: number };
+  annotations: { tracks: boolean; labels: boolean };
+  /** Compare panel (comparePanel). */
+  panelTab: 'compare' | 'nearby';
+  saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
 }
 
 export const T0 = Date.UTC(2026, 2, 1, 12, 0);
@@ -101,12 +114,32 @@ export interface FakeAppOptions {
    * as idle for this many calls (the debounce), then loading for as many again, then ready.
    */
   compareSettleCalls?: number;
+  /** Globe drawing, compass, locator map and drawer: setReliefExaggeration, showCoverage, showIceTargets, resetNorth, setLocatorZoom, setAssistantOpen, clearConversation. */
+  displayActions?: boolean;
+  /** getSiteScience and nearestIceTargets. "t30" adds the Diviner and ShadowCam parts of the site-science module; true gives the earlier result without them. */
+  scienceActions?: boolean | 't30';
+  /** The surface view's own actions: setGeneratedDetail, setFieldOfView, lookAtBody, walkTo, setSkyAnnotations, getSurfaceView. */
+  surfaceActions?: boolean;
+  /** listSites. */
+  catalogActions?: boolean;
+  /** The compare panel: openCompare, compareDelayedArrival, compareMastHeights, swap/clear/save/load/delete/listComparisons; rankNearby then opens its "nearby" tab. */
+  comparePanel?: boolean;
 }
+
+/** Every option on: the stand-in has every action the real build has or is about to get. */
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
   { rank: 2, id: 'cand-2', name: 'Candidate 2', latDeg: -84.779, lonDegEast: 29.11, distanceM: 910, bearingDeg: 341, slopeDeg: 2.1, illuminationPct: 66.2, longestDarknessH: 38.5, earthVisiblePct: 61.5, longestEarthGapH: 20.0, score: 0.84 },
   { rank: 3, id: 'cand-3', name: 'Candidate 3', latDeg: -84.795, lonDegEast: 29.31, distanceM: 1220, bearingDeg: 98, slopeDeg: 9.4, illuminationPct: 58.0, longestDarknessH: 52.0, earthVisiblePct: 57.0, longestEarthGapH: 26.0, score: 0.7 },
+];
+
+/** Rows shaped like the nearestIceTargets / getSiteScience ice rows. */
+export const ICE_TARGETS = [
+  { id: 'psr-107', label: 'Unnamed PSR 107', distanceKm: 6.6, distanceText: '6.6 km', insideOutline: false, bearingDeg: 212, nearestPoint: { latDeg: -84.83, lonDegEast: 28.7 }, measuredTo: 'outline', listedAreaKm2: 1.2, objectives: ['highest'] },
+  { id: 'psr-033', label: 'Unnamed PSR 33', distanceKm: 10.4, distanceText: '10.4 km', insideOutline: false, bearingDeg: 145, nearestPoint: { latDeg: -84.86, lonDegEast: 30.1 }, measuredTo: 'outline', listedAreaKm2: 0.8, objectives: [] },
+  { id: 'psr-012', label: 'Unnamed PSR 12', distanceKm: 16.2, distanceText: '16.2 km', insideOutline: false, bearingDeg: 301, nearestPoint: { latDeg: -84.71, lonDegEast: 27.9 }, measuredTo: 'outline', listedAreaKm2: 3.4, objectives: ['lateral'] },
 ];
 
 export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState; actions: ActionDef<any, any>[] } {
@@ -132,6 +165,16 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     compareB: null,
     comparing: false,
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
+    reliefFactor: 10,
+    coverage: false,
+    iceTargets: false,
+    locatorZoom: 1,
+    assistantOpen: true,
+    generated: true,
+    position: { eastM: 0, northM: 0, liftM: 0 },
+    annotations: { tracks: true, labels: true },
+    panelTab: 'compare',
+    saved: [],
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
   let compareCalls = 0;
@@ -341,7 +384,11 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           const site = requireSite();
           const reference = { rank: 0, id: site.id, name: site.name, latDeg: site.latDeg, lonDegEast: site.lonDegEast, distanceM: 0, bearingDeg: 0, score: 0.6, isReference: true, ...currentMetrics() };
           const candidates = nearbyRows.filter((r) => r.distanceM <= radiusM && r.slopeDeg <= slopeLimitDeg);
-          return { reference, candidates, rejected: { slope: nearbyRows.filter((r) => r.slopeDeg > slopeLimitDeg).length, noData: 0 }, basis: 'Slope and skyline from the 60 m grid: metre-scale hazards are not visible.' };
+          if (options.comparePanel) {
+            state.panelTab = 'nearby';
+            state.comparing = true;
+          }
+          return { reference, rankedCount: candidates.length, candidates, rejected: { slope: nearbyRows.filter((r) => r.slopeDeg > slopeLimitDeg).length, noData: 0 }, basis: 'Slope and skyline from the 60 m grid: metre-scale hazards are not visible.' };
         },
       }),
       defineAction<{ rank?: number; id?: string; asB?: boolean }, unknown>({
@@ -401,6 +448,234 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
             warnings: [],
           };
         },
+      }),
+    );
+  }
+  if (options.displayActions) {
+    const display = () => ({
+      reliefExaggeration: state.reliefFactor,
+      reliefDrawnNow: state.reliefFactor,
+      reliefRule: state.reliefFactor > 1 ? 'The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km.' : null,
+      reliefDataSamplesPerDegree: 16,
+      coverageShown: state.coverage,
+      iceTargetsShown: state.iceTargets,
+      polarCloseUp: null,
+      averageMaps: { state: 'off' },
+    });
+    const bool = (name: string, title: string, key: 'coverage' | 'iceTargets') =>
+      defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
+    actions.push(
+      defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
+      bool('showCoverage', 'Show elevation data coverage', 'coverage'),
+      bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
+      defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),
+      defineAction<{ zoom: number }, unknown>({ name: 'setLocatorZoom', title: 'Zoom locator map', description: 'Zoom.', effect: 'command', params: { type: 'object', properties: { zoom: { type: 'number', description: 'zoom', minimum: 1, maximum: 16 } }, required: ['zoom'] }, run: ({ zoom }) => { state.locatorZoom = zoom; return { locatorZoom: zoom }; } }),
+      defineAction<{ open: boolean }, unknown>({ name: 'setAssistantOpen', title: 'Open or close the assistant', description: 'Drawer.', effect: 'command', params: { type: 'object', properties: { open: { type: 'boolean', description: 'open' } }, required: ['open'] }, run: ({ open }) => { state.assistantOpen = open; return { assistantOpen: open }; } }),
+      defineAction({ name: 'clearConversation', title: 'Clear the conversation', description: 'Clears the chat.', effect: 'command', params: none, run: () => ({ cleared: true }) }),
+    );
+  }
+  if (options.scienceActions) {
+    const ice = (lat: number, count = 3) => ({
+      available: true,
+      nearest: ICE_TARGETS.slice(0, count),
+      mappedRegions: 169,
+      distanceMeaning: 'Straight-line distance over a 1737.4 km sphere to the nearest edge of the mapped outline (0 inside): not a traverse, it ignores terrain, slope and lighting.',
+      whatTheseAre: 'Permanently shaded regions with water-ice signatures in the south polar region, as mapped by the authors: targets of interest, not confirmed deposits at any one spot.',
+      dataNotes: ['Outlines are about 0.3 km wider than the listed shadowed areas.'],
+      credit: 'Lemelin et al. 2021. Licence: CC BY 4.0.',
+      ...(lat > -60 && { nearest: [], note: 'No mapped region lies within 500 km: the database covers the south polar region only.' }),
+    });
+    actions.push(
+      defineAction({
+        name: 'getSiteScience', title: 'Site science readouts', description: 'Science layers for the site.', effect: 'query', params: none,
+        run: () => {
+          const site = requireSite();
+          const contact = (pct: number, gap: number) => ({ pctOfWindow: pct, longestGapH: gap, gapRunsIntoWindowEdge: false });
+          return {
+            site: { id: site.id, name: site.name, latDeg: site.latDeg, lonDegEast: site.lonDegEast },
+            dsn: {
+              available: true, windowStartUtc: isoUtc(state.windowStartMs), windowEndUtc: isoUtc(state.windowStartMs + state.windowDurationH * 3_600_000), windowDurationH: state.windowDurationH,
+              stations: [
+                { id: 'DSS-14', name: 'Goldstone DSS-14', complex: 'Goldstone, USA', receive: contact(59.1, 9.8), transmit: contact(55.0, 10.4), receiveLimitDeg: 10, transmitLimitDeg: 10 },
+                { id: 'DSS-43', name: 'Canberra DSS-43', complex: 'Canberra, Australia', receive: contact(32.7, 16.2), transmit: contact(30.1, 16.9), receiveLimitDeg: 10, transmitLimitDeg: 10 },
+                { id: 'DSS-63', name: 'Madrid DSS-63', complex: 'Madrid, Spain', receive: contact(57.2, 10.1), transmit: contact(54.4, 10.7), receiveLimitDeg: 10, transmitLimitDeg: 10 },
+              ],
+              anyStation: { receive: contact(100, 0), transmit: contact(100, 0) },
+              meaning: 'Geometric line of sight only: not a link budget, not a schedule, not antenna availability.',
+              assumptions: ['Stations above their elevation limit and above the site\'s terrain skyline.'],
+            },
+            longTermAverages: site.latDeg < -80
+              ? { available: true, sunlight: { available: true, pctOfTime: 45, neverInModel: false, cellM: 120, source: 'PGDA 69', text: 'Any sunlight 45 % of the time.' }, earthVisibility: { available: true, pctOfTime: 90, neverInModel: false, cellM: 120, source: 'PGDA 69', text: 'Any of Earth 90 % of the time.' }, kind: 'Multi-year average of a model (18.6 years of hourly steps), not the geometry of the simulated date or of the mission window.', averagingPeriod: '18.6 years', caveats: [], citation: 'Mazarico et al. 2011 (NASA PGDA product 69).' }
+              : { available: false, sunlight: { available: false, pctOfTime: null, neverInModel: false, cellM: null, source: null, text: 'No published average map covers this point: the maps cover the polar regions only.' }, earthVisibility: { available: false, pctOfTime: null, neverInModel: false, cellM: null, source: null, text: 'n/a' }, kind: 'Multi-year average of a model.', averagingPeriod: '18.6 years', caveats: [], citation: 'NASA PGDA product 69.' },
+            iceTargets: ice(site.latDeg),
+            ...(options.scienceActions === 't30'
+              ? {
+                  surfaceTemperature: site.latDeg < -80
+                    ? { available: true, status: 'ok', annualMaxK: 226, annualMeanK: 127, cellM: 240, measuredOver: 'July 2009 to February 2019', text: 'Annual maximum 226 K, annual mean 127 K (Diviner).', kind: 'Annual maximum and annual mean of the surface temperature, from many years of LRO Diviner measurements: not the temperature at the simulated date or during the mission window.', notIncluded: [], caveats: [], citation: 'Williams et al. 2019.', licence: 'public domain' }
+                    : { available: false, status: 'outside', annualMaxK: null, annualMeanK: null, cellM: 240, measuredOver: 'July 2009 to February 2019', text: 'The Diviner polar maps cover only latitudes poleward of 80 degrees.', kind: 'Annual values.', notIncluded: [], caveats: [], citation: 'Williams et al. 2019.', licence: 'public domain' },
+                  shadowCam: { available: false, mosaics: [], text: 'No ShadowCam controlled mosaic covers this point.', imagesBundled: false, credit: 'NASA/KARI/ASU', creditNote: '', licence: '', citation: [], archiveUrl: 'https://pds.shadowcam.asu.edu/', mosaicsInIndex: 26, coverageMeaning: '' },
+                  notIncluded: ['Diviner temperatures are annual values: separate summer and winter maps are not included.', 'ShadowCam images are not bundled with the app: where a mosaic covers the site, the readout links to the product in the ShadowCam PDS archive.'],
+                }
+              : { notIncluded: ['Diviner seasonal temperatures and ShadowCam imagery are not packaged in this build.'] }),
+          };
+        },
+      }),
+      defineAction<{ lat?: number; lon?: number; count?: number; maxKm?: number }, unknown>({
+        name: 'nearestIceTargets', title: 'Nearest ice targets', description: 'Ice targets near a point.', effect: 'query',
+        params: { type: 'object', properties: { lat: { type: 'number', description: 'lat', minimum: -90, maximum: 90 }, lon: { type: 'number', description: 'lon', minimum: -360, maximum: 360 }, count: { type: 'integer', description: 'count', minimum: 1, maximum: 20 }, maxKm: { type: 'number', description: 'km', minimum: 1, maximum: 6000 } } },
+        run: ({ lat, lon, count }) => {
+          if ((lat === undefined) !== (lon === undefined)) throw new ActionError('Give both `lat` and `lon`, or neither to use the selected site.');
+          const at = lat !== undefined ? { latDeg: lat, lonDegEast: lon! } : (({ latDeg, lonDegEast }) => ({ latDeg, lonDegEast }))(requireSite());
+          return { from: at, ...ice(at.latDeg, count ?? 5) };
+        },
+      }),
+    );
+  }
+  if (options.surfaceActions) {
+    const requireSurface = () => {
+      if (state.view !== 'surface') throw new ActionError('Enter the surface view first (enterSurface).');
+    };
+    const LIMIT_M = 2000;
+    const positionOut = () => ({ eastM: state.position.eastM, northM: state.position.northM, distanceFromSiteM: Math.round(Math.hypot(state.position.eastM, state.position.northM) * 10) / 10, eyeHeightM: Math.max(0.2, state.mastHeightM) + state.position.liftM });
+    const SKY = { sun: { azDeg: 143.2, elDeg: 3.4 }, earth: { azDeg: 351.0, elDeg: 5.6 } } as const;
+    actions.push(
+      defineAction<{ on: boolean }, unknown>({ name: 'setGeneratedDetail', title: 'Generated detail', description: 'Generated detail.', effect: 'command', params: { type: 'object', properties: { on: { type: 'boolean', description: 'on' } }, required: ['on'] }, run: ({ on }) => { state.generated = on; return { generatedDetail: on, whatIsGenerated: 'Rocks and sub-metre texture.' }; } }),
+      defineAction<{ fovDeg: number }, unknown>({
+        name: 'setFieldOfView', title: 'Zoom', description: 'Field of view.', effect: 'command', params: { type: 'object', properties: { fovDeg: { type: 'number', description: 'fov', minimum: 4, maximum: 100 } }, required: ['fovDeg'] },
+        run: ({ fovDeg }) => { requireSurface(); state.look = { ...state.look, fovDeg }; return { look: state.look }; },
+      }),
+      defineAction<{ body: 'sun' | 'earth'; fovDeg?: number }, unknown>({
+        name: 'lookAtBody', title: 'Face the Sun or Earth', description: 'Faces a body.', effect: 'command',
+        params: { type: 'object', properties: { body: { type: 'string', description: 'body', enum: ['sun', 'earth'] }, fovDeg: { type: 'number', description: 'fov', minimum: 4, maximum: 100 } }, required: ['body'] },
+        run: ({ body, fovDeg }) => {
+          requireSurface();
+          const b = SKY[body];
+          state.look = { azDeg: b.azDeg, elDeg: b.elDeg, fovDeg: fovDeg ?? state.look.fovDeg };
+          return { body, azDeg: b.azDeg, elDeg: b.elDeg, angularDiameterDeg: body === 'sun' ? 0.533 : 1.9, belowHorizontal: b.elDeg < 0, look: state.look, timeUtc: isoUtc(state.timeMs), directions: 'topocentric (for the site itself), airless' };
+        },
+      }),
+      defineAction<{ eastM: number; northM: number; liftM?: number }, unknown>({
+        name: 'walkTo', title: 'Walk to', description: 'Moves the viewer.', effect: 'command',
+        params: { type: 'object', properties: { eastM: { type: 'number', description: 'east', minimum: -30000, maximum: 30000 }, northM: { type: 'number', description: 'north', minimum: -30000, maximum: 30000 }, liftM: { type: 'number', description: 'lift', minimum: 0, maximum: 500 } }, required: ['eastM', 'northM'] },
+        run: ({ eastM, northM, liftM }) => {
+          requireSurface();
+          state.position = { eastM: Math.max(-LIMIT_M, Math.min(LIMIT_M, eastM)), northM: Math.max(-LIMIT_M, Math.min(LIMIT_M, northM)), liftM: liftM ?? 0 };
+          const at = positionOut();
+          return { position: at, clamped: Math.abs(at.eastM - eastM) > 0.5 || Math.abs(at.northM - northM) > 0.5 };
+        },
+      }),
+      defineAction<{ tracks?: boolean; labels?: boolean }, unknown>({
+        name: 'setSkyAnnotations', title: 'Sky paths and labels', description: 'Sky paths.', effect: 'command', params: { type: 'object', properties: { tracks: { type: 'boolean', description: 'tracks' }, labels: { type: 'boolean', description: 'labels' } } },
+        run: ({ tracks, labels }) => {
+          if (tracks === undefined && labels === undefined) throw new ActionError('Give `tracks` and/or `labels`.');
+          state.annotations = { tracks: tracks ?? state.annotations.tracks, labels: labels ?? state.annotations.labels };
+          return { ...state.annotations, markEvery: { sunH: 1, earthH: 2 } };
+        },
+      }),
+      defineAction({
+        name: 'getSurfaceView', title: 'Surface view state', description: 'What the surface view shows.', effect: 'query', params: none,
+        run: () => ({
+          active: state.view === 'surface',
+          site: siteOut(state.site),
+          look: state.look,
+          position: positionOut(),
+          sky: { timeUtc: isoUtc(state.timeMs), directions: 'topocentric (for the site itself), airless', sun: { ...SKY.sun, angularDiameterDeg: 0.533, discAboveDrawnTerrainPct: 100, discBehindEarthPct: 0 }, earth: { ...SKY.earth, angularDiameterDeg: 1.9, litPct: 48, centreBehindDrawnTerrain: true }, note: 'Visibility here is against the terrain as drawn, from where the viewer stands.' },
+          lighting: 'real',
+          ground: { summary: 'LOLA 40 m polar grid to 30 km, whole-Moon grid beyond', surveyed: false, drawnOutToKm: 246, bands: [{ fromM: 0, toM: 30000, gridSpacingM: 40, product: 'LOLA 40 m polar grid', productResolutionM: 40, interpolated: false }, { fromM: 30000, toM: 246000, gridSpacingM: 1895, product: 'LOLA whole-Moon grid', productResolutionM: 1895, interpolated: false }], generated: 'Rocks, craters a few metres across and finer texture near the viewer.', generatedDetailShown: state.generated, notes: [] },
+          annotations: { ...state.annotations, window: null },
+        }),
+      }),
+    );
+  }
+  if (options.catalogActions) {
+    actions.push(
+      defineAction<{ shownOnly?: boolean }, unknown>({
+        name: 'listSites', title: 'List the landing sites', description: 'The catalogue.', effect: 'query', params: { type: 'object', properties: { shownOnly: { type: 'boolean', description: 'only shown' } } },
+        run: () => ({
+          total: LANDINGS.length, shown: LANDINGS.length, listed: LANDINGS.length, filter: state.filter, markersOnGlobe: state.showMissions, selectedId: state.site?.id ?? null,
+          sites: [...LANDINGS].sort((a, b) => a.landedMs - b.landedMs).map((l) => ({ id: l.id, name: l.name, latDeg: l.latDeg, lonDegEast: l.lonDegEast, program: l.program, country: l.country, landedUtc: isoUtc(l.landedMs), crewed: l.crewed, region: 'r', positionApproximate: false, summary: 's', shown: true })),
+        }),
+      }),
+    );
+  }
+  if (options.comparePanel) {
+    const labels = () => ({ A: state.compareA?.label ?? null, B: state.compareB?.label ?? null });
+    const side = (x: FakeState['compareA']) => (x ? { state: 'ready', scenario: x.label, ...x.metrics, warnings: [] } : null);
+    const compareOut = () => ({ comparing: state.comparing, ...labels(), analysisA: side(state.compareA), analysisB: side(state.compareB), diff: state.compareA && state.compareB ? { meaning: 'B minus A', illuminationPct: state.compareB.metrics.illuminationPct - state.compareA.metrics.illuminationPct, highlights: [] } : null });
+    const showPair = (a: NonNullable<FakeState['compareA']>, b: NonNullable<FakeState['compareB']>) => {
+      state.compareA = a;
+      state.compareB = b;
+      state.comparing = true;
+      state.panelTab = 'compare';
+    };
+    const base = (basis?: 'A' | 'current') => {
+      if (basis !== 'current' && state.compareA) return { a: state.compareA, from: 'A' as const };
+      const site = requireSite();
+      return { a: { label: label(), metrics: metricsFor(site, state.mastHeightM, state.delayH) }, from: 'current' as const };
+    };
+    const BASIS = { type: 'string', description: 'basis', enum: ['A', 'current'] } as const;
+    const named = { type: 'object', properties: { name: { type: 'string', description: 'name' } }, required: ['name'] } as const;
+    actions.push(
+      defineAction<{ tab?: 'compare' | 'nearby' }, unknown>({
+        name: 'openCompare', title: 'Open the compare panel', description: 'Opens the panel.', effect: 'command', params: { type: 'object', properties: { tab: { type: 'string', description: 'tab', enum: ['compare', 'nearby'] } } },
+        run: ({ tab }) => { if (tab) state.panelTab = tab; state.comparing = true; return { open: true, tab: state.panelTab, ...labels(), comparison: state.compareA && state.compareB ? 'ready' : 'idle', ...(!(state.compareA && state.compareB) && { emptySlots: [!state.compareA && 'A', !state.compareB && 'B'].filter(Boolean) }) }; },
+      }),
+      defineAction<{ delayH?: number; basis?: 'A' | 'current' }, unknown>({
+        name: 'compareDelayedArrival', title: 'Compare with a later arrival', description: 'B arrives later.', effect: 'command', params: { type: 'object', properties: { delayH: { type: 'number', description: 'h', minimum: 0.1, maximum: 720 }, basis: BASIS } },
+        run: ({ delayH = 24, basis }) => {
+          const b0 = base(basis);
+          const site = requireSite();
+          const start = state.windowStartMs + state.delayH * 3_600_000;
+          showPair({ label: `${site.name} (earlier arrival)`, metrics: b0.a.metrics }, { label: `${site.name} (arrival ${delayH} h later)`, metrics: metricsFor(site, state.mastHeightM, state.delayH + delayH) });
+          return { ...compareOut(), basis: b0.from, delayH, plannedArrivalUtc: isoUtc(start), revisedArrivalUtc: isoUtc(start + delayH * 3_600_000) };
+        },
+      }),
+      defineAction<{ heightAM?: number; heightBM: number; basis?: 'A' | 'current' }, unknown>({
+        name: 'compareMastHeights', title: 'Compare two mast heights', description: 'Two masts.', effect: 'command', params: { type: 'object', properties: { heightAM: { type: 'number', description: 'A', minimum: 0, maximum: 100 }, heightBM: { type: 'number', description: 'B', minimum: 0, maximum: 100 }, basis: BASIS }, required: ['heightBM'] },
+        run: ({ heightAM, heightBM }) => {
+          const site = requireSite();
+          const a = heightAM ?? state.mastHeightM;
+          if (a === heightBM) throw new ActionError(`Both sides would have a ${heightBM} m mast. Give two different heights.`);
+          showPair({ label: `${site.name} (${a} m mast)`, metrics: metricsFor(site, a, state.delayH) }, { label: `${site.name} (${heightBM} m mast)`, metrics: metricsFor(site, heightBM, state.delayH) });
+          return { ...compareOut(), basis: 'current', mastHeightAM: a, mastHeightBM: heightBM };
+        },
+      }),
+      defineAction({
+        name: 'swapComparison', title: 'Swap A and B', description: 'Swaps.', effect: 'command', params: none,
+        run: () => { if (!state.compareA && !state.compareB) throw new ActionError('Both comparison slots are empty: there is nothing to swap.'); [state.compareA, state.compareB] = [state.compareB, state.compareA]; return state.compareA && state.compareB ? compareOut() : labels(); },
+      }),
+      defineAction<{ slot?: 'A' | 'B' }, unknown>({
+        name: 'clearComparison', title: 'Empty the comparison slots', description: 'Empties.', effect: 'command', params: { type: 'object', properties: { slot: { type: 'string', description: 'slot', enum: ['A', 'B'] } } },
+        run: ({ slot }) => { if (slot !== 'B') state.compareA = null; if (slot !== 'A') state.compareB = null; return labels(); },
+      }),
+      defineAction<{ name?: string }, unknown>({
+        name: 'saveComparison', title: 'Save this comparison', description: 'Saves the pair.', effect: 'command', params: { type: 'object', properties: { name: { type: 'string', description: 'name' } } },
+        run: ({ name }) => {
+          if (!state.compareA || !state.compareB) throw new ActionError('A saved comparison holds both A and B.');
+          const clean = (name ?? `${state.compareA.label} vs ${state.compareB.label}`).trim();
+          const replaced = state.saved.some((c) => c.name === clean);
+          state.saved = [{ name: clean, savedUtc: isoUtc(T0), a: state.compareA, b: state.compareB, clockMs: state.timeMs }, ...state.saved.filter((c) => c.name !== clean)];
+          return { saved: { name: clean, savedUtc: isoUtc(T0), A: state.compareA.label, B: state.compareB.label, clockUtc: isoUtc(state.timeMs) }, replaced, count: state.saved.length, keptInBrowserStorage: true };
+        },
+      }),
+      defineAction<{ name: string }, unknown>({
+        name: 'loadComparison', title: 'Load a saved comparison', description: 'Loads.', effect: 'command', params: named,
+        run: ({ name }) => {
+          const c = state.saved.find((x) => x.name === name.trim());
+          if (!c) throw new ActionError(`No saved comparison is called "${name.trim()}".`);
+          state.timeMs = c.clockMs;
+          state.playing = false;
+          showPair(c.a, c.b);
+          return { ...compareOut(), loaded: c.name, savedUtc: c.savedUtc, restored: { clockUtc: isoUtc(c.clockMs), requirements: null } };
+        },
+      }),
+      defineAction<{ name: string }, unknown>({
+        name: 'deleteComparison', title: 'Delete a saved comparison', description: 'Deletes.', effect: 'command', params: named,
+        run: ({ name }) => { const before = state.saved.length; state.saved = state.saved.filter((c) => c.name !== name.trim()); if (state.saved.length === before) throw new ActionError(`No saved comparison is called "${name.trim()}".`); return { deleted: name.trim(), count: state.saved.length }; },
+      }),
+      defineAction({
+        name: 'listComparisons', title: 'List saved comparisons', description: 'Lists.', effect: 'query', params: none,
+        run: () => ({ comparisons: state.saved.map((c) => ({ name: c.name, savedUtc: c.savedUtc, A: c.a.label, B: c.b.label, clockUtc: isoUtc(c.clockMs) })), keptInBrowserStorage: true }),
       }),
     );
   }
