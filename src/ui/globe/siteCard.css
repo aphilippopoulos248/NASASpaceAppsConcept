@@ -46,3 +46,7 @@
 .sc-actions > .ly-btn { flex: 1 1 auto; }
 .sc-status:empty { display: none; }
 .sc-status { margin-top: var(--sp-2); color: var(--warn); }
+
+.sc-science { display: grid; gap: var(--sp-3); }
+.sc-sci-head { margin: 0 0 var(--sp-1); font-size: var(--fs-sm); font-weight: var(--fw-semibold); }
+.sc-sci-block .ly-note { margin-top: var(--sp-1); }

@@ -6,16 +6,19 @@ import './styles/index.css';
 import { analysis } from './core/analysisStore';
 import * as actions from './core/actions';
 import { createCoreActions } from './core/coreActions';
+import { createScienceActions } from './core/scienceActions';
 import { applyDeepLink, parseDeepLink, syncUrl } from './core/deepLink';
 import { missionFilter } from './core/missionFilter';
 import { store } from './core/store';
 import { getLandings, setLandings } from './data/catalog';
 import { loadLandings } from './data/landings';
+import { displaySummary } from './scene/globe/displayState';
 import { SceneHost } from './scene/globe/sceneHost';
 import { mountAssistantButton, mountAssistantDrawer } from './ui/assistant/drawer';
 import { mountComparePanel } from './ui/compare/panel';
 import { mountFiltersPanel } from './ui/globe/filtersPanel';
 import { mountPerson } from './ui/globe/person';
+import { mountReliefChip } from './ui/globe/reliefChip';
 import { mountSiteCard } from './ui/globe/siteCard';
 import { mountCloseButton } from './ui/shared/closeButton';
 import { mountCompass } from './ui/shared/compass';
@@ -31,14 +34,16 @@ const region = (name: string) => document.getElementById(`region-${name}`) as HT
 async function boot() {
   const host = new SceneHost(document.getElementById('scene') as HTMLCanvasElement);
   setLandings(await loadLandings());
-  actions.registerActions(createCoreActions({ store, landings: getLandings, filters: missionFilter, analysis, prepareSurface: host.prepareSurface }));
+  actions.registerActions(createCoreActions({ store, landings: getLandings, filters: missionFilter, analysis, prepareSurface: host.prepareSurface, display: displaySummary }));
+  actions.registerActions(createScienceActions({ store, analysis }));
   // Expose the registry for the assistant's tests and for debugging in the console.
-  (window as unknown as { lunyx: unknown }).lunyx = { store, analysis, actions };
+  (window as unknown as { lunyx: unknown }).lunyx = { store, analysis, actions, scene: host };
 
   mountToasts(region('toast'));
   mountFiltersPanel(region('left'));
   mountSiteCard(region('card'));
   mountCompass(region('compass'), () => host.globe.northAngleDeg(), (fn) => host.onFrame(fn));
+  mountReliefChip(region('compass'));
   mountPerson(region('person'), (x, y) => host.globe.latLonAt(x, y));
   mountTimeScrubber(region('scrubber'));
   mountLocatorMap(region('locator'));

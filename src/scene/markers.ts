@@ -13,12 +13,16 @@ import { Landing, latLonToVec3, programColor } from '../data/landings';
 /** Marker size as a fraction of camera distance, so markers stay a constant size on screen. */
 const SCREEN_SCALE = 0.006;
 const PICK_RADIUS_PX = 14;
+/** Height of a marker above the terrain, Moon radii (about 350 m): clear of the surface without visibly floating. */
+const LIFT = 0.0002;
 
 export interface Marker {
   landing: Landing;
   /** Unit vector from the Moon's centre to the site. */
   dir: Vector3;
   group: Group;
+  /** Passes the mission filter. The group itself is also hidden while the site is behind the Moon. */
+  shown: boolean;
 }
 
 const Z = new Vector3(0, 0, 1);
@@ -39,11 +43,13 @@ export class Markers {
       const color = programColor(landing.program);
       const dir = latLonToVec3(landing.lat, landing.lon);
       const group = new Group();
-      group.position.copy(dir).multiplyScalar(1.0002);
+      group.position.copy(dir).multiplyScalar(1 + LIFT);
       group.quaternion.setFromUnitVectors(Z, dir);
 
-      const flat = { color, toneMapped: false, side: DoubleSide, transparent: true };
-      group.add(new Mesh(dotGeo, new MeshBasicMaterial({ color, toneMapped: false })));
+      // Markers are symbols, not objects on the ground: they are drawn over the terrain (relief
+      // would otherwise bury parts of them) and hidden as a whole when the site is behind the Moon.
+      const flat = { color, toneMapped: false, side: DoubleSide, transparent: true, depthTest: false };
+      group.add(new Mesh(dotGeo, new MeshBasicMaterial({ ...flat })));
       group.add(new Mesh(ringGeo, new MeshBasicMaterial({ ...flat, opacity: 0.85 })));
       // Crewed landings get a second, outer ring.
       if (landing.crewed) group.add(new Mesh(crewRingGeo, new MeshBasicMaterial({ ...flat, opacity: 0.7 })));
@@ -51,12 +57,12 @@ export class Markers {
       // Draw after the high-resolution site imagery (render orders 1-2).
       group.traverse((o) => (o.renderOrder = 3));
       this.root.add(group);
-      this.items.push({ landing, dir, group });
+      this.items.push({ landing, dir, group, shown: true });
     }
 
     this.selectionRing = new Mesh(
       new RingGeometry(3.6, 3.95, 48),
-      new MeshBasicMaterial({ color: '#ffffff', toneMapped: false, side: DoubleSide, transparent: true }),
+      new MeshBasicMaterial({ color: '#ffffff', toneMapped: false, side: DoubleSide, transparent: true, depthTest: false }),
     );
     this.selectionRing.visible = false;
     this.selectionRing.renderOrder = 3;
@@ -65,21 +71,33 @@ export class Markers {
 
   select(marker: Marker | null): void {
     this.selected = marker;
-    this.selectionRing.visible = marker !== null;
+    this.selectionRing.visible = marker !== null && marker.group.visible;
     if (marker) {
       this.selectionRing.position.copy(marker.group.position);
       this.selectionRing.quaternion.copy(marker.group.quaternion);
     }
   }
 
-  /** Show only the markers whose landing passes the predicate. */
-  setFilter(matches: (l: Landing) => boolean): void {
-    for (const m of this.items) m.group.visible = matches(m.landing);
+  /**
+   * Puts every marker on the drawn surface: `radius(marker)` is the distance of the terrain
+   * from the Moon's centre at that site, in Moon radii, relief exaggeration included.
+   */
+  place(radius: (m: Marker) => number): void {
+    for (const m of this.items) m.group.position.copy(m.dir).multiplyScalar(radius(m) + LIFT);
+    if (this.selected) this.selectionRing.position.copy(this.selected.group.position);
   }
 
-  /** Visible markers, in chronological order. */
+  /** Show only the markers whose landing passes the predicate. */
+  setFilter(matches: (l: Landing) => boolean): void {
+    for (const m of this.items) {
+      m.shown = matches(m.landing);
+      if (!m.shown) m.group.visible = false;
+    }
+  }
+
+  /** Markers that pass the filter, in chronological order (whichever side of the Moon they are on). */
   get visible(): Marker[] {
-    return this.items.filter((m) => m.group.visible);
+    return this.items.filter((m) => m.shown);
   }
 
   get selection(): Marker | null {
@@ -89,9 +107,12 @@ export class Markers {
   /** Call every frame: keeps markers a constant on-screen size and pulses the selection ring. */
   update(camera: Camera, timeSec: number): void {
     for (const m of this.items) {
+      // In front of the limb: the line of sight to the site does not pass through the Moon.
+      m.group.visible = m.shown && m.dir.dot(camera.position) > 1;
       const s = camera.position.distanceTo(m.group.position) * SCREEN_SCALE;
       m.group.scale.setScalar(m === this.selected ? s * 1.25 : s);
     }
+    this.selectionRing.visible = this.selected !== null && this.selected.group.visible;
     if (this.selected) {
       const s = camera.position.distanceTo(this.selectionRing.position) * SCREEN_SCALE;
       const pulse = 1 + 0.12 * Math.sin(timeSec * 3.5);
@@ -107,8 +128,7 @@ export class Markers {
   pick(x: number, y: number, camera: Camera, width: number, height: number): Marker[] {
     const hits: { m: Marker; d: number }[] = [];
     for (const m of this.items) {
-      // A point p on the unit sphere faces a camera at c exactly when p·c > 1.
-      if (!m.group.visible || m.dir.dot(camera.position) <= 1) continue;
+      if (!m.group.visible) continue; // filtered out, or behind the Moon (see update)
       tmp.copy(m.group.position).project(camera);
       const d = Math.hypot((tmp.x * 0.5 + 0.5) * width - x, (-tmp.y * 0.5 + 0.5) * height - y);
       if (d <= PICK_RADIUS_PX) hits.push({ m, d });

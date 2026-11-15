@@ -75,11 +75,31 @@ export interface HeightSource {
   sample(lat: number, lon: number): number;
 }
 
+/**
+ * Where a site-centred grid ends and the next, coarser one takes over. The two never agree
+ * exactly there, so a skyline point formed right at the edge is uncertain by about the
+ * mismatch. Heights are "outer grid minus inner grid" along the inner grid's edge.
+ */
+export interface TerrainSeam {
+  /** The grid that ends here, and the one(s) that continue. */
+  inner: string;
+  outer: string;
+  /** Distance from the site to the edge (the middle of a side of the square), metres. */
+  distanceM: number;
+  minM: number;
+  maxM: number;
+  rmsM: number;
+  /** Skyline elevation that one metre of height makes at that distance, degrees. */
+  degPerMetre: number;
+}
+
 /** The terrain available around one site, finest source first. The last entry should cover the whole Moon. */
 export interface TerrainStack {
   sources: HeightSource[];
   /** Plain-language notes about gaps, e.g. "No high-resolution survey here: nearest relief finer than 1.9 km is not resolved". */
   notes: string[];
+  /** Mismatch at each hand-over between the site's own grids, nearest first (also stated in `notes`). */
+  seams?: TerrainSeam[];
 }
 
 /** Where a class of terrain data exists, for the coverage display. */
