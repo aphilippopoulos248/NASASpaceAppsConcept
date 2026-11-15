@@ -4,7 +4,6 @@ import { analyseStack } from './api';
 import { edgeSpells } from './edges';
 import { fnSource, radialSource, stackOf } from './testing';
 
-const H = 3_600_000;
 const scenario = (label: string, startIso: string, durationH: number, lat = 0, lon = 0): Scenario => ({
   id: label, label, site: { id: `pin:${lat},${lon}`, name: label, kind: 'custom', lat, lon }, mastHeightM: 2, startMs: Date.parse(startIso), durationH, stepMin: 10,
 });
