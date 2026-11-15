@@ -74,6 +74,8 @@ export interface FakeState {
   /** Surface HUD (hudActions). */
   hud: { chart: 'hidden' | 'compact' | 'expanded'; mode: 'skyline' | 'time'; table: boolean; azimuthRange: 'full' | 'tracks'; metricsOpen: boolean; explanation: boolean };
   saved: { name: string; savedUtc: string; a: NonNullable<FakeState['compareA']>; b: NonNullable<FakeState['compareB']>; clockMs: number }[];
+  /** Where the globe view was last asked to centre (option viewTarget); null after a hand turn. */
+  viewTarget: { latDeg: number; lonDegEast: number } | null;
 }
 
 export const T0 = Date.UTC(2026, 2, 1, 12, 0);
@@ -91,6 +93,21 @@ export const EVENTS = [
   { type: 'earthset', timeMs: T0 + 9 * 3_600_000, azDeg: 348.4 },
   { type: 'sunset', timeMs: T0 + 20 * 3_600_000, azDeg: 268.9 },
   { type: 'earthrise', timeMs: T0 + 30 * 3_600_000, azDeg: 11.7 },
+] as const;
+
+const MIN = 60_000;
+/**
+ * The passage of each event's disc through the skyline (option eventSpans, as T-47's SpanReport):
+ * a sunset is the last limb of a set that began with the first cut, a sunrise the first limb of a
+ * rise, Earthset and Earthrise the centre crossing inside Earth's passage. GRAZE is a passage
+ * with no event: the Sun partly hidden, never fully set.
+ */
+export const PASSAGES = [
+  { event: 'sunrise', body: 'sun', kind: 'rise', startMs: T0 + 5 * 3_600_000, endMs: T0 + 5 * 3_600_000 + 40 * MIN, centreMs: [] as number[], startAz: 91.2, endAz: 91.5 },
+  { event: 'earthset', body: 'earth', kind: 'set', startMs: T0 + 8 * 3_600_000 + 10 * MIN, endMs: T0 + 9 * 3_600_000 + 50 * MIN, centreMs: [T0 + 9 * 3_600_000], startAz: 348.1, endAz: 348.7 },
+  { event: 'sunset', body: 'sun', kind: 'set', startMs: T0 + 19 * 3_600_000 + 10 * MIN, endMs: T0 + 20 * 3_600_000, centreMs: [] as number[], startAz: 268.0, endAz: 268.9 },
+  { event: null, body: 'sun', kind: 'graze', startMs: T0 + 22 * 3_600_000, endMs: T0 + 23 * 3_600_000, centreMs: [] as number[], startAz: 270.4, endAz: 271.0 },
+  { event: 'earthrise', body: 'earth', kind: 'rise', startMs: T0 + 29 * 3_600_000 + 20 * MIN, endMs: T0 + 30 * 3_600_000 + 40 * MIN, centreMs: [T0 + 30 * 3_600_000], startAz: 11.3, endAz: 12.1 },
 ] as const;
 
 /** Fixture metrics: differ by site, mast height and delay so comparisons have something to show. */
@@ -137,6 +154,14 @@ export interface FakeAppOptions {
   hudActions?: boolean;
   /** Mission presets (listPresets, loadPreset) and showFlags. */
   presetActions?: boolean;
+  /**
+   * T-47: both ends of each rise and set. jumpToEvent takes `instant` (event, start, end) and gives
+   * the passage (`span`); getAnalysis gives `span` and `summary` per next event, `nextPassages`, and
+   * Earth by any part of its disc (metrics.earthAnyPct, longestEarthAnyGapH); compare's diff gives earthAnyPct.
+   */
+  eventSpans?: boolean;
+  /** getState.globeDisplay.viewTarget: where the view was last asked to centre; the drawn centre stops 0.1° short of a pole, as the globe does. */
+  viewTarget?: boolean;
 }
 
 /** As public/data/presets.json (ids, titles, sites, views). */
@@ -155,7 +180,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -206,6 +231,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     hud: { chart: 'compact', mode: 'skyline', table: false, azimuthRange: 'full', metricsOpen: true, explanation: false },
     preset: null,
     flags: false,
+    viewTarget: null,
   };
   let loadingPolls = options.analysisLoadingPolls ?? 0;
   let compareCalls = 0;
@@ -220,6 +246,42 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
   };
   const label = () => `${state.site!.name}, from ${isoUtc(state.windowStartMs + state.delayH * 3_600_000)} for ${state.windowDurationH} h, mast ${state.mastHeightM} m${state.delayH ? `, +${state.delayH} h delay` : ''}`;
   const currentMetrics = () => metricsFor(requireSite(), state.mastHeightM, state.delayH);
+  /** Earth by any part of its disc: at least the centre figure, the whole-disc gap at most the centre gap. */
+  const anyPart = (m: FakeMetrics) => ({ earthAnyPct: Math.min(100, m.earthVisiblePct + 8), longestEarthAnyGapH: Math.round(m.longestEarthGapH * 40) / 100 });
+  const inWindow = (t: number) => t >= state.windowStartMs + state.delayH * 3_600_000 && t <= state.windowStartMs + (state.delayH + state.windowDurationH) * 3_600_000;
+  const BODY_NAME = { sun: 'Sun', earth: 'Earth' } as const;
+  /** As the science core's TRANSITION_WORDS (labels) and transitionSummary (the words before each time). */
+  const EDGE_WORDS = {
+    set: { label: ['starts setting', 'fully set'], instant: ['the terrain skyline starts to cut into DISC', 'the last part of DISC goes behind the terrain skyline'] },
+    rise: { label: ['starts rising', 'fully risen'], instant: ['the first part of DISC appears above the terrain skyline', 'the whole of DISC is clear of the terrain skyline'] },
+  } as const;
+  /** As src/core/skyEvents.ts spanReport, with the science core's summary sentence (the date only when it changes). */
+  const spanReport = (p: (typeof PASSAGES)[number]) => {
+    let day = '';
+    const at = (t: number, outside: string) => {
+      const iso = isoUtc(t), d = iso.slice(0, 10), text = d === day ? iso.slice(11, 16) : `${d} ${iso.slice(11, 16)}`;
+      day = d;
+      return `${text}${inWindow(t) ? '' : ` (${outside})`}`;
+    };
+    const Body = BODY_NAME[p.body];
+    const graze = p.kind === 'graze';
+    const label = (i: 0 | 1) => (graze ? (i === 0 ? `${Body} partly hidden` : `${Body}'s whole disc clear again`) : `${Body} ${EDGE_WORDS[p.kind].label[i]}`);
+    const centre = p.centreMs.map((t) => ({ label: `${Body}'s centre ${p.kind === 'set' ? 'sets' : 'rises'}`, timeUtc: isoUtc(t), inWindow: inWindow(t) }));
+    const first = `${graze ? 'partly hidden from' : EDGE_WORDS[p.kind].label[0]} ${at(p.startMs, 'before the analysed window')}`;
+    const mids = p.centreMs.map((t) => `centre ${p.kind === 'set' ? 'sets' : 'rises'} ${at(t, 'outside the analysed window')}`);
+    const last = `${graze ? 'whole disc clear again' : EDGE_WORDS[p.kind].label[1]} ${at(p.endMs, 'after the analysed window')}`;
+    return {
+      body: p.body, kind: p.kind,
+      start: { edge: p.kind === 'rise' ? 'first-limb' : 'first-cut', label: label(0), timeUtc: isoUtc(p.startMs), azDeg: p.startAz, inWindow: inWindow(p.startMs) },
+      end: { edge: p.kind === 'set' ? 'last-limb' : 'whole-clear', label: label(1), timeUtc: isoUtc(p.endMs), azDeg: p.endAz, inWindow: inWindow(p.endMs) },
+      hours: Math.round(((p.endMs - p.startMs) / 3_600_000) * 100) / 100,
+      ...(centre.length && { centre }),
+      summary: `${[first, ...mids, last].join(', ')} UTC${graze ? '; never fully set' : ''}`,
+    };
+  };
+  /** The instant clause of an end of an event's passage ("the terrain skyline starts to cut into the Sun's disc"). */
+  const edgeInstant = (p: (typeof PASSAGES)[number], i: 0 | 1) => (p.kind === 'graze' ? '' : EDGE_WORDS[p.kind].instant[i].replace('DISC', p.body === 'sun' ? "the Sun's disc" : "Earth's disc"));
+  const passageOf = (type: string) => PASSAGES.find((p) => p.event === type)!;
   const summary = () => {
     if (!state.site) return { state: 'idle' };
     if (loadingPolls > 0) {
@@ -284,7 +346,9 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       params: { type: 'object', properties: { lat: { type: 'number', description: 'lat', minimum: -90, maximum: 90 }, lon: { type: 'number', description: 'lon', minimum: -360, maximum: 360 }, altitudeKm: { type: 'number', description: 'km', minimum: 10, maximum: 13900 } }, required: ['lat', 'lon'] },
       run: ({ lat, lon, altitudeKm }) => {
         state.view = 'globe';
-        state.globeCenter = { latDeg: lat, lonDegEast: lon, altitudeKm: altitudeKm ?? state.globeCenter.altitudeKm };
+        // The real globe stops 0.1 degree short right over a pole; the view's target stays as asked.
+        state.globeCenter = { latDeg: options.viewTarget ? Math.max(-89.9, Math.min(89.9, lat)) : lat, lonDegEast: lon, altitudeKm: altitudeKm ?? state.globeCenter.altitudeKm };
+        if (options.viewTarget) state.viewTarget = { latDeg: lat, lonDegEast: lon };
         return { view: 'globe', target: { latDeg: lat, lonDegEast: lon, altitudeKm: altitudeKm ?? null } };
       },
     }),
@@ -373,22 +437,38 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const ready = call >= 2 * settle;
         // As the real result: B minus A, rounded to 2 decimals, once both sides are ready.
         const d = (k: keyof FakeMetrics) => Math.round((state.compareB!.metrics[k] - state.compareA!.metrics[k]) * 100) / 100;
-        const diff = ready ? { meaning: 'B minus A', illuminationPct: d('illuminationPct'), longestDarknessH: d('longestDarknessH'), earthVisiblePct: d('earthVisiblePct'), longestEarthGapH: d('longestEarthGapH'), slopeDeg: d('slopeDeg'), highlights: [] as string[] } : null;
+        const dAny = () => Math.round((anyPart(state.compareB!.metrics).earthAnyPct - anyPart(state.compareA!.metrics).earthAnyPct) * 100) / 100;
+        const diff = ready ? { meaning: 'B minus A', illuminationPct: d('illuminationPct'), longestDarknessH: d('longestDarknessH'), earthVisiblePct: d('earthVisiblePct'), ...(options.eventSpans && { earthAnyPct: dAny() }), longestEarthGapH: d('longestEarthGapH'), slopeDeg: d('slopeDeg'), highlights: [] as string[] } : null;
         return { comparing: true, A: state.compareA!.label, B: state.compareB!.label, analysisA: side(state.compareA!), analysisB: side(state.compareB!), diff };
       },
     }),
     defineAction({ name: 'stopCompare', title: 'Close comparison', description: 'Closes.', effect: 'command', params: none, run: () => { state.comparing = false; return { comparing: false }; } }),
-    defineAction<{ type: string; which?: 'next' | 'previous' }, unknown>({
+    defineAction<{ type: string; which?: 'next' | 'previous'; instant?: 'event' | 'start' | 'end' }, unknown>({
       name: 'jumpToEvent', title: 'Jump to sunrise/sunset/Earthrise/Earthset', description: 'Moves the clock to an event.', effect: 'command',
-      params: { type: 'object', properties: { type: { type: 'string', description: 'event', enum: ['sunrise', 'sunset', 'earthrise', 'earthset'] }, which: { type: 'string', description: 'which', enum: ['next', 'previous'] } }, required: ['type'] },
-      run: ({ type, which = 'next' }) => {
+      params: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', description: 'event', enum: ['sunrise', 'sunset', 'earthrise', 'earthset'] },
+          which: { type: 'string', description: 'which', enum: ['next', 'previous'] },
+          ...(options.eventSpans && { instant: { type: 'string' as const, description: 'the event, or the start or end of its passage', enum: ['event', 'start', 'end'] } }),
+        },
+        required: ['type'],
+      },
+      run: ({ type, which = 'next', instant = 'event' }) => {
         requireSite();
-        const list = EVENTS.filter((e) => e.type === type);
+        // Each instant of this type: the event itself, or an end of its passage (T-47).
+        const p = options.eventSpans ? passageOf(type) : null;
+        const list = EVENTS.filter((e) => e.type === type).map((e) => {
+          if (instant === 'event' || !p) return { timeMs: e.timeMs as number, azDeg: e.azDeg as number, ...(options.eventLabels && EVENT_INFO[type]) };
+          const r = spanReport(p), end = instant === 'start' ? r.start : r.end;
+          return { timeMs: instant === 'start' ? p.startMs : p.endMs, azDeg: end.azDeg, label: end.label, instant: edgeInstant(p, instant === 'start' ? 0 : 1) };
+        });
         const hit = which === 'next' ? list.find((e) => e.timeMs > state.timeMs + 30_000) : [...list].reverse().find((e) => e.timeMs < state.timeMs - 30_000);
         if (!hit) throw new ActionError(`No ${which} ${type} inside the analysed mission window.`);
         state.playing = false;
         state.timeMs = hit.timeMs;
-        return { event: type, ...(options.eventLabels && EVENT_INFO[type]), timeUtc: isoUtc(hit.timeMs), azDeg: hit.azDeg };
+        const { timeMs, ...named } = hit;
+        return { event: type, ...(options.eventSpans && { instantChoice: instant }), ...named, timeUtc: isoUtc(timeMs), ...(options.eventSpans && { span: spanReport(p!) }) };
       },
     }),
     defineAction({
@@ -399,6 +479,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         lightMode: state.lightMode,
         site: siteOut(state.site),
         globeCenter: state.globeCenter,
+        ...(options.viewTarget && { globeDisplay: { viewTarget: state.viewTarget && { ...state.viewTarget, flying: false } } }),
         look: state.view === 'surface' ? state.look : null,
         missionWindow: { startUtc: isoUtc(state.windowStartMs), durationH: state.windowDurationH, delayH: state.delayH },
         mastHeightM: state.mastHeightM,
@@ -464,13 +545,20 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           if (!state.site) return { slot, state: 'idle', error: 'No site is selected. Select a landing site or drop a pin first.' };
           const next = (type: string) => {
             const e = EVENTS.find((x) => x.type === type && x.timeMs > state.timeMs + 30_000);
-            return e ? { ...(options.eventLabels && { label: EVENT_INFO[type].label }), timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg, inHours: (e.timeMs - state.timeMs) / 3_600_000 } : null;
+            if (!e) return null;
+            const span = options.eventSpans ? spanReport(passageOf(type)) : undefined;
+            return { ...(options.eventLabels && { label: EVENT_INFO[type].label }), timeUtc: isoUtc(e.timeMs), azDeg: e.azDeg, inHours: (e.timeMs - state.timeMs) / 3_600_000, ...(span && { summary: `${type}: ${span.summary}`, span }) };
+          };
+          // The passage under way at the clock, else the next to start (grazes included).
+          const passage = (body: 'sun' | 'earth') => {
+            const p = PASSAGES.find((x) => x.body === body && x.endMs > state.timeMs);
+            return p ? spanReport(p) : null;
           };
           const m = currentMetrics();
           const terrain = { distanceKm: 4.2, heightM: 1385, latDeg: -84.66, lonDegEast: 28.9, demName: 'LOLA 60 m polar grid', demResolutionM: 60 };
           return {
             slot, state: 'ready', scenario: { label: label(), site: siteOut(state.site), durationH: state.windowDurationH, mastHeightM: state.mastHeightM },
-            metrics: { illuminationPct: m.illuminationPct, longestDarknessH: m.longestDarknessH, earthVisiblePct: m.earthVisiblePct, longestEarthGapH: m.longestEarthGapH },
+            metrics: { illuminationPct: m.illuminationPct, longestDarknessH: m.longestDarknessH, earthVisiblePct: m.earthVisiblePct, longestEarthGapH: m.longestEarthGapH, ...(options.eventSpans && { ...anyPart(m), earthAnyGapRunsIntoWindowEdge: false }) },
             slope: { slopeDeg: m.slopeDeg, demName: 'LOLA 60 m polar grid' },
             now: {
               timeUtc: isoUtc(state.timeMs),
@@ -478,10 +566,11 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
               earth: { azDeg: 351.0, elDeg: 5.6, skylineElDeg: 6.4, clearanceDeg: -0.8, centreAboveSkyline: false, skylineTerrain: terrain, explanation: 'Earth is hidden by terrain 4.20 km away towards azimuth 351.0°: the skyline there is at 6.40° and the centre of the disc at 5.60°.' },
             },
             nextEvents: { sunrise: next('sunrise'), sunset: next('sunset'), earthrise: next('earthrise'), earthset: next('earthset') },
+            ...(options.eventSpans && { nextPassages: { sun: passage('sun'), earth: passage('earth') } }),
             ...(options.eventLabels && { eventDefinitions: Object.fromEntries(Object.entries(EVENT_INFO).map(([k, v]) => [k, `${v.label}: ${v.instant}.`])) }),
             requirements: {
               sunElevationBand: { minDeg: state.sunBand.min, maxDeg: state.sunBand.max, windowMinSunElDeg: -1.2, windowMaxSunElDeg: 4.6, metForWholeWindow: state.sunBand.min <= -1.2 && state.sunBand.max >= 4.6 },
-              maxEarthGap: state.maxEarthGapH === null ? null : { limitH: state.maxEarthGapH, longestEarthGapH: m.longestEarthGapH, met: m.longestEarthGapH <= state.maxEarthGapH },
+              maxEarthGap: state.maxEarthGapH === null ? null : { limitH: state.maxEarthGapH, ...(options.eventSpans && { basis: "Earth's centre" }), longestEarthGapH: m.longestEarthGapH, met: m.longestEarthGapH <= state.maxEarthGapH },
             },
             provenance: { ephemeris: 'model', elevationData: [{ name: 'LOLA 60 m polar grid', resolutionM: 60, fromKm: 0, toKm: 30 }, { name: 'LOLA whole-Moon grid', resolutionM: 1895, fromKm: 30, toKm: 400 }], assumptions: [] },
             warnings: [],

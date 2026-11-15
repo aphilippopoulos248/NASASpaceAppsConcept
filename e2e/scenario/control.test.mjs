@@ -324,6 +324,17 @@ const CASES = [
     const a = (await run(page, 'getAnalysis')).result;
     assert.ok(a.events.some((e) => e.type === 'sunset' && e.timeUtc === r.timeUtc), 'the jump lands on an event of the analysis');
     await shows(page, (s) => s.scrubber.date === r.timeUtc.slice(0, 16) && s.scrubber.playPressed === 'false', 'scrubber date at the event, paused');
+    // D-8 (T-47): the sunset is the last limb of a passage that began with the first cut; the result gives both ends.
+    assert.equal(r.label, 'Sun fully set');
+    assert.equal(r.span?.kind, 'set', JSON.stringify(r.span));
+    assert.equal(r.span.end.timeUtc, r.timeUtc, 'the sunset is the end of its passage');
+    assert.equal(r.span.start.label, 'Sun starts setting');
+    assert.ok(r.span.start.timeUtc < r.timeUtc, JSON.stringify(r.span));
+    assert.match(r.span.summary, /^starts setting .+, fully set .+ UTC$/);
+    // `instant` goes to the other end, as the scrubber's sunset button does before the event.
+    const start = (await run(page, 'jumpToEvent', { type: 'sunset', which: 'previous', instant: 'start' })).result;
+    assert.deepEqual([start.instantChoice, start.label, start.timeUtc], ['start', 'Sun starts setting', r.span.start.timeUtc]);
+    await shows(page, (s) => s.scrubber.date === start.timeUtc.slice(0, 16), 'scrubber date at the start of the sunset');
   } },
   // ---- comparison (no panel in this build: state only)
   { name: 'saveScenario', prepare: async (page) => {

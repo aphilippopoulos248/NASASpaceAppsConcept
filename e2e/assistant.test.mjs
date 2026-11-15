@@ -87,11 +87,43 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.ok(reply.text.includes(`longest darkness ${f1(a.metrics.longestDarknessH)} h`), reply.text);
     assert.ok(reply.text.includes(`Earth's centre in view ${f1(a.metrics.earthVisiblePct)} %`), reply.text);
     assert.ok(reply.text.includes(`longest Earth-centre gap ${f1(a.metrics.longestEarthGapH)} h`), reply.text);
+    // Earth by any part of its disc (T-47), named apart from Earth's centre.
+    assert.ok(reply.text.includes(`any part of Earth's disc in view ${f1(a.metrics.earthAnyPct)} %, longest spell with Earth's whole disc hidden ${f1(a.metrics.longestEarthAnyGapH)} h`), reply.text);
     assert.ok(reply.text.includes(`slope ${f1(a.slope.slopeDeg)}°`), reply.text);
+    // Finding Q-5: the default 0° to 90° band is no requirement, whatever the core's metForWholeWindow says.
+    const band = a.requirements.sunElevationBand;
+    assert.deepEqual([band.minDeg, band.maxDeg], [0, 90]);
+    assert.ok(!reply.text.includes('leaves the required elevation band'), reply.text);
+    assert.ok(reply.text.includes(`No solar elevation band is set (the Filters default, 0° to 90°, means no requirement). The Sun's elevation ranges from ${f1(band.windowMinSunElDeg)}° to ${f1(band.windowMaxSunElDeg)}° during the window`), reply.text);
     assert.match(reply.text, /not a guarantee of a working radio link/);
     assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
     // The question changed nothing: only queries ran.
     assert.ok(reply.actions.every((x) => x.name === 'getAnalysis' || x.name === 'getState'), JSON.stringify(reply.actions.map((x) => x.name)));
+  });
+
+  test('a rise or set is given with both ends of its passage, from the result (D-8, T-47)', SLOW, async (t) => {
+    // Blue Ghost on 16 March 2025 at noon: the Sun sets that evening.
+    await result(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
+    await result(page, 'setMissionWindow', { startUtc: '2025-03-16T06:00Z', durationH: 24, moveClock: true });
+    await result(page, 'setTime', { utc: '2025-03-16T12:00Z' });
+    const hm = (iso) => iso.slice(11, 16);
+    const day = (iso) => iso.slice(0, 10);
+    const passage = (span) => `The Sun starts setting ${day(span.start.timeUtc)} ${hm(span.start.timeUtc)} and is fully set ${day(span.end.timeUtc) === day(span.start.timeUtc) ? '' : `${day(span.end.timeUtc)} `}${hm(span.end.timeUtc)} UTC.`;
+    const start = await ask(page, 'jump to the start of the next sunset');
+    const j = start.actions.find((x) => x.name === 'jumpToEvent');
+    assert.deepEqual(j?.params, { type: 'sunset', which: 'next', instant: 'start' });
+    const r = j.result;
+    assert.equal(r.label, 'Sun starts setting');
+    assert.ok(start.text.includes(`Moved the clock to the start of the next sunset: Sun starts setting ${day(r.timeUtc)} ${hm(r.timeUtc)} UTC (${r.instant})`), start.text);
+    assert.ok(start.text.includes(passage(r.span)), `${passage(r.span)} not in: ${start.text}`);
+    const when = await ask(page, 'when is the next sunset?');
+    const a = await result(page, 'getAnalysis');
+    const e = a.nextEvents.sunset;
+    assert.equal(e.span.start.timeUtc, r.span.start.timeUtc, 'the same passage');
+    assert.ok(when.text.includes(`The next sunset: Sun fully set ${day(e.timeUtc)} ${hm(e.timeUtc)} UTC`), when.text);
+    assert.ok(when.text.includes(passage(e.span)), when.text);
+    t.diagnostic(`reply 1: ${start.text}`);
+    t.diagnostic(`reply 2: ${when.text}`);
   });
 
   test('it says what it did not understand and changes nothing', SLOW, async () => {

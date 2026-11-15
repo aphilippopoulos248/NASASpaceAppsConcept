@@ -1,4 +1,3 @@
-// DRAFT (checkpoint 2026-11-15): two camera cases fail and the controls added since 4f007f1 have no case yet; see docs/lunyx/handover/T-16-T-17-checkpoint.md
 // UI and assistant equivalence (decision D-1, task T-16): using a control and calling its
 // action must leave the same state. For each case below the test
 //   1. puts the app in a known state, uses the real control (pointer / keyboard), and checks
@@ -249,6 +248,37 @@ describe('equivalence: time and mission parameters', () => {
       keys: ['playing', 'lightMode', 'rate'],
       wait: () => until(page, () => window.lunyx.store.get().playing === false),
     });
+  });
+
+  test('scrubber jump button = jumpToEvent { type, instant }: the start of the passage, then the event (T-47)', SLOW, async () => {
+    // Blue Ghost on 16 March 2025 at noon: the Sun sets that evening, a passage of about an hour.
+    const prepare = async () => {
+      await result(page, 'selectSite', { site: 'blue-ghost-1', fly: false });
+      await result(page, 'setMissionWindow', { startUtc: '2025-03-16T06:00Z', durationH: 24, moveClock: true });
+      await result(page, 'setTime', { utc: '2025-03-16T12:00Z' });
+      await result(page, 'getAnalysis');
+    };
+    const button = (label) => scrubber().locator('.ts-jump', { hasText: label });
+    let logged = [];
+    const s = await equivalent({
+      prepare,
+      ui: async () => {
+        const from = await lastSeq(page);
+        // The sunset button names the next end of the passage: first "Sun starts setting", then "Sun fully set".
+        await button('Sun starts setting').click();
+        await until(page, (seq) => window.lunyx.actions.actionLog().some((e) => e.seq > seq && e.name === 'jumpToEvent'), from);
+        await button('Sun fully set').click();
+        await until(page, (seq) => window.lunyx.actions.actionLog().filter((e) => e.seq > seq && e.name === 'jumpToEvent').length === 2, from);
+        logged = await page.evaluate((seq) => window.lunyx.actions.actionLog().filter((e) => e.seq > seq && e.name === 'jumpToEvent').map(({ origin, params, result }) => ({ origin, params, result: JSON.parse(JSON.stringify(result)) })), from);
+      },
+      expect: 'jumpToEvent',
+      action: () => [['jumpToEvent', { type: 'sunset', instant: 'start' }], ['jumpToEvent', { type: 'sunset', instant: 'event' }]],
+    });
+    assert.deepEqual(logged.map((e) => [e.origin, e.params, e.result.label]), [['ui', { type: 'sunset', instant: 'start' }, 'Sun starts setting'], ['ui', { type: 'sunset', instant: 'event' }, 'Sun fully set']]);
+    const [start, end] = logged.map((e) => e.result);
+    assert.equal(start.span.end.timeUtc, end.timeUtc, 'both clicks went through the same passage');
+    assert.equal(s.timeMs, Date.parse(end.timeUtc), 'the clock at the sunset');
+    assert.equal(s.playing, false);
   });
 
   test('speed, window length (both selectors), "Start window here", delay, mast, lighting', SLOW, async () => {
@@ -514,8 +544,8 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     const globe = page.locator('#scene');
     const keys = await equivalent({
       ui: async () => {
-        // One press at a time, as a person does: each press turns from the centre the globe has published,
-        // so presses within one drawn frame start from the same centre (see actions.md, F-7).
+        // One press at a time, so that each logged setGlobeCamera can be replayed in turn. Presses
+        // within one drawn frame used to be lost (F-7, fixed by T-55): the next case checks those.
         await globe.focus();
         for (const key of ['ArrowRight', 'ArrowUp', '+']) {
           const before = await page.evaluate(() => JSON.stringify(window.lunyx.store.get().globeCenter));
@@ -551,6 +581,28 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     await cameraSettled();
     const replayed = (await snapshot()).camera;
     assert.ok(sameCamera(replayed, zoomed.camera), `${JSON.stringify(replayed)} vs ${JSON.stringify(zoomed.camera)}`);
+  });
+
+  test('arrow keys pressed faster than the globe draws: every press counts (F-7, fixed by T-55 in 351e9fc)', SLOW, async () => {
+    const globe = page.locator('#scene');
+    const lonOf = (c) => ((c.lon - HOME.lon + 540) % 360) - 180;
+    // One press, at a person's pace, for the step at this altitude.
+    await reset();
+    await globe.focus();
+    await page.keyboard.press('ArrowRight');
+    await until(page, (lon) => Math.abs(window.lunyx.store.get().globeCenter.lon - lon) > 0.5, HOME.lon);
+    await cameraSettled();
+    const step = lonOf((await snapshot()).camera);
+    assert.ok(step > 1, `one press turned the globe by ${step}°`);
+    // Three presses with no wait in between: most land within one drawn frame.
+    await reset();
+    await globe.focus();
+    const from = await lastSeq(page);
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+    await until(page, (seq) => window.lunyx.actions.actionLog().filter((e) => e.seq > seq && e.name === 'setGlobeCamera' && e.origin === 'ui').length >= 3, from);
+    await cameraSettled();
+    const moved = lonOf((await snapshot()).camera);
+    assert.ok(Math.abs(moved - 3 * step) < 0.05, `three rapid presses turned the globe by ${moved}°, one press by ${step}°`);
   });
 
   test('locator map click and its zoom buttons; compass', SLOW, async () => {
