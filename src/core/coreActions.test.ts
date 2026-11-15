@@ -293,7 +293,7 @@ describe('core actions', () => {
 const at = (id: string, name: string, date: string, time: string, lat: number, lon: number): Landing =>
   ({ id, name, program: 'p', country: 'c', date, time, lat, lon, crewed: false, region: 'r', summary: 's' }) as Landing;
 
-const CATALOGUE = [at('apollo-11', 'Apollo 11', '1969-07-20', '20:17', 0.67416, 23.47314), at('im-2', 'IM-2 Athena', '2025-03-06', '17:28', -84.79, 29.2)];
+const CATALOGUE = [at('apollo-11', 'Apollo 11', '1969-07-20', '20:17', 0.67416, 23.47314), at('im-2', 'IM-2 Athena', '2025-03-06', '17:28', -84.79, 29.2), at('blue-ghost-1', 'Blue Ghost Mission 1', '2025-03-02', '08:34', 18.5622, 61.8102)];
 const IM2_TOUCHDOWN = Date.UTC(2025, 2, 6, 17, 28);
 const APOLLO_TOUCHDOWN = Date.UTC(1969, 6, 20, 20, 17);
 const LONG = 90_000;
@@ -386,7 +386,8 @@ describe('getAnalysis', () => {
       state: 'ready',
       scenario: { site: { id: 'im-2', latDeg: -84.79, lonDegEast: 29.2 }, startUtc: '2025-03-06T17:28Z', endUtc: '2025-03-07T17:28Z', durationH: 24, mastHeightM: 2 },
       now: { timeUtc: '2025-03-06T17:28Z', insideAnalysedWindow: true },
-      requirements: { sunElevationBand: { minDeg: 0, maxDeg: 90, metNow: true }, maxEarthGap: null },
+      // The default band (0 to 90 deg) is no requirement: nothing is checked against it.
+      requirements: { sunElevationBand: { required: false, minDeg: 0, maxDeg: 90, metNow: null, metForWholeWindow: null, note: expect.stringMatching(/^No solar elevation band is required/) }, maxEarthGap: null },
     });
     for (const key of ['illuminationPct', 'sunAnyPct', 'earthVisiblePct']) {
       expect(a.metrics[key]).toBeGreaterThanOrEqual(0);
@@ -482,6 +483,40 @@ describe('jumpToEvent', () => {
     const sunrise = await runAction<any>('jumpToEvent', { type: 'sunrise' });
     expect(sunrise).toMatchObject({ ok: true, result: { label: 'Sun starts rising' } });
     expect(sunrise.ok && store.get().timeMs).toBeGreaterThan(Date.UTC(1969, 7, 16));
+    analysis.stop();
+  }, LONG);
+
+  it('goes to either end of a sunset and names it: Blue Ghost, 16 March 2025, first cut 18:23 and last limb 19:30 UTC', async () => {
+    // The independent validation (docs/lunyx/handover/T-31-event-spans.md, section 6) has, at 2 m:
+    // first cut 18:23:40, last limb 19:30:03 UTC. Firefly's start of night falls at the first cut.
+    const { store, analysis } = setupReal();
+    await runAction('selectSite', { site: 'blue-ghost-1', atLanding: true });
+    await runAction('setMissionWindow', { durationH: 360 });
+    const near = (r: any, hhmm: string) => {
+      const [h, m] = hhmm.split(':').map(Number);
+      expect(Math.abs(Date.parse(r.result.timeUtc) - Date.UTC(2025, 2, 16, h, m))).toBeLessThanOrEqual(3 * 60_000);
+    };
+    const start = (await runAction<any>('jumpToEvent', { type: 'sunset', instant: 'start' })) as { ok: true; result: any };
+    expect(start).toMatchObject({ ok: true, result: { event: 'sunset', instantChoice: 'start', label: 'Sun starts setting', instant: "the terrain skyline starts to cut into the Sun's disc", playing: false } });
+    near(start, '18:23');
+    expect(start.result.span).toMatchObject({ body: 'sun', kind: 'set', start: { label: 'Sun starts setting', inWindow: true }, end: { label: 'Sun fully set', inWindow: true } });
+    expect(start.result.span.summary).toMatch(/^starts setting 2025-03-16 18:2\d, fully set 19:[23]\d UTC$/);
+    expect(start.result.span.hours).toBeGreaterThan(1);
+    expect(start.result.span.hours).toBeLessThan(1.25);
+    // From the first cut, the next sunset event is the last limb of the same passage.
+    const end = (await runAction<any>('jumpToEvent', { type: 'sunset' })) as { ok: true; result: any };
+    expect(end).toMatchObject({ ok: true, result: { instantChoice: 'event', label: 'Sun fully set' } });
+    near(end, '19:30');
+    expect(end.result.span.summary).toBe(start.result.span.summary);
+    expect(await runAction<any>('jumpToEvent', { type: 'sunset', instant: 'start', which: 'previous' })).toMatchObject({ ok: true, result: { timeUtc: start.result.timeUtc } });
+    expect(await runAction('jumpToEvent', { type: 'sunset', instant: 'start' })).toMatchObject({ ok: false, error: expect.stringContaining('There is no next start of a sunset\'s passage') });
+    // getAnalysis tells the same passage, and Earth both ways.
+    store.set({ timeMs: Date.UTC(2025, 2, 16, 12, 0) });
+    const report = await runAction<any>('getAnalysis');
+    expect(report.ok && report.result.nextEvents.sunset.span.summary).toBe(start.result.span.summary);
+    expect(report.ok && report.result.nextEvents.sunset.summary).toBe(`Sunset: ${start.result.span.summary}`);
+    expect(report.ok && report.result.nextPassages.sun.summary).toBe(start.result.span.summary);
+    expect(report.ok && report.result.metrics).toMatchObject({ earthVisiblePct: 100, earthAnyPct: 100, longestEarthAnyGapH: 0 });
     analysis.stop();
   }, LONG);
 });

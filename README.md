@@ -15,17 +15,20 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
 
 - **Globe view.** A 3D Moon with real relief from the LOLA whole-Moon grid, 28 catalogued
   landings and a pin anywhere. Filters: UTC date and time, the latitude and longitude at the
-  centre of the view, the required solar elevation band, mast height, mission window and
-  arrival delay, "Missions to replay" (see [Run it](#run-it)) and "Go to a landing site", a
-  list that also works from the keyboard. Overlays with legends: where the Sun is inside the elevation band (smooth
-  Moon), long-term average sunlight and Earth visibility (NASA PGDA product 69, polar regions
-  only), elevation-data coverage and mapped ice-bearing shadowed regions. A compass, a locator
-  map and a mission-window time scrubber with jumps to rise and set events. Landing markers are
-  coloured by the country their hardware belongs to, with optional flags. The site card shows
-  who owns the hardware (from the GCAT catalogue), the area explored at the site, the data
-  behind the site, the Sun and Earth against its skyline, and a site-science section: Deep
-  Space Network station opportunities, long-term averages, the nearest mapped ice targets,
-  Diviner annual maximum and mean temperature, and ShadowCam mosaics as links.
+  centre of the view, the required solar elevation band, mast height, mission window and arrival
+  delay, "Missions to replay" (see [Run it](#run-it)) and "Go to a landing site", a list that
+  also works from the keyboard. Overlays with legends: where the Sun is inside the elevation
+  band (smooth Moon), long-term average sunlight and Earth visibility (NASA PGDA product 69,
+  polar regions only), elevation-data coverage and mapped ice-bearing shadowed regions. A
+  compass, a locator map and a mission-window time scrubber that draws each sunrise and sunset
+  from its start to its end, with jumps to either end. Landing markers are coloured by the
+  country their hardware belongs to, with optional flags. The site card shows who owns the
+  hardware (from the GCAT catalogue), the area explored at the site, the data behind the site,
+  the Sun and Earth against its skyline with both ends of their next rise or set, the mission
+  window's sunlight and Earth in view (by Earth's centre and by any part of its disc), and a
+  site-science section: Deep Space Network station opportunities, long-term averages, the
+  nearest mapped ice targets, Diviner annual maximum and mean temperature, and ShadowCam mosaics
+  as links.
 - **Surface view.** Stand at the site and look around: black sky, terrain drawn from the
   elevation data out to 246 km, the Sun and Earth at their computed positions and sizes,
   Earth's phase, terrain shadows and both bodies' tracks. Key metrics (upper left): Sun and
@@ -194,11 +197,11 @@ round, by the science project; its record is `tests/fixtures/validation/science-
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
 | Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min at Blue Ghost, Chandrayaan-3 and Apollo 15. Near the poles the Sun and Earth cross the skyline slowly, and the same 0.01° of skyline agreement means times that agree to within a few minutes |
-| Both ends of every rise and set (computed, not yet shown on screen) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s. Near the poles an instant can be several minutes off, up to 14 min for one Earthrise's first limb, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lies under the disc |
+| Both ends of every rise and set (on the scrubber and the site card since T-47) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s. Near the poles an instant can be several minutes off, up to 14 min for one Earthrise's first limb, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lies under the disc |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
 | 14 March 2025 eclipse at the Blue Ghost site | Reported 05:00, 06:18, 09:52 UTC | Computed 05:00:38, 06:17:21, 09:51:06 UTC |
 | Long-term sunlight, 18.6 years, six polar points | The validator's own computation and PGDA product 69 | Within 0.03 points of the validator at a 2 m mast. On the ground (0 m): up to 4.7 points high at a connecting-ridge pin before `3899cb9` (48.93 % against 44.21 %); 44.21 % since, within 0.05 points (round 3). IM-2 at 2 m: PGDA 46.55 %, validator 46.71 %, app 46.68 % |
-| Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth directions; PGDA product 69 | Earth's centre (the figure the screens show) within 0.05 points. PGDA's map counts any part of Earth's disc and reads 4 to 11 points higher by definition. The analysis now also computes the any-part figure (not shown on screen yet): within 0.04 points over 60 days at five sites and 0.03 points over 18.6 years (round 3) |
+| Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth directions; PGDA product 69 | Earth's centre within 0.05 points. PGDA's map counts any part of Earth's disc and reads 4 to 11 points higher by definition. The analysis now also computes the any-part figure, which the site card shows next to Earth's centre since T-47: within 0.04 points over 60 days at five sites and 0.03 points over 18.6 years (round 3) |
 | Deep Space Network station geometry | JPL Horizons with each station as the observer, on dates the author did not use | Elevation within 0.001°. Edges set by a station's elevation limit are placed to 0.25 s and agree within 0.9 s with the independent reference (84 edges, round 3); before that fix they were within 5.3 s. Edges set by the lunar skyline: within 1.5 min |
 | Seasonal outlook | The validator's own skyline and SPICE, a year at IM-2 and at a Shackleton-rim pin | Within 0.11 points per lunar day at both. The one row that read 0.57 points high before `3899cb9` now reads 20.76 % against the validator's 20.84 % (round 3) |
 | Longest darkness and Earth gap followed past the window edge | Same, at IM-2, Chandrayaan-3 and Apollo 11 | Ends within 3.1 min |
@@ -211,17 +214,22 @@ Unless a row says otherwise, the figures above were computed at the catalogue po
 before T-38 moved the landers to LROC's measured positions (IM-2 by 22 m, Blue Ghost 1 by 8 m, Chang'e 4 by 417 m). At IM-2 the
 change is 0.1 point of sunlight and 0.2 h of darkness (validation.md).
 
-**Sunset means "Sun fully set".** Wherever the app reports a sunset or sunrise it means the
-instant the last of the Sun's disc goes behind the terrain (or the first of it appears). The
-start of setting, when the skyline first cuts the disc and power begins to fall, is computed by
-the analysis since the science project's delivery (decision D-8), but the screens and the
-assistant do not show it yet, and some panels still give the time without the words "fully
-set". This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the catalogue's current
-position, the app gives **Sun fully set 19:30 UTC**. Setting starts at 18:24 UTC, inside
-Firefly's reported start of night (about 18:15 to 18:35 UTC; Firefly does not define the term);
-the Sun is fully set about an hour later, at 19:30 (to the second, the analysis gives 18:24:16
-and 19:30:50 UTC; STATUS.md). A higher mast moves both instants later. At the poles the Sun can
-take far longer than an hour to set.
+**Sunset means "Sun fully set".** Where the app gives a sunset or sunrise as one time, it means
+the instant the last of the Sun's disc goes behind the terrain (or the first of it appears), and
+says so. The start of setting, when the skyline first cuts the disc and power begins to fall, is
+computed by the analysis since the science project's delivery (decision D-8). Since the original
+team's T-47 (`bd46eda`) the globe view shows both ends: the time scrubber (also under the
+surface view) draws each passage from its start to its end and its jump buttons go to each end
+in turn ("Sun starts setting", then "Sun fully set"), the site card gives both ends, and the
+actions `getAnalysis` and `jumpToEvent` return them. The surface view's key metrics and the
+compare panel still give one instant per event, labelled with which one it is, until the
+original team's T-48 and T-49 bring both ends there; the assistant's deterministic replies also
+give one labelled instant. This matters: at Blue Ghost on 16 March 2025, with a 2 m mast at the
+catalogue's current position, the site card reads "starts setting 2025-03-16 18:24, fully set
+19:30 UTC". Setting starts inside Firefly's reported start of night (about 18:15 to 18:35 UTC;
+Firefly does not define the term); the Sun is fully set about an hour later (to the second, the
+analysis gives 18:24:16 and 19:30:50 UTC; STATUS.md). A higher mast moves both instants later.
+At the poles the Sun can take far longer than an hour to set.
 
 ## What needs the network
 
@@ -309,20 +317,21 @@ centre.
   drawings made by the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
-- **Open defects** (being fixed by the original team at the time of writing):
-  - typing coordinates into Filters > Centre of view could leave the view, or a pin dropped
-    straight after, short of the typed point; fixed in the code (the fields by T-43, the flights
-    poleward of 80° by `0c15435`; both in `6d4da06`), and the walkthrough's re-check of the fix is
-    still to come;
-  - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
-    met" for any window with a night, while the compare panel treats that band as no
-    requirement (T-46);
+- **Defects fixed upstream, not yet re-checked** (fixed by the original team at the time of
+  writing; each entry goes once the desktop walkthrough has confirmed the fix):
   - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
     south-polar layer), seen in headless Chrome on the build machine; the globe then kept its
     coarser relief and the site card a coarser grid. Fixed upstream in `bbd2294` (T-40: one
-    download at a time, retried), and the walkthrough's re-check is still to come;
-  - keyboard and screen-reader gaps are listed in
-    [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
+    download at a time, retried);
+  - with the default solar band (0° to 90°) the surface view's key metrics said "Requirement not
+    met" for any window with a night, while the compare panel treated that band as no
+    requirement. Fixed upstream in `11f60b4` (T-46: no band is required at the default, by one
+    rule in every panel and in `getAnalysis`);
+  - two keyboard and screen-reader gaps: after "Compare as B" in the nearby list the focus fell
+    out of the compare panel, and the site-science section had two disclosures with the same
+    name, "Source and limits". Fixed upstream in `11f60b4` (T-46).
+- **Keyboard and screen-reader gaps** still open are listed in
+  [docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 
 ## The demo for the submission
 
@@ -334,10 +343,13 @@ slide deck must show the team name, the names of the team members and the challe
 Navigator's earlier answer on GitHub (discussion 1991) gave the same limits; the guide
 confirms them.
 
-An outline built on the presets. Confirm each step in the desktop walkthrough (task T-2) before
-recording it: at the time of writing the walkthrough had confirmed the surface view at full
-settings on a real GPU (IM-2 and Apollo 11, 60 frames per second), and had not reported on the
-presets, the compare panel or the assistant yet.
+An outline built on the presets. Confirm each step in the desktop walkthrough before recording
+it. At the time of writing the walkthrough (task T-2, on build `27b0f30`; record in
+[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)) had seen working the globe
+and site search, the compare panel with nearby sites and the assistant in deterministic mode at
+1280x720, and the surface view at full settings on a real GPU at 1280x720 and 1920x1080 (IM-2 and
+Apollo 11, 60 frames per second). It had not run the presets, which came later; its run on the
+release candidate (T-8) is still to come.
 
 - **Video, 30 seconds or less.** The guide's own beats: who you are (0-2 s), the challenge
   (2-5 s), the project's name (5-10 s), how it works (10-20 s), what it could do (20-30 s). For
@@ -350,9 +362,6 @@ presets, the compare panel or the assistant yet.
   surface view from a preset (IM-2's low Sun near the pole). 5: the compare panel (arrival 24 h
   later, nearby alternatives, the mission-window table). 6: NASA data used and how it was
   checked (with "not fully validated"). 7: how AI was used, and what comes next.
-
-Until the walkthrough has re-checked the T-43 fix, steer around typing coordinates into Filters >
-Centre of view: use a preset, "Go to a landing site", a catalogued site or a click on the globe.
 
 What it must not claim: that the results are fully validated; that Earth visibility is a
 working radio link; a sunset or sunrise time without saying which instant it is; that NASA
