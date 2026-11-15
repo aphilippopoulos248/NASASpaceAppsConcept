@@ -76,6 +76,8 @@ body[data-view='surface'] .cmp-launcher { left: 50%; transform: translateX(-50%)
 .cmp-flags li.is-met strong { color: var(--ok); }
 .cmp-flags li.is-breached { border-left-color: var(--danger); font-size: var(--fs-sm); }
 .cmp-flags li.is-breached strong { color: var(--danger); }
+.cmp-flags li.is-info { color: var(--text-muted); }
+.cmp-flags li.is-info strong { color: var(--text-muted); font-weight: var(--fw-medium); }
 .cmp-flags li.is-unknown { border-left-color: var(--warn); }
 .cmp-flags li.is-unknown strong { color: var(--warn); }
 

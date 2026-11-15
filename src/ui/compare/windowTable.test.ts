@@ -85,7 +85,7 @@ describe('exports', () => {
     expect(a.metrics.earthCentreVisiblePct).toBe(100);
     expect(a.spells).toHaveLength(spellRows(eclipse).length);
     expect(a.spells[1]).toEqual({ group: 'sun', state: 'Dark', startUtc: '2025-03-14T05:44:08Z', endUtc: '2025-03-14T08:10:04Z', hours: 2.4323, startFound: true, endFound: true, inWindow: { startUtc: '2025-03-14T05:44:08Z', endUtc: '2025-03-14T08:10:04Z', hours: 2.4323 }, runsPastWindowStart: false, runsPastWindowEnd: false });
-    expect(a.requirements).toMatchObject({ sunElevationBand: { minDeg: 0, maxDeg: 90, sunElNowDeg: 30 }, maxEarthGap: { limitH: 12, met: true }, slopeLimitDeg: 10, slopeWithinLimit: true });
+    expect(a.requirements).toMatchObject({ sunElevationBand: { minDeg: 0, maxDeg: 90, sunElNowDeg: 30 }, sunElevationBandSet: false, maxEarthGap: { limitH: 12, met: true }, slopeLimitDeg: 10, slopeWithinLimit: true });
     expect(a.provenance.assumptions.length).toBeGreaterThan(3);
     expect(doc.scenarios[1].events.map((e: { label: string }) => e.label)).toContain('Sun fully set');
     expect(doc.comparison).toMatchObject({ meaning: 'B minus A' });

@@ -11,6 +11,7 @@ import { EVENT_INFO } from '../../core/skyEvents';
 import type { AppState } from '../../core/types';
 import { formatUtc } from '../../core/time';
 import type { ComparisonDiff } from '../../analysis/types';
+import { sunBandSet } from './model';
 
 const HOUR_MS = 3_600_000;
 
@@ -160,7 +161,13 @@ export function toJson(sides: readonly ExportSide[], s: Pick<AppState, 'sunElMin
           runsPastWindowStart: r.runsPastStart, runsPastWindowEnd: r.runsPastEnd,
           ...(r.note && { note: r.note }),
         })),
-        requirements: { ...checkRequirements(a, s, sunElNowDeg(a)), slopeLimitDeg: s.slopeLimitDeg, slopeWithinLimit: Number.isFinite(a.slope.slopeDeg) ? a.slope.slopeDeg <= s.slopeLimitDeg : null },
+        requirements: {
+          ...checkRequirements(a, s, sunElNowDeg(a)),
+          // 0 to 90 deg is the Filters default: no band was asked for, so "met" there says nothing.
+          sunElevationBandSet: sunBandSet(s),
+          slopeLimitDeg: s.slopeLimitDeg,
+          slopeWithinLimit: Number.isFinite(a.slope.slopeDeg) ? a.slope.slopeDeg <= s.slopeLimitDeg : null,
+        },
         provenance: {
           ephemeris: a.provenance.ephemeris,
           ephemerisNote: a.provenance.ephemerisNote,
