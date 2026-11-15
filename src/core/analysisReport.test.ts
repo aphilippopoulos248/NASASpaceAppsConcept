@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Blockage, SiteAnalysis, SkyEvent } from '../analysis/types';
 import { checkRequirements, reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
+import { NO_SUN_BAND_TEXT } from './requirements';
 import { scenarioFromState } from './scenario';
 import { initialState } from './store';
 
@@ -86,14 +87,23 @@ describe('analysis report', () => {
 
   it('checks the requirements: Sun band now and over the window, and the Earth gap limit', () => {
     const a = analysis({ minSunElDeg: 2.46, maxSunElDeg: 3.39, longestEarthGapH: 7.5, earthGapOpenEnded: true });
-    expect(checkRequirements(a, { sunElMinDeg: 0, sunElMaxDeg: 90, maxEarthGapH: null }, 2.5)).toEqual({
-      sunElevationBand: { minDeg: 0, maxDeg: 90, sunElNowDeg: 2.5, metNow: true, windowMinSunElDeg: 2.46, windowMaxSunElDeg: 3.39, metForWholeWindow: true },
+    expect(checkRequirements(a, { sunElMinDeg: 2, sunElMaxDeg: 80, maxEarthGapH: null }, 2.5)).toEqual({
+      sunElevationBand: { required: true, minDeg: 2, maxDeg: 80, sunElNowDeg: 2.5, metNow: true, windowMinSunElDeg: 2.46, windowMaxSunElDeg: 3.39, metForWholeWindow: true },
       maxEarthGap: null,
     });
     const strict = checkRequirements(a, { sunElMinDeg: 3, sunElMaxDeg: 30, maxEarthGapH: 6 }, 2.5);
-    expect(strict.sunElevationBand).toMatchObject({ metNow: false, metForWholeWindow: false });
+    expect(strict.sunElevationBand).toMatchObject({ required: true, metNow: false, metForWholeWindow: false });
     expect(strict.maxEarthGap).toEqual({ limitH: 6, basis: "Earth's centre", longestEarthGapH: 7.5, met: false, gapRunsIntoWindowEdge: true });
-    expect(checkRequirements(a, { sunElMinDeg: 0, sunElMaxDeg: 90, maxEarthGapH: 8 }, NaN)).toMatchObject({ sunElevationBand: { sunElNowDeg: null, metNow: null }, maxEarthGap: { met: true } });
+    expect(checkRequirements(a, { sunElMinDeg: -5, sunElMaxDeg: 90, maxEarthGapH: 8 }, NaN)).toMatchObject({ sunElevationBand: { required: true, sunElNowDeg: null, metNow: null }, maxEarthGap: { met: true } });
+  });
+
+  it('checks nothing against the default band (0 to 90 deg), and says so, even for a window with a night', () => {
+    const night = analysis({ minSunElDeg: -12.5, maxSunElDeg: 8.25 });
+    const band = checkRequirements(night, { sunElMinDeg: 0, sunElMaxDeg: 90, maxEarthGapH: null }, -4).sunElevationBand;
+    expect(band).toEqual({ required: false, minDeg: 0, maxDeg: 90, sunElNowDeg: -4, metNow: null, windowMinSunElDeg: -12.5, windowMaxSunElDeg: 8.25, metForWholeWindow: null, note: NO_SUN_BAND_TEXT });
+    // The same window against a band the user set is a breach.
+    expect(checkRequirements(night, { sunElMinDeg: -1, sunElMaxDeg: 90, maxEarthGapH: null }, -4).sunElevationBand).toMatchObject({ required: true, metNow: false, metForWholeWindow: false });
+    expect(checkRequirements(night, { sunElMinDeg: -1, sunElMaxDeg: 90, maxEarthGapH: null }, -4).sunElevationBand).not.toHaveProperty('note');
   });
 
   it('turns a comparison into B minus A, or into the reason there is none', () => {

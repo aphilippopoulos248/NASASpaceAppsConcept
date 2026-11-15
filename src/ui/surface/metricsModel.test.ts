@@ -134,9 +134,16 @@ describe('key metrics', () => {
   it('flags unmet requirements in words, and only then', () => {
     const t = scenario.startMs + 6 * H;
     const ready: AnalysisStatus = { state: 'ready', scenario, value: analysis };
-    // The window runs into the night, so even the default band (0 to 90 degrees) is left for part of it.
+    // A band that takes in every elevation is met.
     const relaxed = buildMetrics(ready, scenario.id, req(t, { sunElMinDeg: -90 }));
     expect(relaxed.flags).toEqual([]);
+    // The window runs into the night, but the default band (0 to 90 degrees) is no requirement:
+    // nothing is flagged, at night or over the window (one rule with getAnalysis, src/core/requirements.ts).
+    expect(analysis.metrics.minSunElDeg).toBeLessThan(0);
+    const night = sunsetMs + 3 * H;
+    expect(blockageAt(analysis, 'sun', night).bodyElDeg).toBeLessThan(0);
+    expect(buildMetrics(ready, scenario.id, req(t)).flags).toEqual([]);
+    expect(buildMetrics(ready, scenario.id, req(night)).flags).toEqual([]);
     const el = blockageAt(analysis, 'sun', t).bodyElDeg;
     const strict = buildMetrics(ready, scenario.id, req(t, { sunElMinDeg: Math.ceil(el) + 5, sunElMaxDeg: 90 }));
     expect(strict.flags[0]).toMatch(/^Sun elevation now \d+\.\d\d° is below the required band \(\d+° to 90°\)\.$/);

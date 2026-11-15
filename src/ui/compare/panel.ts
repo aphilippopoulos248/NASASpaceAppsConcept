@@ -11,6 +11,7 @@ import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
 import { mountAbTab } from './abTab';
 import { bindWorkingPair, createCompareActions } from './actions';
+import { focusInHiddenPanel, returnFocusOnClose } from './focus';
 import { mountNearbyTab } from './nearbyTab';
 import { mountOutlookTab } from './outlookTab';
 import { mountWindowsTab } from './windowsTab';
@@ -109,9 +110,10 @@ export function mountComparePanel(region: HTMLElement): void {
 
   const isOpen = () => store.get().comparing;
   async function closePanel() {
-    const hadFocus = sheet.contains(document.activeElement);
+    // Focus in the panel, or already lost to the page, comes back to the launcher (Q-4).
+    const giveBack = returnFocusOnClose(document.activeElement, sheet, document.body);
     await runAction('stopCompare');
-    if (hadFocus) launcher.focus();
+    if (giveBack) launcher.focus();
   }
 
   const abKit = createTabKit();
@@ -140,7 +142,11 @@ export function mountComparePanel(region: HTMLElement): void {
       b.setAttribute('aria-selected', String(name === tab));
       b.tabIndex = name === tab ? 0 : -1;
     }
+    // A control that switches tabs itself ("Compare as B" in a nearby row) is hidden with its tab:
+    // focus stays in the panel, on the tab now shown, instead of falling to the page (Q-4).
+    const refocus = s.comparing && focusInHiddenPanel(document.activeElement, tabPanels, tab);
     for (const [name, p] of tabPanels) p.hidden = name !== tab;
+    if (refocus) (tablist.hidden ? sheet : tabButtons.get(tab)!).focus();
   };
 
   /** Draws the tab on screen from the stores. The other tabs are drawn when they are shown. */
