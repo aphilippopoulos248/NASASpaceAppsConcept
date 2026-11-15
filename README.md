@@ -198,7 +198,7 @@ round, by the science project; its record is `tests/fixtures/validation/science-
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
 | Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays the default (decision D-10 of the science project). At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 7.5 min apart at a 2 m mast, depending on where within 8 m the lander stood (at the catalogue's current position: first cut 18:24:16 on the 3 m model and 18:30:27 on the 60 m window; last limb 19:30:50 and 19:38:22 UTC). The site windows themselves were not compared with their PDS sources |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min at Blue Ghost, Chandrayaan-3 and Apollo 15. Near the poles the Sun and Earth cross the skyline slowly, and the same 0.01° of skyline agreement means times that agree to within a few minutes |
-| Both ends of every rise and set (on screen in the globe and surface views since T-47 and T-48) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s. Near the poles an instant can be several minutes off, up to 14 min for one Earthrise's first limb, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lies under the disc |
+| Both ends of every rise and set (on screen in the globe and surface views since T-47 and T-48) | The validator's own skyline and Horizons, 141 instants in 48 passages of the Sun and Earth at nine sites (round 3) | Blue Ghost within 4 s (at the catalogue's current position the app reads 18:24:14 / 19:30:47 UTC since T-50). Near the poles an instant was up to 14 min off, where a notch in the skyline narrower than the analysis's 0.5° azimuth step lay under the disc. Since the original team's T-50 (`b6f7392`) the app reads the skyline every 0.05° wherever the Sun's or Earth's disc comes near it: the validator's worst cases went from +464 s to -5 s and from +835 s to +47 s; the slowest passages can still differ by a few minutes, about 0.003° of skyline |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
 | 14 March 2025 eclipse at the Blue Ghost site | Reported 05:00, 06:18, 09:52 UTC | Computed 05:00:38, 06:17:21, 09:51:06 UTC |
 | Long-term sunlight, 18.6 years, six polar points | The validator's own computation and PGDA product 69 | Within 0.03 points of the validator at a 2 m mast. On the ground (0 m): up to 4.7 points high at a connecting-ridge pin before `3899cb9` (48.93 % against 44.21 %); 44.21 % since, within 0.05 points (round 3). IM-2 at 2 m: PGDA 46.55 %, validator 46.71 %, app 46.68 % |
@@ -230,8 +230,9 @@ one labelled instant. This matters: at Blue Ghost on 16 March 2025, with a 2 m m
 catalogue's current position, the site card reads "starts setting 2025-03-16 18:24, fully set
 19:30 UTC". Setting starts inside Firefly's reported start of night (about 18:15 to 18:35 UTC;
 Firefly does not define the term); the Sun is fully set about an hour later (to the second, the
-analysis gives 18:24:16 and 19:30:50 UTC; STATUS.md). A higher mast moves both instants later.
-At the poles the Sun can take far longer than an hour to set.
+app reads 18:24:14 and 19:30:47 UTC since T-50, and the science project's check at that position
+gives 18:24:16 and 19:30:50; STATUS.md). A higher mast moves both instants later. At the poles
+the Sun can take far longer than an hour to set.
 
 ## What needs the network
 
@@ -296,12 +297,20 @@ centre.
   app uses its in-app model, checked against Horizons as above.
 - **Averages are averages.** The long-term overlays are 18.6-year averages of "any part of the
   Sun visible"; they are never mixed with the dated mission-window figures.
-- **Earth visibility is geometry**, to Earth's centre (and, for DSN, to a station above its
-  elevation limit). It does not account for antennas, power or station schedules.
-- **Event instants near the poles.** Where the Sun or Earth crosses the skyline slowly, an instant
-  can be several minutes off (up to 14 min in one case) when a notch in the skyline is narrower
-  than the analysis's 0.5° azimuth step; away from the poles instants agree within seconds
-  (being refined as the original team's T-50).
+- **Earth visibility is geometry**, to Earth's centre or, where the screens say so, to any part
+  of its disc (and, for DSN, to a station above its elevation limit). It does not account for antennas, power or station schedules.
+- **Event instants near the poles.** Near the poles the Sun and Earth skim the skyline for hours.
+  There an event instant (when the Sun or Earth starts to set, or is fully set) can still differ
+  from the independent validation by tens of seconds for most Sun instants and by a few minutes
+  for the slowest passages: Earth's (its last limb at IM-2 on 20 March 2025: 260 s) and a 50-hour
+  sunrise at the connecting ridge. That is about 0.003° of skyline. Before the original team's
+  T-50 the differences reached 14 min, where a notch in the skyline narrower than the 0.5° azimuth
+  step lay under the disc; the window analysis now reads the skyline every 0.05° wherever a disc
+  comes within 0.25° of it. Away from the poles the Sun crosses the skyline quickly and instants
+  agree within seconds.
+- **The seasonal outlook and the nearby-site scan** still read the skyline every 0.5°, so their
+  darkness figures can differ from the window analysis by minutes (7.5 min in one lunar day at
+  IM-2).
 - **The drawn skyline and the analysed one.** The surface view eases each 3 m site model into its
   60 m window at their seam, 768 m from the site, while the analysis uses the grids as stored.
   Where that seam forms the skyline, the drawn skyline can sit up to 0.17° below the analysed one
