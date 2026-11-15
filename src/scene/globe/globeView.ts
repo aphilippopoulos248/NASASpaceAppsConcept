@@ -21,7 +21,7 @@ import { loadOwnership } from '../../data/ownership';
 import { roverNowMs, simulatedRovers } from '../../data/rovers';
 import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
-import { createMoonMaterial, createStars } from '../globe';
+import { bandColour, createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
@@ -307,6 +307,9 @@ export class GlobeView {
   async load(): Promise<void> {
     const material = await createMoonMaterial(this.renderer);
     patchSurfaceMaterial(material, this.uniforms, { hole: true });
+    // The polar close-up takes the photographic map's colour just outside it, so the two meet without a seam.
+    const albedo = bandColour(material.map, -76, -80);
+    if (albedo) this.polar.setAlbedo(albedo);
     this.relief = new ReliefGlobe(material);
     this.scene.add(this.relief.root, this.polar.root);
     this.polar.onData = () => (this.placed.version = -1);

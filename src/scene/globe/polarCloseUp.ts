@@ -6,7 +6,7 @@
 //
 // Two pieces: the whole 80S square at 640 m (always, once the camera is low enough), and a
 // 1024 x 1024 window of the finest layer around the point of interest (40, 80 or 160 m).
-import { BufferAttribute, BufferGeometry, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshStandardMaterial, RedFormat, RGBAFormat, UnsignedByteType, Vector2, Vector4, type IUniform, type Texture } from 'three';
+import { BufferAttribute, BufferGeometry, Color, DataTexture, Group, LinearFilter, LinearMipmapLinearFilter, Mesh, MeshStandardMaterial, RedFormat, RGBAFormat, UnsignedByteType, Vector2, Vector4, type IUniform, type Texture } from 'three';
 import { MOON_RADIUS_M } from '../../core/types';
 import { loadTerrainFor } from '../../terrain/api';
 import { polarXY } from '../../terrain/geo';
@@ -15,9 +15,6 @@ import { litFraction, sampleField, SUN_RADIUS_RAD, sunOverSouthPole, sweepShadow
 import { dirOf } from './reliefTiles';
 import { patchSurfaceMaterial, type SurfaceUniforms } from './surfaceShader';
 
-/** The close-up shows below this camera altitude, fully from `FULL_BELOW_KM` down. */
-const GONE_ABOVE_KM = 1400;
-const FULL_BELOW_KM = 900;
 /** Latitude where the close-up is fully opaque, and where it has faded into the photographic globe. */
 const SOLID_LAT = -81;
 const DEG = Math.PI / 180;
@@ -28,8 +25,11 @@ const WIDE_SEGMENTS = 192;
 const FINE_SEGMENTS = 256;
 /** How far the wide piece is lowered under the fine window, metres: more than its 3 km facets can stand above the true surface. */
 const SINK_M = 700;
-/** Regolith grey of the shaded relief (no albedo map exists in this projection). */
-const SURFACE_COLOUR = 0x8e8e8e;
+/**
+ * Surface colour of the shaded relief until the photographic map's own colour near 78S is
+ * measured (setAlbedo): that mean, from moon_color_2k.jpg, so the two meet without a seam.
+ */
+const SURFACE_COLOUR = 0xaeaba4;
 const sinDeg = (deg: number) => Math.sin((deg * Math.PI) / 180);
 
 interface Piece {
@@ -83,7 +83,15 @@ export class PolarCloseUp {
   /** Called when a piece was built: markers on the cap re-read their heights. */
   onData: (() => void) | null = null;
 
+  private readonly albedo = new Color(SURFACE_COLOUR);
+
   constructor(private readonly shared: SurfaceUniforms) {}
+
+  /** The surface colour (linear), matched to the photographic globe around the close-up's edge. */
+  setAlbedo(colour: Color): void {
+    this.albedo.copy(colour);
+    for (const piece of [this.wide, this.fine]) piece?.material.color.copy(colour);
+  }
 
   /** Height above the reference sphere from the polar layers, metres, or null where the close-up does not reach. */
   heightM(lat: number, lon: number): number | null {
@@ -104,9 +112,8 @@ export class PolarCloseUp {
 
   /** Call every frame. Returns what is on screen, or null when the close-up is not showing. */
   update(view: PolarView): PolarStatus | null {
-    const wanted = view.altitudeKm < GONE_ABOVE_KM * 1.15 && (view.centre.lat < -55 || (view.site?.lat ?? 0) < EDGE_LAT);
-    if (wanted && !this.layers && !this.loading) void this.load();
-    const t = Math.min(1, Math.max(0, (GONE_ABOVE_KM - view.altitudeKm) / (GONE_ABOVE_KM - FULL_BELOW_KM)));
+    // Shown at every altitude while the pole region is in view: zoomed out, the photographic
+    // globe alone pinches into a point at the pole (its equirectangular map converges there).
     // Only while the polar region can be in view: the horizon, seen from this altitude, must reach
     // the close-up's edge (faded over 10 degrees). Otherwise, once its data was loaded, it stayed
     // "on screen" wherever the camera went low, and the relief chip, the card and getState said
@@ -114,7 +121,9 @@ export class PolarCloseUp {
     const horizonDeg = Math.acos(1 / (1 + (view.altitudeKm * 1000) / MOON_RADIUS_M)) / DEG;
     const toEdgeDeg = 90 + view.centre.lat - (90 + EDGE_LAT);
     const inView = Math.min(1, Math.max(0, (horizonDeg + 5 - toEdgeDeg) / 10));
-    this.opacity = this.wide ? t * t * (3 - 2 * t) * inView * inView * (3 - 2 * inView) : 0;
+    const wanted = inView > 0 || (view.site?.lat ?? 0) < EDGE_LAT;
+    if (wanted && !this.layers && !this.loading) void this.load();
+    this.opacity = this.wide ? inView * inView * (3 - 2 * inView) : 0;
     this.root.visible = this.opacity > 0.001;
     // The photographic tiles are left out under the solid part of the close-up, so they cannot poke through it.
     this.shared.uCapHole.value = this.opacity >= 0.999 ? sinDeg(SOLID_LAT - 0.2) : -2;
@@ -260,7 +269,7 @@ export class PolarCloseUp {
       uSinkDepth: { value: SINK_M / MOON_RADIUS_M },
     };
     const material = new MeshStandardMaterial({
-      color: SURFACE_COLOUR,
+      color: this.albedo.clone(),
       roughness: 1,
       metalness: 0,
       normalMap: normal,

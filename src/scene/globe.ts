@@ -67,6 +67,43 @@ export async function createMoonMaterial(renderer: WebGLRenderer): Promise<MeshS
   return material;
 }
 
+/**
+ * Mean colour (linear) of the equirectangular colour map between two latitudes, averaged in
+ * linear light. The south-polar close-up takes this as its albedo, so the shaded relief meets
+ * the photographic globe without a step in colour or brightness. Null when the image cannot be read.
+ */
+export function bandColour(texture: Texture | null, latFrom: number, latTo: number): Color | null {
+  const image = texture?.image as CanvasImageSource & { width: number; height: number } | undefined;
+  if (!image?.width || !image.height) return null;
+  const w = 512, h = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) return null;
+  ctx.drawImage(image, 0, 0, w, h);
+  const row = (lat: number) => Math.min(h - 1, Math.max(0, Math.round(((90 - lat) / 180) * h)));
+  const r0 = Math.min(row(latFrom), row(latTo)), r1 = Math.max(row(latFrom), row(latTo));
+  let data: Uint8ClampedArray;
+  try {
+    data = ctx.getImageData(0, r0, w, r1 - r0 + 1).data;
+  } catch {
+    return null; // a tainted canvas
+  }
+  const toLinear = (c: number) => {
+    const s = c / 255;
+    return s <= 0.04045 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  let r = 0, g = 0, b = 0;
+  const n = data.length / 4;
+  for (let i = 0; i < data.length; i += 4) {
+    r += toLinear(data[i]);
+    g += toLinear(data[i + 1]);
+    b += toLinear(data[i + 2]);
+  }
+  return n ? new Color(r / n, g / n, b / n) : null;
+}
+
 /** What the globe's background stars are, in words: for the relief chip and getState (rule 1 of the brief: generated detail stays labelled). */
 export const BACKGROUND_STARS_NOTE = 'Background stars are decorative: random points, not the real sky.';
 
