@@ -105,6 +105,7 @@ The data the app needs is committed. These scripts rebuild it from the original 
 | `node scripts/build-horizons-bundle.mjs`, `npm run fetch-horizons` | `public/data/horizons/` and `public/data/horizons-check.json` from JPL Horizons | small |
 | `npm run fetch-gcat` | `public/data/sources/gcat-landers.json`: who owns the hardware at each landing (GCAT) | two catalogue tables |
 | `npm run fetch-site-areas` | `public/data/sources/`: LROC's measured hardware positions and the explored area at each site | small |
+| `npm run build-licences` | `public/licences/THIRD-PARTY-NOTICES.txt`, from the installed packages (no download) | none |
 
 `scripts/make-surface-detail.mjs` remakes `public/textures/surface_detail_*.jpg` from a
 third-party asset pack that is not in the repository and whose origin and licence are not
@@ -164,7 +165,7 @@ the data and its own code, not from the app's code. They are not a NASA or peer 
 | What | Checked against | Result |
 | --- | --- | --- |
 | Sun and Earth azimuth and elevation at a site | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035 | Worst difference 0.0036°. After 2035 it grows (0.006° in 2060, 0.021° in 2099); dates are limited to 1950 to 2100 |
-| Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, which was the version on GitHub `main` on 14 November 2026, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
+| Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, GitHub `main`'s version on 14 November 2026 until `595fe28` brought the fix, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs |
 | Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays. At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 3.7 min apart (2 m mast) |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min |
@@ -172,7 +173,7 @@ the data and its own code, not from the app's code. They are not a NASA or peer 
 | 14 March 2025 eclipse at the Blue Ghost site | Reported 05:00, 06:18, 09:52 UTC | Computed 05:00:38, 06:17:21, 09:51:06 UTC |
 | Long-term sunlight, 18.6 years, six polar points | The validator's own computation and PGDA product 69 | Within 0.03 points of the validator. IM-2: PGDA 46.55 %, validator 46.71 %, app 46.68 % |
 | Earth visibility at limb and polar sites | The validator's skyline with Horizons Earth directions | Within 0.05 points. PGDA's Earth map counts any part of Earth's disc and reads 4 to 11 points higher by definition; the app counts Earth's centre |
-| Deep Space Network station geometry | JPL Horizons with each station as the observer, on dates the author did not use | Elevation within 0.001°; limit crossings within 5.3 s (the author's own check had reported 0.3 s); terrain-set edges within 1.5 min |
+| Deep Space Network station geometry | JPL Horizons with each station as the observer, on dates the author did not use | Elevation within 0.001°; limit crossings within 5.3 s, because the code places them only to its 10 s search step (a finer search is done in the science project, not delivered yet); terrain-set edges within 1.5 min |
 | Seasonal outlook | The validator's own skyline and SPICE, a year at IM-2 and at a Shackleton-rim pin | Within 0.11 points per lunar day, except one row at the rim pin (0.57 points), traced to the skyline before `3899cb9`; its re-run is pending |
 | Longest darkness and Earth gap followed past the window edge | Same, at IM-2, Chandrayaan-3 and Apollo 11 | Ends within 3.1 min |
 | Slope | An independent recomputation at the 28 sites and 10 scan candidates | Identical. But a slope measured over 120 m on a 60 m grid cannot see lander-scale tilt: Surveyor 3 is published at 14°, the app gives 12.5° over 10 m on the 3 m model and 3.7° over 120 m; Apollo 14: 7° published, 7.2° against 1.3° |
@@ -317,4 +318,6 @@ docs/lunyx/      status, validation record, sources, AI use, actions, accessibil
 ## Licence
 
 The team has not chosen a licence for its own code yet; there is no `LICENSE` file. Data and
-libraries keep their own terms, listed in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md).
+libraries keep their own terms, listed in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md). The
+licence texts of the libraries and fonts that the website ships are served with it at
+`/licences/THIRD-PARTY-NOTICES.txt` (`public/licences/`, regenerated by `npm run build-licences`).

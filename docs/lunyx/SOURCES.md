@@ -5,8 +5,9 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `1a5fe7d`: `am/lunyx-experience/integration` at `895c026`,
-  which has the same tree as the published `0cc5553`, plus this task's documents. Since the
+- **State described:** the tree at `caf4ce7`: `am/lunyx-experience/integration` at `895c026`
+  (the same tree as the published `0cc5553`) merged with `am/lunyx/integration` at `27b0f30`
+  (T-37: licence notices in the site, the ice-target DOI fix), plus this task's documents. Since the
   earlier published `cc736f8`, `public/` gained only `public/data/sources/` (S18 to S20),
   `package.json` gained the scripts `fetch-gcat` and `fetch-site-areas`, and the lockfile is
   unchanged.
@@ -248,9 +249,9 @@ any AI tool made them are not established (open list L2).**
   2021-03-29). Paper: Lemelin, M., et al. (2021). Framework for Coordinated Efforts in the
   Exploration of Volatiles in the South Polar Region of the Moon. *The Planetary Science
   Journal*, 2(3), 103. https://doi.org/10.3847/PSJ/abf3c5 (checked at Crossref 2026-11-15).
-  **The repository's own files cite `10.3847/PSJ/abf3c3`, which doi.org does not know (HTTP
-  404):** `public/data/ice-targets/README.md`, the `lunyx` block of the GeoJSON and
-  `scripts/build-ice-targets.py`. A fix for their owner, reported through @coordinator.
+  Until T-37 (`27b0f30`) the repository's own files cited `10.3847/PSJ/abf3c3`, which doi.org
+  does not know (HTTP 404); `public/data/ice-targets/README.md`, the GeoJSON's `lunyx` block and
+  `scripts/build-ice-targets.py` now cite `abf3c5`.
 - **Licence:** `cc-by-4.0` in the Zenodo record's metadata (read through the Zenodo API,
   2026-11-15). Attribution is shown in the app's Filters panel next to the layer.
 - **What Lunyx did** (`scripts/build-ice-targets.py`): polygons from the shapefile and
@@ -395,7 +396,13 @@ astronomy-engine's MIT header; the main bundle (`dist/assets/index-*.js`) contai
 comment, so three.js's MIT notice is not shipped with it; ten WOFF2 font files are shipped and
 no copy of the OFL text is. MIT asks that the copyright and permission notice be included in
 copies; OFL 1.1 asks that each copy of the font software contain its copyright notice and
-licence. Shipping a third-party notices file with the build would cover both (open list L8).
+licence. Since T-37 (`27b0f30`) the site ships `/licences/THIRD-PARTY-NOTICES.txt`
+(`public/licences/`, 16.2 kB), written by `scripts/build-licences.mjs` (`npm run
+build-licences`) from the installed packages: three, astronomy-engine, Inter, Space Grotesk,
+Vite and Rolldown (whose module-preload helper is part of the scripts), each with its licence
+text as the package ships it; `src/licences.test.ts` fails when the file is stale. That covers
+both conditions (open list L8, now resolved). The file points readers to `docs/DATA_SOURCES.md`
+for data credits; this register is `docs/lunyx/SOURCES.md`.
 
 **On the server only** (the Vite dev or preview server that runs `/api/*`): `@anthropic-ai/sdk`
 1.8.0 (Apache-2.0; it also ships `LICENSE-MIT`, which says the project moved from MIT to Apache
