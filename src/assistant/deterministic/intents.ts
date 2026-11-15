@@ -788,7 +788,19 @@ const missions: Intent = (step) => {
     const show = /show|display|on|enable/.test(toggle[1]);
     return plan(`${show ? 'show' : 'hide'} the previous missions`, async (ctx) => {
       const r = await ctx.run('showMissions', { show });
-      return r.showMissions === true ? 'Previous landings are shown on the globe.' : 'Previous landings are hidden.';
+      // T-67: the territory colouring and the flags are drawn only with the landings, and only when
+      // the filters let one through. The result says so (territoriesShown, flagsShown); a build
+      // before it is read from getState.
+      const st = await ctx.state();
+      const shown = r.showMissions === true;
+      const territoriesDrawn = typeof r.territoriesShown === 'boolean' ? r.territoriesShown : shown && st.showTerritories === true;
+      const flagsDrawn = typeof r.flagsShown === 'boolean' ? r.flagsShown : shown && st.showFlags === true;
+      const lines = [shown ? 'Previous landings are shown on the globe.' : 'Previous landings are hidden.'];
+      if (shown && num(st, 'missionsShown.shown') === 0) lines.push('The mission filters hide every landing, though: say "reset the filters" to see them.');
+      if (territoriesDrawn) lines.push('The whole Moon is coloured by the country of the nearest landing shown: it shows who landed nearest, not ownership; no country owns lunar ground.');
+      if (flagsDrawn) lines.push('Each marker carries the flag of the state its hardware belongs to.');
+      if (!shown && st.showTerritories === true) lines.push('The territory colouring is hidden with them.');
+      return lines.join(' ');
     });
   }
   const filtered = (r: Json) => `Showing ${num(r, 'shown') ?? '?'} of ${num(r, 'total') ?? '?'} catalogued landings.`;
@@ -1158,10 +1170,10 @@ const INTENTS: Intent[] = [
   timeShift, timeSet,
   later.relief, later.coverage, later.iceOutlines,
   overlays, missions, lighting,
-  later.skyPaths, later.hudPanels,
+  later.skyPaths, later.surfacePanels, later.hudPanels,
   views,
   later.fieldOfView,
-  look, globe, pin, exportResults,
+  later.tracking, look, globe, pin, exportResults,
   later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags, later.territories,
   later.siteRecords, later.realClock,
   questions, site,

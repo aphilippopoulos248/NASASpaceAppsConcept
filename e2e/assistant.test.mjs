@@ -4,9 +4,12 @@
 // goes through the same /api/assistant route, streaming and tool loop a language model
 // would use. Nothing in this file talks to a real language model.
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { act, ask, click, closeBrowser, log, lastSeq, openApp, openAssistant, result, SLOW, state, until } from './lib/app.mjs';
-import { servers } from './lib/servers.mjs';
+import { servers, startPreview } from './lib/servers.mjs';
 
 const DETERMINISTIC_LABEL = 'Deterministic mode: no language model';
 const SCRIPTED_LABEL = 'Scripted test model (not a language model)';
@@ -226,6 +229,36 @@ describe('assistant: deterministic mode (server without a model)', () => {
     // (NASA Moon Trek tiles around a selected site). Everything above ran without it.
     const hosts = [...new Set(app.blocked.map((u) => new URL(u).host))].filter((h) => h !== new URL(srv.deterministic).host);
     assert.deepEqual(hosts.filter((h) => h !== 'trek.nasa.gov'), []);
+  });
+});
+
+// A judge's machine: the default configuration (no LUNYX_LLM_PROVIDER, so the Claude API) and no
+// credentials the SDK can find (no key in the environment, no `ant auth login` profile: an
+// empty SDK config directory). Since 7dabe03 the SDK builds its client without complaint and
+// fails only on the first request; the server must still say "no model" (T-17).
+describe('assistant: the default configuration without Claude credentials', () => {
+  let srv, app, page;
+  before(async () => {
+    srv = await startPreview({ ANTHROPIC_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'lunyx-e2e-no-credentials-')) });
+    app = await openApp(srv.base);
+    page = app.page;
+  }, SLOW);
+  after(async () => {
+    await app?.close();
+    await srv?.stop();
+  });
+
+  test('the status says no model, with the reason, and the drawer is in deterministic mode', SLOW, async () => {
+    const status = await (await fetch(`${srv.base}/api/assistant`)).json();
+    assert.equal(status.available, false, JSON.stringify(status));
+    assert.match(status.reason, /No Claude credentials found/);
+    await openAssistant(page);
+    await until(page, () => document.querySelector('.ad-mode')?.textContent.startsWith('Deterministic'));
+    const reply = await ask(page, 'go to IM-2');
+    assert.deepEqual(reply.source, { kind: 'deterministic' });
+    assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
+    assert.equal((await state(page)).site.id, 'im-2');
+    assert.deepEqual(app.problems, []);
   });
 });
 

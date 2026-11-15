@@ -11,9 +11,10 @@ import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
 import { mountAbTab } from './abTab';
 import { bindWorkingPair, createCompareActions } from './actions';
-import { focusInHiddenPanel, returnFocusOnClose } from './focus';
+import { compareTakesEscape, focusInHiddenPanel, returnFocusOnClose } from './focus';
 import { mountNearbyTab } from './nearbyTab';
 import { mountOutlookTab } from './outlookTab';
+import { mountRankTab } from '../decision/rankTab';
 import { mountWindowsTab } from './windowsTab';
 import { COMPARE_TABS, createPanelStore, TAB_TITLE, type CompareTab } from './state';
 import { createCompareStorage } from './storage';
@@ -121,6 +122,8 @@ export function mountComparePanel(region: HTMLElement): void {
   const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
   const windows = mountWindowsTab(tabPanels.get('windows')!, panel, createTabKit());
   const outlookTab = mountOutlookTab(tabPanels.get('outlook')!, panel, createTabKit());
+  // Decision engine (D-17, T-74): the tab follows the stores and the decision tools itself.
+  const rankTab = mountRankTab(tabPanels.get('rank')!, createTabKit());
 
   // ---------- rendering ----------
   const renderLauncher = () => {
@@ -161,6 +164,7 @@ export function mountComparePanel(region: HTMLElement): void {
     } else if (tab === 'nearby') nearby.render();
     else if (tab === 'windows') windows.render();
     else if (tab === 'outlook') outlookTab.render();
+    else if (tab === 'rank') rankTab.render();
   };
   const showing = (tab: CompareTab) => isOpen() && panel.get().tab === tab;
 
@@ -227,16 +231,18 @@ export function mountComparePanel(region: HTMLElement): void {
 
   // Keys pressed inside the sheet stay inside it (the globe and the site card listen on the window).
   sheet.addEventListener('keydown', (e) => e.stopPropagation());
-  // Escape closes the topmost layer first: this panel, before the site card or the surface view react.
+  // Escape goes to the layer that holds the focus (F-10, agreed with the assistant drawer): this panel
+  // when the focus is inside it, even with the drawer open, and before the site card or the surface
+  // view react; the drawer when the focus is in it, or on the page while it is open.
   window.addEventListener(
     'keydown',
     (e) => {
-      if (e.key !== 'Escape' || !isOpen() || e.defaultPrevented || store.get().assistantOpen) return;
+      if (e.key !== 'Escape' || !isOpen() || e.defaultPrevented) return;
       const target = e.target instanceof Element ? e.target : null;
       const inside = target !== null && sheet.contains(target);
-      // Another layer with its own Escape (the assistant drawer), or a field outside the sheet, keeps the key.
-      if (!inside && target && (target.closest('#region-drawer') || isTypingTarget(target))) return;
-      // Taken: the surface view and the site card leave an Escape that was handled alone.
+      const focus = { inside, inDrawer: !inside && target !== null && target.closest('#region-drawer') !== null, typingOutside: !inside && target !== null && isTypingTarget(target), drawerOpen: store.get().assistantOpen };
+      if (!compareTakesEscape(focus)) return;
+      // Taken: the drawer, the surface view and the site card leave an Escape that was handled alone.
       e.preventDefault();
       e.stopPropagation();
       void closePanel();

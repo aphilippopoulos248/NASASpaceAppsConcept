@@ -32,9 +32,16 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 
 // ---------------------------------------------------------------- how the globe is drawn
 
+/**
+ * Words about the landings' areas and territories. Since T-67 there is no territory size setting
+ * (the whole Moon is coloured by the country of the nearest landing shown, with showMissions), so
+ * these words only keep a request like "territory size exaggeration 25" from being read as the relief.
+ */
+const TERRITORY = /\b(territor(?:y|ies)|explored areas?|landing areas?)\b/;
+
 export const relief: Intent = (step) => {
   const about = /\b(relief|exaggerat\w*)\b/.test(step) || /\bsmooth (sphere|globe|moon)\b/.test(step);
-  if (!about || QUESTION.test(step)) return null;
+  if (!about || QUESTION.test(step) || TERRITORY.test(step)) return null;
   let factor: number | undefined;
   if (/\b(true|real)[- ]scale\b|\bno exaggeration\b|\bexaggerat\w*\b.*\b(off|none)\b|^(remove|turn off|disable|stop|undo)\b.*\bexaggerat/.test(step)) factor = 1;
   else if (/\bsmooth (sphere|globe|moon)\b|\bno relief\b|\brelief\b.*\b(off|none)\b|^(hide|remove|turn off|disable|flatten)\b.*\brelief\b/.test(step)) factor = 0;
@@ -408,6 +415,112 @@ export const surfaceStatus: Intent = (step) => {
 
 // ---------------------------------------------------------------- the surface HUD: chart, key metrics, explanation
 
+// ---------------------------------------------------------------- tracking the Sun or Earth (PR #2)
+
+/** "Track the Sun" keeps the view on it as the clock runs (the HUD's Track toggles); "face the Sun" turns to it once (lookAtBody). */
+export const tracking: Intent = (step) => {
+  const on = /^(?:track|follow|keep (?:facing|looking at|the view on)|lock (?:the view )?on(?:to)?)\s+(?:the\s+)?(sun|earth)(?:\s+as (?:the )?(?:clock|time) (?:runs|moves|passes))?$/.exec(step);
+  const off = /^(?:stop|end|cancel|turn off)\s+(?:tracking|following)(?:\s+(?:the\s+)?(sun|earth))?$|^untrack(?:\s+(?:the\s+)?(sun|earth))?$/.exec(step);
+  if (!on && !off) return null;
+  if (on) {
+    const body = on[1] as 'sun' | 'earth';
+    const name = body === 'sun' ? 'the Sun' : 'Earth';
+    return plan(`keep facing ${name} as the clock runs`, async (ctx) => {
+      const r = await ctx.run('setBodyTracking', { body, on: true });
+      const look = isObject(r.look) ? ` Facing azimuth ${degrees(num(r, 'look.azDeg'))}, elevation ${degrees(num(r, 'look.elDeg'))} now.` : '';
+      return `The view now keeps facing ${name} as simulated time changes.${look} Dragging the view or the arrow keys stop the tracking.`;
+    });
+  }
+  const named = (off![1] ?? off![2]) as 'sun' | 'earth' | undefined;
+  return plan(named ? `stop tracking ${named === 'sun' ? 'the Sun' : 'Earth'}` : 'stop tracking', async (ctx) => {
+    let body = named;
+    if (!body) {
+      // Which one is tracked is in the surface view's state.
+      const v = await ctx.run('getSurfaceView');
+      const t = str(v, 'trackingBody');
+      if (t !== 'sun' && t !== 'earth') return 'Neither the Sun nor Earth is being tracked.';
+      body = t;
+    }
+    const r = await ctx.run('setBodyTracking', { body, on: false });
+    const still = str(r, 'tracking');
+    return still && still !== body ? `${body === 'sun' ? 'The Sun' : 'Earth'} was not being tracked; ${still === 'sun' ? 'the Sun' : 'Earth'} still is.` : `Tracking stopped: the view stays where it is now.`;
+  });
+};
+
+// ---------------------------------------------------------------- the surface view's movable panels (T-65)
+
+/** Panel words to the ids of setSurfacePanel (src/ui/surface/panelLayout.ts). The key metrics keep their own fold (showKeyMetrics). */
+const PANEL_WORDS: [RegExp, string][] = [
+  [/^(?:skyline )?chart$/, 'skyline-chart'],
+  [/^(?:surface )?controls$/, 'surface-controls'],
+  [/^(?:time|time slider|scrubber|clock)$/, 'time'],
+  [/^(?:locator(?: map)?|map)$/, 'locator-map'],
+  [/^(?:compare|comparison)$/, 'compare'],
+  [/^(?:assistant|chat)$/, 'assistant'],
+  [/^key metrics$/, 'key-metrics'],
+];
+const PANEL_NAME = '((?:skyline )?chart|(?:surface )?controls|time slider|time|scrubber|clock|locator map|locator|map|compare|comparison|assistant|chat|key metrics)';
+const panelId = (word: string): string | undefined => PANEL_WORDS.find(([re]) => re.test(word))?.[1];
+
+/** "Time: on screen, folded, moved to 300, 200 px (412 × 96 px)". */
+function panelLine(p: Json): string {
+  const where = p.shown !== true ? 'not on screen' : `on screen, ${p.folded === true ? 'folded' : 'open'}, ${p.moved === true ? 'moved' : 'in its place'}`;
+  const box = num(p, 'xPx') !== undefined ? `, top left at ${num(p, 'xPx')}, ${num(p, 'yPx')} px (${num(p, 'widthPx')} × ${num(p, 'heightPx')} px)` : '';
+  return `${str(p, 'title') ?? str(p, 'panel') ?? 'panel'}: ${where}${box}`;
+}
+
+export const surfacePanels: Intent = (step) => {
+  if (/^(?:reset|restore|tidy(?: up)?)\s+(?:all\s+)?(?:the\s+)?(?:surface\s+)?panels(?:\s+(?:positions?|layout))?$|^panels? reset$/.test(step)) {
+    return plan('put every surface panel back in its place', async (ctx) => {
+      const r = await ctx.run('resetSurfacePanels');
+      const n = Array.isArray(r.panels) ? r.panels.length : 0;
+      return `Every surface panel is back in its place and open${n ? ` (${plural(n, 'panel')})` : ''}.`;
+    });
+  }
+  if (/^(?:list|show me|where are|which are|what are)\s+(?:all\s+)?(?:the\s+)?(?:surface\s+)?panels$|^surface panels$/.test(step)) {
+    return plan('list the surface panels', async (ctx) => {
+      const r = await ctx.run('getSurfacePanels');
+      const list = Array.isArray(r.panels) ? r.panels.filter(isObject) : [];
+      const head = r.surfaceView === true ? 'Surface panels (the surface view is shown):' : 'Surface panels (they move and fold in the surface view only; it is not shown now):';
+      return [head, ...list.map((p) => `- ${panelLine(p)}`)].join('\n');
+    });
+  }
+  // Folding needs the word "panel": "fold the key metrics" and "expand the chart" keep their own actions.
+  const fold = new RegExp(`^(fold|collapse|unfold|open|reopen)\\s+(?:the\\s+)?${PANEL_NAME}\\s+panel$`).exec(step);
+  const moveTo = new RegExp(`^(?:move|put|drag|place)\\s+(?:the\\s+)?${PANEL_NAME}(?:\\s+panel)?\\s+(?:to|at)\\s+(?:x\\s*=?\\s*)?(-?\\d+)(?:\\s*(?:px|pixels))?\\s*(?:,|and)?\\s*(?:y\\s*=?\\s*)?(-?\\d+)(?:\\s*(?:px|pixels))?$`).exec(step);
+  const moveBy = new RegExp(`^(?:move|nudge|shift|drag)\\s+(?:the\\s+)?${PANEL_NAME}(?:\\s+panel)?\\s+(left|right|up|down)(?:\\s+by)?\\s+(\\d+)\\s*(?:px|pixels)?$`).exec(step);
+  const word = fold?.[2] ?? moveTo?.[1] ?? moveBy?.[1];
+  if (!word) return null;
+  const panel = panelId(word);
+  if (!panel || (fold && panel === 'key-metrics')) return null;
+  if (fold) {
+    const folded = /^(fold|collapse)$/.test(fold[1]);
+    return plan(`${folded ? 'fold' : 'open'} the ${word} panel`, async (ctx) => {
+      const r = await ctx.run('setSurfacePanel', { panel, folded });
+      return `The ${str(r, 'title') ?? word} panel is ${r.folded === true ? 'folded to its title row' : 'open'}.`;
+    });
+  }
+  return plan(`move the ${word} panel`, async (ctx) => {
+    let xPx: number, yPx: number;
+    if (moveTo) {
+      xPx = Number(moveTo[2]);
+      yPx = Number(moveTo[3]);
+    } else {
+      // Relative to where it is now, as the grip's arrow keys move it.
+      const now = await ctx.run('getSurfacePanels');
+      const p = (Array.isArray(now.panels) ? now.panels.filter(isObject) : []).find((x) => str(x, 'panel') === panel);
+      if (!p || num(p, 'xPx') === undefined) throw new Halt(`The ${word} panel is not on screen${now.surfaceView === true ? '' : ': the panels move in the surface view only'}.`);
+      const d = Number(moveBy![3]);
+      const dir = moveBy![2];
+      xPx = num(p, 'xPx')! + (dir === 'left' ? -d : dir === 'right' ? d : 0);
+      yPx = num(p, 'yPx')! + (dir === 'up' ? -d : dir === 'down' ? d : 0);
+    }
+    const r = await ctx.run('setSurfacePanel', { panel, xPx, yPx });
+    const kept = num(r, 'xPx') !== xPx || num(r, 'yPx') !== yPx ? ' (kept inside the window)' : '';
+    return `The ${str(r, 'title') ?? word} panel is now at ${num(r, 'xPx') ?? '?'}, ${num(r, 'yPx') ?? '?'} px, its top left corner from the top left of the window${kept}.`;
+  });
+};
+
 export const hudPanels: Intent = (step) => {
   if (QUESTION.test(step)) return null;
   const chartWords = /\b(skyline )?chart\b/;
@@ -586,7 +699,7 @@ export const presets: Intent = (step) => {
       if (!list.length) return 'No mission presets are loaded in this build.';
       return [
         `${plural(list.length, 'mission')} can be replayed from bundled data${str(r, 'loaded') ? ` (on screen now: ${str(r, 'loaded')})` : ''}:`,
-        ...list.map((x) => `- ${str(x, 'title') ?? str(x, 'id')} (say "replay ${str(x, 'id')}"): ${utc(str(x, 'missionWindow.startUtc'))} for ${span(num(x, 'missionWindow.durationH'))}, clock from ${utc(str(x, 'clockStartsUtc'))}, ${str(x, 'view') === 'surface' ? 'surface view' : 'globe view'}`),
+        ...list.map((x) => `- ${str(x, 'title') ?? str(x, 'id')} (say "replay ${str(x, 'id')}"): ${utc(str(x, 'missionWindow.startUtc'))} for ${span(num(x, 'missionWindow.durationH'))}, clock from ${utc(str(x, 'clockStartsUtc'))}, ${str(x, 'view') === 'surface' ? 'surface view' : 'globe view'}${str(x, 'caveat') ? `. Caveat: ${str(x, 'caveat')!.replace(/\.$/, '')}` : ''}`),
       ].join('\n');
     });
   }
@@ -605,7 +718,9 @@ export const presets: Intent = (step) => {
       throw new Halt(hits.length ? `"${wanted}" fits ${hits.length} presets: ${hits.map((x) => str(x, 'id')).join(', ')}. Say which.` : `No preset matches "${wanted}". Presets: ${names}.`);
     }
     const r = await ctx.run('loadPreset', { id: str(hits[0], 'id')! });
-    return `Replaying ${str(r, 'preset.title') ?? str(hits[0], 'title')}: ${siteText(r.site)}, clock at ${utc(str(r, 'timeUtc'))}${r.playing === true ? `, running at ${span((num(r, 'rateSimSecondsPerSecond') ?? NaN) / 3600)} per second` : ', paused'}, ${str(r, 'view') === 'surface' ? 'in the surface view' : 'on the globe'}; mission window ${utc(str(r, 'missionWindow.startUtc'))} to ${utc(str(r, 'missionWindow.endUtc'))}.`;
+    // What is uncertain or computed rather than reported, as the preset list says it on screen (T-67).
+    const caveats = [str(r, 'caveat'), str(r, 'sunBehindEarth.reported')].filter((x): x is string => Boolean(x));
+    return `Replaying ${str(r, 'preset.title') ?? str(hits[0], 'title')}: ${siteText(r.site)}, clock at ${utc(str(r, 'timeUtc'))}${r.playing === true ? `, running at ${span((num(r, 'rateSimSecondsPerSecond') ?? NaN) / 3600)} per second` : ', paused'}, ${str(r, 'view') === 'surface' ? 'in the surface view' : 'on the globe'}; mission window ${utc(str(r, 'missionWindow.startUtc'))} to ${utc(str(r, 'missionWindow.endUtc'))}.${caveats.length ? ` ${caveats.join(' ')}` : ''}`;
   });
 };
 
@@ -615,9 +730,30 @@ export const flags: Intent = (step) => {
   const show = !/hide|remove|off|disable/.test(m[1]);
   return plan(`${show ? 'show' : 'hide'} the country flags on the landing markers`, async (ctx) => {
     const r = await ctx.run('showFlags', { show });
-    return r.showFlags === true ? 'Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia).' : 'The country flags are hidden.';
+    if (r.showFlags !== true) return 'The country flags are hidden.';
+    // The flags ride on the landing markers: none is drawn while previous missions are hidden
+    // (flagsShown from T-67 on; before it, getState.showMissions).
+    const drawn = typeof r.flagsShown === 'boolean' ? r.flagsShown : (await ctx.state()).showMissions !== false;
+    if (!drawn) return `Country flags are switched on, but no flag is drawn ${await notDrawnWhy(ctx)}. ${FLAG_RULE}`;
+    return `Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia). ${FLAG_RULE}`;
   });
 };
+
+/**
+ * Why a layer that is switched on is not drawn: the landing markers are hidden, or the mission
+ * filters let no landing through (T-67: territoriesShown and flagsShown are false in both cases).
+ */
+async function notDrawnWhy(ctx: { state(): Promise<Json> }): Promise<string> {
+  const st = await ctx.state();
+  if (st.showMissions === false) return 'while previous missions are hidden (say "show previous missions" to see them)';
+  if (num(st, 'missionsShown.shown') === 0) return 'while the mission filters hide every landing (say "reset the filters" to see them)';
+  return 'now';
+}
+
+/** Said with the flags: they are about the hardware, not the ground. */
+const FLAG_RULE = 'A flag names who the hardware belongs to, not a claim to the ground: no country owns lunar ground.';
+/** Said with the territories until a result gives its own territoryRule (T-67). */
+const TERRITORY_WORDS = 'It shows who landed nearest, not ownership: no country owns lunar ground.';
 
 export const territories: Intent = (step) => {
   const m = /^(show|display|turn on|enable|hide|remove|turn off|disable)\s+(?:the\s+)?(?:country\s+)?territor(?:y|ies)(?:\s+(?:colours?|colors?|colouring|coloring))?(?:\s+on the globe)?$/.exec(step);
@@ -625,7 +761,13 @@ export const territories: Intent = (step) => {
   const show = !/hide|remove|off|disable/.test(m[1]);
   return plan(`${show ? 'show' : 'hide'} the country territories on the globe`, async (ctx) => {
     const r = await ctx.run('showTerritories', { show });
-    return r.showTerritories === true ? 'The globe is coloured by the country of the nearest landing shown.' : 'The country territories are hidden.';
+    if (r.showTerritories !== true) return 'The country territories are hidden.';
+    const rule = str(r, 'territoryRule') ?? TERRITORY_WORDS;
+    // Drawn only while previous missions are shown (globeView: showMissions && showTerritories; the checkbox is disabled otherwise).
+    const drawn = typeof r.territoriesShown === 'boolean' ? r.territoriesShown : (await ctx.state()).showMissions !== false;
+    return drawn
+      ? `The globe is coloured by the country of the nearest landing shown. ${rule}`
+      : `Country territories are switched on, but nothing is drawn ${await notDrawnWhy(ctx)}. ${rule}`;
   });
 };
 
@@ -689,6 +831,8 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],
   [['setFieldOfView'], 'Surface view: "face the sun", "field of view 10", "hide the sky paths", "what is the ground made of"'],
   [['setChart'], 'Surface HUD: "show the skyline chart", "expand the chart", "chart against time", "show the chart as a table", "fold the key metrics", "close the explanation"'],
+  [['setBodyTracking'], 'Tracking (surface): "track the sun", "follow earth", "stop tracking"'],
+  [['setSurfacePanel'], 'Surface panels: "fold the time panel", "move the locator map to 300, 200", "move the compare panel left by 100", "reset the panels", "list the surface panels"'],
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],

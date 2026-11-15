@@ -1,0 +1,153 @@
+/*
+ * "Rank sites" tab of the compare panel (decision engine, D-17). Tokens and the shared ly- / cmp-
+ * classes carry the look; the dec- classes here are layout: the requirement cards, the candidate
+ * row, the ranked tables with their badges, and the tooltip. Widths follow the sheet (the
+ * cmp-body container), which narrows when the assistant drawer is open beside it.
+ */
+
+.dec-section + .dec-section { margin-top: var(--sp-2); }
+
+/* ---------- mission profile ---------- */
+.dec-pickrow { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-2) var(--sp-4); }
+.dec-select { width: auto; min-width: 16em; max-width: 28em; }
+.dec-profilewords { flex: 1 1 24em; min-width: 0; display: grid; gap: 2px; align-self: center; }
+.dec-profiletext { overflow-wrap: anywhere; }
+
+.dec-reqs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--sp-2); margin-top: var(--sp-3); }
+.dec-req { display: grid; align-content: start; gap: var(--sp-1) 0; min-width: 0; padding: var(--sp-2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.dec-req.is-changed { border-color: var(--accent-line); }
+.dec-req.is-relaxed { border-color: var(--danger); }
+.dec-reqhead { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-2); min-height: 20px; }
+.dec-reqname { font-weight: var(--fw-semibold); }
+.dec-req .cmp-field-row .ly-input { width: 6em; }
+.dec-share { white-space: nowrap; }
+.dec-safety {
+  display: inline-block; padding: 0 6px;
+  border: 1px solid var(--warn); border-radius: var(--radius-pill);
+  color: var(--warn); font-size: var(--fs-xs); font-weight: var(--fw-medium); line-height: 16px;
+  text-transform: uppercase; letter-spacing: var(--tracking-caps);
+}
+.dec-relaxed {
+  justify-self: start; padding: 1px var(--sp-2);
+  border: 1px solid var(--danger); border-radius: var(--radius-pill);
+  background: rgba(255, 143, 133, 0.12); color: var(--danger);
+  font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+}
+
+.dec-prompt { display: grid; gap: var(--sp-2); margin-top: var(--sp-3); padding: var(--sp-3); border: 1px solid var(--danger); border-radius: var(--radius-sm); background: rgba(255, 143, 133, 0.08); }
+.dec-prompttext { line-height: var(--lh-body); }
+.dec-relax { border-color: var(--danger); color: var(--danger); }
+.dec-section > .cmp-state, .dec-section > .ly-note, .dec-section > .cmp-more { margin-top: var(--sp-2); }
+
+/* ---------- candidates ---------- */
+.dec-sourcerow { display: flex; flex-wrap: wrap; align-items: end; gap: var(--sp-2) var(--sp-5); }
+.dec-sources { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: 0; padding: 0; border: 0; min-width: 0; }
+.dec-sources .ly-check { min-height: 28px; }
+.dec-nearby { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-4); }
+.dec-sourcerow .cmp-field-row .ly-input { width: 6.5em; }
+.dec-section > .cmp-status { margin-top: var(--sp-2); }
+
+/* ---------- ranking ---------- */
+.dec-results { margin-top: var(--sp-2); }
+.dec-summary { font-weight: var(--fw-medium); }
+.dec-relaxations { margin: var(--sp-2) 0 0; padding: 0; list-style: none; display: grid; gap: var(--sp-1); }
+.dec-relaxations:empty { display: none; }
+.dec-relaxations li { padding-left: var(--sp-3); border-left: 2px solid var(--danger); color: var(--danger); }
+.dec-results > .cmp-stale { margin-top: var(--sp-1); }
+.dec-tablebox { margin-top: var(--sp-2); }
+.dec-tablebox:empty { display: none; }
+.dec-results > .ly-note { margin-top: var(--sp-2); }
+.dec-results > .ly-note:empty { display: none; }
+.dec-utilitynote { color: var(--text); }
+.dec-other { margin-top: var(--sp-2); }
+.dec-other > .ly-note { margin-top: calc(-1 * var(--sp-1)); }
+
+.dec-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--fs-sm); }
+.dec-table th, .dec-table td { padding: var(--sp-1) var(--sp-2); border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; overflow-wrap: anywhere; }
+.dec-table thead th {
+  position: sticky; top: 0; z-index: 1;
+  vertical-align: bottom; padding-top: var(--sp-2); border-bottom-color: var(--border-strong);
+  background: linear-gradient(var(--surface-1), var(--surface-1)), #000;
+  color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold);
+}
+.dec-table thead th[title] { cursor: help; }
+.dec-table tbody th { font-weight: var(--fw-regular); }
+.dec-table tbody tr:hover { background: var(--surface-2); }
+.dec-table tbody tr[aria-current='true'] > th { box-shadow: inset 2px 0 0 var(--accent); }
+
+/* Column widths (table-layout: fixed; rem, since the head is set smaller than the body): the six criteria share what the others leave. */
+.dec-col-pick { width: 2.75rem; }
+.dec-col-rank { width: 2.5rem; }
+.dec-col-site { width: 17%; }
+.dec-col-utility { width: 4.5rem; }
+.dec-col-pareto { width: 4.25rem; }
+.dec-col-why { width: 18%; }
+.dec-col-choose { width: 10.75rem; }
+.dec-table--other .dec-col-site { width: 14%; }
+.dec-table td.dec-c-crit { padding-inline: 6px; }
+
+.dec-colname { display: block; color: var(--text); }
+.dec-collimit { display: block; font-weight: var(--fw-regular); font-variant-numeric: tabular-nums; }
+.dec-collimit.is-relaxed { color: var(--danger); font-weight: var(--fw-semibold); }
+.dec-table thead .dec-safety { margin-top: 2px; }
+.dec-c-pick { text-align: center; }
+.dec-pickbox { width: 16px; height: 16px; margin: 0; accent-color: var(--accent); vertical-align: middle; cursor: pointer; }
+.dec-c-rank { font-weight: var(--fw-semibold); }
+.dec-sitename { display: block; font-weight: var(--fw-medium); line-height: var(--lh-tight); }
+.dec-where { display: block; margin-top: 2px; }
+.dec-c-utility { font-weight: var(--fw-semibold); }
+.dec-pareto { color: var(--accent); font-size: var(--fs-md); }
+.dec-deciding { margin: 0; padding: 0; list-style: none; display: grid; gap: 2px; font-size: var(--fs-xs); line-height: var(--lh-body); }
+
+.dec-badge {
+  display: inline-flex; align-items: baseline; gap: 4px; max-width: 100%;
+  padding: 1px 6px; border: 1px solid transparent; border-radius: var(--radius-sm);
+  font-variant-numeric: tabular-nums; white-space: nowrap; cursor: help;
+}
+.dec-badge .dec-val { overflow: hidden; text-overflow: ellipsis; }
+.dec-mark { font-weight: var(--fw-semibold); }
+.dec-badge.is-pass .dec-mark { color: var(--ok); }
+.dec-badge.is-fail { border-color: var(--danger); color: var(--danger); background: rgba(255, 143, 133, 0.1); }
+.dec-badge.is-unknown { border-color: var(--warn); border-style: dashed; color: var(--warn); }
+.dec-badge:hover { border-color: var(--border-strong); }
+
+.dec-actions { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+
+/* ---------- two rows compared ---------- */
+.dec-compare { margin-top: var(--sp-3); padding: var(--sp-3); border: 1px solid var(--accent-line); border-radius: var(--radius-sm); }
+.dec-compare > .ly-section-title { margin-top: 0; }
+.dec-comparehead { font-weight: var(--fw-medium); }
+.dec-compare > .cmp-highlights { margin-top: var(--sp-2); }
+.dec-pairtable .dec-p-crit { width: 13%; }
+.dec-pairtable .dec-p-side { width: 17%; }
+.dec-pairtable .dec-p-better { width: 6.5rem; }
+.dec-pairtable td.dec-p-note { color: var(--text-muted); font-size: var(--fs-xs); }
+.dec-better { font-weight: var(--fw-semibold); }
+.dec-better.is-unknown { color: var(--warn); font-weight: var(--fw-regular); }
+.dec-better.is-tie { color: var(--text-muted); font-weight: var(--fw-regular); }
+
+/* ---------- the reason behind a badge ---------- */
+.dec-tip {
+  position: absolute; z-index: 3; transform: none;
+  display: grid; gap: 2px; max-width: 340px;
+  white-space: normal; line-height: var(--lh-body); font-size: var(--fs-xs);
+}
+.dec-tip[hidden] { display: none; }
+.dec-tipscore { color: var(--text-muted); }
+
+/* ---------- a narrower sheet (the assistant drawer beside it) ---------- */
+@container cmp-body (max-width: 1080px) {
+  .dec-reqs { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .dec-col-pick { width: 2.25rem; }
+  .dec-col-rank { width: 2rem; }
+  .dec-col-utility { width: 3.25rem; }
+  .dec-col-pareto { width: 3.25rem; }
+  .dec-col-choose { width: 6.5rem; }
+  .dec-col-site { width: 18%; }
+  .dec-col-why { width: 20%; }
+  .dec-table { font-size: var(--fs-xs); }
+  .dec-table th, .dec-table td, .dec-table td.dec-c-crit { padding-inline: var(--sp-1); }
+  /* A value is never cut: the mark goes above it when the column is too narrow for both. */
+  .dec-badge { flex-wrap: wrap; gap: 0 4px; padding-inline: 4px; white-space: normal; }
+  .dec-badge .dec-val { overflow: visible; }
+}

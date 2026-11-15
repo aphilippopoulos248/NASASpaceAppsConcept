@@ -32,6 +32,8 @@ body[data-view='surface'] .assistant-drawer > .sp-toolbar,
 body[data-view='surface'] .cmp-sheet > .sp-toolbar { padding: 8px 12px; }
 body[data-view='surface'] .time-scrubber > .ts-play { grid-row: 2 / span 2; }
 body[data-view='surface'] .locator-zoom { top: 42px; }
-/* Keep controls available when a chart is expanded; every panel can now be moved or folded. */
-body[data-view='surface'] .surface-hud { display: grid; }
+/* The expanded skyline chart, in its own place, reaches under the surface toolbar's place (1280x720
+   and 1920x1080): there the toolbar gives way to it. A toolbar or a chart the user has moved, or a
+   folded chart, does not. Placement only, so the toolbar's own files (hud.ts, hud.css) stay as main has them. */
+body[data-view='surface']:has(.skc[data-size='expanded']:not([hidden]):not(.sp-positioned):not(.sp-folded)) .surface-hud:not(.sp-positioned) { display: none; }
 .sp-reset { display: block; margin-top: 6px; margin-left: auto; }

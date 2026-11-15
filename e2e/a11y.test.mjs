@@ -4,6 +4,8 @@
 //   - text in the panels has enough contrast (WCAG AA) whatever part of the Moon is behind them;
 //   - with "reduce motion" set, panels and view changes do not animate;
 //   - the compare panel (a dialog) takes the focus, names its controls and gives it back on Escape;
+//   - Escape goes to the layer that holds the focus when the compare panel and the assistant
+//     drawer are both open (F-10);
 //   - the surface view's Key metrics and skyline chart are named and readable.
 // What needs a person (does the order make sense, are the names good, screen-reader wording)
 // is written up in docs/lunyx/accessibility.md.
@@ -44,6 +46,17 @@ async function unnamedControls(page) {
   }
   await cdp.detach();
   return out;
+}
+
+/** The accessibility tree's name, description, checked and disabled state of the first node with this role and name. */
+async function axNode(page, role, name) {
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+  await cdp.detach();
+  const n = nodes.find((x) => !x.ignored && x.role?.value === role && (x.name?.value ?? '').trim() === name);
+  if (!n) return null;
+  const prop = (k) => n.properties?.find((q) => q.name === k)?.value?.value;
+  return { name: n.name?.value ?? '', description: n.description?.value ?? '', checked: prop('checked') ?? null, disabled: prop('disabled') ?? false };
 }
 
 /** Presses Tab until focus returns to where it started; describes every stop. */
@@ -225,7 +238,8 @@ describe('accessibility: a keyboard-only walk of the main journey (desktop)', ()
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 1, az0);
     // From a HUD button too (not a field): the arrows still turn the view.
-    await tabTo(page, /\|Face Sun$/, { max: 60 });
+    // "Track Sun" since GitHub PR #2 ("Face Sun" before); the movable panels added stops before it.
+    await tabTo(page, /\|(Track|Face) Sun$/, { max: 90 });
     const az1 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
     await page.keyboard.press('ArrowLeft');
     const turned = await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1, 15_000).catch(() => false);
@@ -427,5 +441,163 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     await page.keyboard.press('Escape');
     await until(page, () => document.querySelector('.cmp-sheet').hidden);
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
+  });
+});
+
+// Finding F-10 (T-64): with the compare panel and the assistant drawer both open, Escape went to the
+// drawer wherever the focus was (the drawer has caught Escape window-wide since GitHub main 081784a).
+// The joint rule, carried by the drawer (src/ui/assistant/drawer.ts) and the compare panel
+// (src/ui/compare/panel.ts, focus.ts): Escape goes to the layer that holds the focus.
+//   - focus in the compare sheet: the compare panel closes, and the focus returns to its launcher;
+//   - focus in the drawer: the drawer closes;
+//   - focus on the page or the scene: the drawer if it is open, else the compare panel.
+describe('accessibility: Escape goes to the layer that holds the focus (F-10)', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  const layers = () =>
+    page.evaluate(() => {
+      const a = document.activeElement;
+      return {
+        compare: !document.querySelector('.cmp-sheet').hidden,
+        drawer: document.getElementById('assistant-drawer').classList.contains('is-open'),
+        view: document.body.dataset.view,
+        focus: a === document.body ? 'body' : `${a?.tagName.toLowerCase()}#${a?.id}.${typeof a?.className === 'string' ? a.className.trim().replace(/\s+/g, '.') : ''}`,
+        focusInDrawer: Boolean(document.getElementById('assistant-drawer')?.contains(a)),
+        focusOnLauncher: Boolean(a?.classList.contains('cmp-launcher')),
+      };
+    });
+  /** Opens the drawer (if closed) and puts the focus in its message box, after its own focus move. */
+  const openDrawer = async () => {
+    if (!(await page.evaluate(() => window.lunyx.store.get().assistantOpen))) await result(page, 'setAssistantOpen', { open: true });
+    await until(page, () => document.getElementById('assistant-drawer').classList.contains('is-open'));
+    // The drawer focuses its box on the next animation frame after opening: let that happen first.
+    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+    await page.locator('#assistant-input').focus();
+    await until(page, () => document.getElementById('assistant-drawer').contains(document.activeElement));
+  };
+  /** Both layers open: the compare panel from its launcher, then the drawer, with the focus in the drawer. */
+  const openBoth = async () => {
+    if (await page.evaluate(() => document.querySelector('.cmp-sheet').hidden)) {
+      await page.locator('.cmp-launcher').click();
+      await until(page, () => !document.querySelector('.cmp-sheet').hidden);
+    }
+    await openDrawer();
+  };
+  /** Presses Escape and waits until one of the layers has reacted (or 3 s went by). */
+  const escape = async () => {
+    const before = await layers();
+    await page.keyboard.press('Escape');
+    await until(page, (b) => !document.querySelector('.cmp-sheet').hidden !== b.compare || document.getElementById('assistant-drawer').classList.contains('is-open') !== b.drawer || document.body.dataset.view !== b.view, before, 3000).catch(() => null);
+    await new Promise((r) => setTimeout(r, 150));
+    return layers();
+  };
+
+  test('focus in the compare panel: Escape closes the panel, not the drawer, and the focus returns to the launcher', SLOW, async () => {
+    await openBoth();
+    await page.locator('.cmp-sheet [role="tab"]').first().focus();
+    const after = await escape();
+    assert.deepEqual([after.compare, after.drawer], [false, true], `compare open: ${after.compare}, drawer open: ${after.drawer} (focus ${after.focus})`);
+    assert.equal(after.focusOnLauncher, true, `the focus went to ${after.focus}, not the launcher`);
+  });
+
+  test('focus in the drawer: Escape closes the drawer, not the compare panel', SLOW, async () => {
+    await openBoth();
+    await page.locator('#assistant-input').focus();
+    const after = await escape();
+    assert.deepEqual([after.compare, after.drawer], [true, false], `compare open: ${after.compare}, drawer open: ${after.drawer}`);
+    assert.equal(after.focusInDrawer, false, 'the focus stayed in the closed drawer');
+  });
+
+  test('focus on the globe or the page: Escape closes the drawer first, then the compare panel', SLOW, async () => {
+    for (const where of ['scene', 'page']) {
+      await openBoth();
+      if (where === 'scene') await page.locator('#scene').focus();
+      else await page.evaluate(() => document.activeElement?.blur());
+      const first = await escape();
+      assert.deepEqual([first.compare, first.drawer], [true, false], `${where}, first Escape: compare open ${first.compare}, drawer open ${first.drawer}`);
+      if (where === 'scene') await page.locator('#scene').focus();
+      const second = await escape();
+      assert.deepEqual([second.compare, second.drawer, second.view], [false, false, 'globe'], `${where}, second Escape: compare open ${second.compare}, drawer open ${second.drawer}, view ${second.view}`);
+    }
+  });
+
+  test('surface view, drawer open, focus on the scene: Escape closes the drawer and stays; the next leaves the view', SLOW, async () => {
+    await result(page, 'selectSite', { site: 'im-2', fly: false });
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface');
+    await openDrawer();
+    await page.locator('#scene').focus();
+    const first = await escape();
+    assert.deepEqual([first.drawer, first.view], [false, 'surface'], `first Escape: drawer open ${first.drawer}, view ${first.view}`);
+    await page.locator('#scene').focus();
+    const second = await escape();
+    assert.equal(second.view, 'globe', 'the second Escape did not leave the surface view');
+    assert.equal(await page.evaluate(() => window.lunyx.store.get().site?.id), 'im-2', 'Escape must keep the site (F-1)');
+  });
+});
+
+// T-67 (GitHub main 5972aaf and pull request #4): country territories behind a Filters checkbox,
+// and a compact surface strip whose "Surface options" and "About" are disclosures that close on
+// Escape, an outside click or the focus leaving.
+describe('accessibility: the territories checkbox and the surface strip\'s disclosures (T-67)', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  test('"Show country territories": a named checkbox, off by default, disabled while previous missions are hidden, and its meaning is available', SLOW, async () => {
+    const box = page.getByRole('checkbox', { name: 'Show country territories' });
+    assert.equal(await box.count(), 1, 'no "Show country territories" checkbox');
+    assert.equal(await box.isChecked(), false, 'territories should be off by default');
+    const missions = page.getByRole('checkbox', { name: 'Show previous missions' });
+    await missions.uncheck();
+    const off = await axNode(page, 'checkbox', 'Show country territories');
+    assert.equal(off?.disabled, true, 'not disabled while previous missions are hidden');
+    await missions.check();
+    const on = await axNode(page, 'checkbox', 'Show country territories');
+    assert.equal(on?.disabled, false);
+    // What the colours mean must not hang on a hover tooltip: with the colouring on, a caption
+    // under the checkbox says it, in text everyone gets (and passes the contrast check).
+    await page.getByRole('checkbox', { name: 'Show country territories' }).check();
+    await until(page, () => !document.querySelector('.fp-territory-note')?.hidden);
+    assert.match((await page.locator('.fp-territory-note').textContent()) ?? '', /nearest/i, 'the caption does not say what the territories mean');
+    assert.deepEqual(await lowContrast(page, '.filters-panel'), []);
+    await page.getByRole('checkbox', { name: 'Show country territories' }).uncheck();
+    await until(page, () => document.querySelector('.fp-territory-note')?.hidden);
+  });
+
+  test('the surface strip: "Surface options" and "About" open from the keyboard, and Escape closes them without leaving the view', SLOW, async () => {
+    await result(page, 'selectSite', { site: 'im-2', fly: false });
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface');
+    for (const label of ['Surface options', 'About']) {
+      const summary = page.locator('.surface-hud summary', { hasText: label });
+      assert.equal(await summary.count(), 1, `no "${label}" disclosure on the strip`);
+      await summary.focus();
+      await page.keyboard.press('Enter');
+      await until(page, (l) => [...document.querySelectorAll('.surface-hud details')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, 5000);
+      assert.deepEqual(await unnamedControls(page), [], `unnamed controls with "${label}" open`);
+      assert.deepEqual(await lowContrast(page, '.surface-hud'), [], `low contrast with "${label}" open`);
+      await page.keyboard.press('Escape');
+      await until(page, (l) => ![...document.querySelectorAll('.surface-hud details')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, 5000);
+      assert.equal(await page.evaluate(() => document.body.dataset.view), 'surface', `Escape in "${label}" left the surface view`);
+      assert.equal(await page.evaluate(() => document.activeElement?.tagName.toLowerCase()), 'summary', `the focus did not return to "${label}"`);
+    }
+    // "Sky paths" is reachable by keyboard inside "Surface options".
+    await page.locator('.surface-hud summary', { hasText: 'Surface options' }).focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    assert.match(await page.evaluate(() => document.activeElement?.textContent.trim() ?? ''), /^Sky paths$/, 'Tab from "Surface options" does not reach its first control');
+    await page.keyboard.press('Escape');
+    await page.locator('#scene').focus();
+    await page.keyboard.press('Escape');
+    await until(page, () => document.body.dataset.view === 'globe');
   });
 });

@@ -8,6 +8,7 @@
 import { runAction } from '../../core/actions';
 import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
+import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
@@ -15,6 +16,7 @@ import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
 import { globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
+import { territoriesDrawn, TERRITORY_RULE } from '../../scene/globe/territories';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
@@ -209,6 +211,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
   territoriesBox.addEventListener('change', () => void runAction('showTerritories', { show: territoriesBox.checked }));
   territories.append(territoriesBox, el('span', undefined, 'Show country territories'));
   territories.title = 'Colours the whole Moon by the country of the nearest landing shown: neighbouring landings of one country share one territory. Not a legal boundary: no country owns lunar ground.';
+  // What the colours mean, on screen while they are drawn (D-1: the same sentence as showTerritories' territoryRule).
+  const territoryNote = el('p', 'ly-note fp-territory-note', `Colours: the country of the nearest landing shown. ${TERRITORY_RULE}`);
   const flags = el('label', 'ly-check fp-flags');
   const flagsBox = el('input');
   flagsBox.type = 'checkbox';
@@ -219,7 +223,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, territories, flags, missions);
+  panel.append(show, territories, territoryNote, flags, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
@@ -301,6 +305,12 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
 
   let lastLegendMs = -Infinity;
+  // The caption is up exactly while the colouring is drawn (territoriesShown): not when the filters hide every landing.
+  const syncTerritoryNote = () => {
+    const s = store.get(), f = missionFilter.get();
+    territoryNote.hidden = !territoriesDrawn(s.showMissions, s.showTerritories, getLandings().filter((l) => matchesFilter(f, l)).length);
+  };
+  missionFilter.subscribe(() => syncTerritoryNote());
   const sync = (changed?: ReadonlySet<string>) => {
     const s = store.get();
     set(date, isoUtc(s.windowStartMs).slice(0, 16));
@@ -318,6 +328,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
     territoriesBox.checked = s.showTerritories;
     territoriesBox.disabled = !s.showMissions;
     territories.classList.toggle('off', !s.showMissions);
+    syncTerritoryNote();
     flagsBox.checked = s.showFlags;
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);

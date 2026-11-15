@@ -18,9 +18,10 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 | Q-4 | "Compare as B" in a ranked row of "Nearby sites" switches the panel to "A and B", which hides the button that had the focus: the focus falls to the page (`document.body`), so a keyboard user loses their place, and the next Escape closes the panel without giving the focus back to the launcher. Seen with the mouse (walkthrough) and with the keyboard only (`e2e/a11y.test.mjs`). | @analysis (`src/ui/compare/`) | 2f7e813, c366a06 | **fixed** upstream (original T-46, in 11f60b4); the e2e regression test passes on 8988bd0 |
 | Q-5 | The default solar elevation band (0° to 90°) means "no band" in the compare panel since c331052 ("No requirement: no solar elevation band is set"), but the surface Key metrics still raise "Requirement not met … outside the required band (0° to 90°)" whenever the window includes a night (Apollo 11, 29.5-day window), and `getAnalysis` reports `requirements.sunElevationBand.metForWholeWindow: false`, which the assistant words as "The Sun leaves the required elevation band (0.0° to 90.0°) during the window". One app state, two answers. | @surface (`src/ui/surface/metricsModel.ts` `flags`), the owner of `src/core/analysisReport.ts` (`checkRequirements`); the assistant follows `getAnalysis` | 2f7e813 | **fixed** upstream (T-46, 11f60b4: `sunElevationBand.required` false at the default, no verdict); on 8988bd0 Key metrics shows no band flag (walkthrough dry run) and the JSON export says `required: false` with no verdict (dry run 2, 26/26 checks) |
 | Q-6 | (adds to the original T-40, not a new defect) The polar elevation layers fail too, not only the whole-Moon grid: `lola_south_875s_40m.lxg`, `lola_south_85s_80m.lxg` and `lola_south_80s_160m.lxg` each failed with `net::ERR_CACHE_WRITE_FAILURE`: two of the three in each of four walkthrough page loads, one in the reproduction's (none in the e2e runs, whose requests go through Playwright's request interception). Then the site card names a coarser grid than the analysis beside it used (card "160 m grid", elevation 1,946 m; analysis 40 m layer, 1,948 m), or still says "Loading…" when the analysis is ready, and when the analysis's own copy fails it uses the 1.9 km grid for that distance range (skyline 0.01° different between two loads of the same pin). | owner of T-40 (@surface) | 2f7e813 | **fixed** upstream (original T-40, bbd2294: serialised downloads with retries); no `.lxg` download failed in 2 of 2 walkthrough page loads (0167112, 8988bd0), against 2 per load in 4 of 4 before |
-| Q-7 | Compare > "Nearby sites": committing "Slope at most" (or any requirement) redraws the tab, which puts the last scan's Radius and Spacing back over what was typed; the scan then runs with the old grid. Typed Radius 900 m, then Slope at most 30°: the field reads 2000 again and the scan covers 2 km (its summary says so). Cause: `panel.ts` redraws the tab on every requirement change and `nearbyTab.ts` `render()` refills the fields from the panel state, which only a scan updates. | @analysis (`src/ui/compare/`); the original team's T-56 | c366a06, 649fc4e | **deferred** by operator decision D-14: out of the release requirements, a known issue in the README's known limits (80cec53) and in `docs/lunyx/STATUS.md`, not counted as verified. The e2e todo test stays as its marker and still fails on 649fc4e (typed 900, the field reads 2000) |
+| Q-7 | Compare > "Nearby sites": committing "Slope at most" (or any requirement) redraws the tab, which puts the last scan's Radius and Spacing back over what was typed; the scan then runs with the old grid. Typed Radius 900 m, then Slope at most 30°: the field reads 2000 again and the scan covers 2 km (its summary says so). Cause: `panel.ts` redraws the tab on every requirement change and `nearbyTab.ts` `render()` refills the fields from the panel state, which only a scan updates. | @analysis (`src/ui/compare/`); the original team's T-56 | c366a06, 649fc4e | **fixed** by Lunyx T-56 (8c58f49, from lunyx-standby; operator decision D-16 lifted the deferral of D-14). The fix is on @upstream-sync's fcc5482 (ce09c48 + 8c58f49), not yet on am/lunyx/integration, and lands together with this test. **Verified** by the e2e regression test "a typed radius and spacing survive a change of the slope limit, and the scan covers them" (`e2e/flow.test.mjs`, no longer a todo), the operator's scenario. Steps: Radius 900, Spacing 150, then "Slope at most" 30. Both fields keep 900 and 150, and the scan from the tab covers "within 900 m, every 150 m, slope at most 30°" (options 900 / 150 / 30). The test needs the fix and fails without it. Run on the GPU (GTX 1050 Ti), 2026-11-15 08:32 to 08:35Z, on this branch's tree, whose app code is ce09c48's, with the fix's two app files (`nearbyTab.ts`, `scanSettings.ts` from fcc5482) applied for the run only, i.e. the app code of fcc5482: flow 16 of 16 pass (the Q-7 test 15.8 s). The same tree without them: 15 pass, 1 fail, the Q-7 test ("the typed radius was replaced", '2000' !== '900'). @upstream-sync runs the flow file on fcc5482 merged with this test. **Verified on RC bce6816** (2026-11-15 09:28 to 09:33Z, GPU), through the real controls at 1280x720 and 1920x1080 (walkthrough step 7, 10 of 10 checks at each size). Radius 900 and Spacing 150 kept through two slope-limit changes (10° and back to 8°); the scan's options 900 / 150 / 8; the summary "(within 900 m, every 150 m, slope at most 8°)". The e2e flow file passed 16 of 16 on the RC's exact tree 2425d14 in the original team's run, Q-7 test included |
 | Q-3 | After load the globe auto-rotates; stopping it at the start of the first flight leaves the orbit controls' damped momentum, which turns the camera on after the flight has arrived: a 1° first hop ended 0.013° short in longitude (0.4 km at the equator); the same hop again was exact. An earlier run, on a busier machine, missed by 0.14°; the amount depends on the frame rate. Low: only the first flight after load. | @globe | f928038, 2f7e813 | **fixed** upstream (T-43, dbc6c59: no turn after the first flight); 0° on c366a06 |
 | Q-8 | Compare > "Nearby sites": the tab's status line keeps the outcome of the tab's last own action after a scan started elsewhere (the assistant's `rankNearby`) has replaced the list. After "Compare as B" on rank 1 of a scan around one pin, then a new pin and the assistant's "find a flatter nearby site with a shorter blackout", the tab shows the new scan ("Around: Pin 88.000° S, 136.700° E", rank 1 "600 m W, 600 m N") under the green line "Candidate 1 is pinned and loaded as B, against A: Pin 89.450° S, 137.200° W." That candidate 1 is not loaded as B: slot B still holds the first scan's candidate. The figures, the list's own summary, the A/B table and the reply are all right; only this sentence is stale. A scan started from the tab's own button rewrites the line. Seen in the T-8 walkthrough (`649fc4e/1280x720/38-scenario-1-nearby.jpg`). **D-13: not blocking** (no figure is wrong, no primary flow breaks; the line names the old pin), so fix if ready in time, else state it as open. Cause: `createTabKit()` (`src/ui/compare/widgets.ts`) writes the line only for actions run through the tab's `act`, and `panel.ts` empties a tab's line only for the A/B tab (`abKit.clearIfIdle()` when compareA/compareB change, since 08427e6); the nearby tab's kit is never emptied. Emptying it when a scan result arrives that the tab did not start, or when the site on screen changes, would close it. | @analysis (`src/ui/compare/`) | 649fc4e | open; sent to @coordinator with this reproduction (`e2e/qa/repro-nearby-status.mjs`, 2 of 2 runs) |
+| Q-9 | Globe markers since the original T-64 (a click shows the details, a double-click opens the surface view): where two landings' markers overlap, "click, read the card, then double-click" opened the other landing. From 3,000 km Apollo 11's and Surveyor 5's markers are 8 px apart: a click showed Apollo 11's card; a double-click on the same spot opened Surveyor 5's surface view, and its card. The first click of the double-click counted as a slower second click, which takes the next overlapping landing (`globeView.ts`, `hits[(current + 1) % hits.length]`). Found by the walkthrough's Apollo 11 step on fe0ae02 (both sizes). **D-13: not blocking**: the view and the card name the landing that opened, and the card's "Enter surface view" opens the selected one. | @globe (`src/scene/globe/globeView.ts`, T-64) | fe0ae02, c39c516 | **fixed** upstream (@globe's aaeada2, in the T-64 candidate e54cc2d): a double-click opens the landing whose details are shown. Verified on e54cc2d: `e2e/qa/repro-marker-dblclick.mjs` no longer reproduces it (the double-click opens Apollo 11), where on c39c516 it did; the walkthrough's Apollo 11 step (click, then double-click on the overlapping markers) passes at both sizes |
 
 ## Walkthrough record
 
@@ -28,6 +29,9 @@ Numbering: `Q-n` are findings of this walkthrough. `F-n` and `A-n` are the legac
 | --- | --- | --- | --- | --- | --- | --- |
 | T-2 | app tree of 2f7e813 (= published 27b0f30) | 03:47Z | 1280x720, 1920x1080 (surface) | 47 of 47 | 244 of 248 | F-3 (two), Q-4, Q-6 |
 | T-8, release | app tree of team integration 649fc4e (published 39a4c5d + this team's last delivery) = **RC 41be074**: app code identical to 649fc4e (diff outside *.md: empty) | 06:26 to 06:31Z, script e6d5333 | 1280x720, 1920x1080, all five parts | 82 of 82 | 494 of 494 | none; Q-8 seen in a screenshot, then reproduced |
+| T-16, release | **RC bce6816** (41be074 + the Q-7 fix, Lunyx T-56): a72a57f merged, app code identical to bce6816 | 09:28 to 09:33Z, script b067068 | 1280x720, 1920x1080, all five parts | 82 of 82 | 504 of 504 | none; the scan step now runs the operator's Q-7 scenario (10 of 10 checks at each size) |
+| T-19, T-64 candidate | **e54cc2d** (@upstream-sync's candidate: bce6816 + GitHub main 081784a/a03eff9/d744169, the movable surface panels, Track Sun/Earth, F-10 both halves, Q-9 fix), merged into this branch: app code identical to e54cc2d | 10:39 to 10:45Z, script 844813c | 1280x720, 1920x1080, all five parts | 82 of 82 | 514 of 514 | none. Earlier the same day on fe0ae02: 80 of 82, which found Q-9 and two script faults, fixed in 5209bd6 |
+| T-22, T-67 head | **dd42bdb** (= ba95be0 in app and test code: the T-64 RC 504d51a + main 5775c64, territories, the compact surface card, presets at the bottom of Filters, @globe's caption and preset confirmation), plus @assistant's T-20, merged into this branch | 11:08 to 11:13Z, script 232c74e | 1280x720, 1920x1080, all five parts | 82 of 82 | 530 of 530 | none. Checked as well: the territories follow the mission filters (28 landings in 5 countries, 27 in 4 with India hidden), their caption says what they mean, the checkbox is off by default and disabled while the missions are hidden. The preset status line confirms the load and gives the caveat: batch 16 (the line was empty after a load on 912c7ec, found by code reading) is fixed by f420c44. a11y + flow 37/37 on the same tree |
 
 The T-8 run: GPU (GTX 1050 Ti, full settings, 60 fps). No failed request, HTTP error or
 console error at either size. Report `e2e/qa/out/rc-649fc4e-r2/report.json`. The first T-8
@@ -128,9 +132,19 @@ Ask the assistant "what is the illumination?": "The Sun leaves the required elev
 
 ### Q-7
 
-`npm run e2e -- flow`, test "a typed radius survives a change of the slope limit before the scan"
-(todo). By hand: drop a pin, open Compare, "Nearby sites", type 900 in Radius and press Tab, type
-30 in "Slope at most" and press Tab: Radius reads 2000 again; "Scan nearby sites" scans within 2 km.
+`npm run e2e -- flow`, test "a typed radius and spacing survive a change of the slope limit, and
+the scan covers them". It was a todo until the fix; it is now a regression test, and it needs
+Lunyx T-56 (8c58f49) in the tree.
+
+By hand, before the fix:
+
+1. Drop a pin, open Compare and go to "Nearby sites".
+2. Type 900 in Radius and press Tab.
+3. Type 30 in "Slope at most" and press Tab. Radius reads 2000 again.
+4. "Scan nearby sites" scans within 2 km.
+
+Since T-56 the fields keep what was typed, and a redraw shows a scan's radius and spacing only
+for a new scan.
 
 ### Q-8: `e2e/qa/repro-nearby-status.mjs`
 
@@ -155,6 +169,22 @@ flock /tmp/lunyx-gpu.lock node e2e/qa/repro-nearby-status.mjs   # writes e2e/qa/
    88.000° S, 136.700° E: 70 ranked alternatives."
 
 On e6d5333 (app tree of 649fc4e), 06:35Z and 06:36Z: stale in 2 of 2 runs.
+
+### Q-9: `e2e/qa/repro-marker-dblclick.mjs`
+
+```bash
+npm run build
+flock /tmp/lunyx-gpu.lock node e2e/qa/repro-marker-dblclick.mjs   # writes e2e/qa/out/repro-marker-dblclick-<sha>/result.json; exit 1 while reproduced
+```
+
+1280x720, bundled data, 20 s:
+
+1. Centre of view on Apollo 11 from 3,000 km (`setGlobeCamera`), where Surveyor 5's marker is drawn 8 px from it.
+2. Click the Apollo 11 marker: the card shows Apollo 11.
+3. 1.2 s later, double-click the same spot.
+
+- On 5209bd6 (app tree c39c516): the surface view and the card show Surveyor 5 (exit 1).
+- On 844813c (app tree e54cc2d, with aaeada2): they show Apollo 11 (exit 0).
 
 ### Q-6
 

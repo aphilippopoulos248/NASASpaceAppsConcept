@@ -27,6 +27,8 @@ export function initialState(nowMs: number): AppState {
     maxEarthGapH: null,
     sunElMinDeg: 0,
     sunElMaxDeg: 90,
+    decisionProfileId: '',
+    decisionOverrides: {},
     overlay: 'off',
     showMissions: true,
     showTerritories: false,

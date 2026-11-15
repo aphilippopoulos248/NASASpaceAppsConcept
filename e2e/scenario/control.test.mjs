@@ -97,10 +97,16 @@ function screen(page) {
         mast: labelled('Mast height')?.value,
         window: labelled('Mission window')?.value,
         delay: labelled('Arrival delay')?.value,
+        // Since T-64 the relief has no selector: the "Terrain relief" note says what is drawn.
+        reliefNote: [...document.querySelectorAll('.filters-panel h3')].find((h) => h.textContent.trim() === 'Terrain relief')?.nextElementSibling?.textContent ?? '',
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
         flags: check('Show country flags'),
+        territories: check('Show country territories'),
+        territoriesDisabled: [...document.querySelectorAll('.filters-panel label.ly-check')].find((l) => l.textContent.includes('Show country territories'))?.querySelector('input')?.disabled ?? null,
+        // T-67: the caption under the checkbox, shown while the colours are drawn.
+        territoryCaption: q('.filters-panel .fp-territory-note') ? !q('.filters-panel .fp-territory-note').hidden : null,
         missions: check('Show previous missions'),
         overlayOn: check('Show optimal landing area'),
         overlay: q('.filters-panel select[aria-label="Landing-area overlay"]')?.value,
@@ -113,7 +119,14 @@ function screen(page) {
       card: card && !card.hidden ? { title: q('.site-card .sc-title')?.textContent, where: q('.site-card .sc-where')?.textContent ?? '', bodyHidden: Boolean(q('.site-card .sc-body')?.hidden), foldExpanded: q('.site-card .sc-fold')?.getAttribute('aria-expanded'), text: card.textContent } : null,
       compass: q('.compass')?.getAttribute('aria-label') ?? '',
       locator: { readout: q('.locator-readout')?.textContent ?? '', zoomOutDisabled: Boolean(q('.locator button[aria-label="Zoom the map out"]')?.disabled) },
-      hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null },
+      hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null, trackSunPressed: hudButton('Track Sun')?.getAttribute('aria-pressed') ?? null, trackEarthPressed: hudButton('Track Earth')?.getAttribute('aria-pressed') ?? null },
+      // The surface view's movable panels (T-65): folded, moved, the box on screen, the Fold button's word.
+      panels: Object.fromEntries([['key-metrics', '.km'], ['skyline-chart', '.skc'], ['surface-controls', '.surface-hud'], ['time', '.time-scrubber'], ['locator-map', '.locator'], ['compare', '.cmp-sheet'], ['assistant', '.assistant-drawer']].map(([id, sel]) => {
+        const el = q(sel);
+        if (!el) return [id, null];
+        const r = el.getBoundingClientRect();
+        return [id, { folded: el.classList.contains('sp-folded'), positioned: el.classList.contains('sp-positioned'), x: Math.round(r.x), y: Math.round(r.y), foldWord: el.querySelector(':scope > .sp-toolbar .sp-fold')?.textContent ?? null }];
+      })),
       drawerOpen: Boolean(q('#assistant-drawer')?.classList.contains('is-open')),
       compare: (() => {
         const sheet = q('.cmp-sheet');
@@ -221,6 +234,8 @@ const CASES = [
   } },
   { name: 'showMissions', params: { show: false }, check: async (r, page) => {
     assert.equal(r.showMissions, false);
+    // T-67: what the markers carry is drawn only with them.
+    assert.deepEqual([r.territoriesShown, r.flagsShown], [false, false]);
     await shows(page, (s) => s.filters.missions === false, '"Show previous missions" unticked');
     await run(page, 'showMissions', { show: true });
   } },
@@ -233,6 +248,8 @@ const CASES = [
     assert.equal(r.reliefExaggeration, 0);
     // Heights are never exaggerated: more than true scale is refused.
     assert.equal((await page.evaluate(() => window.lunyx.actions.runAction('setReliefExaggeration', { factor: 5 }, 'test'))).ok, false);
+    // No selector since T-64: the "Terrain relief" note says what is drawn.
+    await shows(page, (s) => s.filters.reliefNote.includes('Drawn now: smooth sphere (relief off)'), 'the Terrain relief note says the relief is off');
     await run(page, 'setReliefExaggeration', { factor: 1 });
   } },
   { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
@@ -242,8 +259,29 @@ const CASES = [
   } },
   { name: 'showFlags', params: { show: true }, check: async (r, page) => {
     assert.equal(r.showFlags, true);
+    // T-67 (@globe): flagsShown says whether flags are drawn, which needs the landing markers.
+    assert.equal(r.flagsShown, true, 'previous missions are shown here');
     await shows(page, (s) => s.filters.flags === true, '"Show country flags" ticked');
     await run(page, 'showFlags', { show: false });
+  } },
+  { name: 'showTerritories', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.showTerritories, true);
+    // T-67 (@globe, f420c44): what is drawn, which needs the landing markers and a landing through the
+    // filters, and what it is: who landed nearest, never ownership.
+    assert.equal(r.territoriesShown, true, 'previous missions are shown here');
+    assert.match(r.territoryRule, /who landed nearest/);
+    assert.doesNotMatch(r.territoryRule.replace(/no country owns lunar ground/i, ''), /\bown(s|ed|er|ership)?\b/i, 'never ownership');
+    await shows(page, (s) => s.filters.territories === true && s.filters.territoriesDisabled === false && s.filters.territoryCaption === true, '"Show country territories" ticked, its caption shown');
+    // With the landings hidden: nothing drawn, the checkbox disabled, no caption.
+    const hidden = (await run(page, 'showMissions', { show: false })).result;
+    assert.deepEqual([hidden.showMissions, hidden.territoriesShown], [false, false]);
+    await shows(page, (s) => s.filters.territoriesDisabled === true && s.filters.territoryCaption === false, '"Show country territories" disabled and no caption while previous missions are hidden');
+    await run(page, 'showMissions', { show: true });
+    // With the filters hiding every landing: nothing drawn either.
+    await run(page, 'setFilters', { fromYear: 2100 });
+    assert.equal((await run(page, 'showTerritories', { show: true })).result.territoriesShown, false, 'no landing through the filters');
+    await run(page, 'setFilters', { reset: true });
+    await run(page, 'showTerritories', { show: false });
   } },
   { name: 'showIceTargets', params: { show: true }, check: async (r, page) => {
     assert.equal(r.iceTargetsShown, true);
@@ -447,6 +485,16 @@ const CASES = [
     near(look.azDeg, r.azDeg, 0.06, 'look azimuth vs Earth azimuth');
     await shows(page, (s) => new RegExp(`^Facing \\w+ ${Math.round(r.azDeg) % 360}°`).test(s.hud.status), `HUD facing ${Math.round(r.azDeg)}°`);
   } },
+  { name: 'setBodyTracking', params: { body: 'sun', on: true }, check: async (r, page) => {
+    assert.deepEqual([r.body, r.tracking], ['sun', 'sun']);
+    const v = (await run(page, 'getSurfaceView')).result;
+    assert.equal(v.trackingBody, 'sun');
+    near(r.look.azDeg, v.sky.sun.azDeg, 0.06, 'tracking faces the Sun');
+    await shows(page, (s) => s.hud.trackSunPressed === 'true' && s.hud.trackEarthPressed === 'false', '"Track Sun" pressed, "Track Earth" released');
+    // Off again, as the toggle does.
+    assert.equal((await run(page, 'setBodyTracking', { body: 'sun', on: false })).result.tracking, null);
+    await shows(page, (s) => s.hud.trackSunPressed === 'false', '"Track Sun" released');
+  } },
   { name: 'walkTo', params: { eastM: 100, northM: 50 }, check: async (r, page) => {
     near(r.position.distanceFromSiteM, Math.hypot(100, 50), 0.6, 'distance from the site');
     await shows(page, (s) => /112 m from the site/.test(s.hud.status) && s.hud.homeShown === true, 'HUD 112 m from the site, "Return to site" shown');
@@ -490,6 +538,30 @@ const CASES = [
     assert.equal(r.explanationShown, false);
     await shows(page, (s) => s.chart?.explainShown === false, 'the explanation is closed');
   } },
+  // ---- the surface view's movable panels (T-65)
+  { name: 'setSurfacePanel', params: { panel: 'time', folded: true }, check: async (r, page) => {
+    assert.deepEqual([r.panel, r.shown, r.folded], ['time', true, true]);
+    await shows(page, (s) => s.panels.time?.folded === true && s.panels.time.foldWord === 'Expand', 'the Time panel folded, its button reads "Expand"');
+    // Moving one: the box on screen is where the result says.
+    const moved = (await run(page, 'setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 })).result;
+    assert.equal(moved.moved, true);
+    await shows(page, (s) => s.panels['locator-map']?.positioned === true && Math.abs(s.panels['locator-map'].x - moved.xPx) <= 1 && Math.abs(s.panels['locator-map'].y - moved.yPx) <= 1, `the Locator map panel at ${moved.xPx}, ${moved.yPx}`);
+  } },
+  { name: 'getSurfacePanels', check: async (r, page) => {
+    assert.equal(r.surfaceView, true);
+    const by = Object.fromEntries(r.panels.map((p) => [p.panel, p]));
+    assert.equal(by.time.folded, true);
+    assert.equal(by['locator-map'].moved, true);
+    const s = await screen(page);
+    for (const p of r.panels.filter((x) => x.shown)) {
+      assert.equal(s.panels[p.panel].folded || p.panel === 'key-metrics' ? p.folded : false, p.folded, `${p.panel} folded`);
+      assert.ok(Math.abs(s.panels[p.panel].x - p.xPx) <= 1 && Math.abs(s.panels[p.panel].y - p.yPx) <= 1, `${p.panel} box: ${JSON.stringify(s.panels[p.panel])} vs ${p.xPx}, ${p.yPx}`);
+    }
+  } },
+  { name: 'resetSurfacePanels', check: async (r, page) => {
+    assert.ok(r.panels.every((p) => !p.folded && !p.moved), JSON.stringify(r.panels));
+    await shows(page, (s) => Object.values(s.panels).every((p) => !p || (!p.folded && !p.positioned)), 'no panel folded or moved');
+  } },
   { name: 'exitSurface', check: async (r, page) => {
     assert.equal(r.view, 'globe');
     assert.equal(r.site.id, 'im-2');
@@ -503,11 +575,16 @@ const CASES = [
   { name: 'listPresets', check: async (r) => {
     assert.ok(r.presets.length >= 3, JSON.stringify(r.presets.map((p) => p.id)));
     assert.ok(r.presets.some((p) => p.id === 'eclipse-2025-03-14'));
+    // T-67: what is uncertain or computed rather than reported (IM-2's touchdown minute).
+    assert.match(r.presets.find((p) => p.id === 'im-2-landing')?.caveat ?? '', /touchdown minute/i);
   } },
   { name: 'loadPreset', params: { id: 'eclipse-2025-03-14', play: false }, check: async (r, page) => {
     assert.equal(r.site.id, 'blue-ghost-1');
     assert.equal(r.view, 'surface');
     assert.equal(r.playing, false);
+    // T-67: the eclipse times are computed by the app; what was reported for the lander comes with them.
+    assert.match(r.caveat ?? '', /computed/i);
+    assert.match(r.sunBehindEarth?.reported ?? '', /reported/i);
     await shows(page, (s) => s.view === 'surface' && s.scrubber.date === r.timeUtc.slice(0, 16), 'surface view at the preset\'s clock');
     await run(page, 'exitSurface');
     await run(page, 'clearSite');

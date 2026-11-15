@@ -166,6 +166,11 @@ export function createSurfaceActions(ctx: SurfaceActionContext): ActionDef<any, 
       },
       run: ({ body, fovDeg }) => {
         requireSurface();
+        // Facing the other body ends tracking; otherwise the next clock change would turn the view back.
+        if (ctx.trackingBody() && ctx.trackingBody() !== body) {
+          ctx.setTrackingBody(null);
+          ctx.changed();
+        }
         const sky = aimAtBody(view, body, fovDeg);
         if (!sky) throw new ActionError('The sky is not ready yet for this site.');
         const b = body === 'sun' ? sky.sun : sky.earth;

@@ -45,6 +45,53 @@ describe('deterministic mode: how the globe is drawn', () => {
     state = installFakeApp(ALL_ACTIONS);
   });
 
+  it('reads no territory setting as the relief (T-67 removed setTerritoryScale)', async () => {
+    const e = engine();
+    const r = await e.reply('territory size exaggeration 50');
+    expect(r.understood).toBe(false);
+    expect(state.reliefFactor).toBe(1);
+  });
+
+  it('says what the territories and flags draw, from the real results (T-67: territoriesShown, territoryRule, flagsShown)', async () => {
+    const e = engine();
+    const RULE = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
+    const FLAGS = 'A flag names who the hardware belongs to, not a claim to the ground: no country owns lunar ground.';
+    expect((await e.reply('show territories')).text).toBe(`The globe is coloured by the country of the nearest landing shown. ${RULE}`);
+    expect((await e.reply('show country flags')).text).toBe(`Each landing marker now carries the flag of the state its hardware belongs to (GCAT catalogue; USSR hardware is shown as Russia). ${FLAGS}`);
+    expect((await e.reply('show previous missions')).text).toBe('Previous landings are shown on the globe. The whole Moon is coloured by the country of the nearest landing shown: it shows who landed nearest, not ownership; no country owns lunar ground. Each marker carries the flag of the state its hardware belongs to.');
+    // The landings hidden: nothing of either is drawn, and the replies say why.
+    expect((await e.reply('hide previous missions')).text).toBe('Previous landings are hidden. The territory colouring is hidden with them.');
+    expect((await e.reply('show territories')).text).toBe(`Country territories are switched on, but nothing is drawn while previous missions are hidden (say "show previous missions" to see them). ${RULE}`);
+    expect((await e.reply('show country flags')).text).toBe(`Country flags are switched on, but no flag is drawn while previous missions are hidden (say "show previous missions" to see them). ${FLAGS}`);
+    // The filters hiding every landing: the same, for the other reason.
+    await e.reply('show previous missions');
+    // Filters that no landing passes (no catalogued landing after 2099).
+    state.filter = { ...state.filter, fromYear: 2100 };
+    expect((await e.reply('show territories')).text).toBe(`Country territories are switched on, but nothing is drawn while the mission filters hide every landing (say "reset the filters" to see them). ${RULE}`);
+    expect((await e.reply('show previous missions')).text).toBe('Previous landings are shown on the globe. The mission filters hide every landing, though: say "reset the filters" to see them.');
+    await e.reply('reset the filters');
+    expect((await e.reply('hide territories')).text).toBe('The country territories are hidden.');
+  });
+
+  it('falls back to getState on a build whose results do not say what is drawn (before @globe\'s T-67 commit)', async () => {
+    installFakeApp({ ...ALL_ACTIONS, drawnLayers: false });
+    const e = engine();
+    expect((await e.reply('show territories')).text).toBe('The globe is coloured by the country of the nearest landing shown. It shows who landed nearest, not ownership: no country owns lunar ground.');
+    await e.reply('hide previous missions');
+    expect((await e.reply('show territories')).text).toContain('nothing is drawn while previous missions are hidden');
+    expect((await e.reply('show country flags')).text).toContain('no flag is drawn while previous missions are hidden');
+  });
+
+  it('quotes a preset\'s caveat, and for the eclipse what was reported (T-67)', async () => {
+    const e = engine();
+    const list = (await e.reply('list the presets')).text;
+    expect(list).toContain('IM-2 Athena, Mons Mouton (say "replay im-2-landing")');
+    expect(list).toContain('Caveat: The touchdown minute is not confirmed by an official source');
+    const eclipse = (await e.reply('replay the eclipse')).text;
+    expect(eclipse).toContain('The times of the Sun behind Earth are computed by this app. Reported for the lander: eclipse from 05:00 to about 09:52 UTC.');
+    expect((await e.reply('replay blue-ghost-landing')).text).not.toMatch(/Caveat|Reported/);
+  });
+
   it('draws the relief at true scale or off from several phrasings, and never exaggerates it', async () => {
     const e = engine();
     const cases: [string, number][] = [
@@ -507,5 +554,95 @@ describe('deterministic mode: help follows the build', () => {
     for (const line of ['Globe drawing:', 'Site science:', 'Ice targets:', 'Walking (surface):', 'Surface view:', 'Catalogue:', 'Saved comparisons:']) expect(full).toContain(line);
     const old = await help({});
     for (const line of ['Globe drawing:', 'Site science:', 'Walking (surface):', 'Saved comparisons:']) expect(old).not.toContain(line);
+  });
+});
+
+describe('deterministic mode: tracking the Sun or Earth (PR #2: setBodyTracking)', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('keeps facing a body, stops on request, and tells tracking apart from facing once', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    let from = lastSeq();
+    const on = await e.reply('track the sun');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['setBodyTracking', { body: 'sun', on: true }]]);
+    expect(state.tracking).toBe('sun');
+    expect(on.text).toContain('The view now keeps facing the Sun as simulated time changes.');
+    // Another body replaces it; "face" still turns once without tracking.
+    await e.reply('follow earth');
+    expect(state.tracking).toBe('earth');
+    from = lastSeq();
+    const off = await e.reply('stop tracking');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['getSurfaceView', {}], ['setBodyTracking', { body: 'earth', on: false }]]);
+    expect(state.tracking).toBeNull();
+    expect(off.text).toBe('Tracking stopped: the view stays where it is now.');
+    expect((await e.reply('stop tracking')).text).toBe('Neither the Sun nor Earth is being tracked.');
+    from = lastSeq();
+    await e.reply('face the sun');
+    const ran = ranSince(from).map((x) => x.name);
+    expect(ran).toContain('lookAtBody');
+    expect(ran).not.toContain('setBodyTracking');
+    expect(state.tracking).toBeNull();
+  });
+
+  it('needs the surface view, as the action says', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    expect((await e.reply('track the sun')).text).toContain('Enter the surface view first');
+  });
+});
+
+describe('deterministic mode: the surface panels (T-65: setSurfacePanel, resetSurfacePanels, getSurfacePanels)', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('folds, opens, moves (to a point and by an amount), lists and resets the panels', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    let from = lastSeq();
+    expect((await e.reply('fold the time panel')).text).toBe('The Time panel is folded to its title row.');
+    expect((await e.reply('open the time panel')).text).toBe('The Time panel is open.');
+    expect((await e.reply('move the locator map to 300, 200')).text).toBe('The Locator map panel is now at 300, 200 px, its top left corner from the top left of the window.');
+    expect((await e.reply('move the locator map panel left by 100')).text).toBe('The Locator map panel is now at 200, 200 px, its top left corner from the top left of the window.');
+    // Kept inside the window, as the action does.
+    expect((await e.reply('move the time panel to 5000, 5000')).text).toContain('(kept inside the window)');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([
+      ['setSurfacePanel', { panel: 'time', folded: true }],
+      ['setSurfacePanel', { panel: 'time', folded: false }],
+      ['setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 }],
+      ['getSurfacePanels', {}],
+      ['setSurfacePanel', { panel: 'locator-map', xPx: 200, yPx: 200 }],
+      ['setSurfacePanel', { panel: 'time', xPx: 5000, yPx: 5000 }],
+    ]);
+    const list = await e.reply('list the surface panels');
+    expect(list.text).toContain('Surface panels (the surface view is shown):');
+    expect(list.text).toContain('- Locator map: on screen, open, moved, top left at 200, 200 px (200 × 200 px)');
+    expect(list.text).toContain('- Compare: not on screen');
+    from = lastSeq();
+    expect((await e.reply('reset the panels')).text).toBe('Every surface panel is back in its place and open (7 panels).');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['resetSurfacePanels']);
+    expect(state.panels).toEqual({});
+  });
+
+  it('leaves the key metrics and the chart to their own actions', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    const from = lastSeq();
+    await e.reply('fold the key metrics');
+    await e.reply('expand the skyline chart');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['showKeyMetrics', 'setChart']);
+  });
+
+  it('says why a panel cannot move: not in the surface view, or not on screen', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    expect((await e.reply('fold the time panel')).text).toContain('The panels move and fold in the surface view only');
+    await e.reply('enter the surface');
+    expect((await e.reply('fold the compare panel')).text).toContain('The Compare panel is not on screen. Open the comparison first.');
   });
 });

@@ -141,7 +141,9 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
       },
     }),
     script: s.get('LUNYX_LLM_SCRIPT') ?? 'default',
-    secrets: [typesafeKey].filter((v): v is string => Boolean(v)),
+    // The SDK reads ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN itself; when one is set it is still
+    // removed from anything that leaves the server, not only by the sk-ant- pattern.
+    secrets: [s.get('ANTHROPIC_API_KEY'), s.get('ANTHROPIC_AUTH_TOKEN'), typesafeKey].filter((v): v is string => Boolean(v)),
   };
 
   if (wanted === 'off' || wanted === 'none' || wanted === 'deterministic') {

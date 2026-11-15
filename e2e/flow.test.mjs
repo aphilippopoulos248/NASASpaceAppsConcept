@@ -175,8 +175,9 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   test('nearby sites: the scan from the "Nearby sites" tab is listed as the analysis ranked it', SLOW, async () => {
     await sheet().getByRole('tab', { name: 'Nearby sites' }).click();
     const scanSettings = page.getByRole('group', { name: 'Scan settings' });
-    // The slope limit first: committing it redraws the tab, which puts back the last scan's
-    // radius and spacing (finding Q-7, tested on its own below). A small grid keeps the test short.
+    // The slope limit first: before the fix of Q-7 (Lunyx T-56), committing it redrew the tab
+    // and put back the last scan's radius and spacing; the test below types them the other way
+    // round. A small grid keeps the test short.
     await setField(page, scanSettings.getByLabel('Slope at most'), SCAN.slopeLimitDeg);
     await until(page, (v) => window.lunyx.store.get().slopeLimitDeg === v, SCAN.slopeLimitDeg);
     await setField(page, scanSettings.getByLabel('Radius'), SCAN.radiusM);
@@ -232,7 +233,9 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     await page.mouse.dblclick(at.x, at.y);
     await until(page, () => window.lunyx.store.get().site?.id === 'im-2' && document.body.dataset.view === 'surface');
     assert.ok((await log(page, from)).some((e) => e.name === 'selectSite' && e.origin === 'ui' && e.ok));
-    assert.match(await page.locator('.surface-hud').textContent(), /Surface view/);
+    // The surface strip is on screen: since PR #4 a compact card (Track Sun, Track Earth, "Surface
+    // options", "About") without the "Surface view" title.
+    assert.equal(await page.locator('.surface-hud').getByRole('button', { name: 'Track Sun', exact: true }).isVisible(), true, 'the surface strip is not on screen');
     assert.match(page.url(), /site=im-2/);
     assert.match(page.url(), /view=surface/);
     await page.locator('.close-surface').click();
@@ -377,9 +380,10 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
   });
 });
 
-// Finding Q-7 (docs/lunyx/qa-findings.md), owner @analysis: in "Nearby sites", committing the
-// slope limit (or any requirement) redraws the tab and puts back the last scan's radius and
-// spacing over what was typed, so the scan runs with the old grid.
+// Finding Q-7 (docs/lunyx/qa-findings.md): in "Nearby sites", committing the slope limit (or any
+// requirement) redrew the tab and put the last scan's radius and spacing back over what was
+// typed, so the scan ran on the old grid. Fixed by Lunyx T-56 (8c58f49, operator decision D-16);
+// this test is the operator's scenario, kept as a regression test.
 describe('flow: the nearby scan settings keep what was typed', () => {
   let other, op;
   before(async () => {
@@ -390,7 +394,7 @@ describe('flow: the nearby scan settings keep what was typed', () => {
     await other?.close();
   });
 
-  test('a typed radius survives a change of the slope limit before the scan', { ...SLOW, todo: 'Q-7 (@analysis): the slope limit redraws the tab and resets Radius and Spacing to the last scan' }, async () => {
+  test('a typed radius and spacing survive a change of the slope limit, and the scan covers them', SLOW, async () => {
     const f = op.locator('.filters-panel');
     await setField(op, f.getByLabel('Latitude', { exact: true }), -89.45);
     await setField(op, f.getByLabel('Longitude', { exact: true }), -137.2);
@@ -399,10 +403,33 @@ describe('flow: the nearby scan settings keep what was typed', () => {
     await op.locator('.cmp-launcher').click();
     await op.locator('.cmp-sheet').getByRole('tab', { name: 'Nearby sites' }).click();
     const settings = op.getByRole('group', { name: 'Scan settings' });
+    // Radius and spacing first, then the slope limit, whose commit redraws the tab. 900 m every
+    // 150 m is a 13 x 13 grid, well under the 2000-point limit of a scan.
     await setField(op, settings.getByLabel('Radius'), 900);
-    await setField(op, settings.getByLabel('Slope at most'), 25);
-    await until(op, () => window.lunyx.store.get().slopeLimitDeg === 25);
+    await setField(op, settings.getByLabel('Spacing'), 150);
+    await setField(op, settings.getByLabel('Slope at most'), 30);
+    await until(op, () => window.lunyx.store.get().slopeLimitDeg === 30);
     assert.equal(await settings.getByLabel('Radius').inputValue(), '900', 'the typed radius was replaced');
+    assert.equal(await settings.getByLabel('Spacing').inputValue(), '150', 'the typed spacing was replaced');
+    // This page has run no scan before, so the next scan to finish is the one started here.
+    assert.equal(await op.evaluate(() => window.lunyx.analysis.nearby().state), 'idle');
+    const from = await lastSeq(op);
+    await settings.getByRole('button', { name: 'Scan nearby sites' }).click();
+    await until(op, () => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), undefined, 5 * 120_000);
+    const scan = await publishedNearby(op);
+    assert.equal(scan.state, 'ready', scan.error);
+    const entry = (await log(op, from)).find((e) => e.name === 'rankNearby');
+    assert.ok(entry?.ok && entry.origin === 'ui', JSON.stringify(entry));
+    assert.deepEqual([scan.options.radiusM, scan.options.spacingM, scan.options.slopeLimitDeg], [900, 150, 30], 'the scan ran on another grid than the fields said');
+    // The summary says what the scan covered (nearbyTab.ts, distanceText: 900 m).
+    const summary = await until(op, () => {
+      const text = document.querySelector('.cmp-sheet .cmp-nearbysummary')?.textContent ?? '';
+      return text.includes('points scanned around') ? text : null;
+    });
+    assert.ok(summary.includes('within 900 m, every 150 m, slope at most 30°'), summary);
+    // After the scan the fields still show the grid it covered.
+    assert.equal(await settings.getByLabel('Radius').inputValue(), '900');
+    assert.equal(await settings.getByLabel('Spacing').inputValue(), '150');
   });
 });
 

@@ -96,6 +96,7 @@ function describe(p: MissionPreset, landings: readonly Landing[]) {
         reported: e.reported,
       },
     }),
+    ...(p.caveat && { caveat: p.caveat }),
     sources: p.sources,
   };
 }
@@ -110,7 +111,7 @@ export function createPresetActions(ctx: PresetContext): ActionDef<any, any>[] {
       name: 'listPresets',
       title: 'Missions to replay',
       description:
-        'Lists the missions that can be replayed in one step from data bundled with the app (no network): for each its id, what plays, the site, the mission window (UTC), where the clock starts, the view it opens in, the playback rate and its data sources. `loaded` is the id of the preset on screen now, or null. Load one with loadPreset.',
+        'Lists the missions that can be replayed in one step from data bundled with the app (no network): for each its id, what plays, the site, the mission window (UTC), where the clock starts, the view it opens in, the playback rate, its caveat where it has one (what is uncertain or computed rather than reported) and its data sources. `loaded` is the id of the preset on screen now, or null. Load one with loadPreset.',
       effect: 'query',
       params: { type: 'object', properties: {} },
       run: () => ({ presets: ctx.presets().map((p) => describe(p, ctx.landings())), loaded: activePreset(state(), ctx.presets())?.id ?? null }),
@@ -194,6 +195,7 @@ export function createPresetActions(ctx: PresetContext): ActionDef<any, any>[] {
           analysisState: status?.state ?? 'not running',
           ...(status?.state === 'error' && { analysisError: status.error }),
           ...(describe(preset, ctx.landings()).sunBehindEarth && { sunBehindEarth: describe(preset, ctx.landings()).sunBehindEarth }),
+          ...(preset.caveat && { caveat: preset.caveat }),
           sources: preset.sources,
           ...(comparisonClosed && { comparisonClosed: true }),
           ...(interrupted && { note: 'Something else changed the site, the window or the clock while the preset was loading, so the clock was not started.' }),

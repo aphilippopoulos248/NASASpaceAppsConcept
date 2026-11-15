@@ -10,6 +10,8 @@
 //   - Elevation is degrees above the local horizontal plane, with NO refraction
 //     (the Moon is airless). "Skyline" is the terrain horizon as an elevation angle.
 
+import type { ProfileOverrides } from '../analysis/decision/types';
+
 export const MOON_RADIUS_M = 1_737_400;
 export const MOON_RADIUS_KM = 1737.4;
 
@@ -80,6 +82,9 @@ export interface AppState {
   /** Required solar elevation band, degrees. Drives the 'sun-band' overlay and viability flags. */
   sunElMinDeg: number;
   sunElMaxDeg: number;
+  /** Decision engine (D-17): the mission profile in use (a preset id; '' = the first preset) and the user's changes to it. */
+  decisionProfileId: string;
+  decisionOverrides: ProfileOverrides;
   overlay: OverlayMode;
   showMissions: boolean;
   /** Country territory colouring on the globe (nearest-site Voronoi). */

@@ -6,6 +6,7 @@
 // through the action registry (`toolDefinitions()` / `runAction`), like every other control.
 import { DeterministicEngine } from '../../assistant/deterministic/engine';
 import { accuracyNote, isLanguageModel, replyLabel } from '../../assistant/labels';
+import { escapeClosesDrawer } from './escape';
 import { DETERMINISTIC_LABEL } from '../../assistant/protocol';
 import { AssistantSession, type ChatMessage } from '../../assistant/session';
 import { httpTransport } from '../../assistant/transport';
@@ -263,8 +264,11 @@ export function mountAssistantDrawer(region: HTMLElement): void {
 
   // The drawer remains open when a user returns focus to the scene. Catch Escape before
   // the scene shortcuts in that case too, so closing chat does not leave surface view.
+  // Escape goes to the layer that holds focus (F-10, escape.ts): focus in another panel, such
+  // as the compare sheet, leaves Escape to that panel.
   window.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape' || e.defaultPrevented || !store.get().assistantOpen) return;
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (!escapeClosesDrawer(store.get().assistantOpen, document.activeElement, { drawer, scene: document.getElementById('scene'), body: document.body, root: document.documentElement })) return;
     e.stopPropagation();
     e.preventDefault();
     void runAction('setAssistantOpen', { open: false });

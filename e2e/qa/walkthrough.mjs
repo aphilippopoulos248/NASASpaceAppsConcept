@@ -3,11 +3,12 @@
 //
 //   search     site search and comparison: open, type coordinates in Filters > Centre of view,
 //              drop a pin, the pin's card against the analysis, search criteria (mission
-//              window, slope and Earth-gap limits), save A, scan nearby sites, a ranked
-//              alternative as B (or, in a build without the scan, B = A arriving 24 h later),
-//              and the compare table against the analysis.
+//              window, slope and Earth-gap limits), save A, scan nearby sites with a typed
+//              radius and spacing that must survive a change of the slope limit (Q-7, T-16),
+//              a ranked alternative as B (or, in a build without the scan, B = A arriving 24 h
+//              later), and the compare table against the analysis.
 //   surface    IM-2 from its globe marker, looking around, its card and surface view at the
-//              landing time, Face Earth / Face Sun / sky paths, the 29.5-day window, scrubbing
+//              landing time, Track Earth / Track Sun / sky paths, the 29.5-day window, scrubbing
 //              and event jumps, Escape; Apollo 11 at its landing time. On a GPU the surface is
 //              drawn at full settings (the app picks low-power settings only for a software
 //              renderer); the shots pair with the software-rendered ones in docs/lunyx/handover.
@@ -18,7 +19,7 @@
 //              against the actions' results and the analysis.
 //   extras     (T-8) a mission preset played to its end, a zoomed Earth, the window table with
 //              its CSV and JSON downloads against the analysis, the outlook, the Country filter,
-//              country flags, ownership rows and the explored area on the card.
+//              country flags and territories, ownership rows and the explored area on the card.
 //
 // Every step is done through the real controls (mouse and keyboard) unless the build has no
 // control for it; such steps say so and run through the action registry. Values on screen
@@ -64,6 +65,9 @@ const IM2 = { id: 'im-2', name: 'IM-2 Athena', lat: -84.79, lon: 29.2, landingUt
 const APOLLO11 = { id: 'apollo-11', lat: 0.6741, lon: 23.4730, landingUtc: Date.UTC(1969, 6, 20, 20, 17) };
 const PIN = { lat: -89.45, lon: -137.2, latText: '-89.45', lonText: '-137.2' };
 const CRITERIA = { windowH: 168, slopeLimitDeg: 8, maxEarthGapH: 48 };
+// The nearby scan as the operator checked Q-7: a typed radius and spacing, then the slope limit
+// changed (to the detour value and back), which redraws the tab; the scan must cover what was typed.
+const SCAN = { radiusM: 900, spacingM: 150, slopeDetourDeg: 10 };
 const kmPerDeg = (1737.4 * Math.PI) / 180;
 
 // ------------------------------------------------------------------ reading the app
@@ -268,8 +272,90 @@ async function markerPoint(page, id) {
     const y = r.top + (-v.y * 0.5 + 0.5) * r.height;
     const inView = v.z < 1 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     const top = inView ? document.elementFromPoint(x, y) : null;
-    return { found: true, visible: inView, x: Math.round(x), y: Math.round(y), covered: Boolean(top && top !== g.canvas), coveredBy: top && top !== g.canvas ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null };
+    // Other landings drawn within 30 px: a click there may pick one of them (they cycle on slower clicks).
+    const near = g.markers.items
+      .filter((o) => o !== m && o.group.visible)
+      .map((o) => {
+        const w = o.group.position.clone().project(g.camera);
+        return { id: o.landing.id, d: w.z < 1 ? Math.hypot(r.left + (w.x * 0.5 + 0.5) * r.width - x, r.top + (-w.y * 0.5 + 0.5) * r.height - y) : Infinity };
+      })
+      .filter((o) => o.d < 30)
+      .map((o) => o.id);
+    return { found: true, visible: inView, x: Math.round(x), y: Math.round(y), covered: Boolean(top && top !== g.canvas), coveredBy: top && top !== g.canvas ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null, near };
   }, id);
+}
+
+/**
+ * The surface strip since GitHub PR #4 is one compact row: Track Sun, Track Earth and two
+ * disclosures, "Surface options" (Sky paths, Generated detail, Skyline chart, Return to site) and
+ * "About" (the status, ground and owner lines). They open from their summary and close on Escape,
+ * an outside click or the focus leaving. Opens one as a person would; false on builds without it,
+ * where everything is on the strip.
+ */
+async function openHudMenu(page, label) {
+  const menu = page.locator('.surface-hud details.sh-menu').filter({ has: page.locator('summary', { hasText: label }) });
+  if (!(await menu.count())) return false;
+  if (!(await menu.evaluate((d) => d.open))) await menu.locator('summary').click();
+  await page.waitForFunction((l) => [...document.querySelectorAll('.surface-hud details.sh-menu')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, { timeout: 5000 });
+  return true;
+}
+
+/** Closes a strip disclosure with Escape from its summary. Never pressed when it is closed: Escape would then leave the view. */
+async function closeHudMenu(page, label) {
+  const menu = page.locator('.surface-hud details.sh-menu').filter({ has: page.locator('summary', { hasText: label }) });
+  if (!(await menu.count()) || !(await menu.evaluate((d) => d.open))) return;
+  await menu.locator('summary').focus();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction((l) => ![...document.querySelectorAll('.surface-hud details.sh-menu')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, { timeout: 5000 });
+}
+
+/**
+ * Turns the surface view to the Sun or Earth from the HUD. Since GitHub PR #2 the HUD has toggles,
+ * "Track Sun" and "Track Earth": pressed, the view turns to the body and follows it as the clock
+ * moves; pressed again, it stops. Earlier builds had one-off "Face Sun" / "Face Earth" buttons.
+ * A toggle that is already on is left on. Returns which kind the build has.
+ */
+async function faceBody(page, body) {
+  const hud = page.locator('.surface-hud');
+  const track = hud.getByRole('button', { name: `Track ${body}`, exact: true });
+  if (await track.count()) {
+    if ((await track.getAttribute('aria-pressed')) !== 'true') await track.click();
+    await page.waitForFunction((b) => [...document.querySelectorAll('.surface-hud button')].some((x) => x.textContent.trim() === `Track ${b}` && x.getAttribute('aria-pressed') === 'true'), body, { timeout: 10_000 });
+    return 'track';
+  }
+  await hud.getByRole('button', { name: `Face ${body}`, exact: true }).click();
+  return 'face';
+}
+
+/**
+ * Opens a landing's surface view from its globe marker. Since the original T-64 a click selects
+ * the landing and shows its details on the card while the view stays on the globe, and a
+ * double-click opens the surface view. Earlier builds stepped straight down on a click. Both are
+ * handled; the step's notes say which one this build does.
+ */
+async function openFromMarker(page, id, p, { check, note }) {
+  // Overlapping landings (Apollo 11 and Surveyor 5 from far out) take turns on slower clicks; since
+  // @globe's aaeada2 (Q-9) a double-click still opens the landing whose details are shown.
+  if (p.near?.length) note(`Landings drawn next to it: ${p.near.join(', ')} (overlapping markers).`);
+  await page.mouse.click(p.x, p.y);
+  await page.waitForFunction((siteId) => window.lunyx.store.get().site?.id === siteId, id, { timeout: 20_000 });
+  await sleep(1200);
+  if ((await appState(page)).view === 'surface') {
+    note('A single marker click selected the landing and stepped straight down into its surface view (a build before the original T-64).');
+    return;
+  }
+  const card = await page.evaluate(() => ({ title: document.querySelector('.site-card .sc-title')?.textContent.trim() ?? '', body: Boolean(document.querySelector('.site-card .sc-body')?.getClientRects().length) }));
+  const view = (await appState(page)).view;
+  check("A marker click shows the landing's details (card open, view stays on the globe)", `${card.title}, details ${card.body ? 'shown' : 'hidden'}, view ${view}`, 'details shown, globe', card.body && view === 'globe');
+  // The camera may have moved to the selection: find the marker again.
+  const q = await markerPoint(page, id);
+  if (!q.visible || q.covered) throw new Error(`Marker not clickable after the click: ${JSON.stringify(q)}`);
+  await page.mouse.dblclick(q.x, q.y);
+  await page.waitForFunction(() => window.lunyx.store.get().view === 'surface', null, { timeout: 20_000 });
+  const opened = (await appState(page)).site?.id;
+  check('The double-click opened the landing whose details were shown', opened, id, opened === id, { finding: 'Q-9' });
+  if (opened !== id) throw new Error(`The double-click opened ${opened}, not ${id}`);
+  note('A click showed the details on the globe; a double-click opened the surface view (original T-64).');
 }
 
 /** Types into a number field at a human pace. */
@@ -380,12 +466,29 @@ async function partSearch(app, step) {
   const canScan = await hasAction(page, 'rankNearby');
   app.report.build.scan = canScan;
   if (canScan) {
-    await step('Scan nearby sites (Nearby sites tab, default radius and spacing, slope limit as set)', 'control', async ({ check, note }) => {
+    await step(`Scan nearby sites (Nearby sites tab): type Radius ${SCAN.radiusM} m and Spacing ${SCAN.spacingM} m, change "Slope at most" to ${SCAN.slopeDetourDeg}° and back to ${CRITERIA.slopeLimitDeg}°, then scan (Q-7)`, 'control', async ({ check, note }) => {
       await page.getByRole('tab', { name: 'Nearby sites' }).click();
       const scan = page.getByRole('button', { name: 'Scan nearby sites' });
       await scan.waitFor({ state: 'visible', timeout: 10_000 });
-      const settings = await page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`));
-      note(`Scan settings: ${settings.join(', ')}.`);
+      const group = page.getByRole('group', { name: 'Scan settings' });
+      const [radius, spacing, slope] = [group.getByLabel('Radius'), group.getByLabel('Spacing'), group.getByLabel('Slope at most')];
+      const settingsNow = () => page.evaluate(() => [...document.querySelectorAll('[aria-label="Scan settings"] input')].map((i) => `${i.labels?.[0]?.textContent.trim()}=${i.value}`).join(', '));
+      note(`Scan settings before: ${await settingsNow()}.`);
+      // Typed, then left with Tab (Enter in these fields starts the scan).
+      await typeInto(radius, String(SCAN.radiusM));
+      await radius.press('Tab');
+      await typeInto(spacing, String(SCAN.spacingM));
+      await spacing.press('Tab');
+      // Each change of the slope limit redraws the tab, which used to put the last scan's radius and spacing back (Q-7).
+      for (const v of [SCAN.slopeDetourDeg, CRITERIA.slopeLimitDeg]) {
+        await typeInto(slope, String(v));
+        await slope.press('Tab');
+        await page.waitForFunction((x) => window.lunyx.store.get().slopeLimitDeg === x, v, { timeout: 10_000 });
+      }
+      const kept = [await radius.inputValue(), await spacing.inputValue()];
+      check('Radius keeps the typed value after the slope limit changed twice', kept[0], String(SCAN.radiusM), kept[0] === String(SCAN.radiusM), { finding: 'Q-7' });
+      check('Spacing keeps the typed value after the slope limit changed twice', kept[1], String(SCAN.spacingM), kept[1] === String(SCAN.spacingM), { finding: 'Q-7' });
+      note(`Scan settings at the scan: ${await settingsNow()}.`);
       const t0 = Date.now();
       await scan.click();
       await page.waitForFunction(() => ['ready', 'error'].includes(window.lunyx.analysis.nearby().state), null, { polling: 250, timeout: 600_000 });
@@ -398,6 +501,12 @@ async function partSearch(app, step) {
       const view = await readNearby(page);
       app.report.values.push({ profile: app.profile, where: 'nearby scan', nearby: st, table: view });
       note(`Summary: ${view?.summary}`);
+      const grid = `${SCAN.radiusM} / ${SCAN.spacingM} / ${CRITERIA.slopeLimitDeg}`;
+      check('The scan ran on the typed grid (options radius / spacing / slope limit)', `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}`, grid, `${st.options?.radiusM} / ${st.options?.spacingM} / ${st.options?.slopeLimitDeg}` === grid, { finding: 'Q-7' });
+      const says = `within ${SCAN.radiusM} m, every ${SCAN.spacingM} m, slope at most ${CRITERIA.slopeLimitDeg}°`;
+      check('The summary names the typed grid', view?.summary, says, Boolean(view?.summary?.includes(says)), { finding: 'Q-7' });
+      const after = [await radius.inputValue(), await spacing.inputValue()];
+      check('After the scan the fields show the grid it covered', after.join(' / '), `${SCAN.radiusM} / ${SCAN.spacingM}`, after.join(' / ') === `${SCAN.radiusM} / ${SCAN.spacingM}`);
       const ranked = (st.value ?? []).filter((c) => !c.ref && Number.isFinite(c.score) && c.slope <= CRITERIA.slopeLimitDeg).sort((a, b) => b.score - a.score);
       const first = view?.rows.find((r) => r.Rank === '1');
       if (first && ranked[0]) {
@@ -471,7 +580,7 @@ async function partSearch(app, step) {
 async function partSurface(app, step) {
   const { page } = app;
 
-  await step('IM-2: click its marker on the globe', 'control', async ({ check, note }) => {
+  await step('IM-2: its marker on the globe (a click shows the details, a double-click opens the surface view)', 'control', async ({ check, note }) => {
     let p = await markerPoint(page, IM2.id);
     note(`IM-2 marker: ${JSON.stringify(p)}.`);
     if (!p.visible || p.covered) {
@@ -481,12 +590,10 @@ async function partSurface(app, step) {
       note(`Brought IM-2 to the centre by typing its coordinates (centre ${r.centre.lat.toFixed(3)}, ${r.centre.lon.toFixed(3)}); marker now ${JSON.stringify(p)}.`);
     }
     if (!p.visible) throw new Error('IM-2 marker not visible');
-    await page.mouse.click(p.x, p.y);
-    await page.waitForFunction((id) => window.lunyx.store.get().site?.id === id, IM2.id, { timeout: 20_000 });
-    note('A marker click selects the landing and steps straight down into its surface view.');
+    await openFromMarker(page, IM2.id, p, { check, note });
     await surfaceReady(page);
     const s = await appState(page);
-    check('View after the marker click', s.view, 'surface', s.view === 'surface');
+    check('View after opening the marker', s.view, 'surface', s.view === 'surface');
     // First arrival at a site faces the Sun (or Earth when the Sun is down): faceOnArrival in the surface controller.
     await sleep(500);
     const v = await surfaceView(page);
@@ -494,15 +601,22 @@ async function partSurface(app, step) {
     app.lookBeforeLeaving = null;
   }, { timeout: 180_000 });
 
-  await step('Look around: drag, then arrow keys', 'control', async ({ check }) => {
+  await step('Look around: drag, then arrow keys', 'control', async ({ check, note }) => {
     const c = canvasCentre(app);
+    // A horizontal drag on the scene itself: since T-64 movable panels can cover the middle at 1280x720.
+    const y = await page.evaluate(({ cx, cy }) => {
+      const free = (yy) => [-150, -75, 0, 100, 200].every((dx) => document.elementFromPoint(cx + dx, yy)?.id === 'scene');
+      return [0, -0.1, -0.2, 0.1, -0.3, 0.2].map((f) => Math.round(cy + f * cy * 2)).find(free) ?? null;
+    }, { cx: c.x, cy: c.y });
+    if (y === null) throw new Error('No clear horizontal line on the scene to drag along');
+    if (y !== c.y) note(`Dragged along y = ${y}: the middle of the scene is covered by a panel.`);
     const before = (await appState(page)).look;
-    await mouseDrag(page, { x: c.x + 200, y: c.y }, { x: c.x - 150, y: c.y });
+    await mouseDrag(page, { x: c.x + 200, y }, { x: c.x - 150, y });
     await sleep(600);
     const afterDrag = (await appState(page)).look;
     const turned = Math.abs(((afterDrag.azDeg - before.azDeg + 540) % 360) - 180);
     check('Dragging turns the view (azimuth change, degrees)', turned.toFixed(1), '> 5', turned > 5);
-    await page.mouse.click(c.x, c.y);
+    await page.mouse.click(c.x, y);
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await sleep(300);
     const afterKeys = (await appState(page)).look;
@@ -512,9 +626,12 @@ async function partSurface(app, step) {
     await sleep(200);
     const up = (await appState(page)).look;
     check('ArrowUp tilts up (elevation, degrees)', `${afterKeys.elDeg} -> ${up.elDeg}`, 'larger', up.elDeg > afterKeys.elDeg);
+    // The status line is in the strip's "About" disclosure since PR #4: open it to read it.
+    const about = await openHudMenu(page, 'About');
     const hud = await page.locator('.surface-hud .sh-status').textContent();
     const look = (await appState(page)).look;
     check('HUD "Facing" azimuth = store.look.azDeg', hud, look.azDeg, close(numbers(hud)[0], Math.round(look.azDeg) % 360, 1.01));
+    if (about) await closeHudMenu(page, 'About');
   });
 
   await step('Close the surface view (× button), then "At landing time" (card): IM-2 card values', 'control', async ({ check, note }) => {
@@ -550,8 +667,10 @@ async function partSurface(app, step) {
     if (was) check('Back at the same site, the view keeps its last direction (azimuth)', v.look.azDeg, was.azDeg, close(v.look.azDeg, was.azDeg, 1));
     const settings = await page.evaluate(() => ({ lowPower: window.lunyx.scene.surface.view.lowPower ?? null, pixelRatio: window.lunyx.scene.surface.view.renderer?.getPixelRatio?.() ?? null }));
     note(`Surface settings: ${JSON.stringify(settings)} (the app uses low-power settings only for a software renderer).`);
+    const about = await openHudMenu(page, 'About');
     note(`HUD: ${await page.locator('.surface-hud .sh-status').textContent()}`);
     note(`Ground: ${(await page.locator('.surface-hud .sh-ground').textContent().catch(() => '')).slice(0, 400)}`);
+    if (about) await closeHudMenu(page, 'About');
     note(`Frame rate ${await fps(page)} fps.`);
   }, { shot: 'im2-surface-landing-sun', timeout: 180_000 });
 
@@ -617,8 +736,9 @@ async function partSurface(app, step) {
     await back.click();
   });
 
-  await step('Face Earth (HUD button)', 'control', async ({ check }) => {
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
+  await step('Turn to Earth from the HUD ("Track Earth"; "Face Earth" before GitHub PR #2)', 'control', async ({ check, note }) => {
+    const how = await faceBody(page, 'Earth');
+    note(how === 'track' ? '"Track Earth" is pressed: the view follows Earth as the clock moves.' : 'One-off "Face Earth" button (a build before GitHub PR #2).');
     await sleep(800);
     const v = await surfaceView(page);
     check('Look azimuth = Earth azimuth', v.look.azDeg, v.sky.earth.azDeg, close(v.look.azDeg, v.sky.earth.azDeg, 0.2));
@@ -626,10 +746,17 @@ async function partSurface(app, step) {
     check('Earth phase (lit %) shown in the scene', v.sky.earth.litPct, 'a number', Number.isFinite(v.sky.earth.litPct));
   }, { shot: 'im2-surface-earth' });
 
-  await step('Face Sun and show sky paths (HUD buttons)', 'control', async ({ check }) => {
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+  await step('Turn to the Sun ("Track Sun") and show sky paths (HUD toggles)', 'control', async ({ check, note }) => {
+    const how = await faceBody(page, 'Sun');
+    if (how === 'track') {
+      const earth = await page.locator('.surface-hud').getByRole('button', { name: 'Track Earth', exact: true }).getAttribute('aria-pressed');
+      check('Tracking the Sun replaces tracking Earth', `Track Earth pressed: ${earth}`, 'false', earth === 'false');
+    }
+    // "Sky paths" is in the strip's "Surface options" disclosure since PR #4.
+    const options = await openHudMenu(page, 'Surface options');
     const paths = page.locator('.surface-hud').getByRole('button', { name: 'Sky paths' });
     if ((await paths.getAttribute('aria-pressed')) !== 'true') await paths.click();
+    if (options) await closeHudMenu(page, 'Surface options');
     await sleep(800);
     const v = await surfaceView(page);
     check('Sky paths on', v.annotations.tracks, true, v.annotations.tracks === true);
@@ -707,7 +834,7 @@ async function partSurface(app, step) {
           sunsetShot = true;
           const a = await getAnalysis(page);
           note(`At "Sun fully set": Sun elevation ${a.now.sun.elDeg}°, skyline ${a.now.sun.skylineElDeg}°, clearance ${a.now.sun.clearanceDeg}°.`);
-          await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+          await faceBody(page, 'Sun');
           await sleep(800);
           app.extraShots.push(await shot(page, `${app.shotDir}/${String(app.report.steps.length + 1).padStart(2, '0')}-im2-surface-at-sun-fully-set.jpg`));
         }
@@ -723,7 +850,7 @@ async function partSurface(app, step) {
     check('View is the globe, IM-2 still selected', `${s.view} ${s.site?.id}`, 'globe im-2', s.view === 'globe' && s.site?.id === IM2.id);
   });
 
-  await step('Apollo 11: click its marker, close, "At landing time", "Enter surface view", Face Sun', 'control', async ({ check, note }) => {
+  await step('Apollo 11: open it from its marker, close, "At landing time", "Enter surface view", turn to the Sun', 'control', async ({ check, note }) => {
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
     let p = await markerPoint(page, APOLLO11.id);
@@ -734,8 +861,7 @@ async function partSurface(app, step) {
       note(`Brought Apollo 11 to the centre by typing its coordinates (centre ${r.centre.lat.toFixed(3)}, ${r.centre.lon.toFixed(3)}); marker now ${JSON.stringify(p)}.`);
     }
     if (!p.visible || p.covered) throw new Error(`Apollo 11 marker not clickable: ${JSON.stringify(p)}`);
-    await page.mouse.click(p.x, p.y);
-    await page.waitForFunction((id) => window.lunyx.store.get().site?.id === id, APOLLO11.id, { timeout: 20_000 });
+    await openFromMarker(page, APOLLO11.id, p, { check, note });
     await surfaceReady(page);
     await page.getByRole('button', { name: 'Close the surface view and return to the globe' }).click();
     await page.waitForFunction(() => window.lunyx.store.get().view === 'globe', null, { timeout: 15_000 });
@@ -744,7 +870,7 @@ async function partSurface(app, step) {
     await page.locator('.site-card').getByRole('button', { name: 'Enter surface view' }).click();
     await surfaceReady(page);
     await analysisSettled(page);
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Sun' }).click();
+    await faceBody(page, 'Sun');
     await sleep(800);
     const [v, a] = [await surfaceView(page), await getAnalysis(page)];
     app.report.values.push({ profile: app.profile, where: 'Apollo 11 surface at landing', surface: { look: v.look, sky: v.sky, ground: v.ground }, analysisNow: a.now });
@@ -878,6 +1004,24 @@ async function partExtras(app, step) {
     await page.waitForFunction(() => window.lunyx.store.get().playing, null, { timeout: 60_000 }).catch(() => {});
     const s0b = await appState(page);
     check('Preset plays at its rate', `${s0b.playing || s0b.timeMs > start} ${s0b.rate}`, `true ${preset.rateSecondsPerSecond}`, (s0b.playing || s0b.timeMs > start) && s0b.rate === preset.rateSecondsPerSecond);
+    // What the list says after the load. Since main 5972aaf (list at the bottom of Filters, no
+    // per-preset disclosures) the status line stayed empty after a successful load (batch 16);
+    // @globe's T-67 commit makes it confirm the load, with the preset's caveat (IM-2's touchdown
+    // minute is not confirmed) on screen or in the button's tooltip.
+    // The line says "Loading …" until the action returns; wait for its final text.
+    await page.waitForFunction(() => !/^Loading/.test(document.querySelector('.pl-status')?.textContent.trim() ?? ''), null, { timeout: 30_000 }).catch(() => {});
+    const said = await page.evaluate(() => {
+      const panel = document.querySelector('.filters-panel');
+      const list = document.querySelector('.pl');
+      return {
+        last: Boolean(panel && list && [...panel.children].filter((c) => !c.matches('hr')).at(-1)?.contains(list)),
+        status: document.querySelector('.pl-status')?.textContent.trim() ?? '',
+        title: [...document.querySelectorAll('.pl-button')].find((b) => b.textContent.includes('IM-2 Athena'))?.title ?? '',
+      };
+    });
+    note(`"Missions to replay" ${said.last ? 'is the last section of Filters' : 'is not the last section of Filters'}. Status line after the load: "${said.status}". The button's tooltip: "${said.title}".`);
+    check('The "Missions to replay" status line confirms the load', said.status || '(empty)', 'a sentence about the loaded preset', !/^Loading/.test(said.status) && /IM-2/.test(said.status) && /playing|loaded/i.test(said.status), { finding: 'batch 16 (T-67)' });
+    check("The preset's caveat (IM-2's touchdown minute) is on screen or in the tooltip", `${said.status} | ${said.title}`.slice(0, 220), 'says the touchdown minute is not confirmed', /minute|unconfirmed|not confirmed|approximate|uncertain/i.test(`${said.status} ${said.title}`), { finding: 'batch 16 (T-67)' });
     const eph = (await page.locator('.pl-ephemeris').textContent().catch(() => '')) ?? '';
     const a = await getAnalysis(page);
     note(`Ephemeris line: "${eph.trim()}"; analysis ephemeris: ${a.provenance?.ephemeris}.`);
@@ -889,11 +1033,11 @@ async function partExtras(app, step) {
     check('The clock stops at the end of the window', new Date(s1.timeMs).toISOString(), new Date(end).toISOString(), s1.timeMs === end);
   }, { shot: 'preset-im2-end', timeout: 300_000 });
 
-  await step('Zoomed Earth at IM-2 touchdown ("Face Earth", then + until about 8° field of view)', 'keyboard', async ({ check, note }) => {
+  await step('Zoomed Earth at IM-2 touchdown (turn to Earth, then + until about 8° field of view)', 'keyboard', async ({ check, note }) => {
     await page.locator('.ts-date').fill('2025-03-06T17:28');
     await page.locator('.ts-date').press('Enter');
     await page.waitForFunction(() => window.lunyx.store.get().timeMs === Date.UTC(2025, 2, 6, 17, 28), null, { timeout: 15_000 }).catch(() => note('The date field did not move the clock to touchdown.'));
-    await page.locator('.surface-hud').getByRole('button', { name: 'Face Earth' }).click();
+    await faceBody(page, 'Earth');
     await page.locator('#scene').focus();
     for (let i = 0; i < 25 && (await appState(page)).look.fovDeg > 8.5; i++) await page.keyboard.press('+');
     await sleep(800);
@@ -959,7 +1103,7 @@ async function partExtras(app, step) {
     }
   }, { shot: 'outlook', timeout: 300_000 });
 
-  await step('Globe: Country filter (India), country flags, ownership rows and the explored area on the card', 'control', async ({ check, note }) => {
+  await step('Globe: Country filter (India), country flags, country territories, ownership rows and the explored area on the card', 'control', async ({ check, note }) => {
     await closeCompare(page);
     await backToGlobe(page);
     const missions = page.locator('.fp-missions');
@@ -979,7 +1123,42 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?× larger/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
+    // Since T-67 the explored area is no longer drawn on the globe: the row gives its size only.
+    check('Explored area says its size', card?.facts.Explored, 'about … across', /about .*across/.test(card?.facts.Explored ?? ''));
+    // Country territories (main 5972aaf, T-67): the whole Moon coloured by the country of the
+    // nearest landing shown; off by default, and disabled while previous missions are hidden.
+    const terrBox = page.getByLabel('Show country territories');
+    if (await terrBox.count()) {
+      check('"Show country territories" is off by default', String(await terrBox.isChecked()), 'false', !(await terrBox.isChecked()));
+      const caption = page.locator('.fp-territory-note');
+      check('No territory caption while the colouring is off', String(await caption.isVisible()), 'false', !(await caption.isVisible()));
+      await terrBox.check();
+      await page.waitForFunction(() => window.lunyx.store.get().showTerritories === true, null, { timeout: 10_000 });
+      // What the colours mean, on screen under the checkbox while they are drawn (@globe's ed249f4).
+      const meaning = (await caption.isVisible()) ? ((await caption.textContent()) ?? '').trim() : '';
+      check('The caption under the checkbox says what the colours mean (the nearest landing, not ownership)', meaning.slice(0, 220) || '(no caption)', 'nearest landing; no ownership', /nearest/i.test(meaning) && /(legal boundary|owns|ownership)/i.test(meaning));
+      const terr = () =>
+        page.evaluate(() => {
+          const g = window.lunyx.scene.globe;
+          const u = g.uniforms;
+          const n = u.uTerrCount.value;
+          return { sites: n, countries: new Set([...Array(n).keys()].map((i) => u.uTerrSite.value[i].w)).size, shown: g.visibleMarkers.length };
+        });
+      const t1 = await terr();
+      check('The territories are drawn for every landing shown', `${t1.sites} sites, ${t1.countries} countries`, `${t1.shown} sites`, t1.sites === t1.shown && t1.sites > 0);
+      const india = page.getByRole('button', { name: /^India, \d+ landings?$/ });
+      await india.click();
+      await page.waitForFunction((n) => window.lunyx.scene.globe.uniforms.uTerrCount.value !== n, t1.sites, { timeout: 10_000 }).catch(() => {});
+      const t2 = await terr();
+      check('The territories follow the mission filters (India hidden)', `${t2.sites} sites, ${t2.countries} countries`, `${t2.shown} sites, ${t1.countries - 1} countries`, t2.sites === t2.shown && t2.sites < t1.sites && t2.countries === t1.countries - 1);
+      await india.click();
+      await page.waitForFunction((n) => window.lunyx.scene.globe.uniforms.uTerrCount.value === n, t1.sites, { timeout: 10_000 }).catch(() => {});
+      const shownBox = page.getByLabel('Show previous missions');
+      await shownBox.uncheck();
+      check('"Show country territories" is disabled while previous missions are hidden', String(await terrBox.isDisabled()), 'true', await terrBox.isDisabled());
+      await shownBox.check();
+      note(`Territories: ${t1.sites} landings in ${t1.countries} countries; ${t2.sites} in ${t2.countries} with India hidden.`);
+    } else note('No "Show country territories" in this build (before main 5972aaf).');
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
@@ -1173,4 +1352,7 @@ try {
 }
 const all = Object.values(report.profiles).flatMap((p) => p.steps);
 const checks = all.flatMap((s) => s.checks);
-log(`done: ${all.filter((s) => s.ok).length}/${all.length} steps ran, ${checks.filter((c) => c.pass).length}/${checks.length} checks passed. ${out}/report.json`);
+// A check marked `pending` waits for a fix the owners have announced (named in qa-findings.md): when it
+// fails it is counted apart, not as a failure.
+const pending = checks.filter((c) => !c.pass && c.pending);
+log(`done: ${all.filter((s) => s.ok).length}/${all.length} steps ran, ${checks.filter((c) => c.pass).length}/${checks.length} checks passed${pending.length ? `, ${pending.length} pending (${[...new Set(pending.map((c) => c.what))].join('; ')})` : ''}. ${out}/report.json`);

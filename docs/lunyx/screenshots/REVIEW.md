@@ -1,11 +1,202 @@
 # Desktop walkthrough: screenshots and review against the mockups
 
-Task T-8 (release-candidate walkthrough, project lunyx-experience), by @desktop-workflow.
-Desktop website only (decision D-4): 1280x720 and 1920x1080. This replaces the T-2 review of
-build `27b0f30` (this file at `6a24334`); the T-2 shots stay under `27b0f30/` because
-`docs/lunyx/AI-USE.md` lists them (A32).
+Tasks T-8, T-16, T-19, T-22 and T-23 (release-candidate walkthroughs, project lunyx-experience),
+by @desktop-workflow. Desktop website only (decision D-4): 1280x720 and 1920x1080. Newest first;
+each section names the app code it saw. This replaces
+the T-2 review of build `27b0f30` (this file at `6a24334`); the T-2 shots stay under `27b0f30/`
+because `docs/lunyx/AI-USE.md` lists them (A32).
 
-## What was tested
+## T-67 head: app code dd42bdb plus T-20 (T-22)
+
+| | |
+| --- | --- |
+| Head | @upstream-sync's T-67 head `dd42bdb`: the published T-64 RC `504d51a` plus GitHub main 5775c64 (country territories, the compact surface card, "Missions to replay" at the bottom of Filters), merged as `eb88237`, with @globe's caption and preset confirmation (`ed249f4`, `f420c44`) and @surface's chart fix. Its app and test code are byte-identical to `ba95be0`, which this branch merged; `dd42bdb` adds only STATUS.md and the T-23 screenshots. |
+| Tested tree | `ba95be0` and team integration `2fba58b` merged into this branch (D-5 point 3 exception). The app code is `dd42bdb`'s plus @assistant's T-20 (the deterministic assistant without setTerritoryScale, with territory and flag replies). Script: `e2e/qa/walkthrough.mjs` at `232c74e`. |
+| Renderer | ANGLE on the NVIDIA GTX 1050 Ti, full settings (`lowPower: false`). 60 and 60.1 fps at 1280x720; 60 and 60.2 fps at 1920x1080. |
+| Run | 2026-11-15 11:08 to 11:13Z, all five parts at both sizes. Report: `e2e/qa/out/t67-dd42bdb/report.json` (not committed). The page contacted only the preview server and `trek.nasa.gov`, with no failed request, HTTP error or console error. |
+
+| Size | Steps | Value checks | Time | Load (1 min) |
+| --- | --- | --- | --- | --- |
+| 1280x720 | 41 of 41 ran | 265 of 265 | 153 s | 4.0 at the start |
+| 1920x1080 | 41 of 41 ran | 265 of 265 | 142 s | 2.1 at the end |
+
+The browser tests on the same tree (GPU, 11:04 to 11:06Z): `a11y` and `flow`, 37 of 37. That
+includes two new a11y tests: the territories checkbox, and the strip's two disclosures by
+keyboard.
+
+**What changed since the T-64 RC, as seen on screen.**
+
+- **Country territories.** Filters has "Show country territories", off by default, next to
+  "Show previous missions" and disabled while those are hidden.
+  - Ticked, the whole Moon is coloured by the country of the nearest landing shown, with a light
+    line where two countries meet.
+  - A caption under the checkbox says what the colours mean: "Colours: the country of the
+    nearest landing shown. A display of who landed nearest, not a boundary; no country owns
+    lunar ground (Outer Space Treaty, Article II)."
+  - The colouring follows the mission filters: 28 landings in 5 countries, then 27 in 4 with
+    India hidden.
+  - @globe's `f420c44` keeps the tint off the polar and site close-ups. The walkthrough does not
+    zoom into a close-up with the territories on, so this was not seen here.
+- **Explored area.** The explored area is no longer drawn on the globe, and the card's Explored
+  row gives the size only ("about 60 m across"). The "Territory size exaggeration" select is
+  gone.
+- **Surface strip.** The surface strip is one compact row: Track Sun, Track Earth, "Surface
+  options" (Sky paths, Generated detail, Skyline chart, Return to site) and "About" (the
+  status, ground and owner lines).
+  - The two disclosures close on Escape, an outside click or the focus leaving.
+  - The "Surface view" title is gone.
+  - The yellow ring on "About" in some surface shots is the keyboard focus: the walkthrough
+    closed that disclosure with Escape, which leaves the focus on it.
+- **Missions to replay.** The presets are the last section of Filters, without the per-preset
+  "Timing and data sources" disclosures (A-6 is moot). After a load the status line confirms it
+  and gives the preset's caveat, for example "Playing "IM-2 Athena, Mons Mouton". … The
+  touchdown minute is not confirmed by an official source (NASA: about 11:30 a.m. CST, 17:30
+  UTC)."
+
+Still there, as expected while on hold: Q-8 (T-60) and Japan's flag on the wordmark's "N"
+(T-61), as in `36-globe-flags.jpg`.
+
+**Shots.** The changed ones are under `docs/lunyx/screenshots/dd42bdb/`: 18 at 1280x720 and 7
+at 1920x1080.
+
+| Shot | What it shows |
+| --- | --- |
+| `1280x720/01-open.jpg`, `1920x1080/01-…` | The globe on opening: Filters starts with the arrival date; "Missions to replay" is at the bottom |
+| `1280x720/04-…`, `12-…` | The pin's card, and IM-2's card at touchdown |
+| `1280x720/13-…` to `18-…`, `1920x1080/14-…`, `17-…`, `18-…` | The surface view with the compact strip: Track Sun, Track Earth, "Surface options", "About" |
+| `1280x720/22-…`, `24-…`, `1920x1080/22-…`, `24-…` | At "Sun fully set" following the Sun; Apollo 11 at touchdown |
+| `1280x720/25-…`, `28-…` | The assistant drawer over the new Filters |
+| `1280x720/32-…`, `33-…` | The IM-2 preset at its window end; Earth zoomed in |
+| `1280x720/34-…`, `35-…` | The window table and the outlook over the compact strip |
+| `1280x720/36-globe-flags.jpg`, `1920x1080/36-…` | Country territories with their caption, country flags, the Country filter, and IM-2's card with the size-only Explored row |
+
+The rest of the T-64 RC's shots (`e54cc2d/`) still show this head: the scenario (38 to 40),
+"why?" and the chart's table at 1920x1080. So do 07 and 08 in `bce6816/`.
+
+## Release candidate with T-64: app code e54cc2d (T-19, T-23)
+
+| | |
+| --- | --- |
+| Release candidate | The T-64 release candidate: lunyx/@upstream-sync's candidate `e54cc2d` plus this team's tests and docs (`8b24e05`, T-19). `e54cc2d` is `bce6816` plus GitHub main's T-64 work and its fixes: mission selection and the movable surface panels (081784a), the tracking toggles (pull request #2, a03eff9), the SDK credentials (d744169), @analysis's and @assistant's halves of F-10, @globe's territory wording (8ebeb4b) and Q-9 fix (aaeada2), and @surface's T-65 (208d238), 4df402f and 8ea37e1. |
+| Tested tree | `e54cc2d` merged into this branch (D-5 point 3 exception). The app code is identical to `e54cc2d`'s; the branch adds e2e and docs only. Outside `e2e/`, `docs/` and `*.md`, `8b24e05` differs from `e54cc2d` only in `.env.example` (@assistant's credentials text, T-17), a template the app does not read. Script: `e2e/qa/walkthrough.mjs` at `844813c`. |
+| Renderer | ANGLE on the NVIDIA GTX 1050 Ti, full settings (`lowPower: false`). 60.2 and 60.3 fps at 1280x720; 60.3 and 60.1 fps at 1920x1080 (the strip there says "61 fps, 90% resolution"). |
+| Run | 2026-11-15 10:39 to 10:45Z, all five parts at both sizes. Report: `e2e/qa/out/cand-e54cc2d/report.json` (not committed). The page contacted only the preview server and `trek.nasa.gov`, with no failed request, HTTP error or console error. |
+
+| Size | Steps | Value checks | Time | Load (1 min) |
+| --- | --- | --- | --- | --- |
+| 1280x720 | 41 of 41 ran | 257 of 257 | 144 s | 4.2 at the start |
+| 1920x1080 | 41 of 41 ran | 257 of 257 | 150 s | 4.0 at the end |
+
+The browser tests on the same tree (GPU, 10:33 to 10:36Z): `a11y` and `flow`, 35 of 35. That
+includes the four new F-10 Escape tests and the T-64 marker test.
+
+**What changed since `bce6816`, as seen on screen.**
+
+- **Globe markers.** A click on a landing's marker shows its details on the card, and the view
+  stays on the globe. A double-click opens its surface view. The tooltip says so: "Click for
+  mission details · Double-click for surface view".
+  - Where markers overlap (Apollo 11 and Surveyor 5 seen from far out), slower clicks take
+    turns, and a double-click opens the landing whose details are shown.
+  - Q-9 (the double-click opened the other landing) was found on `fe0ae02`, and @globe's
+    `aaeada2` fixed it. The walkthrough checks it at both sizes.
+- **Territory size.** Filters has a "Territory size exaggeration" select (100 by default). The
+  card's Explored row says how much larger the area is drawn: "about 60 m across (drawn 2500×
+  larger in width from orbit, about 150 km across, so it can be seen; true size close to the
+  ground)".
+- **Surface panels.** Each surface panel has a header with a grip and a Fold button: Key
+  metrics, Skyline chart, Surface controls, Time, Locator map, and the compare panel and the
+  assistant drawer when they are open.
+  - The grip moves the panel by dragging or with the arrow keys. "Reset panels", under the
+    close button, puts every panel back.
+  - At 1280x720 the ground and ownership lines sit in the strip's "About this view"
+    disclosure, so the horizon stays clear. At 1920x1080 they show.
+- **Tracking.** The strip's "Face Sun" and "Face Earth" are now toggles, "Track Sun" and "Track
+  Earth". The view follows the body as the clock moves. Tracking one body replaces the other,
+  and dragging, the arrow keys or another look stop it.
+- **The assistant drawer** has a labelled "Close ×" button.
+- **F-10.** Escape goes to the layer that holds the focus. With the compare panel and the drawer
+  both open:
+  - focus in the compare panel: Escape closes the panel and gives the focus back to its
+    launcher;
+  - focus in the drawer: Escape closes the drawer;
+  - focus on the page or the scene: the drawer goes first.
+
+  See `docs/lunyx/accessibility.md`.
+
+Still there, as expected while on hold: Q-8, the stale "Nearby sites" status line (original
+T-60), in `38-scenario-1-nearby.jpg`; and Japan's flag on the wordmark's "N" (T-61), in
+`36-globe-flags.jpg`.
+
+**Shots.** The changed ones are under `docs/lunyx/screenshots/e54cc2d/`: 19 at 1280x720 and 10
+at 1920x1080. They are the screens with the surface panels, the tracking toggles, the
+assistant drawer, the card's Explored row and the territory select. The other shots are
+unchanged on this RC and stay where they are: in `649fc4e/`, 01, 04 and 12 (both sizes for 01),
+and in `bce6816/`, 07 and 08.
+
+| Shot | What it shows |
+| --- | --- |
+| `1280x720/13-…`, `14-im2-surface-key-metrics.jpg`, `1920x1080/14-…` | IM-2 at touchdown with the movable panels, each titled with a grip and Fold; "Reset panels"; the strip with Track Sun, Track Earth, Sky paths, Generated detail, Skyline chart. At 1280x720 "About this view" holds the ground lines. |
+| `1280x720/15-…`, `16-…` | "why?" on the Sun row, and the chart's table view, in the panel layout |
+| `1280x720/17-…`, `1920x1080/17-…` | "Track Earth" pressed: the view on Earth |
+| `1280x720/18-…`, `1920x1080/18-…` | "Track Sun" pressed (it replaces Earth) with sky paths |
+| `1280x720/22-…`, `1920x1080/22-…` | The clock at "Sun fully set", 2025-03-19 23:06 UTC, the view following the Sun |
+| `1280x720/24-…`, `1920x1080/24-…` | Apollo 11 at touchdown, opened by a click and then a double-click over Surveyor 5's overlapping marker |
+| `1280x720/25-…`, `28-…`, `30-…` | The assistant drawer with its "Close ×" button: open, "compare with a 24 h delay", "enter the surface then look at the sun" |
+| `1280x720/32-…`, `33-…`, `1920x1080/33-…` | The IM-2 preset at its window end; Earth zoomed in (7.8° and 6.5° fields of view) |
+| `1280x720/34-…`, `35-…`, `1920x1080/35-…` | The window table and the outlook in the compare panel, which in the surface view is a movable panel too |
+| `1280x720/36-…`, `1920x1080/36-…` | Country flags, the "Territory size exaggeration" select and IM-2's card with the new Explored row |
+| `1280x720/38-…`, `39-…`, `40-…`, `1920x1080/39-…`, `40-…` | The T-6 scenario with the panels and the drawer open |
+
+## Release candidate bce6816 (T-16)
+
+| | |
+| --- | --- |
+| Release candidate | `bce6816` (`bce6816ffd56a15e193f83ac747aadfd292d0053`), published. Origin `feature/lunyx-navigator` is at `a72a57f`, which adds only `docs/lunyx/STATUS.md`. Over `41be074`, the only app change is the Q-7 fix of Lunyx T-56: `src/ui/compare/nearbyTab.ts` and the new `src/ui/compare/scanSettings.ts` (with its unit test). The rest is this team's test and docs commits. |
+| Tested tree | `a72a57f` merged into this branch. **Its app code is identical to `bce6816`'s**: `git diff --name-only bce6816 HEAD -- . ':(exclude)*.md' ':(exclude)docs' ':(exclude)e2e'` is empty. The script is `e2e/qa/walkthrough.mjs` at `b067068`. It is the RC's script, except that its scan step now runs the operator's Q-7 scenario (below). |
+| Renderer | As for `41be074`: ANGLE on the NVIDIA GTX 1050 Ti, full settings (`lowPower: false`). 60.2 and 60.1 fps at 1280x720; 58.6 and 60.1 fps at 1920x1080. |
+| Run | 2026-11-15 09:28 to 09:33Z, all five parts at both sizes. Report: `e2e/qa/out/rc-bce6816/report.json` (not committed). As before, the page contacted only the preview server and `trek.nasa.gov`, with no failed request, HTTP error or console error. |
+
+| Size | Steps | Value checks | Time | Load (1 min) |
+| --- | --- | --- | --- | --- |
+| 1280x720 | 41 of 41 ran | 252 of 252 | 150 s | 2.0 at the start |
+| 1920x1080 | 41 of 41 ran | 252 of 252 | 155 s | 3.0 at the end |
+
+**The changed area, at both sizes (step 7, 10 of 10 checks each).** In Compare > "Nearby
+sites":
+
+1. Radius 900 and Spacing 150 are typed and left with Tab.
+2. "Slope at most" is changed to 10° and back to 8°; each change redraws the tab.
+3. Both fields still read 900 and 150. Before the fix, the first change put 2000 and 300 back.
+4. "Scan nearby sites" runs on that grid: its options are 900 / 150 / 8, and its summary reads
+   "113 points scanned around Pin 89.450° S, 137.200° W (within 900 m, every 150 m, slope at
+   most 8°): 57 alternatives ranked, 55 over the slope limit."
+5. Rank 1 equals the scan's best (score 91.8, 150 m E and 150 m S). After the scan the fields
+   still show 900 and 150.
+6. "Compare as B" on rank 1 (step 8): the table and the requirement lines equal both analyses,
+   28 of 28 checks.
+
+Everything else matched the `41be074` run, where every screen value was checked against the
+analysis.
+
+The e2e flow file on the RC's exact tree (`2425d14`) passed 16 of 16 in the original team's run,
+the Q-7 test included. It was not repeated here (D-7).
+
+**Shots.** Only the "Nearby sites" shots changed. They are under
+`docs/lunyx/screenshots/bce6816/`:
+
+| Shot | What it shows |
+| --- | --- |
+| `1280x720/07-nearby-ranked.jpg`, `1920x1080/07-…` | "Nearby sites" after the scan. The typed 900 m and 150 m are kept, the slope limit is 8°, and 113 points give 57 ranked. Each row has Pin and "Compare as B". |
+| `1280x720/08-compare-candidate-as-b.jpg` | "A and B" after "Compare as B" on rank 1: the pin against the candidate 150 m E, 150 m S. |
+
+The other shots, in `649fc4e/`, still show this RC: nothing else in the app changed.
+
+**What changed since `41be074`, as seen on screen:** "Nearby sites" keeps a typed radius and
+spacing through every redraw, and scans what it shows. No new finding. Q-8 (the stale status
+line, original T-60) and the flag on the wordmark (original T-61) are still there, as expected:
+both are on hold, not fixed in this RC.
+
+## Release candidate 41be074 (T-8): what was tested
 
 | | |
 | --- | --- |
@@ -66,7 +257,7 @@ What the parts cover, and what equalled the analysis:
 
 The crash has not happened again; see Observations in `docs/lunyx/qa-findings.md`.
 
-## Shots
+## Shots of RC 41be074 (T-8)
 
 All under `docs/lunyx/screenshots/649fc4e/`. JPEG, quality 80; 24 at 1280x720 and 11 at
 1920x1080. The run also took the other 13 at 1920x1080; they are in the report directory and
@@ -105,7 +296,8 @@ Seen in these shots, all from the original team's work since then:
 
 - Filters opens with "Missions to replay": Blue Ghost Mission 1, IM-2 and the 14 March 2025
   eclipse. Each has its own "Timing and data sources" disclosure, named after the preset (A-6
-  is fixed).
+  is fixed). On RC 41be074; since T-67 the presets are the last section of Filters, without
+  these disclosures.
 - Every rise and set has both ends, on every screen: the card, the Key metrics countdowns, the
   scrubber's jump buttons and the window table. Earth gets three instants: starts setting,
   centre sets, fully set. The countdown buttons and the scrubber jumps go to the instant they
@@ -202,13 +394,14 @@ terrain, Sun and Earth positions and sky paths as the software-rendered ones, at
 of about 1 fps, and no rendering fault was seen. When a panel covers much of the screen, the
 app may lower its drawing resolution (70 % in shot 32) and says so in the strip.
 
-## Findings from this run
+## Findings from the T-8 run
 
 The full records are in `docs/lunyx/qa-findings.md`.
 
-- **Q-7, known issue (deferred by D-14).** A radius or spacing typed into "Nearby sites" goes
-  back to the last scan's values when a requirement changes before the scan. The README's
-  known limits say so, and the e2e todo test is the marker. Still there on `649fc4e`.
+- **Q-7, fixed in RC `bce6816`.** On `649fc4e` / `41be074` it was a known issue (deferred by
+  D-14): a radius or spacing typed into "Nearby sites" went back to the last scan's values when a
+  requirement changed before the scan. Operator decision D-16 lifted the deferral; Lunyx T-56
+  fixed it, and the walkthrough verified the fix on `bce6816` at both sizes (above).
 - **Q-8, new, not blocking (D-13).** The "Nearby sites" status line keeps the outcome of an
   earlier "Compare as B" after another scan has replaced the list, for example one the
   assistant ran around a new pin. In `38-scenario-1-nearby.jpg` it says, in green, "Candidate 1

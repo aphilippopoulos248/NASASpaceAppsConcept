@@ -5,15 +5,14 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `3bbf500`: team integration `2e6c8c5` (the release candidate
-  `41be074`'s app code with the release walkthrough's record) merged with the documentation-only
-  `am/lunyx/integration` at `3d38dc8`, plus this task's documents (T-22 mission presets, T-37
-  licence notices and the DOI fix, T-38 a source for every landing, T-39 the flags, T-40 the
-  notices header, T-46 to T-50, all four of the science project's deliveries). Since the
-  published `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20),
-  `public/data/presets.json` (S21) and `public/licences/` (section 6); `package.json` gained
-  the scripts `fetch-gcat`, `fetch-site-areas` and `build-licences`; the lockfile is
-  unchanged.
+- **State described:** the tree of `3d04281` (the original team's T-67 head `dd42bdb` on the
+  published release candidate `504d51a`, plus @globe's `29b513b`) plus this delivery's files
+  (our paths), with this task's documents (T-22 mission presets, T-37 licence notices and the DOI
+  fix, T-38 a source for every landing, T-39 the flags, T-40 the notices header, T-46 to T-50,
+  T-56, T-64, T-65, T-67, all four of the science project's deliveries). Since the published
+  `cc736f8`, `public/` gained `public/data/sources/` (S18 to S20), `public/data/presets.json`
+  (S21) and `public/licences/` (section 6); `package.json` gained the scripts `fetch-gcat`,
+  `fetch-site-areas` and `build-licences`; the lockfile is unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
   nothing, the entry says so and the item is on the open list in
@@ -63,7 +62,7 @@ Insignia, Logotype and identifiers are not in the public domain; Lunyx uses none
 | Bundled files against the SHA-256 that their build scripts recorded in `index.json` (`public/data/dem`, `heatmap`, `science/diviner`, `science/shadowcam`) | 18 of 18 files match |
 | Source checksums recorded by the build scripts against the publishers' current ones | Zenodo record 4646092: 2 of 2 MD5 match. Harvard Dataverse DVN/EGOOCL v3.0: 4 of 4 MD5 match |
 | Bundled values against the original archives | Not repeated here. The independent validation (T-26) compared 30 080 samples of the bundled `.lxg` grids with the PDS originals: equal within rounding (`tests/fixtures/validation/ephemeris-check/`, STATUS.md section 4). The site windows (S3, S4: `public/terrain/*.bin`) were not compared with their PDS sources; the 3 m and 60 m windows were compared with each other (they step by several metres at the 3 m model's edge) and with LRO LOLA laser shots at 17 of the 19 sites (the science project's T-32 verification) |
-| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 190 images in the repository | None carries EXIF, XMP or C2PA metadata. The only embedded data: ICC colour profiles in 24 JPEG screenshots, and creation and modification times in the text chunks of three PNG screenshots (AI-USE.md section 2.4) |
+| Embedded image metadata (EXIF, XMP, C2PA, PNG text) of all 247 images in the repository | None carries EXIF, XMP or C2PA metadata. The only embedded data: ICC colour profiles in 24 JPEG screenshots, and creation and modification times in the text chunks of three PNG screenshots (AI-USE.md section 2.4) |
 | Licences of npm packages | Read from each installed `node_modules/<package>/package.json` after `npm ci` at `cc736f8` (same lockfile as `bc5fb8e`); 93 packages installed |
 
 ## 3. Datasets bundled in `public/`
@@ -93,7 +92,7 @@ says so.
 | S18 | Who owns the hardware at each landing (GCAT) | `public/data/sources/gcat-landers.json` | 13.1 kB | **CC BY 4.0** (GCAT's copyright notice) | Site card: "source: GCAT" with a link and the catalogue id; surface view: "(GCAT)" |
 | S19 | LROC catalogue of hardware positions on the Moon | `public/data/sources/lroc-anthropogenic-objects.csv` | 21.0 kB | As S4 (public domain as a PDS product) | Recorded in `site-areas.json`; not shown on screen |
 | S20 | Explored area at each site (made in this repository from S19 and traverse maps) | `public/data/sources/site-areas.json` | 34.3 kB | Derived here | Sources listed in the file |
-| S21 | The three "Missions to replay" (written here: site, window, clock, view) | `public/data/presets.json` | 3.9 kB | Written here; its times come from S16 and its windows lie inside the S10 tables | `sources` field of each preset |
+| S21 | The three "Missions to replay" (written here: site, window, clock, view, and a caveat where a time is not confirmed or is computed) | `public/data/presets.json` | 4.4 kB | Written here; its times come from S16 and its windows lie inside the S10 tables | `sources` field of each preset |
 
 The `README.md` next to each data folder (`public/data/dem/`, `heatmap/`, `ice-targets/`,
 `science/diviner/`, `science/shadowcam/`) carries the same credits for anyone who opens the
@@ -328,10 +327,13 @@ any AI tool made them are not established (open list L2).**
   and so on; the folders exist, listed 2026-11-15), cited by the teammate as Gonzales et al. (2019),
   LPSC 50, abstract 3089 (not checked here); and the map layers of the Apollo Analyst's Notebook,
   NASA PDS Geosciences Node (https://an.rsl.wustl.edu/apollo/; its page states no licence or
-  terms), whose rover traverses the teammate attributes to NASA TN D-7469 (not checked here). On
-  the globe each area is drawn up to ten times larger than true size from orbit and true to size
-  close to the ground (`AREA_DISPLAY_SCALE` in `src/scene/siteAreas.ts`); the site card gives the
-  true size and says so.
+  terms), whose rover traverses the teammate attributes to NASA TN D-7469 (not checked here). Since
+  the teammates' T-67 work the areas are no longer drawn on the globe: the site card quotes each
+  at true size. With Filters > "Show country territories" (off by default) the globe instead tints the
+  whole Moon by the country of the nearest landing shown (`src/scene/globe/territories.ts`; not
+  over the south-polar or site close-ups), a display of who landed nearest, derived only from the
+  landing coordinates; it is not data and not a boundary of any kind, and no country owns any
+  lunar ground (the Outer Space Treaty, 1967).
 
 ### S16. Landing catalogue
 
@@ -543,10 +545,24 @@ areas) was merged into the navigator branch and published as `0cc5553` on 2026-1
 files are S18 to S20 above, its flags are discussed in AI-USE.md section 6, and its
 `docs/DATA_SOURCES.md` is compared in section 8. `origin/Abdel` (`595fe28`) adds no files.
 
+GitHub `main` at `081784a` (the teammates' second round) and pull request #2 (`a03eff9`), both
+in the original team's T-64 candidate, add no data or image file. They change the app: a the
+globe's relief at true scale with no selector, movable and foldable panels in the surface view
+(`src/ui/surface/panels.ts`), "Close ×" and Escape for the assistant's drawer, a landing list
+whose choice opens the card (a double-click enters the surface view), and the Track Sun and
+Track Earth toggles. The change to `docs/DATA_SOURCES.md` (section 11) is compared in section 8.
+GitHub `main` at `8c5ba86` (the teammates' T-67) then removes the territory size control and the
+drawn explored areas: the globe tints the whole Moon by the country of the nearest landing
+shown, and the card quotes each explored area at true size (S20; `docs/DATA_SOURCES.md` section
+11). Pull request #4 (`7282c55`) makes the surface view's control strip one compact row; it adds
+no data or image file. Its `5972aaf` adds the "Show country territories" switch (off by default)
+and moves "Missions to replay" to the bottom of Filters.
+
 ## 8. Comparison with the teammate's `docs/DATA_SOURCES.md`
 
 The teammate keeps a data-sources note, `docs/DATA_SOURCES.md` (from GitHub `main`, in the
-tree since `0cc5553`). This document is the complete register; it was checked against that note
+tree since `0cc5553`; checked again on the T-64 candidate `c39c516`, after the original team's
+correction of its section 11). This document is the complete register; it was checked against that note
 entry by entry. The note is the teammate's and was not edited.
 
 | Entry in DATA_SOURCES.md | Here | Agrees | Differs or adds |
@@ -561,7 +577,7 @@ entry by entry. The note is the teammate's and was not edited.
 | 8. Photo-derived relief | S5 | Yes | — |
 | 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |
 | 10. Close-up surface maps | S9 | Yes: third-party pack, "origin and licence unknown" | Adds that its AI status is not established (L2) |
-| 11. Explored area at each site | S19, S20 | Yes on sources; the display now shrinks from 10× to true size near the ground | Adds that the bundled LROC table is byte-identical to the archive's current file |
+| 11. Explored area at each site | S19, S20 | Yes, on the sources and on the display: since T-67 the areas are quoted at true size in the card and no longer drawn, and the globe's territory tint is "a display of who landed nearest, derived only from the landing coordinates" | Adds that the bundled LROC table is byte-identical to the archive's current file |
 | Not in that note | S1, S2, S12 to S15, S17, sections 4 to 6 | — | The LOLA grids in `public/data/dem`, PGDA product 69, the ice targets, Diviner, the ShadowCam index, the run-time services, the test references and the software licences |
 
 ## 9. What is not established
