@@ -97,17 +97,77 @@ mismatch at the edge, read at the same points of both grids (T-32's own measure)
 table to its 0.1 m rounding at every site; with the rule applied it is 0.000 m everywhere. The
 stored-mode table (`terrain/seams.txt`) is unchanged, because the files are unchanged.
 
-## Pending
+## 2b, app side: the ground the delivered build stands on (T-34 item 6)
 
-- The app side of 2b (its own heights and skylines, default and opt-in easing) on T-1's review SHA
-  (`../ephemeris-check/check0c_app_heights.py`, `skyline-eased/`).
-- T-34 item 5, second half (T-31 items 2-3: both ends of each passage, Earth by disc) on T-2's review
-  SHA: `../ephemeris-check/check10_transitions.py`; smoke test on 7767d3d at IM-2 within 0.006 deg and
-  0.05 points.
-- 18.6-year shares from a build with 1289083 (`check3 --apps ... --tag`): @analysis's 0 m any-Sun
-  question at the connecting-ridge pin, and the any-part Earth figure against PGDA product 69.
-- Outlook row 9 at the rim pin (`check5 --app ... --tag`).
-- Wording review of the submission documents (lunyx-experience @submission).
+Build: `am/lunyx-science/integration` **af1b499** (T-1 integrated, decision D-10: stored grids by
+default, `{ easeEdges: true }` as an opt-in). Asked through T-32's own report script
+(`scripts/terrain-seams.mjs --heights`, run in the export), 1808 points per site at the 19 sites
+with a 3 m model: nodes on nine rings across the 129 m band and the edge, half-cell points, and
+points 1.5 m and 30 m outside the edge (`../ephemeris-check/check0c_app_heights.py`, results in
+`../ephemeris-check/terrain/app-heights-af1b499.txt`):
+
+- the heights in use equal this fixture's own reader of the stored files to under 0.1 mm everywhere;
+- the opt-in eased stack equals the independent re-implementation of T-32's rule to 0.2 mm;
+- the source named for every point inside the model is the 3 m model.
+
+Skylines on that build, 2 m, against references with the exact near field (`skyline-eased/results.txt`):
+Blue Ghost 0.0022 deg, Apollo 12 0.0021, Luna 23 0.0038 at worst. These are the three sites that
+easing would have moved most (T-32's table); on the stored default nothing moves.
+
+## T-34 item 5, second half: both ends of every set and rise; Earth by disc (T-31 items 2-3)
+
+Build: `am/lunyx-science/integration` **9bc4878** (T-2 integrated; contains 1289083).
+`../ephemeris-check/check10_transitions.py`, results in `../ephemeris-check/transitions/results-9bc4878.txt`.
+141 instants in 48 passages of the Sun and Earth (first cut, centre, last limb; first limb, centre,
+whole disc clear) at Blue Ghost (0.5, 2, 5 m), IM-2 (14 days), Chandrayaan-3 (33 days) and five polar
+and limb sites over 60 days, against Horizons and own skylines (61-strip disc, bisected to 1 s).
+A time difference is scored as the skyline error that explains it (dt x the rate at which the
+clearance changes); tolerance 0.01 deg.
+
+- Blue Ghost, all three eye heights: every instant within 4 s (2 m: 18:23:41 / 18:56:49 / 19:30:04
+  against 18:23:40 / 18:56:51 / 19:30:03).
+- Worst over all: 0.0185 deg (the Sun's centre rising at IM-2 on 6 March, 7.7 min late), then
+  0.0140 (an Earthrise's first limb at the connecting-ridge pin, 13.9 min) and 0.009 (a sunrise at
+  the east-limb pin, 1 min). With this fixture's skyline read only every 0.5 deg, as the app keeps
+  it, the worst is 0.0040 deg and those three fall to 0.0001-0.0009 (`results-9bc4878-sky0.5.txt`).
+  So the passage logic agrees; what remains is the app's 0.5 deg azimuth step meeting narrow
+  skyline features. Near the poles that can move an instant by several minutes.
+- Every event carries its span as the contract says (sunset = span end, sunrise = span start,
+  Earth events among the span's centre crossings).
+- Any part of Earth's disc: within 0.04 points everywhere (60-day windows at five sites, IM-2 14
+  days); longest spell wholly hidden within 0.3 h.
+
+18.6 years on the same build (`../ephemeris-check/illumination/results-9bc4878.txt`):
+
+- @analysis's question (T-31 item 1): the connecting-ridge pin at 0 m now reads 44.21 % any Sun
+  against this fixture's 44.21 % (48.93 % before 1289083). All twelve point and eye-height cases are
+  within 0.05 points.
+- Any part of Earth's disc: within 0.03 points of the own figure in all twelve cases. Against PGDA
+  product 69 at 2 m: +0.07 to +1.05 points at the four smooth points (centre figure: 4.4 to 11.1
+  below); single pixels on crests prove nothing (neighbouring PGDA pixels differ by tens of points).
+
+## T-34 items 1 and 3, the two points round 2 left pending
+
+- Outlook row 9 at the Shackleton-rim pin, on 9bc4878 (`../ephemeris-check/outlook/results-9bc4878.txt`):
+  20.76 % any Sun against 20.84 % (was 21.41 %, +0.57 points, before 1289083's skyline). Every row at
+  both sites within 0.11 points; the longest Earth gap's ends at the rim pin within 3 min (were 12-14).
+  Any part of Earth's disc per lunar day within 0.20 points.
+- DSN edges after T-9, on af1b499 (`../ephemeris-check/dsn/results-af1b499.txt`): the 84 edges set by
+  a station's elevation limit within 0.9 s (round 2: 5.3 s), which is the reference's own 1 s
+  precision; edges set by the lunar skyline within 1.5 min (unchanged); shares within 0.03 points.
+
+## Wording review of the submission documents
+
+`review-submission-docs.md`: README.md, SOURCES.md section 2 and AI-USE.md section 2.3 on
+`am/lunyx-experience/agent/submission` 3871d58, line by line, with suggested wording.
+
+## What was not checked
+
+- Anything on the GPU or in the browser (no Chromium runs here, decision D-9).
+- The site windows (`public/terrain/*.bin`) against their PDS sources (round 1 limit, unchanged).
+- The app's eased skylines (only its eased heights): easing is an opt-in for comparison (D-10).
+- Published event times beyond those of round 1: none new was found for IM-2.
+- The 18.6-year longest darkness (round 1 limit, unchanged).
 
 ## Re-running
 
@@ -120,4 +180,7 @@ python3 -I $S/check9_bg_products.py --write                                     
 python3 -I $V/check0b_layer_seams.py --eased --write                                         # seconds
 ```
 
-Heavy runs go under the shared CPU lock (`flock /tmp/lunyx-heavy.lock ...`, decision D-9).
+Heavy runs go under the shared CPU lock (`flock /tmp/lunyx-heavy.lock ...`, decision D-9). The
+later checks re-run the same way with `--app app-<sha>.json --tag <sha>` (checks 3, 5, 7),
+`--build <sha>` (check 10) and `--app-dir DIR --commit <sha>` (check 0c); each script's header
+gives its full command.

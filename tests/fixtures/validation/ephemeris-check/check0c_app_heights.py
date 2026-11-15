@@ -99,8 +99,8 @@ lines = []
 out = lines.append
 report = {'build': args.commit, 'sites': {}}
 out('App %s (scripts/terrain-seams.mjs --heights) against this fixture\'s reader, metres; "eased" = lib/lunyx_dem.py eased_fine (T-32 rule from its handover).' % args.commit)
-out('site            points   app in use - own eased: worst  (band / outside)   app stored - own stored: worst   app in use - own stored: worst   source "fine" where expected')
-worst_all = {'inUseVsEased': 0.0, 'storedVsStored': 0.0}
+out('site            points   app eased - own eased: worst  (band / outside)   app stored - own stored: worst   app in use - own stored: worst   source "fine" where expected')
+worst_all = {'easedVsEased': 0.0, 'storedVsStored': 0.0, 'inUseVsStored': 0.0}
 for sid in SITES:
     entry = index['sites'][sid]
     with open(os.path.join(args.app_dir, '%s.in.json' % sid)) as fh:
@@ -116,23 +116,28 @@ for sid in SITES:
     own_e = dem.Stack(dem.site_windows(common.ROOT, sid, eased=True)[1]).sample(la, lo)
     in_use = np.array([h['inUse'] for h in app], dtype=np.float64)
     stored = np.array([h['stored'] for h in app], dtype=np.float64)
+    # From 30389f2 (decision D-10) the stack in use is the stored grids and "eased" is the opt-in
+    # { easeEdges: true } stack; at e4b06ef "inUse" was the eased one and there was no "eased" key.
+    new_api = 'eased' in app[0]
+    eased = np.array([h['eased'] for h in app], dtype=np.float64) if new_api else in_use
     src = [str(h.get('source', '')) for h in app]
     kind = np.array([m['kind'] for m in meta])
     band = kind != 'outside'
-    d_e, d_s, d_mix = in_use - own_e, stored - own_s, in_use - own_s
+    d_e, d_s, d_mix = eased - own_e, stored - own_s, in_use - own_s
     fine_expected = band
     fine_reported = np.array(['3 m' in s or 'NAC' in s or 'fine' in s.lower() for s in src])
-    row = {'points': int(len(q)), 'inUseMinusOwnEasedMaxM': float(np.nanmax(np.abs(d_e))), 'inBandMaxM': float(np.nanmax(np.abs(d_e[band]))), 'outsideMaxM': float(np.nanmax(np.abs(d_e[~band]))),
+    row = {'points': int(len(q)), 'interface': 'inUse = stored (D-10), eased opt-in' if new_api else 'inUse = eased (e4b06ef)',
+           'easedMinusOwnEasedMaxM': float(np.nanmax(np.abs(d_e))), 'inBandMaxM': float(np.nanmax(np.abs(d_e[band]))), 'outsideMaxM': float(np.nanmax(np.abs(d_e[~band]))),
            'storedMinusOwnStoredMaxM': float(np.nanmax(np.abs(d_s))), 'inUseMinusOwnStoredMaxM': float(np.nanmax(np.abs(d_mix))),
            'sourcesSeen': sorted(set(src)), 'fineWhereExpected': int(np.sum(fine_reported & fine_expected)), 'bandPoints': int(band.sum()), 'nan': int(np.sum(~np.isfinite(in_use)))}
-    for k, v in (('inUseVsEased', row['inUseMinusOwnEasedMaxM']), ('storedVsStored', row['storedMinusOwnStoredMaxM'])):
+    for k, v in (('easedVsEased', row['easedMinusOwnEasedMaxM']), ('storedVsStored', row['storedMinusOwnStoredMaxM']), ('inUseVsStored', row['inUseMinusOwnStoredMaxM'])):
         worst_all[k] = max(worst_all[k], v)
     report['sites'][sid] = row
     out('%-15s %6d   %8.4f  (%7.4f / %7.4f)                %8.4f                         %8.3f                     %d of %d'
-        % (sid, row['points'], row['inUseMinusOwnEasedMaxM'], row['inBandMaxM'], row['outsideMaxM'], row['storedMinusOwnStoredMaxM'], row['inUseMinusOwnStoredMaxM'], row['fineWhereExpected'], row['bandPoints']))
+        % (sid, row['points'], row['easedMinusOwnEasedMaxM'], row['inBandMaxM'], row['outsideMaxM'], row['storedMinusOwnStoredMaxM'], row['inUseMinusOwnStoredMaxM'], row['fineWhereExpected'], row['bandPoints']))
 report['worst'] = worst_all
 out('')
-out('Worst over the 19 sites: app in use against own eased %.4f m; app stored against own stored %.4f m.' % (worst_all['inUseVsEased'], worst_all['storedVsStored']))
+out('Worst over the 19 sites: app eased against own eased %.4f m; app stored against own stored %.4f m; app in use against own stored %.4f m.' % (worst_all['easedVsEased'], worst_all['storedVsStored'], worst_all['inUseVsStored']))
 out('Sources the app named: %s' % ', '.join(sorted({s for r in report['sites'].values() for s in r['sourcesSeen']}))[:600])
 text = '\n'.join(lines)
 print(text)
