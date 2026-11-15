@@ -1,4 +1,5 @@
 import {
+  BufferAttribute,
   BufferGeometry,
   Camera,
   DoubleSide,
@@ -8,6 +9,7 @@ import {
   LineLoop,
   Mesh,
   MeshBasicMaterial,
+  Vector3,
 } from 'three';
 import { landingColor, latLonToVec3 } from '../data/landings';
 import type { Marker } from './markers';
@@ -50,6 +52,8 @@ export function describeExtent(a: SiteArea): string {
 
 /** Just above the site imagery patches (radius 1.0001), below the markers. */
 const RADIUS = 1.00014;
+/** The same height above the drawn surface once the relief is applied (see SiteAreaLayer.place). */
+const LIFT = RADIUS - 1;
 
 /**
  * Areas are drawn this many times larger (in width) than they really are, so they read on the globe.
@@ -73,9 +77,16 @@ function enlarge(polygon: [number, number][], scale: number): [number, number][]
  * Each site's explored area drawn on the globe in its country's colour: a translucent fill with a solid
  * outline, enlarged AREA_DISPLAY_SCALE times about its centre so it reads at globe scale.
  */
+/** The vertices of one drawn piece (fill or outline) by latitude and longitude, so it can follow the relief. */
+interface Piece {
+  lat: Float32Array;
+  lon: Float32Array;
+  position: BufferAttribute;
+}
+
 export class SiteAreaLayer {
   readonly root = new Group();
-  private readonly items: { marker: Marker; group: Group }[] = [];
+  private readonly items: { marker: Marker; group: Group; pieces: Piece[] }[] = [];
 
   constructor(markers: Marker[], areas: Map<string, SiteArea>) {
     for (const marker of markers) {
@@ -102,7 +113,41 @@ export class SiteAreaLayer {
       const group = new Group();
       group.add(fill, outline);
       this.root.add(group);
-      this.items.push({ marker, group });
+      const ringLat = Float32Array.from(polygon, ([lat]) => lat), ringLon = Float32Array.from(polygon, ([, lon]) => lon);
+      const pieces: Piece[] = [
+        {
+          lat: Float32Array.from([cLat / polygon.length, ...ringLat]),
+          lon: Float32Array.from([cLon / polygon.length, ...ringLon]),
+          position: fillGeo.getAttribute('position') as BufferAttribute,
+        },
+        { lat: ringLat, lon: ringLon, position: lineGeo.getAttribute('position') as BufferAttribute },
+      ];
+      this.items.push({ marker, group, pieces });
+    }
+  }
+
+  /**
+   * Puts every area on the drawn surface, as the globe's other overlays do: `radius(lat, lon)` in
+   * Moon radii, relief exaggeration included. Without this the areas stay on the plain sphere and
+   * disappear under raised terrain.
+   */
+  place(radius: (lat: number, lon: number) => number): void {
+    const v = new Vector3();
+    for (const { pieces } of this.items) {
+      for (const p of pieces) {
+        const out = p.position.array as Float32Array;
+        for (let k = 0; k < p.lat.length; k++) {
+          latLonToVec3(p.lat[k], p.lon[k], radius(p.lat[k], p.lon[k]) + LIFT, v);
+          out[k * 3] = v.x;
+          out[k * 3 + 1] = v.y;
+          out[k * 3 + 2] = v.z;
+        }
+        p.position.needsUpdate = true;
+      }
+    }
+    // The surface can move by a good fraction of a Moon radius at high exaggeration: keep culling right.
+    for (const { group } of this.items) {
+      for (const child of group.children) (child as Mesh).geometry.computeBoundingSphere();
     }
   }
 
