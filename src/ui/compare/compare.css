@@ -197,6 +197,53 @@ body[data-view='surface'] .cmp-launcher { left: 50%; transform: translateX(-50%)
   .cmp-std[data-label]:not(.cmp-sstate):not(.cmp-snote)::before { content: attr(data-label) ': '; color: var(--text-muted); font-size: var(--fs-xs); }
 }
 
+/* ---------- outlook ---------- */
+.cmp-stale:empty { display: none; }
+.cmp-stale { color: var(--warn); }
+.cmp-outlook[hidden] { display: none; }
+.cmp-outlook.is-refreshing { opacity: 0.55; transition: opacity var(--dur); }
+.cmp-chart { margin: var(--sp-3) 0 0; }
+.cmp-chartcaption { font-weight: var(--fw-medium); }
+.cmp-chartlegend { display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-4); margin: var(--sp-1) 0 var(--sp-2); color: var(--text-muted); font-size: var(--fs-xs); }
+.cmp-key { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.cmp-keymark { display: inline-block; width: 10px; height: 10px; }
+.cmp-keymark.is-sun { border-radius: 50%; background: var(--sun); }
+.cmp-keymark.is-earth { background: var(--earth); }
+.cmp-keymark.is-arrival { width: 2px; height: 12px; background: var(--border-strong); }
+.cmp-plot { position: relative; min-height: 200px; border-radius: var(--radius-sm); }
+.cmp-plot:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.cmp-svg { display: block; overflow: visible; }
+.cmp-grid { stroke: var(--border); stroke-width: 1; }
+.cmp-axis { stroke: var(--border-strong); stroke-width: 1; }
+.cmp-tick { fill: var(--text-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+.cmp-direct { fill: var(--text); font-size: 12px; }
+.cmp-arrival { stroke: var(--border-strong); stroke-width: 1; }
+.cmp-arrivaltext { fill: var(--text-muted); }
+.cmp-cross { stroke: var(--text-muted); stroke-width: 1; }
+.cmp-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.cmp-line.is-sun { stroke: var(--sun); }
+.cmp-line.is-earth { stroke: var(--earth); }
+.cmp-dot { stroke: var(--bg); stroke-width: 2; }
+.cmp-dot.is-sun { fill: var(--sun); }
+.cmp-dot.is-earth { fill: var(--earth); }
+.cmp-readout { position: absolute; transform: none; white-space: normal; max-width: 220px; z-index: 1; }
+.cmp-readout[hidden] { display: none; }
+.cmp-arrivals { display: grid; grid-template-columns: minmax(0, 10em) minmax(0, 1fr); gap: var(--sp-1) var(--sp-3); }
+.cmp-arrivals dt { color: var(--text-muted); }
+.cmp-arrivals dd { margin: 0; font-variant-numeric: tabular-nums; }
+.cmp-orow { display: grid; grid-template-columns: minmax(0, 1.9fr) repeat(5, minmax(0, 1fr)); gap: 0 var(--sp-3); align-items: baseline; padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); }
+.cmp-orow--slip { grid-template-columns: minmax(0, 1.9fr) repeat(4, minmax(0, 1fr)); }
+.cmp-ohead { color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); border-bottom-color: var(--border-strong); }
+.cmp-more > .cmp-ntable, .cmp-more > .cmp-assumelist { margin-top: var(--sp-2); }
+@container cmp-body (max-width: 700px) {
+  .cmp-ohead { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .cmp-orow, .cmp-orow--slip { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-3); padding: var(--sp-2) 0; }
+  .cmp-orow > .cmp-nname { grid-column: 1 / -1; }
+  .cmp-orow .cmp-ntd[data-label]:not(.cmp-nname)::before { content: attr(data-label) ': '; color: var(--text-muted); font-size: var(--fs-xs); }
+  .cmp-arrivals { grid-template-columns: 1fr; gap: 0; }
+  .cmp-arrivals dd { margin-bottom: var(--sp-2); }
+}
+
 /* ---------- narrow screens ---------- */
 @media (max-width: 700px) {
   .cmp-launcher { top: var(--sp-3); left: auto; right: var(--edge); }

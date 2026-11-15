@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { analyseStack } from '../../analysis/api';
+import { analyseStack, outlookStack } from '../../analysis/api';
 import { candidateOffsets } from '../../analysis/nearby';
 import { fnSource, stackOf } from '../../analysis/testing';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from '../../analysis/types';
@@ -111,7 +111,7 @@ describe('the compare panel opens through an action', () => {
 
   it('every action has a description and a parameter schema the assistant can use', () => {
     setup();
-    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons', 'rankNearby', 'selectCandidate', 'exportResults'];
+    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons', 'rankNearby', 'selectCandidate', 'exportResults', 'showOutlook'];
     const registered = listActions();
     for (const name of mine) {
       const def = registered.find((a) => a.name === name);
@@ -534,6 +534,72 @@ describe('the mission-window table and its export', () => {
     registerActions(createCompareActions({ store, analysis, panel: createPanelStore(), storage: createCompareStorage(null), download: () => undefined }));
     await ok('selectSite', { site: 'im-2' });
     expect(await fails('exportResults', { format: 'json' })).toBe('The analysis of the scenario on screen is not available: the terrain could not be read');
+  });
+});
+
+describe('the seasonal outlook', () => {
+  function setupOutlook(fail = false) {
+    resetActions();
+    const store = new Store(initialState(Date.UTC(2025, 2, 10)));
+    const smooth = stackOf(fnSource('smooth sphere', 60, () => 0));
+    const analysis = new AnalysisStore(store, { analyse: (sc) => analyseStack(sc, smooth), rankNearby: () => Promise.resolve([]) });
+    const panel = createPanelStore();
+    const asked: { label: string; months?: number }[] = [];
+    const outlook = (sc: Scenario, o: { months?: number }) => {
+      asked.push({ label: sc.label, months: o.months });
+      return fail ? Promise.reject(new Error('the terrain could not be read')) : Promise.resolve(outlookStack(sc, smooth, o));
+    };
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => [IM2], analysis }));
+    registerActions(createCompareActions({ store, analysis, panel, storage: createCompareStorage(null), outlook }));
+    return { store, panel, asked };
+  }
+
+  it('showOutlook computes the outlook of the scenario on screen, opens its tab and reports it', async () => {
+    const { store, panel, asked } = setupOutlook();
+    expect(await fails('showOutlook')).toBe('No site is selected. Select a landing site or drop a pin first.');
+    await ok('dropPin', { lat: 0, lon: 0 });
+    await ok('setMissionWindow', { startUtc: '2025-03-10T00:00Z', durationH: 72 });
+    const r = await ok('showOutlook', { months: 3 });
+    expect(asked).toEqual([{ label: 'Pin 0.000° N, 0.000° E, arrival 2025-03-10 00:00 UTC, 3-day window, 2 m mast', months: 3 }]);
+    expect(store.get().comparing).toBe(true);
+    expect(panel.get()).toMatchObject({ tab: 'outlook', outlookSlot: 'current', outlookMonths: 3, outlook: { state: 'ready', months: 3 } });
+    expect(r).toMatchObject({ slot: 'current', months: 3, missionH: 72, span: { startUtc: '2025-03-10T00:00Z' }, scenario: { site: { latDeg: 0, lonDegEast: 0 } } });
+    expect(r.lunarDays).toHaveLength(3);
+    // On a smooth Moon at the equator about half of every lunar day is sunlit and Earth's centre is always in view.
+    for (const d of r.lunarDays) {
+      expect(d.illuminationPct).toBeGreaterThan(45);
+      expect(d.illuminationPct).toBeLessThan(55);
+      expect(d.earthVisiblePct).toBe(100);
+    }
+    expect(r.planned).toMatchObject({ arrivalUtc: '2025-03-10T00:00Z', slipDays: 0 });
+    expect(r.best.score).toBeGreaterThanOrEqual(r.planned.score);
+    expect(r.worst.score).toBeLessThanOrEqual(r.planned.score);
+    expect(r.slips.map((x: { slipDays: number }) => x.slipDays)).toEqual([1, 3, 7, 14, 28]);
+    const week = r.slips[2];
+    expect(week.scoreChange).toBeCloseTo(week.score - r.planned.score, 1);
+    expect(week.longestDarknessChangeH).toBeCloseTo(week.longestDarknessH - r.planned.longestDarknessH, 1);
+    expect(r.highlights.length).toBeGreaterThan(2);
+    expect(r.scoring).toMatch(/mean of illuminationPct and earthVisiblePct/);
+    // Defaults: the span and the scenario last used.
+    await ok('showOutlook');
+    expect(asked[1].months).toBe(3);
+  });
+
+  it('for a comparison slot, refused past 2100, and a failure is said, not drawn', async () => {
+    const { store, panel } = setupOutlook();
+    expect(await fails('showOutlook', { slot: 'A' })).toBe('Comparison slot A is empty. Save a scenario there first (saveScenario).');
+    await ok('dropPin', { lat: 0, lon: 0 });
+    await ok('saveScenario', { slot: 'A', label: 'Baseline' });
+    expect(await ok('showOutlook', { slot: 'A', months: 1 })).toMatchObject({ slot: 'A', scenario: { label: 'Baseline' } });
+    expect(await fails('showOutlook', { months: 61 })).toMatch(/at most 60/);
+    store.set({ windowStartMs: Date.UTC(2099, 6, 1) });
+    expect(await fails('showOutlook', { slot: 'current', months: 12 })).toMatch(/would run past 2100-01-01T00:00Z/);
+
+    const broken = setupOutlook(true);
+    await ok('dropPin', { lat: 0, lon: 0 });
+    expect(await fails('showOutlook')).toBe('The outlook is not available: the terrain could not be read');
+    expect(broken.panel.get().outlook).toMatchObject({ state: 'error', error: 'the terrain could not be read' });
+    expect(panel.get().outlook.state).toBe('ready');
   });
 });
 
