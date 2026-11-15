@@ -111,7 +111,8 @@ describe('average maps', () => {
     expect(maps.state).toEqual({ state: 'off' });
     maps.update('avg-illumination', 'S');
     expect(maps.state.state).toBe('loading');
-    for (let i = 0; i < 400 && maps.state.state === 'loading'; i++) await new Promise((r) => setTimeout(r, 25));
+    // The maps arrive one by one (two wide ones and the fine one): wait for the south-polar wide map, or for the verdict that there are none.
+    for (let i = 0; i < 800 && maps.state.state !== 'missing' && !(u.uAvgHalf.value.x > 0); i++) await new Promise((r) => setTimeout(r, 25));
     const st = maps.state;
     // The maps belong to the science-layers module: when it is in the build they load, otherwise the overlay says why not.
     if (st.state === 'ready') {
