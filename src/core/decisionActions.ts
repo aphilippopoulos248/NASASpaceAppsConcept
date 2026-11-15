@@ -109,7 +109,7 @@ const CRITERION_PARAMS = (what: string, unitFor: (c: CriterionId) => string, max
   Object.fromEntries(CRITERIA.map((c) => [c, { type: 'number' as const, description: `${what} for ${c}, ${unitFor(c)}.`, minimum: 0, maximum: max(c) }]));
 
 const UNIT: Record<CriterionId, string> = { sunlight: 'percent', darkness: 'hours', earthVisibility: 'percent', commBlackout: 'hours', slope: 'degrees', roughness: 'metres' };
-const MAX_THRESHOLD: Record<CriterionId, number> = { sunlight: 100, darkness: 24 * 365, earthVisibility: 100, commBlackout: 24 * 365, slope: 90, roughness: 1000 };
+const MAX_THRESHOLD: Record<CriterionId, number> = { sunlight: 100, darkness: 24 * 365, earthVisibility: 100, commBlackout: 24 * 365, slope: 89, roughness: 1000 };
 
 const OVERRIDES_SCHEMA: ObjectSchema = {
   type: 'object',
@@ -339,6 +339,9 @@ export function createDecisionActions(ctx: DecisionContext): ActionDef<any, any>
     try {
       region = await regionTerrain(s, profile.landingRadiusM, profile.thresholds.slope);
     } catch (err) {
+      // A RangeError is a bad radius, limit or centre: the request itself, so it is refused. Anything
+      // else (no grid covers the region, say) leaves slope and roughness unknown, with the reason.
+      if (err instanceof RangeError) throw new ActionError(`The landing region cannot be measured as asked: ${err.message}`);
       regionError = message(err);
     }
     let metrics = engineCall('measure the site', () =>
