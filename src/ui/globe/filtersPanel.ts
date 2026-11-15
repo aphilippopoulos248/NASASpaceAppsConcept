@@ -18,6 +18,7 @@ import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
+import { AREA_DISPLAY_SCALE, MAX_ORBIT_AREA_WIDTH_M, MIN_ORBIT_AREA_WIDTH_M } from '../../scene/siteAreas';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import { committedPoint, fieldText, pinPoint, viewPoint, type Written } from './centreFields';
@@ -218,11 +219,15 @@ export function mountFiltersPanel(region: HTMLElement): void {
   areaLab.htmlFor = areaId;
   const areaSel = el('select', 'ly-select');
   areaSel.id = areaId;
-  const areaLabel = (f: number) => (f === 1 ? 'True size (×1)' : `×${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
+  // A setting, not a width multiplier (setTerritoryScale): the options are not labelled "×N".
+  const areaLabel = (f: number) => (f === 1 ? 'True size (1)' : `${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
   for (const f of AREA_SCALE_CHOICES) areaSel.append(new Option(areaLabel(f), String(f)));
   areaSel.addEventListener('change', () => void runAction('setTerritoryScale', { factor: Number(areaSel.value) }));
   const areaField = el('div', 'fp-num fp-territory');
-  areaField.title = "Each landing's explored area is drawn this many times wider than it really is, so it can be seen on the globe. The Moon itself is not changed.";
+  areaField.title =
+    `Display setting: how much each landing's explored area is enlarged so it can be seen from orbit. 1 = true size; ${AREA_DISPLAY_SCALE} = ` +
+    `every area about ${MIN_ORBIT_AREA_WIDTH_M / 1000} to ${MAX_ORBIT_AREA_WIDTH_M / 1000} km across from orbit, whatever its true size; settings in between blend the two (default ${DEFAULT_AREA_SCALE}). ` +
+    "Not a width multiplier: the site card says how much larger each area is drawn. True size close to the ground; the Moon itself is not changed.";
   areaField.append(areaLab, areaSel);
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));

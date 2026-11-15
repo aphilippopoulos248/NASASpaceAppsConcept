@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import type { Landing } from '../data/landings';
 import type { Marker } from './markers';
-import { AREA_DISPLAY_SCALE, areaDisplayScale, areaScale, MIN_ORBIT_AREA_WIDTH_M, MAX_ORBIT_AREA_WIDTH_M, SiteAreaLayer, type SiteArea } from './siteAreas';
+import { AREA_DISPLAY_SCALE, areaDisplayFacts, areaDisplayScale, areaScale, describeExtent, exploredText, MIN_ORBIT_AREA_WIDTH_M, MAX_ORBIT_AREA_WIDTH_M, SiteAreaLayer, type SiteArea } from './siteAreas';
 
 const landing = { id: 'apollo-11', name: 'Apollo 11', program: 'Apollo', country: 'USA', date: '1969-07-20', time: '20:17', lat: 0.674, lon: 23.473, crewed: true, region: 'r', summary: 's' } as Landing;
 const marker = { landing, group: new Group() } as unknown as Marker;
@@ -91,6 +91,23 @@ describe('how much larger the areas are drawn', () => {
     expect(areaDisplayScale({ extentM: 60 }) * 60).toBe(MIN_ORBIT_AREA_WIDTH_M);
     expect(areaDisplayScale({ extentM: 15000 }) * 15000).toBeCloseTo(MAX_ORBIT_AREA_WIDTH_M, 6);
     expect(areaDisplayScale({ extentM: 2500 }) * 2500).toBe(250000);
+  });
+
+  it('says how much larger and how wide an area is drawn from orbit, in the card\'s words (T-64)', () => {
+    const lander = { ...area, extentM: 60 }, traverse = { ...area, extentM: 11443 };
+    // The full display enlargement: 150 to 500 km across.
+    expect(areaDisplayFacts(lander, 100)).toMatchObject({ widthFactorFromOrbit: 2500, drawnWidthFromOrbitKm: 150 });
+    expect(areaDisplayFacts(traverse, 100)).toMatchObject({ widthFactorFromOrbit: 43.7, drawnWidthFromOrbitKm: 500 });
+    // A setting in between is not a width multiplier: 5 draws the lander about 100x wider and the traverse 2.7x.
+    expect(areaDisplayFacts(lander, 5)).toMatchObject({ widthFactorFromOrbit: 102, drawnWidthFromOrbitKm: 6.1 });
+    expect(areaDisplayFacts(traverse, 5)).toMatchObject({ widthFactorFromOrbit: 2.7, drawnWidthFromOrbitKm: 31.2 });
+    expect(exploredText(traverse, 100)).toBe('about 11.4 km across (drawn 44× larger in width from orbit, about 500 km across, so it can be seen; true size close to the ground)');
+    expect(exploredText(traverse, 5)).toBe('about 11.4 km across (drawn 2.7× larger in width from orbit, about 31.2 km across, so it can be seen; true size close to the ground)');
+    expect(exploredText(lander, 100)).toBe('about 60 m across (drawn 2500× larger in width from orbit, about 150 km across, so it can be seen; true size close to the ground)');
+    expect(exploredText(lander, 1)).toBe('about 60 m across (drawn at true size on the globe)');
+    // The release walkthrough reads the card's row this way (e2e/qa/walkthrough.mjs, part 4).
+    expect(exploredText(traverse, 100)).toMatch(/\d+(\.\d+)?× larger/);
+    expect(describeExtent(traverse)).toBe('about 11.4 km across');
   });
 
   it('keeps enlarged triangles above a smooth Moon and preserves small polar polygons across the date line', () => {
