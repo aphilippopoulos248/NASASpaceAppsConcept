@@ -20,10 +20,15 @@ const T0_MS = Date.UTC(2025, 2, 6, 17, 28);
 const HOME = { lat: 10, lon: 20, altitudeKm: 4170 };
 
 let srv, app, page;
+/** Main-frame navigations after the first load, and renderer crashes: the app never navigates itself, so each one is a finding. */
+const navigations = [];
 before(async () => {
   srv = await servers();
   app = await openApp(srv.deterministic);
   page = app.page;
+  page.on('framenavigated', (f) => f === page.mainFrame() && navigations.push(`${new Date().toISOString()} navigated to ${f.url()}`));
+  page.on('crash', () => navigations.push(`${new Date().toISOString()} the page crashed`));
+  page.on('popup', (p) => navigations.push(`${new Date().toISOString()} popup ${p.url()}`));
 }, SLOW);
 after(async () => {
   await app?.close();
@@ -452,13 +457,11 @@ describe('equivalence: site selection and views', () => {
     await inSurface();
   };
 
-  test('little person = enterSurface; close button and "Back to orbit" = exitSurface', SLOW, async () => {
+  // The rebuilt surface view (T-9) has no "Back to orbit" button any more: the close button is the control.
+  test('little person = enterSurface; the close button = exitSurface', SLOW, async () => {
     const down = await equivalent({ site: 'im-2', ui: () => page.locator('.person-btn').click(), expect: 'enterSurface', action: ['enterSurface', {}], keys: ['view', 'siteId'], wait: inSurface });
     assert.equal(down.view, 'surface');
-    for (const [how, leave] of [
-      ['close button', () => click(page, '.close-surface')],
-      ['"Back to orbit"', () => page.getByRole('button', { name: 'Back to orbit' }).click()],
-    ]) {
+    for (const [how, leave] of [['close button', () => click(page, '.close-surface')]]) {
       const s = await equivalent({ site: 'im-2', prepare: enterSurface, ui: leave, expect: 'exitSurface', action: ['exitSurface', {}], keys: ['view', 'siteId'], wait: inGlobe });
       assert.equal(s.view, 'globe', how);
       assert.equal(s.siteId, 'im-2', how);
@@ -493,10 +496,15 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
     const globe = page.locator('#scene');
     const keys = await equivalent({
       ui: async () => {
+        // One press at a time, as a person does: each press turns from the centre the globe has published,
+        // so presses within one drawn frame start from the same centre (see actions.md, F-7).
         await globe.focus();
-        await page.keyboard.press('ArrowRight');
-        await page.keyboard.press('ArrowUp');
-        await page.keyboard.press('+');
+        for (const key of ['ArrowRight', 'ArrowUp', '+']) {
+          const before = await page.evaluate(() => JSON.stringify(window.lunyx.store.get().globeCenter));
+          await page.keyboard.press(key);
+          await until(page, (b) => JSON.stringify(window.lunyx.store.get().globeCenter) !== b, before);
+          await cameraSettled();
+        }
       },
       expect: 'setGlobeCamera',
       action: replay,
@@ -681,7 +689,9 @@ describe('equivalence: assistant drawer and deep links', () => {
     }
   });
 
-  test('the page raised no errors during all of the above', SLOW, async () => {
+  test('the page raised no errors during all of the above', SLOW, async (t) => {
+    for (const n of navigations) t.diagnostic(n);
+    assert.deepEqual(navigations, [], 'the page navigated or crashed during the run');
     assert.deepEqual(app.problems, []);
   });
 });
