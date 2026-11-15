@@ -130,4 +130,67 @@ None of these is changed by @events (D-1 of lunyx-science: consumers' files belo
 
 ## 6. Verification and example sentences
 
-Added with the implementation commit.
+### How the new instants are found
+
+- **First cut / whole disc clear** (both bodies): the lowest point of the disc, over the same 24
+  strips `discVisibility()` integrates (`bottomClearance`, exactly when the visible fraction is 1),
+  crossing the skyline; sampled at the analysis' step and refined to 10 s like the existing events.
+  The strips nearest the centre sit 1/24 of a radius off it, so the disc is tested 0.09 % of a radius
+  (0.0002 deg for the Sun) short of its true lowest point: about 2 s of time where the Sun moves
+  0.48 deg an hour (Blue Ghost), over a minute where it climbs a hundredth of a degree an hour.
+- **First and last limb**: for the Sun, the existing `sunrise` / `sunset` events, unchanged; for
+  Earth, the ends of `metrics.earthAnyIntervals` (same sampling and refinement).
+- **Centre**: Earth's `earthrise` / `earthset` events, unchanged; the Sun's computed the same way.
+- **Beyond the window**: followed with the in-app model in 20 min (Sun) / 60 min (Earth) steps up to
+  60 days, as `longestDarknessFull` is.
+- **Limits**: terrain skyline only (eclipses are separate); a graze or peek shorter than the
+  sampling step can be missed, as can an event; `min/maxVisibleFraction` are sample values.
+
+### Against the independent validation (`tests/fixtures/validation/ephemeris-check/events/results.json`)
+
+Run on am/lunyx/integration 2ade856 plus this work, `npx vitest run src/analysis/transitions.test.ts`
+(the instants are printed with `--silent=false`). The validator's skyline is its own ray march at
+0.1 deg with 61 strips; its "half hidden" is half of the disc's area, which equals the centre
+crossing only where the skyline runs straight across the disc.
+
+| Site, eye height | Instant | Validator (UTC) | App | App minus validator |
+| --- | --- | --- | --- | --- |
+| Blue Ghost 1, 0.5 m (Horizons table) | first cut | 2025-03-16 18:09:45 | 18:09:42 | -3 s |
+| | centre / half hidden | 18:42:57 | 18:42:59 | +2 s |
+| | last limb (`sunset`) | 19:16:07 | 19:16:06 | -1 s |
+| Blue Ghost 1, 2 m | first cut | 18:23:40 | 18:23:36 | -4 s |
+| | centre / half hidden | 18:56:53 | 18:56:53 | 0 s |
+| | last limb (`sunset`) | 19:30:03 | 19:30:00 | -3 s |
+| Blue Ghost 1, 5 m | first cut | 18:51:31 | 18:51:34 | +3 s |
+| | centre / half hidden | 19:24:45 | 19:24:42 | -3 s |
+| | last limb (`sunset`) | 19:57:57 | 19:57:59 | +2 s |
+| Chandrayaan-3, 2 m (model) | first cut | 2023-09-04 04:53:35 | 04:53:51 | +16 s |
+| | last limb (`sunset`) | 08:02:23 | 08:02:17 | -6 s |
+| | first limb (`sunrise`) | 2023-09-19 23:57:08 | 23:56:40 | -28 s |
+| | whole disc clear | 2023-09-20 02:42:19 | 02:41:49 | -30 s |
+
+So the Sun takes 66 min to set at Blue Ghost (2 m), 3 h 8 min at Chandrayaan-3 and 6 h 35 min at
+IM-2. Firefly's start of night at Blue Ghost (about 18:15-18:35 UTC, D-8) falls at the first cut,
+18:23. These Blue Ghost times rest on the elevation data of 2ade856: the T-32 easing of the 3 m site
+models (lunyx-science T-1, not integrated here) moves this sunset, so the test allows 20 min and the
+table above will change with it.
+
+### Earth by disc
+
+| Window | Earth's centre in view | Any part of Earth's disc | Longest gap: centre / whole disc hidden |
+| --- | --- | --- | --- |
+| IM-2, 14 days from 2025-03-06 17:28 UTC, 2 m (Horizons table) | 88.90 % | 97.04 % | 37.3 h / 9.9 h (both run into the window's end) |
+| Blue Ghost 1, 15 days from landing, 2 m | 100 % | 100 % | 0 h / 0 h |
+
+IM-2's Earthset (centre 2025-03-19 04:09:38 UTC; validator 04:07:45) sits in a passage from
+2025-03-18 06:25 to 2025-03-20 07:31 UTC: Earth's disc takes 49 h to set there.
+
+### Example sentences (real results, `eventText` / `transitionText` / `transitionSummary`)
+
+- Blue Ghost 1, 2 m: `Sunset: starts setting 2025-03-16 18:23, fully set 19:30 UTC`
+- IM-2, 2 m: `Sunset: starts setting 2025-03-19 16:42, fully set 23:17 UTC`
+- IM-2, 2 m: `Earthset: starts setting 2025-03-18 06:25, centre sets 2025-03-19 04:09, fully set 2025-03-20 07:31 UTC`
+- Chandrayaan-3, 2 m: `The Sun: starts rising 2023-09-19 23:56, fully risen 2023-09-20 02:41 UTC (from the moment the first part of the Sun's disc appears above the terrain skyline to the moment the whole disc is clear of it).`
+- A graze (synthetic skyline in the tests): `partly hidden from 2026-01-10 19:26, whole disc clear again 2026-01-11 16:33 UTC; never fully set`
+
+Times are written to the minute, truncated (as `utcMinute` elsewhere in the science core).
