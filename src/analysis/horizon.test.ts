@@ -349,7 +349,7 @@ describe('observer on or near the ground: the two polar pins of the independent 
     });
   }
   // Apollo 15 is back (T-49): the T-32 easing of its 3 m site model onto the 60 m window is off by default
-  // (lunyx-science D-10), so the app's terrain there again equals the stored files this reference was built from.
+  // (lunyx-science D-12, which replaced D-10), so the app's terrain there again equals the stored files this reference was built from.
   for (const [id, limit] of [['connecting-ridge', 0.01], ['shackleton-rim', 0.01], ['im-2', 0.01], ['chandrayaan-3', 0.01], ['apollo-15', 0.01]] as const) {
     it(`${id}, 2 m mast: within ${limit} deg of the independent skyline`, async () => {
       const r = await compare(id);
