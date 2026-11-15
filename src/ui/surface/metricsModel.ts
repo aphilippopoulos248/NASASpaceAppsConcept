@@ -1,8 +1,8 @@
 // What the key-metrics panel says, worked out from the shared analysis and the shared clock.
 // Pure: no DOM. Every number comes from the science core (blockageAt, nextEvents, the
 // analysis' metrics); where something is not available the text says so and why.
-import { blockageAt, nextEvents, skyAt } from '../../analysis/api';
-import type { Blockage, FullSpan, SiteAnalysis, SkyEvent } from '../../analysis/types';
+import { blockageAt, nextEvents, nextTransitions, skyAt, TRANSITION_WORDS, transitionSummary, transitionText } from '../../analysis/api';
+import type { Blockage, FullSpan, SiteAnalysis, SkyEvent, SkyTransition } from '../../analysis/types';
 import type { AnalysisStatus } from '../../core/analysisStore';
 import { sunBandRequired } from '../../core/requirements';
 import { formatDuration, formatUtc } from '../../core/time';
@@ -25,12 +25,16 @@ export interface BodyNow {
 export interface Countdown {
   type: SkyEvent['type'];
   label: string;
-  /** Which instant of the transition the time is (decision D-8), e.g. "last limb gone". */
+  /** The instant the jump goes to (the event's own, decision D-8), e.g. "Sun fully set". */
   instant: string;
+  /** Both ends of the passage (D-8), e.g. "starts setting 2025-03-19 22:15, fully set 23:17 UTC"; empty when there is none to show. */
+  span: string;
+  /** Which instant the button moves the clock to (jumpToEvent's `instant`): the one the countdown names. */
+  jump: 'event' | 'start' | 'end';
   /** Null when no such event lies ahead inside the analysed window. */
   timeMs: number | null;
   inHours: number | null;
-  /** "in 3 d 04 h" or, briefly, why there is none. */
+  /** The next instant of the passage still ahead, named: "Sun starts setting in 3 d 04 h"; or, briefly, why there is none. */
   text: string;
   /** The longer statement of the same (for a hint). */
   detail: string;
@@ -44,6 +48,10 @@ export interface WindowFigures {
   longestDarknessText: string;
   earthVisiblePct: number;
   longestEarthGapText: string;
+  /** Any part of Earth's disc above the skyline (PGDA product 69's definition); null when the analysis does not give it. */
+  earthAnyPct: number | null;
+  /** Longest spell with Earth's disc wholly hidden. */
+  longestEarthAnyGapText: string;
   slopeText: string;
   /** How the slope was measured and which way the ground falls; empty when there is no slope. */
   slopeDetail: string;
@@ -137,23 +145,62 @@ function spanText(hours: number, openEnded: boolean, full: FullSpan | undefined)
   return text;
 }
 
+/** The passage a countdown row is about when its event lies beyond the window: a set (or rise) that has begun, or begins, before the window ends. */
+export function rowPassage(type: SkyEvent['type'], tr: SkyTransition | null, endMs: number): SkyTransition | null {
+  if (!tr || tr.start.timeMs >= endMs) return null;
+  const setting = type === 'sunset' || type === 'earthset';
+  const kind = tr.kind === 'unresolved' ? (tr.start.edge === 'first-cut' ? 'set' : 'rise') : tr.kind;
+  return kind === (setting ? 'set' : 'rise') ? tr : null;
+}
+
+/** The instants of a passage in time order, each with its D-8 label and which end it is (`centre` for Earth's centre crossing); ends that were not found carry no time and are left out. */
+export function passageInstants(tr: SkyTransition): { label: string; timeMs: number; inWindow: boolean; part: 'start' | 'centre' | 'end' }[] {
+  const words = TRANSITION_WORDS[tr.body];
+  const out: { label: string; timeMs: number; inWindow: boolean; part: 'start' | 'centre' | 'end' }[] = [];
+  if (tr.start.edge !== 'unresolved') out.push({ label: words[tr.start.edge].label, timeMs: tr.start.timeMs, inWindow: tr.start.inWindow, part: 'start' });
+  if (tr.body === 'earth') for (const c of tr.centre) out.push({ label: `Earth's centre ${c.up ? 'rises' : 'sets'}`, timeMs: c.timeMs, inWindow: c.inWindow, part: 'centre' });
+  if (tr.end.edge !== 'unresolved') out.push({ label: words[tr.end.edge].label, timeMs: tr.end.timeMs, inWindow: tr.end.inWindow, part: 'end' });
+  return out;
+}
+
 function countdowns(a: SiteAnalysis, timeMs: number): Countdown[] {
   const next = nextEvents(a, timeMs);
+  const passing = nextTransitions(a, timeMs);
   const endMs = a.scenario.startMs + a.scenario.durationH * 3_600_000;
-  return EVENT_ORDER.map((type) => {
+  return EVENT_ORDER.map((type): Countdown => {
     const e = next[type];
+    const body = type === 'sunset' || type === 'sunrise' ? 'sun' : 'earth';
+    // The event's own passage; failing that, one under way (or starting) before the window ends whose event lies beyond it.
+    const tr = e?.span ?? rowPassage(type, passing[body], endMs);
+    const base = { type, label: EVENT_LABELS[type], instant: EVENT_INSTANT[type], timeMs: e?.timeMs ?? null, inHours: e ? (e.timeMs - timeMs) / 3_600_000 : null, jump: 'event' as Countdown['jump'] };
+    if (tr) {
+      const ahead = passageInstants(tr).find((x) => x.timeMs > timeMs);
+      const under = tr.start.timeMs <= timeMs && timeMs < tr.end.timeMs;
+      const text = ahead
+        ? `${ahead.label} in ${formatDuration((ahead.timeMs - timeMs) / 3_600_000)}${ahead.inWindow ? '' : ' (after the analysed window)'}${under ? `, ${type === 'sunset' || type === 'earthset' ? 'setting' : 'rising'} now` : ''}`
+        : 'under way past the analysed window';
+      // The button goes to the instant the countdown names (Earth's centre crossing is the event itself).
+      const jump: Countdown['jump'] = !ahead || ahead.part === 'centre' ? 'event' : ahead.part;
+      const target = ahead && e ? ahead : null;
+      return {
+        ...base,
+        jump,
+        timeMs: target ? target.timeMs : base.timeMs,
+        inHours: target ? (target.timeMs - timeMs) / 3_600_000 : base.inHours,
+        text,
+        span: transitionSummary(tr),
+        detail: `${transitionText(tr)}${target ? ` Clicking moves the clock to "${target.label}" (${formatUtc(target.timeMs)}).` : ''}`,
+      };
+    }
     if (e) {
-      const inHours = (e.timeMs - timeMs) / 3_600_000;
-      return { type, label: EVENT_LABELS[type], instant: EVENT_INSTANT[type], timeMs: e.timeMs, inHours, text: `in ${formatDuration(inHours)}`, detail: `${EVENT_LABELS[type]} at ${formatUtc(e.timeMs)}: ${EVENT_MEANING[type]}` };
+      // An event without its passage (an analysis made before passages existed): the instant alone, named.
+      return { ...base, text: `${EVENT_INSTANT[type]} in ${formatDuration(base.inHours!)}`, span: '', detail: `${EVENT_LABELS[type]} at ${formatUtc(e.timeMs)}: ${EVENT_MEANING[type]}` };
     }
     const past = timeMs >= endMs;
     return {
-      type,
-      label: EVENT_LABELS[type],
-      instant: EVENT_INSTANT[type],
-      timeMs: null,
-      inHours: null,
+      ...base,
       text: past ? 'none: clock past the window' : 'none before the window ends',
+      span: '',
       detail: past
         ? `The clock is past the analysed mission window, which ended ${formatUtc(endMs)}. Events are only searched inside it.`
         : `No ${EVENT_LABELS[type].toLowerCase()} between now and the end of the analysed mission window (${formatUtc(endMs)}). ${EVENT_LABELS[type]} here means: ${EVENT_MEANING[type]}.`,
@@ -252,6 +299,8 @@ export function buildMetrics(st: AnalysisStatus, wantedId: string | null, req: R
       longestDarknessText: spanText(m.longestDarknessH, m.darknessOpenEnded, m.longestDarknessFull),
       earthVisiblePct: m.earthVisiblePct,
       longestEarthGapText: spanText(m.longestEarthGapH, m.earthGapOpenEnded, m.longestEarthGapFull),
+      earthAnyPct: m.earthAnyPct !== undefined && Number.isFinite(m.earthAnyPct) ? m.earthAnyPct : null,
+      longestEarthAnyGapText: m.longestEarthAnyGapH === undefined ? 'not available' : spanText(m.longestEarthAnyGapH, m.earthAnyGapOpenEnded ?? false, m.longestEarthAnyGapFull),
       slopeText: Number.isFinite(slope.slopeDeg) ? `${slope.slopeDeg.toFixed(1)}° over ${metres(slope.baselineM)}` : 'not available: no elevation data covers the site',
       slopeDetail: Number.isFinite(slope.slopeDeg)
         ? `Slope of the ground at the site: ${slope.slopeDeg.toFixed(1)}° from horizontal, measured over ${metres(slope.baselineM)} on ${slope.demName}${Number.isFinite(slope.aspectDeg) ? `; the ground falls towards ${COMPASS16[Math.round((((slope.aspectDeg % 360) + 360) % 360) / 22.5) % 16]} (${Math.round(((slope.aspectDeg % 360) + 360) % 360)}°)` : ''}.`
