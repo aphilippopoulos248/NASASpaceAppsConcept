@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { listActions, registerActions, resetActions, runAction, toolDefinitions } from '../../core/actions';
 import { initialState, Store } from '../../core/store';
 import type { SurfaceGround, SurfaceSky } from '../surface';
-import { createSurfaceActions, roundedLook, skySummary, type SurfaceApi } from './actions';
+import { aimAtBody, createSurfaceActions, roundedLook, skySummary, type SurfaceApi, type TrackedBody } from './actions';
 
 const T0 = Date.UTC(2025, 2, 6, 17, 28);
 
@@ -63,6 +63,7 @@ describe('surface view actions', () => {
   let active: boolean;
   let changes: number;
   let fake: ReturnType<typeof fakeView>;
+  let trackingBody: TrackedBody | null;
 
   beforeEach(() => {
     resetActions();
@@ -70,11 +71,23 @@ describe('surface view actions', () => {
     active = true;
     changes = 0;
     fake = fakeView();
-    registerActions(createSurfaceActions({ store, view: fake.view, active: () => active, changed: () => changes++ }));
+    trackingBody = null;
+    registerActions(
+      createSurfaceActions({
+        store,
+        view: fake.view,
+        active: () => active,
+        trackingBody: () => trackingBody,
+        setTrackingBody: (body) => {
+          trackingBody = body;
+        },
+        changed: () => changes++,
+      }),
+    );
   });
 
   it('registers the documented names with schemas the assistant can use', () => {
-    expect(listActions().map((a) => a.name)).toEqual(['setGeneratedDetail', 'setFieldOfView', 'lookAtBody', 'walkTo', 'setSkyAnnotations', 'getSurfaceView']);
+    expect(listActions().map((a) => a.name)).toEqual(['setGeneratedDetail', 'setFieldOfView', 'lookAtBody', 'setBodyTracking', 'walkTo', 'setSkyAnnotations', 'getSurfaceView']);
     for (const tool of toolDefinitions()) {
       expect(tool.description.length).toBeGreaterThan(60);
       expect(tool.input_schema.type).toBe('object');
@@ -115,6 +128,23 @@ describe('surface view actions', () => {
     expect(low.ok && low.result).toMatchObject({ belowHorizontal: true, look: { azDeg: 65.7, elDeg: -0.3, fovDeg: 4 } });
   });
 
+  it('tracks one body at a time and can re-aim it after the sky changes', async () => {
+    const sun = await runAction<Record<string, unknown>>('setBodyTracking', { body: 'sun', on: true }, 'test');
+    expect(sun.ok && sun.result).toEqual({ body: 'sun', tracking: 'sun', look: { azDeg: 65.7, elDeg: 2.5, fovDeg: 70 } });
+    expect(trackingBody).toBe('sun');
+
+    (fake.view as { skyNow: SurfaceSky }).skyNow = { ...SKY, sun: { ...SKY.sun, azDeg: 90, elDeg: 20 } };
+    aimAtBody(fake.view, 'sun');
+    expect(fake.state).toMatchObject({ az: 90, el: 20, fov: 70 });
+
+    const earth = await runAction<Record<string, unknown>>('setBodyTracking', { body: 'earth', on: true }, 'test');
+    expect(earth.ok && earth.result).toMatchObject({ body: 'earth', tracking: 'earth', look: { azDeg: 335.8, elDeg: 11.2 } });
+    expect(trackingBody).toBe('earth');
+    const off = await runAction<Record<string, unknown>>('setBodyTracking', { body: 'earth', on: false }, 'test');
+    expect(off.ok && off.result).toMatchObject({ body: 'earth', tracking: null });
+    expect(trackingBody).toBeNull();
+  });
+
   it('walks to an absolute position and says when it was clamped', async () => {
     const r = await runAction<{ position: Record<string, number>; clamped: boolean }>('walkTo', { eastM: 120, northM: -50, liftM: 10 }, 'test');
     expect(r.ok && r.result).toEqual({ position: { eastM: 120, northM: -50, distanceFromSiteM: 130, eyeHeightM: 12 }, clamped: false });
@@ -127,7 +157,12 @@ describe('surface view actions', () => {
 
   it('refuses to move the camera while the surface view is not on screen, with a sentence', async () => {
     active = false;
-    for (const [name, params] of [['setFieldOfView', { fovDeg: 30 }], ['lookAtBody', { body: 'sun' }], ['walkTo', { eastM: 1, northM: 1 }]] as const) {
+    for (const [name, params] of [
+      ['setFieldOfView', { fovDeg: 30 }],
+      ['lookAtBody', { body: 'sun' }],
+      ['setBodyTracking', { body: 'sun', on: true }],
+      ['walkTo', { eastM: 1, northM: 1 }],
+    ] as const) {
       const r = await runAction(name, params, 'test');
       expect(r).toEqual({ ok: false, error: 'Enter the surface view first (enterSurface).' });
     }
@@ -152,6 +187,7 @@ describe('surface view actions', () => {
     if (!r.ok) return;
     expect(r.result).toMatchObject({
       active: true,
+      trackingBody: null,
       site: { id: 'im-2', latDeg: -84.79, lonDegEast: 29.2 },
       look: { azDeg: 65.7, elDeg: 2.5, fovDeg: 70 },
       position: { eastM: 0, northM: 0, distanceFromSiteM: 0, eyeHeightM: 2 },

@@ -9,7 +9,7 @@ import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
 import type { SiteRef } from '../../core/types';
 import { SurfaceView } from '../surface';
-import { createSurfaceActions, roundedLook } from './actions';
+import { aimAtBody, createSurfaceActions, roundedLook, type TrackedBody } from './actions';
 import { focusPlace, probeElement, surfaceCommand } from './keys';
 
 const DEFAULT_FOV_DEG = 70;
@@ -44,6 +44,7 @@ export class SurfaceController {
   private lastLook = { azDeg: NaN, elDeg: NaN, fovDeg: NaN };
   private previousLabel: string | null = null;
   private previousRole: string | null = null;
+  private trackedBody: TrackedBody | null = null;
 
   constructor(anisotropy: number, private readonly canvas: HTMLCanvasElement) {
     // ?quality=low|high overrides the automatic choice (for testing).
@@ -58,11 +59,24 @@ export class SurfaceController {
     });
     store.subscribe(['mastHeightM'], (s) => this.view.setObserverHeight(s.mastHeightM));
     store.subscribe(['windowStartMs', 'windowDurationH', 'delayH'], () => this.syncWindow());
-    registerActions(createSurfaceActions({ store, view: this.view, active: () => this.active, changed: () => this.onChange?.() }));
+    registerActions(
+      createSurfaceActions({
+        store,
+        view: this.view,
+        active: () => this.active,
+        trackingBody: () => this.trackedBody,
+        setTrackingBody: (body) => this.setTrackingBody(body),
+        changed: () => this.onChange?.(),
+      }),
+    );
   }
 
   /** Called when something the HUD shows changes outside the frame loop. */
   onChange: (() => void) | null = null;
+
+  get trackingBody(): TrackedBody | null {
+    return this.trackedBody;
+  }
 
   /** Loads the ground for any site: a catalogued landing or a custom pin. Rejects with a sentence when no elevation data can be had. */
   prepare(site: SiteRef): Promise<void> {
@@ -91,6 +105,7 @@ export class SurfaceController {
     this.syncWindow();
     this.view.setTime(s.timeMs);
     this.faceOnArrival();
+    this.followTrackedBody();
     this.canvas.style.cursor = 'grab';
     this.previousLabel = this.canvas.getAttribute('aria-label');
     this.canvas.setAttribute('aria-label', SURFACE_LABEL);
@@ -123,7 +138,11 @@ export class SurfaceController {
   setSky(_g: MoonGeometry): void {
     const s = store.get();
     this.view.setMode(s.lightMode);
-    if (this.active) this.view.setTime(s.timeMs);
+    if (this.active) {
+      this.view.setTime(s.timeMs);
+      this.followTrackedBody();
+      this.publishLook();
+    }
   }
 
   private syncWindow(): void {
@@ -155,6 +174,20 @@ export class SurfaceController {
     store.set({ look });
   }
 
+  private setTrackingBody(body: TrackedBody | null): void {
+    this.trackedBody = body;
+  }
+
+  private stopTracking(): void {
+    if (!this.trackedBody) return;
+    this.setTrackingBody(null);
+    this.onChange?.();
+  }
+
+  private followTrackedBody(): void {
+    if (this.trackedBody) aimAtBody(this.view, this.trackedBody);
+  }
+
   private bindInput(): void {
     const canvas = this.canvas;
     const drop = (e: PointerEvent) => {
@@ -179,6 +212,7 @@ export class SurfaceController {
       p.y = e.clientY;
       if (this.pointers.size === 1) {
         // Drag (mouse or one finger): the scene follows the pointer, as in a street-level viewer.
+        if (dx || dy) this.stopTracking();
         this.view.look(-dx, -dy);
       } else if (this.pointers.size === 2) {
         // Two fingers: pinch to zoom.
@@ -209,6 +243,7 @@ export class SurfaceController {
       e.preventDefault();
       if (command.kind === 'look') {
         // Applied per key event rather than per frame, so a tap is never lost between two slow frames.
+        this.stopTracking();
         const look = this.view.lookDirection, step = look.fovDeg * KEY_TURN_STEP;
         this.view.setLook(look.azDeg + command.dAz * step, look.elDeg + command.dEl * step);
       } else if (command.kind === 'walk') this.keysDown.add(command.code);
