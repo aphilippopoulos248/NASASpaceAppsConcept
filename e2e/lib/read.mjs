@@ -188,10 +188,15 @@ export function keyMetricsAgainst(km, a) {
   }
   const m = a.metrics;
   const tolH = (h) => (h < 0.05 ? 0.05 : 0.051);
+  // Since T-46 the Earth lines give both definitions: "centre 88.9 % · any part of the disc 92.0 %"
+  // and "centre 18.4 h · whole disc none". Older builds: "Earth's centre in sight" with one figure.
+  const centrePart = (text) => (/^centre\s/.test(text ?? '') ? text.replace(/^centre\s+/, '').split(' · ')[0] : text);
+  const earthSight = km?.win?.['Earth in sight'] ?? km?.win?.["Earth's centre in sight"];
   out.push({ what: 'key metrics: Sunlight', shown: km?.win?.Sunlight, expected: m.illuminationPct, pass: close(firstNumber(km?.win?.Sunlight), m.illuminationPct, 0.051) });
   out.push({ what: 'key metrics: Longest darkness', shown: km?.win?.['Longest darkness'], expected: m.longestDarknessH, pass: close(hoursOf(km?.win?.['Longest darkness']), m.longestDarknessH, tolH(m.longestDarknessH)) });
-  out.push({ what: "key metrics: Earth's centre in sight", shown: km?.win?.["Earth's centre in sight"], expected: m.earthVisiblePct, pass: close(firstNumber(km?.win?.["Earth's centre in sight"]), m.earthVisiblePct, 0.051) });
-  out.push({ what: 'key metrics: Longest Earth gap', shown: km?.win?.['Longest Earth gap'], expected: m.longestEarthGapH, pass: close(hoursOf(km?.win?.['Longest Earth gap']), m.longestEarthGapH, tolH(m.longestEarthGapH)) });
+  out.push({ what: "key metrics: Earth's centre in sight", shown: earthSight, expected: m.earthVisiblePct, pass: close(firstNumber(centrePart(earthSight)), m.earthVisiblePct, 0.051) });
+  if (/any part of the disc/.test(earthSight ?? '') && Number.isFinite(m.earthAnyPct)) out.push({ what: 'key metrics: any part of Earth in sight', shown: earthSight, expected: m.earthAnyPct, pass: close(firstNumber(earthSight.split('any part of the disc')[1]), m.earthAnyPct, 0.051) });
+  out.push({ what: "key metrics: Longest Earth gap (Earth's centre)", shown: km?.win?.['Longest Earth gap'], expected: m.longestEarthGapH, pass: close(hoursOf(centrePart(km?.win?.['Longest Earth gap'])), m.longestEarthGapH, tolH(m.longestEarthGapH)) });
   out.push({ what: 'key metrics: Slope', shown: km?.win?.Slope, expected: a.slope.slopeDeg, pass: close(firstNumber(km?.win?.Slope), a.slope.slopeDeg, 0.051) });
   return out;
 }

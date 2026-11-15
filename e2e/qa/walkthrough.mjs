@@ -231,8 +231,11 @@ function checkCard(check, card, a, st) {
   check('Card: sky heading time = simulated time', card.skyTitle, `Sky at ${fmtUtc(st.timeMs)}`, card.skyTitle === `Sky at ${fmtUtc(st.timeMs)}`);
   check('Card: Sunlight % vs metrics.illuminationPct', card.window.Sunlight, m.illuminationPct, close(firstNumber(card.window.Sunlight), m.illuminationPct, 0.051));
   check('Card: Longest darkness vs metrics.longestDarknessH', card.window['Longest darkness'], m.longestDarknessH, close(parseDurationH(card.window['Longest darkness'] ?? ''), m.longestDarknessH, tolH(m.longestDarknessH)));
-  check('Card: Earth in view % vs metrics.earthVisiblePct', card.window['Earth in view'], m.earthVisiblePct, close(firstNumber(card.window['Earth in view']), m.earthVisiblePct, 0.051));
-  check('Card: Longest Earth gap vs metrics.longestEarthGapH', card.window['Longest Earth gap'], m.longestEarthGapH, close(parseDurationH(card.window['Longest Earth gap'] ?? ''), m.longestEarthGapH, tolH(m.longestEarthGapH)));
+  const earthIn = card.window["Earth's centre in view"] ?? card.window['Earth in view'];
+  const earthGap = card.window["Longest gap, Earth's centre"] ?? card.window['Longest Earth gap'];
+  check("Card: Earth's centre in view % vs metrics.earthVisiblePct", earthIn, m.earthVisiblePct, close(firstNumber(earthIn), m.earthVisiblePct, 0.051));
+  if (card.window['Any part of Earth in view'] && Number.isFinite(m.earthAnyPct)) check('Card: any part of Earth in view % vs metrics.earthAnyPct', card.window['Any part of Earth in view'], m.earthAnyPct, close(firstNumber(card.window['Any part of Earth in view']), m.earthAnyPct, 0.051));
+  check("Card: longest gap, Earth's centre vs metrics.longestEarthGapH", earthGap, m.longestEarthGapH, close(parseDurationH(earthGap ?? ''), m.longestEarthGapH, tolH(m.longestEarthGapH)));
   check('Card: Slope vs slope.slopeDeg', card.window.Slope, a.slope.slopeDeg, close(firstNumber(card.window.Slope), a.slope.slopeDeg, 0.051));
   for (const [key, body] of [['Sun', 'sun'], ['Earth', 'earth']]) {
     const shown = parseBody(card.sky[key] ?? '');
@@ -575,12 +578,7 @@ async function partSurface(app, step) {
       const at = fmtUtc(Date.parse(e.timeUtc));
       check(`Countdown "${c?.label}": instant and time = analysis nextEvents.${type}`, c?.at, `${e.label} · ${at}`, c?.at === `${e.label} · ${at}`);
     }
-    const m = a.metrics;
-    check('Key metrics: Sunlight = metrics.illuminationPct', km.win.Sunlight, m.illuminationPct, close(firstNumber(km.win.Sunlight), m.illuminationPct, 0.051));
-    check('Key metrics: Longest darkness = metrics.longestDarknessH', km.win['Longest darkness'], m.longestDarknessH, close(hoursOf(km.win['Longest darkness']), m.longestDarknessH, durTol(m.longestDarknessH)));
-    check("Key metrics: Earth's centre in sight = metrics.earthVisiblePct", km.win["Earth's centre in sight"], m.earthVisiblePct, close(firstNumber(km.win["Earth's centre in sight"]), m.earthVisiblePct, 0.051));
-    check('Key metrics: Longest Earth gap = metrics.longestEarthGapH', km.win['Longest Earth gap'], m.longestEarthGapH, close(hoursOf(km.win['Longest Earth gap']), m.longestEarthGapH, durTol(m.longestEarthGapH)));
-    check('Key metrics: Slope = slope.slopeDeg', km.win.Slope, a.slope.slopeDeg, close(firstNumber(km.win.Slope), a.slope.slopeDeg, 0.051));
+    for (const c of keyMetricsAgainst(km, a).filter((x) => /Sunlight|darkness|Earth's centre in sight|any part|Earth gap|Slope/.test(x.what))) check(c.what, c.shown, c.expected, c.pass);
     note(`States: ${km.states.join(' | ')}. Flags: ${km.flags.join(' | ') || 'none'}.`);
   }, { shot: 'im2-surface-key-metrics' });
 
@@ -934,7 +932,10 @@ async function partExtras(app, step) {
     check('JSON longest darkness = analysis', m.longestDarknessH, a.metrics.longestDarknessH, close(m.longestDarknessH, a.metrics.longestDarknessH, 0.0006));
     check('JSON slope = analysis', sc?.slope?.slopeDeg, a.slope.slopeDeg, close(sc?.slope?.slopeDeg, a.slope.slopeDeg, 0.0006));
     check('JSON spells = rows in the table on screen', sc?.spells?.length, shown, sc?.spells?.length === shown);
-    check('JSON says whether a solar band was set', sc?.requirements?.sunElevationBandSet, 'a boolean', typeof sc?.requirements?.sunElevationBandSet === 'boolean');
+    const band = sc?.requirements?.sunElevationBand;
+    const bandSet = band?.required ?? sc?.requirements?.sunElevationBandSet;
+    check('JSON says whether a solar band is required', bandSet, 'a boolean', typeof bandSet === 'boolean');
+    if (bandSet === false && band) check('JSON: no verdict on a band nobody set (Q-5)', band.metForWholeWindow, null, band.metForWholeWindow === null, { finding: 'Q-5' });
     const [dlCsv] = await Promise.all([page.waitForEvent('download', { timeout: 60_000 }), page.getByRole('button', { name: 'Download as CSV' }).click()]);
     const csv = readFileSync(await dlCsv.path(), 'utf8').trim().split(/\r?\n/);
     note(`CSV: ${dlCsv.suggestedFilename()}, ${csv.length} lines; header: ${csv[0].slice(0, 160)}`);
