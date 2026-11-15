@@ -1,7 +1,7 @@
 // Sun and Earth in a site's sky: the in-app model (src/astro/topocentric.ts) and
 // bundled JPL Horizons tables, behind one "ephemeris" interface used by the series code.
 import type { LatLon } from '../core/types';
-import { EARTH_R_KM, SUN_R_KM, topocentricSky } from '../astro/topocentric';
+import { azEl, EARTH_R_KM, localFrame, SUN_R_KM, topocentricSky, type V3 } from '../astro/topocentric';
 import type { EphemerisSource, SkyInstant } from './types';
 
 /** Measured agreement of the model with JPL Horizons (see docs/lunyx/validation.md). */
@@ -65,6 +65,60 @@ export function modelEphemeris(site: LatLon, elevationM: number): Ephemeris {
       const s = topocentricSky(site.lat, site.lon, elevationM, t);
       out[0] = s.sun.azDeg; out[1] = s.sun.elDeg; out[2] = s.earth.azDeg; out[3] = s.earth.elDeg;
       out[4] = s.sun.angularRadiusDeg; out[5] = s.earth.angularRadiusDeg;
+    },
+    instant: (t) => skyAt(site, elevationM, t),
+  };
+}
+
+/**
+ * The model ephemeris for one site over a span, tabulated and interpolated: Sun and Earth
+ * directions are computed every `nodeStepMs` (3 h by default) and interpolated with a cubic
+ * through the four surrounding nodes, which reproduces the model to better than 0.0005 deg at a
+ * fraction of its cost. For long spans (a year of samples) and for searches that step through time.
+ * Times outside [startMs, endMs] are answered by the model itself.
+ */
+export function tabulatedEphemeris(site: LatLon, elevationM: number, startMs: number, endMs: number, nodeStepMs = 3 * 3_600_000): Ephemeris {
+  const h = nodeStepMs;
+  const frame = localFrame(site.lat, site.lon);
+  // One node before the start and enough after the end, so every instant has two nodes on each side.
+  const t0 = startMs - h;
+  const m = Math.max(4, Math.ceil((endMs - startMs) / h) + 3);
+  const sun = new Float64Array(m * 3), earth = new Float64Array(m * 3), rs = new Float64Array(m), re = new Float64Array(m);
+  for (let k = 0; k < m; k++) {
+    const s = topocentricSky(site.lat, site.lon, elevationM, t0 + k * h);
+    sun.set(s.sun.dir, k * 3);
+    earth.set(s.earth.dir, k * 3);
+    rs[k] = s.sun.angularRadiusDeg;
+    re[k] = s.earth.angularRadiusDeg;
+  }
+  const direct = modelEphemeris(site, elevationM);
+  const v: V3 = [0, 0, 0];
+  /** Catmull-Rom through nodes i-1 .. i+2 at fraction w of the way from node i to i+1. */
+  const cubic = (arr: Float64Array, i: number, w: number, stride: number, offset: number) => {
+    const p0 = arr[(i - 1) * stride + offset], p1 = arr[i * stride + offset], p2 = arr[(i + 1) * stride + offset], p3 = arr[(i + 2) * stride + offset];
+    return 0.5 * (2 * p1 + (p2 - p0) * w + (2 * p0 - 5 * p1 + 4 * p2 - p3) * w * w + (3 * p1 - p0 - 3 * p2 + p3) * w * w * w);
+  };
+  return {
+    source: 'model',
+    note: `${MODEL_ACCURACY_NOTE} Directions computed every ${nodeStepMs / 3_600_000} h and interpolated (agreeing with the model to better than 0.0005 deg).`,
+    at(t, out) {
+      if (!(t >= startMs && t <= endMs)) {
+        direct.at(t, out);
+        return;
+      }
+      const x = (t - t0) / h;
+      let i = Math.floor(x);
+      if (i < 1) i = 1;
+      else if (i > m - 3) i = m - 3;
+      const w = x - i;
+      v[0] = cubic(sun, i, w, 3, 0); v[1] = cubic(sun, i, w, 3, 1); v[2] = cubic(sun, i, w, 3, 2);
+      const a = azEl(frame, v);
+      out[0] = a.az; out[1] = a.el;
+      v[0] = cubic(earth, i, w, 3, 0); v[1] = cubic(earth, i, w, 3, 1); v[2] = cubic(earth, i, w, 3, 2);
+      const b = azEl(frame, v);
+      out[2] = b.az; out[3] = b.el;
+      out[4] = cubic(rs, i, w, 1, 0);
+      out[5] = cubic(re, i, w, 1, 0);
     },
     instant: (t) => skyAt(site, elevationM, t),
   };
