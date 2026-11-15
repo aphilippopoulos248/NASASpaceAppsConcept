@@ -5,10 +5,13 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { Scenario, SiteRef } from '../core/types';
 import { loadTerrainFor } from '../terrain/api';
 import { analyseStack, clearAnalysisCache, outlook, outlookStack, SYNODIC_DAYS } from './api';
+import { siteEphemeris } from './engine';
 import { followOff, fullSpans, longestFull } from './extend';
 import { nearbyScore } from './nearby';
 import { outlookWith } from './outlook';
-import { setBundleReader } from './sky';
+import { findBundledTable, setBundleReader } from './sky';
+import { withTransitions } from './transitions';
+import { analyseWith } from './window';
 import { fnSource, radialSource, stackOf } from './testing';
 
 setBundleReader(async (p) => readFileSync(join(process.cwd(), 'public', p), 'utf8'));
@@ -219,9 +222,16 @@ describe('outlook on real terrain agrees with analyse() for the same windows', (
     const o = outlookStack(s, stack);
     console.log(`IM-2 outlook, 12 lunar days from ${isoM(o.startMs)}:\n` + o.rows.map((r) => `  ${String(r.index).padStart(2)}  ${isoM(r.startMs)}  sunlight ${r.illuminationPct.toFixed(1).padStart(5)} %  any Sun ${r.sunAnyPct.toFixed(1).padStart(5)} %  longest darkness ${r.longestDarknessH.toFixed(1).padStart(6)} h  Earth ${r.earthVisiblePct.toFixed(1).padStart(5)} %  longest Earth gap ${r.longestEarthGapH.toFixed(1).padStart(6)} h  max Sun elevation ${r.maxSunElDeg.toFixed(2)} deg`).join('\n') + '\n  ' + o.highlights.join('\n  '));
     expect(o.rows.length).toBe(12);
+    // The outlook reads the main profile only (every 0.5 deg); analyse() also reads the skyline every
+    // 0.05 deg where a disc meets it (T-50), which moves IM-2's instants by minutes. Compared here on
+    // the same skyline: analyse() with the main profile only.
+    const sameSkyline = async (sc: Scenario) => {
+      const eph = siteEphemeris(sc, stack, await findBundledTable(sc.site, sc.startMs, sc.startMs + sc.durationH * H));
+      return withTransitions(analyseWith(sc, stack, eph, {}, { fineSkyline: false }), eph);
+    };
     for (const k of [0, 5, 11]) {
       const r = o.rows[k];
-      const a = await analyseStack({ ...s, startMs: r.startMs, durationH: (r.endMs - r.startMs) / H }, stack);
+      const a = await sameSkyline({ ...s, startMs: r.startMs, durationH: (r.endMs - r.startMs) / H });
       expect(Math.abs(r.illuminationPct - a.metrics.illuminationPct), `row ${r.index} sunlight`).toBeLessThan(0.05);
       expect(Math.abs(r.sunAnyPct - a.metrics.sunAnyPct), `row ${r.index} any Sun`).toBeLessThan(0.05);
       expect(Math.abs(r.earthVisiblePct - a.metrics.earthVisiblePct), `row ${r.index} Earth`).toBeLessThan(0.05);
@@ -231,7 +241,7 @@ describe('outlook on real terrain agrees with analyse() for the same windows', (
       expect(Math.abs(r.maxSunElDeg - a.metrics.maxSunElDeg), `row ${r.index} Sun elevation`).toBeLessThan(0.01);
     }
     // The planned arrival is the scenario itself (analysed here with the bundled Horizons table at 10 min).
-    const planned = await analyseStack(s, stack);
+    const planned = await sameSkyline(s);
     expect(planned.series.source).toBe('horizons');
     expect(Math.abs(o.planned!.illuminationPct - planned.metrics.illuminationPct)).toBeLessThan(0.1);
     expect(Math.abs(o.planned!.earthVisiblePct - planned.metrics.earthVisiblePct)).toBeLessThan(0.1);
