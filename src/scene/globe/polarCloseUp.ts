@@ -270,7 +270,8 @@ export class PolarCloseUp {
       polygonOffsetFactor: fine ? -4 : -2,
       polygonOffsetUnits: fine ? -16 : -8,
     });
-    patchSurfaceMaterial(material, this.shared, { polar: uniforms });
+    // No territory colouring here: the close-up's Sun shadows must read black (SurfacePatch.territory).
+    patchSurfaceMaterial(material, this.shared, { polar: uniforms, territory: false });
     const mesh = new Mesh(geometry, material);
     mesh.frustumCulled = false;
     mesh.renderOrder = fine ? 2 : 1;
