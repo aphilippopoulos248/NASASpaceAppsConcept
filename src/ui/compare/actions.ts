@@ -2,7 +2,8 @@
 // through runAction, and the assistant gets the same list as tools. Each result is a small
 // JSON object read back from real state, and resolves when what it describes is on screen:
 // the panel redraws from the same stores, synchronously, before a waiting action continues.
-import { DEFAULT_NEARBY_OPTIONS } from '../../analysis/api';
+import { DEFAULT_NEARBY_OPTIONS, outlook as realOutlook } from '../../analysis/api';
+import type { Outlook, OutlookOptions } from '../../analysis/types';
 import { candidateOffsets } from '../../analysis/nearby';
 import { ActionError, defineAction, type ActionDef } from '../../core/actions';
 import { reportComparison, scenarioFacts } from '../../core/analysisReport';
@@ -13,8 +14,11 @@ import { describeScenario, hasAutoLabel, labelPair, scenarioFromState, scenarioK
 import { MAX_TIME_MS, MIN_TIME_MS, type Store } from '../../core/store';
 import { isoUtc } from '../../core/time';
 import type { AppState, Scenario, SiteRef } from '../../core/types';
+import { SCIENCE, type Science } from './model';
 import { nearbyRow, nearbyView } from './nearbyView';
-import { COMPARE_TABS, type CompareTab, type PanelStore } from './state';
+import { outlookResult } from './outlookView';
+import { COMPARE_TABS, TABLE_SLOTS, type CompareTab, type PanelStore, type TableSlot } from './state';
+import { exportFilename, spellRows, toCsv, toJson, type ExportSide } from './windowTable';
 import { MAX_NAME_LENGTH, MAX_SAVED, type CompareStorage, type SavedComparison } from './storage';
 
 export interface CompareContext {
@@ -22,9 +26,18 @@ export interface CompareContext {
   analysis: AnalysisStore;
   panel: PanelStore;
   storage: CompareStorage;
-  /** Wall clock for the "saved" stamp; replaceable in tests. */
+  /** Wall clock for the "saved" and "exported" stamps; replaceable in tests. */
   now?: () => number;
+  /** Hands a finished file to the browser (a download); replaceable in tests. Without it exportResults says it cannot. */
+  download?: (filename: string, mimeType: string, text: string) => void;
+  /** The science core's instant lookups (the Sun's elevation at the clock for the export's requirements). */
+  science?: Science;
+  /** The seasonal outlook of the science core; replaceable in tests. */
+  outlook?: (scenario: Scenario, options: OutlookOptions) => Promise<Outlook>;
 }
+
+/** Longest outlook the science core computes, lunar months. */
+export const MAX_OUTLOOK_MONTHS = 60;
 
 const HOUR_MS = 3_600_000;
 /** The science core refuses a scan of more points than this. */
@@ -68,7 +81,11 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
   /** What the panel shows now, without waiting. */
   const panelResult = () => {
     const c = analysis.comparison();
-    return { open: state().comparing, tab: panel.get().tab, ...labels(), comparison: c.state, ...(c.state === 'idle' && { emptySlots: c.missing }) };
+    const tab = panel.get().tab;
+    return {
+      open: state().comparing, tab, ...labels(), comparison: c.state, ...(c.state === 'idle' && { emptySlots: c.missing }),
+      ...(tab === 'windows' && { table: panel.get().tableSlot }),
+    };
   };
 
   /** The finished comparison, in the shape of the `compare` action's result. */
@@ -117,6 +134,8 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
 
   const storageNote = () => (storage.persistent ? {} : { note: 'This browser gives the page no storage, so saved comparisons last only until the page is closed.' });
 
+  let outlookToken = 0;
+
   const flyTo = (site: SiteRef) => {
     const delivered = emitCommand('flyTo', { lat: site.lat, lon: site.lon, altitudeKm: SITE_ALTITUDE_KM });
     // Nothing is rendering the globe (tests, headless): record where it would point.
@@ -142,16 +161,24 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
   };
 
   return [
-    defineAction<{ tab?: CompareTab }, unknown>({
+    defineAction<{ tab?: CompareTab; table?: TableSlot }, unknown>({
       name: 'openCompare',
       title: 'Open the compare panel',
       description:
-        'Opens the compare panel, or switches its tab, without changing any scenario. Tab "compare" shows the scenarios saved in slots A and B side by side with the differences B minus A. ' +
-        'Returns at once with what the panel shows; use `compare` to wait for the finished comparison. Close the panel with stopCompare.',
+        'Opens the compare panel, or switches its tab, without changing any scenario. Tab "compare" shows the scenarios saved in slots A and B side by side with the differences B minus A; "nearby" the scan of nearby alternative sites (rankNearby); ' +
+        '"windows" the mission-window table: every sunlit and dark spell and every spell with Earth\'s centre in view or hidden, with UTC start, end and duration, of the scenario on screen or of slot A or B (`table`; giving `table` alone opens this tab). ' +
+        'Returns at once with what the panel shows; use `compare` to wait for the finished comparison and exportResults for the table as a file. Close the panel with stopCompare.',
       effect: 'command',
-      params: { type: 'object', properties: { tab: { type: 'string', description: 'Tab to show (default: the one shown last).', enum: COMPARE_TABS } } },
-      run: ({ tab }) => {
-        if (tab) panel.set({ tab });
+      params: {
+        type: 'object',
+        properties: {
+          tab: { type: 'string', description: 'Tab to show (default: the one shown last).', enum: COMPARE_TABS },
+          table: { type: 'string', description: 'Whose mission window the window table shows: the scenario on screen ("current"), or slot "A" or "B".', enum: TABLE_SLOTS },
+        },
+      },
+      run: ({ tab, table }) => {
+        if (table) panel.set({ tableSlot: table });
+        if (tab ?? (table && 'windows')) panel.set({ tab: tab ?? 'windows' });
         store.set({ comparing: true });
         return panelResult();
       },
@@ -316,6 +343,96 @@ export function createCompareActions(ctx: CompareContext): ActionDef<any, any>[]
       effect: 'query',
       params: NO_PARAMS,
       run: () => ({ comparisons: storage.list().map(savedSummary), keptInBrowserStorage: storage.persistent, ...storageNote() }),
+    }),
+
+    // ---------- the mission-window table as a file ----------
+    defineAction<{ format: 'csv' | 'json'; slot?: TableSlot | 'AB' }, unknown>({
+      name: 'exportResults',
+      title: 'Download the mission-window results',
+      description:
+        'Downloads the mission-window results as a file. "csv": the window table, one row per spell (sunlit, dark, Earth in front of the Sun, Earth\'s centre in view, hidden) with UTC start and end, duration, the part inside the window and a note; a spell that runs past an edge of the window is given in full. ' +
+        '"json": everything behind it: scenario, metrics, events with which instant each is, every spell, the requirements checked, elevation data, ephemeris, assumptions and warnings, and the differences B minus A when both slots are exported. ' +
+        '`slot`: "current" (the scenario on screen), "A", "B", or "AB" for both in one file; default: the scenario the window table shows (normally the one on screen). Waits for the analyses. Returns the file name and size.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          format: { type: 'string', description: 'File format.', enum: ['csv', 'json'] },
+          slot: { type: 'string', description: 'Which results: the scenario on screen, a comparison slot, or "AB" for A and B together.', enum: [...TABLE_SLOTS, 'AB'] },
+        },
+        required: ['format'],
+      },
+      run: async ({ format, slot }) => {
+        if (!ctx.download) throw new ActionError('Files cannot be downloaded in this session.');
+        const which = slot ?? panel.get().tableSlot;
+        const slots: TableSlot[] = which === 'AB' ? ['A', 'B'] : [which];
+        const sides: ExportSide[] = [];
+        for (const k of slots) {
+          const st = await analysis.settled(k);
+          if (st.state === 'idle') throw new ActionError(k === 'current' ? 'No site is selected. Select a landing site or drop a pin first.' : `Comparison slot ${k} is empty. Save a scenario there first (saveScenario).`);
+          if (st.state === 'error') throw new ActionError(`The analysis of ${k === 'current' ? 'the scenario on screen' : `slot ${k} (${st.scenario.label})`} is not available: ${st.error}`);
+          if (st.state !== 'ready') throw new ActionError('The analysis has not finished. Ask again in a moment.');
+          sides.push({ slot: k, analysis: st.value });
+        }
+        let diff = null;
+        if (which === 'AB') {
+          const c = await analysis.settledComparison();
+          diff = c.state === 'ready' ? c.diff : null;
+        }
+        const science = ctx.science ?? SCIENCE;
+        const t = state().timeMs;
+        const text = format === 'csv' ? toCsv(sides) : toJson(sides, state(), (a) => science.blockageAt(a, 'sun', t).bodyElDeg, diff, now());
+        const filename = exportFilename(sides, format);
+        const mimeType = format === 'csv' ? 'text/csv;charset=utf-8' : 'application/json';
+        ctx.download(filename, mimeType, text);
+        return {
+          format,
+          filename,
+          mimeType,
+          bytes: new TextEncoder().encode(text).length,
+          scenarios: sides.map((x) => ({ slot: x.slot, label: x.analysis.scenario.label })),
+          spells: sides.reduce((n, x) => n + spellRows(x.analysis).length, 0),
+          downloaded: true,
+        };
+      },
+    }),
+
+    // ---------- the seasonal outlook ----------
+    defineAction<{ months?: number; slot?: TableSlot }, unknown>({
+      name: 'showOutlook',
+      title: 'Show the seasonal outlook',
+      description:
+        'The long view for the site of the scenario on screen (or of slot A or B), at its mast height: sunlight % and Earth\'s centre in view % for each lunar day over the coming `months` lunar months (default 12) from its arrival, the longest darkness and Earth gap in that span, and for a mission of the scenario\'s length the planned arrival, the best and the worst arrival in the span (by score: mean of sunlight % and Earth\'s centre in view %, arrivals every 2 h) and what a slip of 1, 3, 7, 14 or 28 days changes. ' +
+        'Opens the "outlook" tab of the compare panel with the chart and its table, and waits for the computation (a few seconds). Uses the in-app Sun/Earth model and one skyline throughout; no statement about power or temperature.',
+      effect: 'command',
+      params: {
+        type: 'object',
+        properties: {
+          months: { type: 'integer', description: 'Span, lunar months of 29.53 days (default 12).', minimum: 1, maximum: MAX_OUTLOOK_MONTHS },
+          slot: { type: 'string', description: 'Whose scenario: the one on screen ("current", default), or slot "A" or "B".', enum: TABLE_SLOTS },
+        },
+      },
+      run: async ({ months, slot }) => {
+        const which = slot ?? panel.get().outlookSlot;
+        const span = months ?? panel.get().outlookMonths;
+        const sc = analysis.wanted(which);
+        if (!sc) throw new ActionError(which === 'current' ? 'No site is selected. Select a landing site or drop a pin first.' : `Comparison slot ${which} is empty. Save a scenario there first (saveScenario).`);
+        const end = sc.startMs + span * 29.530589 * 24 * HOUR_MS + sc.durationH * HOUR_MS;
+        if (end > MAX_TIME_MS) throw new ActionError(`An outlook of ${span} lunar months from ${isoUtc(sc.startMs)} would run past ${isoUtc(MAX_TIME_MS)}, the end of the span the ephemeris is validated for. Ask for fewer months.`);
+        const token = ++outlookToken;
+        panel.set({ tab: 'outlook', outlookSlot: which, outlookMonths: span, outlook: { state: 'loading', scenario: sc, months: span } });
+        store.set({ comparing: true });
+        let value: Outlook;
+        try {
+          value = await (ctx.outlook ?? realOutlook)(sc, { months: span });
+        } catch (err) {
+          const error = err instanceof Error ? err.message : String(err);
+          if (token === outlookToken) panel.set({ outlook: { state: 'error', scenario: sc, months: span, error } });
+          throw new ActionError(`The outlook is not available: ${error}`);
+        }
+        if (token === outlookToken) panel.set({ outlook: { state: 'ready', scenario: sc, months: span, value } });
+        return { slot: which, ...outlookResult(value), ...(token !== outlookToken && { replacedByNewerOutlook: true }) };
+      },
     }),
 
     // ---------- nearby alternatives ----------
