@@ -32,6 +32,40 @@ function star(ctx: CanvasRenderingContext2D, cx: number, cy: number, r: number, 
   ctx.fill();
 }
 
+/**
+ * The United States flag's 50 stars in a union `cw` wide and `ch` high: nine rows alternating six
+ * and five stars, at the positions and size Executive Order 10834 (1959) gives in units of the
+ * hoist: union 0.5385 high and 0.76 wide, row centres 0.054 apart starting 0.054 below the
+ * union's top (E, F), column centres 0.063 apart starting 0.063 from the hoist (G, H), star
+ * diameter 0.0616 (K). Positions scale with the union drawn here; the star size follows its height.
+ */
+export function usStarField(cw: number, ch: number): { centres: [number, number][]; radius: number } {
+  const C = 0.5385, D = 0.76, E = 0.054, F = 0.054, G = 0.063, H = 0.063, K = 0.0616;
+  const centres: [number, number][] = [];
+  for (let row = 0; row < 9; row++) {
+    // Rows of six use the even columns of an 11-column grid, rows of five the odd ones.
+    for (let col = row % 2; col < 11; col += 2) centres.push([(cw * (G + col * H)) / D, (ch * (E + row * F)) / C]);
+  }
+  return { centres, radius: ((K / 2) * ch) / C };
+}
+
+/**
+ * The stars of China's flag on a `w` x `h` field (3:2), from its construction grid of 30 x 20
+ * (GB 12982): the large star centred at (5, 5) with a circumscribed radius of 3, one point
+ * straight up; the four small ones centred at (10, 2), (12, 4), (12, 7) and (10, 9) with radius
+ * 1, each with one point aimed at the large star's centre.
+ */
+export function chinaStars(w: number, h: number): { x: number; y: number; r: number; rotation: number }[] {
+  const u = w / 30, v = h / 20;
+  const big = { x: 5 * u, y: 5 * v, r: 3 * v, rotation: -Math.PI / 2 };
+  const small = ([[10, 2], [12, 4], [12, 7], [10, 9]] as const).map(([gx, gy]) => {
+    const x = gx * u, y = gy * v;
+    // Aimed in drawn (pixel) space, so it holds whatever the canvas size.
+    return { x, y, r: v, rotation: Math.atan2(big.y - y, big.x - x) };
+  });
+  return [big, ...small];
+}
+
 const PAINTERS: Record<string, Painter> = {
   US(ctx, w, h) {
     for (let i = 0; i < 13; i++) {
@@ -42,13 +76,8 @@ const PAINTERS: Record<string, Painter> = {
     ctx.fillStyle = '#3c3b6e';
     ctx.fillRect(0, 0, cw, ch);
     ctx.fillStyle = '#ffffff';
-    for (let row = 0; row < 5; row++) {
-      for (let col = 0; col < 6; col++) {
-        const x = (cw * (col + 0.5 + (row % 2) * 0.25)) / 6.25;
-        const y = (ch * (row + 0.5)) / 5;
-        star(ctx, x, y, ch * 0.075);
-      }
-    }
+    const field = usStarField(cw, ch);
+    for (const [x, y] of field.centres) star(ctx, x, y, field.radius);
   },
   SU(ctx, w, h) {
     ctx.fillStyle = '#cc0000';
@@ -87,9 +116,7 @@ const PAINTERS: Record<string, Painter> = {
     ctx.fillStyle = '#de2910';
     ctx.fillRect(0, 0, w, h);
     ctx.fillStyle = '#ffde00';
-    star(ctx, w * 0.17, h * 0.27, h * 0.16);
-    const small: [number, number][] = [[0.33, 0.1], [0.4, 0.2], [0.4, 0.35], [0.33, 0.45]];
-    for (const [x, y] of small) star(ctx, w * x, h * y, h * 0.055, Math.atan2(0.27 - y, 0.17 - x));
+    for (const s of chinaStars(w, h)) star(ctx, s.x, s.y, s.r, s.rotation);
   },
   IN(ctx, w, h) {
     ctx.fillStyle = '#ff9933';
