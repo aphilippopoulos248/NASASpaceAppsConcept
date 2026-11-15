@@ -45,6 +45,30 @@ describe('deterministic mode: how the globe is drawn', () => {
     state = installFakeApp(ALL_ACTIONS);
   });
 
+  it('sets the explored areas\' drawn size apart from the relief, without calling the factor a width multiple (T-64: setTerritoryScale)', async () => {
+    const e = engine();
+    const cases: [string, number][] = [
+      ['territory size x25', 25],
+      ['draw the explored areas 10 times wider', 10],
+      ['territory size exaggeration 50', 50],
+      ['territories at true size', 1],
+    ];
+    for (const [say, factor] of cases) {
+      const r = await e.reply(say);
+      expect(r.understood, say).toBe(true);
+      expect(state.territoryScale, say).toBe(factor);
+    }
+    // "Exaggeration" alone is still the relief: the territory words decide.
+    expect(state.reliefFactor).toBe(10);
+    // The factor is a display setting, not a width multiple: the reply never says "N times wider".
+    const said = (await e.reply('territory size x25')).text;
+    expect(said).toBe('Territory size exaggeration set to ×25, as the Filters setting of that name: it only changes how large the explored areas are drawn on the globe, not their real size on the site card.');
+    expect(said).not.toMatch(/times wider/);
+    const tooMuch = await e.reply('territory size x500');
+    expect(tooMuch.text).toContain('params.factor must be at most 100');
+    expect(state.territoryScale).toBe(25);
+  });
+
   it('sets the relief exaggeration from several phrasings, and says what the factor means', async () => {
     const e = engine();
     const cases: [string, number][] = [

@@ -58,6 +58,8 @@ export interface FakeState {
   filter: { programs: string[] | null; countries: string[] | null; type: string; fromYear: number | null; toYear: number | null };
   /** Globe drawing (displayActions). */
   reliefFactor: number;
+  /** How many times wider than life the explored areas are drawn (setTerritoryScale, T-64). */
+  territoryScale: number;
   coverage: boolean;
   iceTargets: boolean;
   locatorZoom: number;
@@ -231,6 +233,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     comparing: false,
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
     reliefFactor: 10,
+    territoryScale: 100,
     coverage: false,
     iceTargets: false,
     locatorZoom: 1,
@@ -609,6 +612,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       reliefDrawnNow: state.reliefFactor,
       reliefRule: state.reliefFactor > 1 ? 'The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km.' : null,
       reliefDataSamplesPerDegree: 16,
+      territoryScale: state.territoryScale,
       coverageShown: state.coverage,
       iceTargetsShown: state.iceTargets,
       polarCloseUp: null,
@@ -618,6 +622,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
       defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
     actions.push(
       defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
+      defineAction<{ factor: number }, unknown>({ name: 'setTerritoryScale', title: 'Territory size exaggeration', description: 'How many times wider than life the explored areas are drawn.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 1, maximum: 100 } }, required: ['factor'] }, run: ({ factor }) => { state.territoryScale = factor; return display(); } }),
       bool('showCoverage', 'Show elevation data coverage', 'coverage'),
       bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
       defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),

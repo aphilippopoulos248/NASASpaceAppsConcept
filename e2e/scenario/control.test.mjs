@@ -98,6 +98,9 @@ function screen(page) {
         window: labelled('Mission window')?.value,
         delay: labelled('Arrival delay')?.value,
         relief: labelled('Exaggeration')?.value,
+        // Since T-64 the relief has no selector: the "Terrain relief" note says what is drawn.
+        reliefNote: [...document.querySelectorAll('.filters-panel h3')].find((h) => h.textContent.trim() === 'Terrain relief')?.nextElementSibling?.textContent ?? '',
+        territory: labelled('Territory size exaggeration')?.value,
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
@@ -230,10 +233,21 @@ const CASES = [
     await shows(page, (s) => s.filters.crewedPressed === 'true' && s.filters.landingCount === `${r.shown} of ${r.total} landings`, 'Crewed pressed and the landing count');
     await run(page, 'setFilters', { reset: true });
   } },
-  { name: 'setReliefExaggeration', params: { factor: 5 }, check: async (r, page) => {
+  { name: 'setReliefExaggeration', prepare: async (page) => {
+    page.__relief = (await run(page, 'getState')).result.globeDisplay.reliefExaggeration;
+  }, params: { factor: 5 }, check: async (r, page) => {
     assert.equal(r.reliefExaggeration, 5);
-    await shows(page, (s) => s.filters.relief === '5', 'relief selector');
-    await run(page, 'setReliefExaggeration', { factor: 10 });
+    // No selector since T-64 (the assistant's own control); the Filters note gives the factor drawn now.
+    // (It names the factor drawn at the camera's altitude, which eases towards true scale close in.)
+    await shows(page, (s) => s.filters.reliefNote.includes('Drawn now: ') && s.filters.reliefNote.includes('The stretch applies above'), 'the Terrain relief note says an exaggerated relief is drawn');
+    await run(page, 'setReliefExaggeration', { factor: page.__relief });
+  } },
+  { name: 'setTerritoryScale', prepare: async (page) => {
+    page.__territory = (await run(page, 'getState')).result.globeDisplay.territoryScale;
+  }, params: { factor: 25 }, check: async (r, page) => {
+    assert.equal(r.territoryScale, 25);
+    await shows(page, (s) => s.filters.territory === '25', 'the Territory size exaggeration selector');
+    await run(page, 'setTerritoryScale', { factor: page.__territory });
   } },
   { name: 'showCoverage', params: { show: true }, check: async (r, page) => {
     assert.equal(r.coverageShown, true);

@@ -9,7 +9,9 @@ which merges `am/lunyx-experience/integration` (350f928) and with it `am/lunyx/i
 surface HUD, T-48; one rule for the default solar band, T-46; globe keys that add up, T-55;
 before that 50aaace: compare panel slices 1 to 4, the surface HUD of original T-10, T-20 /
 T-33, mission presets T-22, the assistant-visible state of T-44, GitHub main 282249d with
-country flags and ownership). **64 actions.** Read from every event handler and
+country flags and ownership), and the teammates' GitHub main 081784a (original T-64: territory
+size, movable surface panels, one click selects a landing, the drawer's "Close ×" and Escape).
+**65 actions.** Read from every event handler and
 every `runAction` call in `src/ui/` and `src/scene/`, and from the registry at run time.
 
 How the pieces relate: a control calls `runAction(name, params)`; the assistant's tools are
@@ -28,7 +30,7 @@ Check columns:
 | **U** | Unit tests of the owner | the module's `*.test.ts` |
 | **H** | Checked by hand | |
 
-## 1. The registry: 64 actions
+## 1. The registry: 65 actions
 
 | Action | Module (owner) | Parameters | Control that runs it | Checks |
 | --- | --- | --- | --- | --- |
@@ -37,7 +39,7 @@ Check columns:
 | `setRate` | core | `secondsPerSecond` | scrubber speed | C D E |
 | `setLightMode` | core | `mode: real \| even` | Filters: Real / Even | C D E |
 | `jumpToEvent` | core | `type`, `which?`, `instant?: event \| start \| end` (T-47) | scrubber jump buttons (each goes to the next end of its event's passage in turn: `instant: start`, then `event`); key-metrics countdowns (the instant each countdown names, T-48) | C D E U |
-| `selectSite` | core | `site`, `atLanding?`, `surface?`, `fly?` | markers, Filters "Go to a landing site", card "At landing time", "Earlier / Later", arrow keys on the card, deep links | C D E |
+| `selectSite` | core | `site`, `atLanding?`, `surface?`, `fly?` | markers (since T-64 one click selects and shows the details, `fly: false` with `showPanel`; a double click enters the surface view), Filters "Go to a landing site", card "At landing time", "Earlier / Later" (they stay on the globe since T-64), arrow keys on the card, deep links | C D E |
 | `dropPin` | core | `lat`, `lon`, `fly?` | globe click, Enter on the globe, "Drop pin at centre", little person | C D E |
 | `clearSite` | core | | card close, Escape on the globe | C D E |
 | `enterSurface`, `exitSurface` | core | | card, little person; surface close, "Back to orbit", Escape | C D E |
@@ -59,7 +61,8 @@ Check columns:
 | `stopCompare` | core | | compare panel close, Escape | C D |
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
-| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30) | Filters: Terrain relief, Exaggeration | C D E |
+| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30; default 1 since T-64) | none since T-64: the Filters selector is gone and only the assistant sets it; the "Terrain relief" note says what is drawn | C D U |
+| `setTerritoryScale` | globe display (@globe, T-64) | `factor` (1 to 100, default 100): a display setting for how much the explored areas are enlarged from orbit, not a width multiple (with ×5 a 60 m area is drawn about 100 times wider; @submission's cross-check) | Filters: "Territory size exaggeration" | C D E |
 | `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |
@@ -84,7 +87,7 @@ Check columns:
 | `showOutlook` | compare panel | `months?`, `slot?` | "Outlook" tab | C D U |
 | `rankNearby` | compare panel | `radiusM?`, `spacingM?`, `slopeLimitDeg?` | "Nearby sites" tab, its scan | C D U |
 | `selectCandidate` | compare panel | `rank?` or `id?`, `asB?` | a row of the nearby list | C D U |
-| `setAssistantOpen`, `clearConversation` | drawer (@assistant) | `open`; | assistant button, drawer close, Escape; "New chat" | C D E |
+| `setAssistantOpen`, `clearConversation` | drawer (@assistant) | `open`; | assistant button, drawer "Close ×", Escape (since T-64 wherever focus is while the drawer is open: F-10); "New chat" | C D E |
 
 ## 2. Capabilities, area by area
 
@@ -147,8 +150,13 @@ the drawn centre before, so a zoom after "show the south pole" re-centred 0.1° 
 ### 2.4 Layers and how the globe is drawn
 
 `setOverlay`, `showMissions`, `setFilters` (as before); `setReliefExaggeration`, `showCoverage`,
-`showIceTargets` (T-13, T-20). `getState.globeDisplay` reports the factor drawn now, the
-coverage and ice outlines and the average-map legend.
+`showIceTargets` (T-13, T-20); `setTerritoryScale` (T-64: how much the explored areas are
+enlarged on the globe from orbit, a display setting whose factor is not a width multiple; the
+card's sizes stay true; the original team is adding the real enlargement for the selected site
+to its result, and the phrase then quotes it). `getState.globeDisplay`
+reports the relief factor drawn now, `territoryScale`, the coverage and ice outlines and the
+average-map legend. Deterministic phrases: "relief x5", "territory size x25", "territories at
+true size".
 
 ### 2.5 Mission parameters and requirements
 
@@ -205,6 +213,7 @@ A gap is something a user can do or read that no action covers, or data neither 
 | G-10 | The scrubber's "Now" starts the window at the **real** time; the assistant had no wall clock | @globe | **closed** by T-44: `getState.wallClockUtc`, `"real-now"` in `setTime` and `setMissionWindow`; deterministic mode: "start the mission window now in real time" |
 | G-11 | Mission-window table and CSV / JSON export, seasonal outlook | @analysis | **closed**: `exportResults`, `showOutlook` (a958d6b); phrases "export the results as csv", "show the seasonal outlook for 2 months", "show the window table" |
 | G-12 | The card's "Belongs to", "Owner" and "Explored" rows and the ownership mismatch (GitHub main 282249d) were in no action result | @globe | **closed** by T-44: `site.ownership`, `site.exploredArea` in `getState` and the site results; deterministic mode reads them out (903b390) |
+| G-13 | The surface view's movable panels (T-64: key metrics, skyline chart, surface controls, time, locator, compare, assistant): moving a panel (drag, arrow keys on its grip), "Fold" / "Expand" and "Reset panels" run no action (only "Reset panels" runs `showKeyMetrics`), and `getState` does not say where the panels are or which are folded | @globe (original T-65) | open: T-65 brings their actions |
 
 ## 4. Findings, rechecked on this build
 
