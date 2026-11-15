@@ -19,8 +19,9 @@ import { getLandings } from '../../data/catalog';
 import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapUrl, trekUrl } from '../../data/landings';
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
+import { globeDisplay } from '../../scene/globe/displayState';
 import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
-import { IMAGERY_MAX_LAT, SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
+import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
 import { button, el, isTypingTarget } from '../dom';
@@ -138,7 +139,7 @@ export function mountSiteCard(region: HTMLElement): void {
     a.rel = 'noopener';
   }
   links.append(quickmap, trek);
-  const credit = el('p', 'ly-note sc-credit', `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`);
+  const credit = el('p', 'ly-note sc-credit');
   const nav = el('div', 'sc-nav');
   const prev = button('← Earlier', 'ly-btn ly-btn--small', () => step(-1));
   const index = el('span', 'ly-label ly-value');
@@ -203,6 +204,26 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   onPanelChange((panel) => panel === 'site-science' && syncScience());
   syncScience();
+
+  // ---------- what the close-up on the globe is made of ----------
+  // Up to 80 degrees of latitude it is imagery fetched from NASA Moon Trek, which may not
+  // arrive: the line says what is on screen, not what was asked for.
+  const renderCredit = (site: SiteRef) => {
+    if (Math.abs(site.lat) > IMAGERY_MAX_LAT) {
+      credit.textContent =
+        site.lat < 0
+          ? 'Close-up on the globe: shaded relief computed from LOLA polar elevation (40, 80 and 160 m grids), with the shadows the terrain casts at the simulated time. Not a photograph: photographic maps are stretched this close to the pole.'
+          : 'No close-up on the globe this close to the north pole: photographic maps are stretched here and no north-polar elevation layer is bundled.';
+      return;
+    }
+    const closeUp = globeDisplay.getLive().closeUp;
+    credit.textContent = imageryText(closeUp?.state ?? 'loading', closeUp?.credits ?? []);
+    credit.classList.toggle('sc-credit--missing', closeUp?.state === 'unavailable');
+  };
+  globeDisplay.subscribe(() => {
+    const site = store.get().site;
+    if (site) renderCredit(site);
+  });
 
   /** The finished analysis of the scenario on screen, or null while there is none for it. */
   const currentAnalysis = () => {
@@ -368,13 +389,7 @@ export function mountSiteCard(region: HTMLElement): void {
     facts.set('region', l?.region ?? null);
     facts.set('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}; longitude east-positive`);
     renderArea(l);
-    // What the close-up on the globe is made of at this latitude.
-    credit.textContent =
-      Math.abs(site.lat) <= IMAGERY_MAX_LAT
-        ? `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`
-        : site.lat < 0
-          ? 'Close-up on the globe: shaded relief computed from LOLA polar elevation (40, 80 and 160 m grids), with the shadows the terrain casts at the simulated time. Not a photograph: photographic maps are stretched this close to the pole.'
-          : 'No close-up on the globe this close to the north pole: photographic maps are stretched here and no north-polar elevation layer is bundled.';
+    renderCredit(site);
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';
     links.hidden = !l;

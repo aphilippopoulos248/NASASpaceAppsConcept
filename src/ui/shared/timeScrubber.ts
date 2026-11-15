@@ -6,13 +6,13 @@
 // A rise or a set is not one moment (decision D-8), so no mark, button or tooltip here names a
 // "sunset" with a time on its own: each says which instant it is ("Sun fully set"), in the
 // words of core/skyEvents.ts, which the actions use too.
-import type { SkyEvent } from '../../analysis/types';
+import type { SiteAnalysis, SkyEvent } from '../../analysis/types';
 import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { RATE_PRESETS } from '../../core/coreActions';
-import { moonPhaseAt, moonPhaseText } from '../../core/moonPhase';
+import { moonPhaseAt, moonPhaseDetail, moonPhaseText } from '../../core/moonPhase';
 import { effectiveStartMs, spanText } from '../../core/scenario';
-import { EVENT_INFO, EVENT_TYPES, findEvent } from '../../core/skyEvents';
+import { eclipseSpans, eclipseText, EVENT_INFO, EVENT_TYPES, findEvent } from '../../core/skyEvents';
 import { MAX_TIME_MS, MIN_TIME_MS, store } from '../../core/store';
 import { throttle } from '../../core/throttle';
 import { formatUtc, isoUtc } from '../../core/time';
@@ -30,7 +30,7 @@ export const WINDOW_CHOICES = [
 ] as const;
 
 /** Events of the current analysis, or why there are none. */
-function currentEvents(): { events: SkyEvent[] } | { reason: string } {
+function currentEvents(): { events: SkyEvent[]; analysis: SiteAnalysis } | { reason: string } {
   const st = analysis.get('current');
   // Just after a change the published result still belongs to the previous scenario.
   if (st.state !== 'idle' && st.scenario.id !== analysis.wanted('current')?.id) return { reason: 'Analysing the site…' };
@@ -38,7 +38,7 @@ function currentEvents(): { events: SkyEvent[] } | { reason: string } {
     case 'idle': return { reason: 'Select a site or drop a pin to see when the Sun and Earth rise and set there.' };
     case 'loading': return { reason: 'Analysing the site…' };
     case 'error': return { reason: `No rise and set marks: the site analysis is not available (${st.error})` };
-    case 'ready': return { events: st.value.events };
+    case 'ready': return { events: st.value.events, analysis: st.value };
   }
 }
 
@@ -55,7 +55,10 @@ export function mountTimeScrubber(region: HTMLElement): void {
   slider.setAttribute('aria-label', 'Time within the mission window');
   const marks = el('div', 'ts-marks');
   marks.setAttribute('aria-hidden', 'true');
-  track.append(marks, slider);
+  // Under the track: when Earth is in front of the Sun (lighter), and when the Sun is entirely hidden (full).
+  const bands = el('div', 'ts-bands');
+  bands.setAttribute('aria-hidden', 'true');
+  track.append(marks, slider, bands);
   const scale = el('div', 'ts-scale');
   const scaleStart = el('span', 'ly-value');
   const scaleMid = el('span', 'ly-value ts-now');
@@ -136,7 +139,9 @@ export function mountTimeScrubber(region: HTMLElement): void {
   // the Moon's phase. The last clock change is always drawn (throttle runs once more at the end).
   const slowSync = throttle(() => {
     syncJumps();
-    readout.textContent = moonPhaseText(moonPhaseAt(store.get().timeMs));
+    const phase = moonPhaseAt(store.get().timeMs);
+    readout.textContent = moonPhaseText(phase);
+    readout.title = moonPhaseDetail(phase);
   }, 250);
   const syncWindow = () => {
     const s = store.get();
@@ -155,13 +160,38 @@ export function mountTimeScrubber(region: HTMLElement): void {
     const start = effectiveStartMs(s), span = s.windowDurationH * 3_600_000;
     const ev = currentEvents();
     marks.replaceChildren();
+    bands.replaceChildren();
     events = 'events' in ev ? ev.events : null;
     const none = events !== null && events.length === 0;
+    const eclipses = 'analysis' in ev ? eclipseSpans(ev.analysis) : [];
+    const eclipseLine = eclipses.length ? ` ${eclipseText(eclipses)}` : '';
     jumps.hidden = events === null || none;
     eventNote.hidden = events !== null && !none;
-    eventNote.textContent = 'reason' in ev ? ev.reason : none ? `Neither the Sun nor Earth's centre rises or sets in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).` : '';
+    eventNote.textContent = 'reason' in ev ? ev.reason : none ? `Neither the Sun nor Earth's centre rises or sets in this ${spanText(s.windowDurationH, true)} window (measured against the terrain skyline).${eclipseLine}` : '';
     if (!events) return;
     syncJumps();
+    const place = (node: HTMLElement, fromMs: number, toMs: number) => {
+      const a = Math.max(0, (fromMs - start) / span), b = Math.min(1, (toMs - start) / span);
+      if (b <= a) return false;
+      node.style.left = `${a * 100}%`;
+      node.style.width = `${(b - a) * 100}%`;
+      return true;
+    };
+    for (const e of eclipses) {
+      const band = el('span', 'ts-band ts-eclipse');
+      if (!place(band, e.startMs, e.endMs)) continue;
+      bands.append(band);
+      for (const h of e.hidden) {
+        const full = el('span', 'ts-band ts-totality');
+        if (place(full, h.startMs, h.endMs)) bands.append(full);
+      }
+      // A mark above the middle of the passage carries the times as a tooltip, like the rise and set marks.
+      const mid = (Math.max(start, e.startMs) + Math.min(start + span, e.endMs)) / 2;
+      const m = el('span', 'ts-mark ts-sun', '◐');
+      m.style.left = `${((mid - start) / span) * 100}%`;
+      m.title = eclipseText([e]);
+      marks.append(m);
+    }
     for (const e of events) {
       const f = (e.timeMs - start) / span;
       if (f < 0 || f > 1) continue;
