@@ -3,12 +3,12 @@
 // east-positive; a number that does not exist is null, never a stand-in value.
 //
 // Everything here is copied or rounded from the science core's output (src/analysis/types.ts).
-import { blockageAt as realBlockageAt, nextEvents as realNextEvents } from '../analysis/api';
+import { blockageAt as realBlockageAt, eventText, nextEvents as realNextEvents, nextTransitions } from '../analysis/api';
 import type { Blockage, ComparisonDiff, Interval, SiteAnalysis, SkyEvent } from '../analysis/types';
 import { rounded, type AnalysisSlot, type AnalysisStatus, type ComparisonStatus } from './analysisStore';
 import { NO_SUN_BAND_TEXT, sunBandRequired } from './requirements';
 import { describeScenario } from './scenario';
-import { EVENT_INFO, eventDefinitions } from './skyEvents';
+import { EVENT_INFO, eventDefinitions, spanReport } from './skyEvents';
 import { isoUtc } from './time';
 import type { AppState, Scenario } from './types';
 
@@ -122,6 +122,8 @@ export function checkRequirements(a: SiteAnalysis, s: Pick<AppState, 'sunElMinDe
         ? null
         : {
             limitH: s.maxEarthGapH,
+            /** The limit is checked against line of sight to Earth's centre. */
+            basis: "Earth's centre",
             longestEarthGapH: rounded(m.longestEarthGapH),
             met: Number.isFinite(m.longestEarthGapH) ? m.longestEarthGapH <= s.maxEarthGapH : null,
             // A gap cut by the window edge is at least this long: "met" then holds only inside the window.
@@ -144,7 +146,10 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
   const endMs = st.scenario.startMs + st.scenario.durationH * HOUR_MS;
   const sun = science.blockageAt(a, 'sun', t), earth = science.blockageAt(a, 'earth', t);
   const next = science.nextEvents(a, t);
-  const event = (e: SkyEvent | null) => (e ? { label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1), inHours: rounded((e.timeMs - t) / HOUR_MS) } : null);
+  // Each event with the whole passage it belongs to (decision D-8): both ends, named, and the summary sentence.
+  const event = (e: SkyEvent | null) =>
+    e ? { label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1), inHours: rounded((e.timeMs - t) / HOUR_MS), summary: eventText(e), span: e.span ? spanReport(e.span) : null } : null;
+  const passages = nextTransitions(a, t);
   const list = <T>(items: readonly T[]) => (items.length > LIST_LIMIT ? { shown: LIST_LIMIT, total: items.length } : undefined);
   return {
     slot,
@@ -157,10 +162,16 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
       sunAnyPct: rounded(m.sunAnyPct),
       longestDarknessH: rounded(m.longestDarknessH),
       darknessRunsIntoWindowEdge: m.darknessOpenEnded,
-      /** Share of the window with geometric line of sight to Earth's centre (not a radio link budget). */
+      /** Share of the window with geometric line of sight to Earth's CENTRE (not a radio link budget). */
       earthVisiblePct: rounded(m.earthVisiblePct),
+      /** Longest spell without line of sight to Earth's centre. */
       longestEarthGapH: rounded(m.longestEarthGapH),
       earthGapRunsIntoWindowEdge: m.earthGapOpenEnded,
+      /** Share of the window with ANY PART of Earth's disc above the skyline: NASA PGDA product 69's definition, so comparable with the long-term map; at least earthVisiblePct. */
+      earthAnyPct: m.earthAnyPct === undefined ? null : rounded(m.earthAnyPct),
+      /** Longest spell with Earth's disc WHOLLY hidden; at most longestEarthGapH. */
+      longestEarthAnyGapH: m.longestEarthAnyGapH === undefined ? null : rounded(m.longestEarthAnyGapH),
+      earthAnyGapRunsIntoWindowEdge: m.earthAnyGapOpenEnded ?? null,
       minSunElDeg: rounded(m.minSunElDeg),
       maxSunElDeg: rounded(m.maxSunElDeg),
     },
@@ -172,14 +183,22 @@ export function reportAnalysis(slot: AnalysisSlot, st: AnalysisStatus, s: Readon
       sun: bodyNow(sun),
       earth: bodyNow(earth),
     },
-    /** The first event of each kind after the simulated time, inside the analysed window; null when there is none in it. */
+    /** The first event of each kind after the simulated time, inside the analysed window; null when there is none in it. Each with its passage (`span`) and the D-8 sentence (`summary`). */
     nextEvents: { sunrise: event(next.sunrise), sunset: event(next.sunset), earthrise: event(next.earthrise), earthset: event(next.earthset) },
-    events: a.events.slice(0, LIST_LIMIT).map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1) })),
+    /**
+     * The passage of each body through the skyline in progress at the simulated time, else the next
+     * one to start: includes passages that end beyond the window and grazes (partly hidden, never
+     * fully set), which have no event. Null when there is none.
+     */
+    nextPassages: { sun: passages.sun ? spanReport(passages.sun) : null, earth: passages.earth ? spanReport(passages.earth) : null },
+    events: a.events.slice(0, LIST_LIMIT).map((e) => ({ type: e.type, label: EVENT_INFO[e.type].label, timeUtc: isoUtc(e.timeMs), azDeg: rounded(e.azDeg, 1), summary: eventText(e) })),
     /** Which instant each event type is (decision D-8): a rise or set takes time, so a time is never quoted without saying which end of it is meant. */
     eventDefinitions: eventDefinitions(),
     intervals: {
       darkness: intervalList(m.darkIntervals),
       earthGaps: intervalList(m.earthGapIntervals),
+      /** Spells with Earth's disc wholly hidden. */
+      earthDiscHidden: intervalList(m.earthAnyGapIntervals ?? []),
       sunBehindEarth: intervalList(m.eclipseIntervals ?? []),
     },
     ...((list(a.events) || list(m.darkIntervals) || list(m.earthGapIntervals)) && {
@@ -205,7 +224,9 @@ export function reportDiff(diff: ComparisonDiff) {
     meaning: 'B minus A',
     illuminationPct: rounded(diff.illuminationPct),
     longestDarknessH: rounded(diff.longestDarknessH),
+    /** Earth's centre in view, percentage points. */
     earthVisiblePct: rounded(diff.earthVisiblePct),
+    ...(diff.earthAnyPct !== undefined && { /** Any part of Earth's disc in view, percentage points. */ earthAnyPct: rounded(diff.earthAnyPct) }),
     longestEarthGapH: rounded(diff.longestEarthGapH),
     slopeDeg: rounded(diff.slopeDeg),
     highlights: diff.highlights,

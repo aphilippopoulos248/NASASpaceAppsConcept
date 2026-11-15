@@ -116,6 +116,13 @@ in a hub message; do not patch around it. New files go inside your own directori
 | @ephemeris-check (independent validation) | `tests/fixtures/**`, and nothing in `src/` or `scripts/`: this agent checks other people's numbers and must stay independent of their code |
 | @upstream-sync (incoming GitHub changes, decision D-7) | its own isolated worktree and merge commits only: it stages changes from `origin/main` and other upstream branches and hands them to @coordinator; conflict resolutions inside other owners' files are reviewed by those owners |
 
+Retired here, worktrees kept:
+- @assistant: its paths are now worked by lunyx-experience's assistant team, which delivers through @upstream-sync.
+- @ephemeris-check: independent validation is now done by lunyx-science.
+- @ice-targets: its paths are assigned task by task, e.g. @surface in `src/terrain/reader.ts` for T-40 and @analysis in `src/ui/science/**` for T-46.
+
+Closed task-specific grant: @globe worked in @analysis's `src/analysis/` (`fineSkyline.ts`, `horizon.ts`, `window.ts`, `types.ts`) for T-50, the finer skyline at transitions. Those files are @analysis's again.
+
 `src/analysis/types.ts` and `src/terrain/types.ts` are contracts: their owner may add
 fields; removing or renaming one needs a note in the hub first, because other workers
 code against them.
