@@ -114,7 +114,8 @@ export function mountComparePanel(region: HTMLElement): void {
     if (hadFocus) launcher.focus();
   }
 
-  const ab = mountAbTab(tabPanels.get('compare')!, storage, createTabKit());
+  const abKit = createTabKit();
+  const ab = mountAbTab(tabPanels.get('compare')!, storage, abKit);
   const nearby = mountNearbyTab(tabPanels.get('nearby')!, panel, createTabKit());
   const windows = mountWindowsTab(tabPanels.get('windows')!, panel, createTabKit());
   const outlookTab = mountOutlookTab(tabPanels.get('outlook')!, panel, createTabKit());
@@ -181,6 +182,8 @@ export function mountComparePanel(region: HTMLElement): void {
     else if (showing('outlook')) outlookTab.render();
   });
   store.subscribe(['compareA', 'compareB'], () => {
+    // What the A/B tab last said about the pair no longer holds once something else changed it.
+    abKit.clearIfIdle();
     renderLauncher();
     if (showing('windows')) windows.render();
     if (showing('outlook')) outlookTab.render();
