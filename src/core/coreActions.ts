@@ -4,8 +4,8 @@
 import { findLanding, landingSite } from '../data/catalog';
 import { formatCoords, Landing, landingDate, quickmapUrl, trekUrl } from '../data/landings';
 import { labelDisagrees, loadOwnership, stateLabel, type OwnershipIndex } from '../data/ownership';
-import { globeDisplay } from '../scene/globe/displayState';
-import { areaDisplayScale, describeExtent, loadSiteAreas, type SiteArea } from '../scene/siteAreas';
+import { TERRITORY_RULE } from '../scene/globe/territories';
+import { describeExtent, loadSiteAreas, type SiteArea } from '../scene/siteAreas';
 
 import { ActionError, ActionDef, defineAction } from './actions';
 import { reportAnalysis, reportComparison, scenarioFacts, type ReportScience } from './analysisReport';
@@ -134,9 +134,6 @@ export function exploredAreaFacts(l: Landing, areas: ReadonlyMap<string, SiteAre
     areaM2: Math.round(a.areaM2),
     /** False when the lander has not been found in LRO images: the area is then the lander alone at the catalogue's approximate position. */
     located: a.located,
-    /** The globe draws the area this many times wider than it is, so it can be seen; the figures here are true size. */
-    displayScale: areaDisplayScale(a, globeDisplay.get().areaScale),
-
     ...(a.note && { note: a.note }),
     source: a.sources.length ? a.sources.join('; ') : 'No measured position: the lander at the landing catalogue\'s approximate coordinates.',
   };
@@ -261,6 +258,11 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     if (!ctx.analysis) throw new ActionError('The site analysis is not running in this session.');
     return ctx.analysis;
   };
+
+  /** Whether the territory colouring and the flags are drawn now: switched on, with the markers shown and at least one landing left by the filters. */
+  const withMarkers = (on: boolean) => on && state().showMissions && filterResult().shown > 0;
+  const territoriesShown = () => withMarkers(state().showTerritories);
+  const flagsShown = () => withMarkers(state().showFlags);
 
   const filterResult = () => {
     const all = ctx.landings();
@@ -395,7 +397,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
         'Selects a catalogued landing site by id or name (e.g. "apollo-11", "Apollo 11", "Chang\'e 4") and flies the globe to it. ' +
         'With `atLanding: true` it also lines everything up with that mission: the clock and the mission window start are set to the touchdown time (UTC), any arrival delay is cleared, sunlight is real and the clock is paused, so "IM-2 at its landing" is one step. ' +
         'With `surface: true` it then steps down into the surface view. `fly: false` keeps the camera where it is. Custom coordinates use dropPin instead. ' +
-        'The result\'s `site` carries what the site card shows: the catalogue\'s facts, summary and links, `ownership` (GCAT: the responsible state, the owner, the GCAT id, `labelDisagrees`) and `exploredArea` (true size, the globe\'s display scale, caveat, source).',
+        'The result\'s `site` carries what the site card shows: the catalogue\'s facts, summary and links, `ownership` (GCAT: the responsible state, the owner, the GCAT id, `labelDisagrees`) and `exploredArea` (true size, caveat, source).',
       effect: 'command',
       params: {
         type: 'object',
@@ -664,24 +666,43 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
     defineAction<{ show: boolean }, unknown>({
       name: 'showMissions',
       title: 'Show previous missions',
-      description: 'Shows or hides the markers of catalogued landings on the globe.',
+      description:
+        'Shows or hides the markers of catalogued landings on the globe. The territory colouring (showTerritories) and the country flags (showFlags) are drawn only while the markers are shown: hiding the markers hides them too, and they come back with the markers if they are switched on. ' +
+        'The result says whether each is drawn now (territoriesShown, flagsShown).',
       effect: 'command',
       params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the landing markers.' } }, required: ['show'] },
       run: ({ show }) => {
         store.set({ showMissions: show });
-        return { showMissions: state().showMissions };
+        return { showMissions: state().showMissions, territoriesShown: territoriesShown(), flagsShown: flagsShown() };
+      },
+    }),
+    defineAction<{ show: boolean }, unknown>({
+      name: 'showTerritories',
+      title: 'Show country territories',
+      description:
+        'Shows or hides the territory colouring on the globe (off by default): the whole Moon tinted by the country of the nearest landing shown, with a light line where two countries meet, ' +
+        'so neighbouring landings of one country share one territory. It is drawn only while the landing markers are shown (showMissions), which it does not change; the mission filters (setFilters) choose which landings count, and hiding one hands its ground to the nearest landings still shown. ' +
+        'The colours show who landed nearest, not ownership: no country owns lunar ground (Outer Space Treaty, Article II). ' +
+        'It is not drawn over the south-polar close-up or the close-up around a selected site, so their shading and Sun shadows keep their true grey. ' +
+        'The result says whether the colouring is drawn now (territoriesShown: false while it is off, the markers are hidden or the filters hide every landing) and what it means (territoryRule).',
+      effect: 'command',
+      params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the territory colouring.' } }, required: ['show'] },
+      run: ({ show }) => {
+        store.set({ showTerritories: show });
+        return { showTerritories: state().showTerritories, territoriesShown: territoriesShown(), territoryRule: TERRITORY_RULE };
       },
     }),
     defineAction<{ show: boolean }, unknown>({
       name: 'showFlags',
       title: 'Show country flags',
       description:
-        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state).',
+        'Shows or hides a 3D flag on each landing marker for the state the hardware there belongs to (GCAT catalogue; USSR hardware is shown as Russia, its successor state). ' +
+        'The flags are drawn only while the landing markers are shown (showMissions), which this does not change. The result says whether they are drawn now (flagsShown: false while they are off, the markers are hidden or the filters hide every landing).',
       effect: 'command',
       params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the flags.' } }, required: ['show'] },
       run: ({ show }) => {
         store.set({ showFlags: show });
-        return { showFlags: state().showFlags };
+        return { showFlags: state().showFlags, flagsShown: flagsShown() };
       },
     }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: MissionType; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({
@@ -806,7 +827,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       name: 'listSites',
       title: 'List the landing catalogue',
       description:
-        'Lists the catalogued Moon landings (the markers on the globe), oldest first: id, name, latitude and longitude (degrees, longitude east-positive), touchdown time (UTC), program, country, crewed or robotic, region, the catalogue\'s short account of the mission, who the hardware belongs to (`ownership`: state, owner, GCAT id, whether the catalogue\'s own country label disagrees) and the area explored (`exploredArea`: size, true scale, how much wider the globe draws it, caveat, source). Each row says whether the current mission filters show it (`shown`); with `shownOnly: true` only those rows are returned. Changes nothing. Pass an `id` or `name` to selectSite to go there.',
+        'Lists the catalogued Moon landings (the markers on the globe), oldest first: id, name, latitude and longitude (degrees, longitude east-positive), touchdown time (UTC), program, country, crewed or robotic, region, the catalogue\'s short account of the mission, who the hardware belongs to (`ownership`: state, owner, GCAT id, whether the catalogue\'s own country label disagrees) and the area explored (`exploredArea`: true size, caveat, source; it is not drawn on the globe). Each row says whether the current mission filters show it (`shown`); with `shownOnly: true` only those rows are returned. Changes nothing. Pass an `id` or `name` to selectSite to go there.',
       effect: 'query',
       params: { type: 'object', properties: { shownOnly: { type: 'boolean', description: 'Only the landings the current filters show (default: all of them, each marked).' } } },
       run: async ({ shownOnly }) => {
@@ -870,6 +891,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           sunBandDeg: { min: s.sunElMinDeg, max: s.sunElMaxDeg },
           overlay: s.overlay,
           showMissions: s.showMissions,
+          showTerritories: s.showTerritories,
           showFlags: s.showFlags,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },

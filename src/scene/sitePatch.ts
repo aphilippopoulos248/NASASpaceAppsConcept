@@ -188,7 +188,7 @@ function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: n
   });
   material.color.setScalar(layer.gain);
   // Drawn on the relief (same displacement as the tiles), lifted by the layer's own small offset.
-  patchSurfaceMaterial(material, uniforms, { lift: layer.radius - 1 });
+  patchSurfaceMaterial(material, uniforms, { lift: layer.radius - 1, territory: false }); // true grey: no territory colouring on the close-up
   mosaic.ready.then((ok) => (material.userData.loaded = ok));
 
   // Curved grid following the sphere; UVs are linear in lat/lon, matching the tile grid.

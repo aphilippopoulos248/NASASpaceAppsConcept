@@ -79,7 +79,7 @@ npm run dev        # development server, http://localhost:5173
 ```
 
 Three missions play in one step, offline, from the JPL Horizons tables bundled with the app.
-Open one of these links, or pick it under "Missions to replay" at the top of Filters:
+Open one of these links, or pick it under "Missions to replay" at the bottom of Filters:
 
 | Link (dev server) | What plays |
 | --- | --- |

@@ -1,10 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { MeshStandardMaterial } from 'three';
-import { describe, expect, it, vi } from 'vitest';
-import { getAction, resetActions, runAction } from '../../core/actions';
-import { store } from '../../core/store';
+import { describe, expect, it } from 'vitest';
+import { resetActions, runAction } from '../../core/actions';
 import { AverageMaps } from './averageMaps';
-import { DEFAULT_AREA_SCALE, DEFAULT_RELIEF, displaySummary, globeDisplay, registerDisplayActions, reliefText, TERRITORY_RULE } from './displayState';
+import { DEFAULT_RELIEF, displaySummary, globeDisplay, registerDisplayActions, reliefText } from './displayState';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { createSurfaceUniforms, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 import { imageryText } from '../sitePatch';
@@ -15,7 +13,7 @@ describe('globe display actions', () => {
   it('sets the relief exaggeration and the coverage outlines, and reports what is drawn', async () => {
     resetActions();
     registerDisplayActions();
-    expect(globeDisplay.get()).toEqual({ reliefFactor: DEFAULT_RELIEF, areaScale: 100, coverage: false, iceTargets: false });
+    expect(globeDisplay.get()).toEqual({ reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false });
     let heard = 0;
     const off = globeDisplay.subscribe(() => heard++);
 
@@ -33,47 +31,6 @@ describe('globe display actions', () => {
 
     expect(await runAction('setReliefExaggeration', { factor: 0 })).toMatchObject({ ok: true, result: { reliefExaggeration: 0, reliefRule: null } });
     expect(await runAction('setReliefExaggeration', { factor: 31 })).toMatchObject({ ok: false, error: 'params.factor must be at most 30' });
-    // Territory size is its own setting: it leaves the relief alone. No landing selected: no site figures.
-    expect(await runAction('setTerritoryScale', { factor: 25 })).toMatchObject({ ok: true, result: { territoryScale: 25, territoryRule: TERRITORY_RULE, reliefExaggeration: 0, selectedSiteArea: null } });
-    expect(await runAction('setTerritoryScale', { factor: 101 })).toMatchObject({ ok: false, error: 'params.factor must be at most 100' });
-
-    // T-64: what the territory setting means, and the selected landing's area as drawn from orbit.
-    // The bundled areas, served as the app would fetch them.
-    const file = readFileSync('public/data/sources/site-areas.json', 'utf8');
-    vi.stubGlobal('fetch', async () => new Response(file));
-    // What the assistant reads (D-1): a display setting, never "N times wider".
-    const def = getAction('setTerritoryScale')!;
-    expect(def.description).toMatch(/^Display setting .* Not a width multiplier: 1 = true size; 100 = the full display enlargement/);
-    expect(def.description).not.toMatch(/times wider than life/);
-    expect(def.params.properties.factor.description).toMatch(/Not a width multiplier/);
-    try {
-      store.set({ site: { kind: 'landing', id: 'apollo-17', name: 'Apollo 17', lat: 20.19, lon: 30.77 } });
-      // The default: the full display enlargement. Apollo 17's 11.4 km is drawn 500 km across from orbit, 44x.
-      let r = await runAction<any>('setTerritoryScale', { factor: DEFAULT_AREA_SCALE });
-      expect(r.ok && r.result.territoryRule).toMatch(/not a width multiplier.*about 150 to 500 km across from orbit.*eases to true size below 100 km/);
-      expect(r.ok && r.result.selectedSiteArea).toEqual({
-        site: 'apollo-17', name: 'Apollo 17', extentM: 11443, widthFactorFromOrbit: 43.7, drawnWidthFromOrbitKm: 500,
-        text: 'about 11.4 km across (drawn 44× larger in width from orbit, about 500 km across, so it can be seen; true size close to the ground)',
-      });
-      // A setting of 5 is not "5x": Apollo 17 is drawn 2.7x wider, a 60 m lander about 100x.
-      r = await runAction<any>('setTerritoryScale', { factor: 5 });
-      expect(r.ok && r.result.selectedSiteArea).toMatchObject({ widthFactorFromOrbit: 2.7, drawnWidthFromOrbitKm: 31.2 });
-      store.set({ site: { kind: 'landing', id: 'im-2', name: 'IM-2 Athena', lat: -84.79, lon: 29.2 } });
-      r = await runAction<any>('setTerritoryScale', { factor: 5 });
-      expect(r.ok && r.result.selectedSiteArea).toMatchObject({ extentM: 60, widthFactorFromOrbit: 102, drawnWidthFromOrbitKm: 6.1 });
-      // True size: no enlargement, and no rule to explain.
-      r = await runAction<any>('setTerritoryScale', { factor: 1 });
-      expect(r.ok && r.result).toMatchObject({ territoryScale: 1, territoryRule: null, selectedSiteArea: { widthFactorFromOrbit: 1, drawnWidthFromOrbitKm: 0.1, text: 'about 60 m across (drawn at true size on the globe)' } });
-      // A pin has no explored area.
-      store.set({ site: { kind: 'custom', id: 'pin:-85,30', name: 'Pinned location', lat: -85, lon: 30 } });
-      r = await runAction<any>('setTerritoryScale', { factor: DEFAULT_AREA_SCALE });
-      expect(r.ok && r.result.selectedSiteArea).toBeNull();
-    } finally {
-      store.set({ site: null });
-      globeDisplay.set({ areaScale: DEFAULT_AREA_SCALE });
-      vi.unstubAllGlobals();
-    }
-
     expect(await runAction('showCoverage', { show: true })).toMatchObject({ ok: true, result: { coverageShown: true } });
     expect(globeDisplay.get().coverage).toBe(true);
     expect(await runAction('showIceTargets', { show: true })).toMatchObject({ ok: true, result: { iceTargetsShown: true, coverageShown: true } });
@@ -127,6 +84,21 @@ describe('surface shader switches', () => {
     const later = new MeshStandardMaterial();
     patchSurfaceMaterial(later, u);
     expect(later.defines).toMatchObject({ LUNYX_OVERLAY: 1, LUNYX_COVERAGE: 1 });
+    // The country territories are a switch of their own.
+    setSurfaceFeatures(1, true, true);
+    expect(tiles.defines).toMatchObject({ LUNYX_OVERLAY: 1, LUNYX_COVERAGE: 1, LUNYX_TERRITORY: 1 });
+    setSurfaceFeatures(1, true);
+    expect(tiles.defines).toMatchObject({ LUNYX_TERRITORY: 0 });
+    // The polar close-up and the site close-ups never draw it: their shading and shadows keep their true grey.
+    const closeUp = new MeshStandardMaterial();
+    patchSurfaceMaterial(closeUp, u, { territory: false });
+    setSurfaceFeatures(1, true, true);
+    expect(closeUp.defines).toMatchObject({ LUNYX_OVERLAY: 1, LUNYX_COVERAGE: 1, LUNYX_TERRITORY: 0 });
+    expect(tiles.defines).toMatchObject({ LUNYX_TERRITORY: 1 });
+    const closeUpLater = new MeshStandardMaterial();
+    patchSurfaceMaterial(closeUpLater, u, { lift: 0.0001, territory: false });
+    expect(closeUpLater.defines).toMatchObject({ LUNYX_TERRITORY: 0 });
+    setSurfaceFeatures(1, true);
     // A disposed material is forgotten.
     patch.dispose();
     setSurfaceFeatures(0, false);

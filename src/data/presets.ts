@@ -44,6 +44,8 @@ export interface MissionPreset {
   /** Start playing once everything is on screen. */
   play: boolean;
   sunBehindEarth?: PresetEclipse;
+  /** What in this replay is uncertain or computed rather than reported, in one sentence: shown on screen with it. */
+  caveat?: string;
   /** Where the data comes from, one sentence each. */
   sources: string[];
 }
@@ -126,6 +128,7 @@ export function parsePresets(json: unknown): MissionPreset[] {
       rate: num('rateSecondsPerSecond', 1, 31_536_000),
       play: p.play === undefined ? true : typeof p.play === 'boolean' ? p.play : fail('"play" must be true or false.'),
       ...(sunBehindEarth && { sunBehindEarth }),
+      ...(p.caveat !== undefined && { caveat: text('caveat') }),
       sources,
     };
   });

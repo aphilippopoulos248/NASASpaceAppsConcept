@@ -3,9 +3,7 @@
 // back for labels: the exaggeration drawn right now, which elevation data is loaded, whether
 // the polar close-up is showing. Presentation state, so it lives beside the scene.
 import { ActionError, defineAction, registerActions } from '../../core/actions';
-import { store } from '../../core/store';
 import { BACKGROUND_STARS_NOTE } from '../globe';
-import { AREA_DISPLAY_SCALE, areaDisplayFacts, exploredText, loadSiteAreas, MAX_ORBIT_AREA_WIDTH_M, MIN_ORBIT_AREA_WIDTH_M } from '../siteAreas';
 import { imageryText, type ImageryState } from '../sitePatch';
 import type { AverageState } from './averageMaps';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
@@ -13,20 +11,9 @@ import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
 export const DEFAULT_RELIEF = 1;
 export const MAX_RELIEF = 30;
 
-/**
- * The territory setting: how much each landing's explored area is enlarged on the globe so it can be
- * seen from orbit. 1 = true size, 100 = the full display enlargement (each area about 150 to 500 km
- * across from orbit), blended linearly in between: not a width multiplier (src/scene/siteAreas.ts).
- */
-export const AREA_SCALE_CHOICES = [1, 5, 10, 25, 50, 100] as const;
-export const DEFAULT_AREA_SCALE = 100;
-export const MAX_AREA_SCALE = 100;
-
 export interface GlobeDisplay {
   /** Chosen relief exaggeration: 0 = smooth sphere, 1 = true scale. */
   reliefFactor: number;
-  /** The territory setting for the explored areas: 1 = true size, 100 = full display enlargement (see AREA_SCALE_CHOICES). */
-  areaScale: number;
   /** Outline where each class of elevation data exists. */
   coverage: boolean;
   /** Outline the mapped ice-bearing permanently shaded regions (south polar region). */
@@ -60,7 +47,7 @@ export interface GlobeLive {
 type Listener = () => void;
 
 class DisplayStore {
-  private display: GlobeDisplay = { reliefFactor: DEFAULT_RELIEF, areaScale: DEFAULT_AREA_SCALE, coverage: false, iceTargets: false };
+  private display: GlobeDisplay = { reliefFactor: DEFAULT_RELIEF, coverage: false, iceTargets: false };
   private live: GlobeLive = { reliefNow: 0, reliefPpd: 0, reliefProblem: null, polar: null, averages: { state: 'off' }, closeUp: null, viewTarget: null, flying: false };
   private readonly listeners = new Set<Listener>();
 
@@ -74,7 +61,7 @@ class DisplayStore {
 
   set(patch: Partial<GlobeDisplay>): void {
     const next = { ...this.display, ...patch };
-    if (next.reliefFactor === this.display.reliefFactor && next.areaScale === this.display.areaScale && next.coverage === this.display.coverage && next.iceTargets === this.display.iceTargets) return;
+    if (next.reliefFactor === this.display.reliefFactor && next.coverage === this.display.coverage && next.iceTargets === this.display.iceTargets) return;
     this.display = next;
     this.emit();
   }
@@ -113,29 +100,6 @@ export function reliefText(factor: number): string {
   return `relief ×${Number(factor.toFixed(factor < 10 ? 1 : 0))}`;
 }
 
-const km = (m: number) => (m / 1000).toLocaleString('en-US');
-
-/** What the territory setting means, for action results and getState. */
-export const TERRITORY_RULE =
-  `A display setting, not a width multiplier: 1 = true size; ${AREA_DISPLAY_SCALE} = the full display enlargement, ` +
-  `each explored area drawn about ${km(MIN_ORBIT_AREA_WIDTH_M)} to ${km(MAX_ORBIT_AREA_WIDTH_M)} km across from orbit whatever its true size, so the smallest sites are enlarged most; ` +
-  `settings in between blend linearly between the two. It applies above ${FULL_EXAGGERATION_KM} km camera altitude and eases to true size below ${TRUE_SCALE_BELOW_KM} km. ` +
-  'Each landing\'s own enlargement is its exploredArea.displayScale.';
-
-/**
- * The selected landing's explored area as drawn from orbit at the present territory setting, in the
- * site card's words; null when no catalogued landing with a mapped area is selected.
- */
-export async function selectedSiteArea() {
-  const site = store.get().site;
-  if (!site || site.kind !== 'landing') return null;
-  const area = (await loadSiteAreas()).get(site.id);
-  if (!area) return null;
-  const setting = globeDisplay.get().areaScale;
-  const { widthFactorFromOrbit, drawnWidthFromOrbitKm } = areaDisplayFacts(area, setting);
-  return { site: site.id, name: site.name, extentM: Math.round(area.extentM), widthFactorFromOrbit, drawnWidthFromOrbitKm, text: exploredText(area, setting) };
-}
-
 /** The display state as a small JSON object, for action results and getState. */
 export function displaySummary() {
   const d = globeDisplay.get(), l = globeDisplay.getLive();
@@ -145,8 +109,6 @@ export function displaySummary() {
     reliefRule: d.reliefFactor > 1 ? `The chosen factor applies above ${FULL_EXAGGERATION_KM} km camera altitude and eases to true scale (1) below ${TRUE_SCALE_BELOW_KM} km.` : null,
     reliefDataSamplesPerDegree: l.reliefPpd || null,
     ...(l.reliefProblem && { reliefProblem: l.reliefProblem }),
-    territoryScale: d.areaScale,
-    territoryRule: d.areaScale > 1 ? TERRITORY_RULE : null,
     coverageShown: d.coverage,
     iceTargetsShown: d.iceTargets,
     polarCloseUp: l.polar ? { elevationGridM: l.polar.resolutionM, sunShadows: l.polar.shadows, note: l.polar.note } : null,
@@ -183,23 +145,6 @@ export function registerDisplayActions(): void {
         if (!Number.isFinite(factor)) throw new ActionError('The factor must be a number.');
         globeDisplay.set({ reliefFactor: factor });
         return displaySummary();
-      },
-    }),
-    defineAction<{ factor: number }, unknown>({
-      name: 'setTerritoryScale',
-      title: 'Territory size exaggeration',
-      description:
-        `Display setting for how much each landing's explored area (its territory) is enlarged on the globe so it can be seen from orbit. Not a width multiplier: 1 = true size; ${AREA_DISPLAY_SCALE} = the full display enlargement, ` +
-        `in which every area is drawn about ${km(MIN_ORBIT_AREA_WIDTH_M)} to ${km(MAX_ORBIT_AREA_WIDTH_M)} km across from orbit whatever its true size (a 60 m lander site ${Math.round(MIN_ORBIT_AREA_WIDTH_M / 60)} times wider, a long traverse much less); settings in between blend linearly between the two. The default is ${DEFAULT_AREA_SCALE}. ` +
-        `The enlargement applies above ${FULL_EXAGGERATION_KM} km camera altitude and eases to true size below ${TRUE_SCALE_BELOW_KM} km. Only the drawing changes: the sizes quoted for each site stay true, and the shape of the Moon is not affected. ` +
-        'The result gives the setting (territoryScale), what it means (territoryRule) and, for the selected landing, its area as drawn from orbit in the site card\'s words (selectedSiteArea: widthFactorFromOrbit, drawnWidthFromOrbitKm, text; null when no landing with a mapped area is selected). ' +
-        'Quote those figures, not the setting, for how much larger an area is drawn; every landing\'s own factor is its exploredArea.displayScale (getState, listLandings).',
-      effect: 'command',
-      params: { type: 'object', properties: { factor: { type: 'number', description: `Territory setting: 1 = true size, ${AREA_DISPLAY_SCALE} = full display enlargement (about ${km(MIN_ORBIT_AREA_WIDTH_M)} to ${km(MAX_ORBIT_AREA_WIDTH_M)} km across from orbit), blended linearly in between. Not a width multiplier.`, minimum: 1, maximum: MAX_AREA_SCALE } }, required: ['factor'] },
-      run: async ({ factor }) => {
-        if (!Number.isFinite(factor)) throw new ActionError('The factor must be a number.');
-        globeDisplay.set({ areaScale: factor });
-        return { ...displaySummary(), selectedSiteArea: await selectedSiteArea() };
       },
     }),
     defineAction<{ show: boolean }, unknown>({
