@@ -441,14 +441,34 @@ def smooth(t):
     return t * t * (3 - 2 * t)
 
 
+def ring_check(args):
+    """The option B ring grid of the app's prototype against this file's own rule, at every ring node."""
+    entry, fine, w60, _ = load_site(args.ring_site)
+    extra = int(math.ceil(args.band / fine.spacing))
+    n = fine.n + 2 * extra
+    app = np.fromfile(args.ring, dtype='<f4').reshape(n, n).astype(np.float64)
+    c = (n - 1) / 2
+    e = (np.arange(n) - c) * fine.spacing
+    E, N = np.meshgrid(e, e)
+    inside = (np.abs(E) < fine.half) & (np.abs(N) < fine.half)
+    d = np.hypot(np.maximum(0, np.abs(E) - fine.half), np.maximum(0, np.abs(N) - fine.half))
+    Ec, Nc = np.clip(E, -fine.half, fine.half), np.clip(N, -fine.half, fine.half)
+    mine = w60.at(E, N) + (fine.at(Ec, Nc) - w60.at(Ec, Nc)) * smooth(1 - d / args.band)
+    ok = ~inside
+    diff = np.abs(app[ok] - mine[ok])
+    print('%s: ring %d x %d, %d nodes outside the model; app minus this file: largest %.2e m; inside the model the app has %s' % (args.ring_site, n, n, ok.sum(), diff.max(), 'NaN everywhere' if np.all(np.isnan(app[inside])) else 'values'))
+
+
 def cmd_lola(args):
+    if args.ring:
+        return ring_check(args)
     sites = args.sites.split(',') if args.sites else SITES_WITH_MODEL
     rows = {}
     pooled = {'outErrWin': [], 'outStep': [], 'inErrModel': [], 'inStep': []}
     print('Heights minus LOLA, metres, after removing the 3 m model\'s own offset against LOLA at the site (median over the model\'s core),')
     print('so that zero means "right relative to an observer standing on the model". RMS over the shots in each region.')
-    print('band = the outer 129 m of the model; outside = up to 129 m beyond its edge. (a) = eased onto the 60 m window (T-32),')
-    print('(b) = the other reference: model kept, the 60 m window eased onto the model over 129 m outside the edge, (c) = as stored.\n')
+    print('band = the outer 129 m of the model; outside = up to %g m beyond its edge. (a) = eased onto the 60 m window (T-32),' % args.reach)
+    print('(b) = option B: model kept, the 60 m window eased onto the model over %g m outside the edge, (c) = as stored (in use).\n' % args.band)
     print('%-13s %5s %6s %6s | %5s %7s %7s %7s | %5s %7s %7s | %s' % ('site', 'shots', 'offset', 'core', 'band', '(a)', '(b,c)', '60 m', 'out', '(a,c)', '(b)', 'slope of 60 m error on the step just outside (1 = model right, 0 = window right)'))
     for sid in sites:
         path = lola_fetch(sid) if args.fetch else os.path.join(LOLA_CACHE, sid, 'pts.csv')
@@ -463,7 +483,7 @@ def cmd_lola(args):
         from_edge = fine.half - reach
         core = inside & (from_edge >= band * fine.spacing)
         in_band = inside & ~core
-        out = (~inside) & (reach < fine.half + band * fine.spacing)
+        out = (~inside) & (np.hypot(np.maximum(0, np.abs(E) - fine.half), np.maximum(0, np.abs(N) - fine.half)) < args.reach)
         hm, he, hw = fine.at(E, N), eased.at(E, N), w60.at(E, N)
         if core.sum() < 5:
             print('%-13s %5d  too few LOLA shots inside the model' % (sid, inside.sum()))
@@ -473,8 +493,10 @@ def cmd_lola(args):
         # The step at the nearest point of the model's edge (60 m window minus model there).
         Ec, Nc = np.clip(E, -fine.half, fine.half), np.clip(N, -fine.half, fine.half)
         step = w60.at(Ec, Nc) - fine.at(Ec, Nc)
-        # (b): outside the edge the window moves towards the model by the step, fading out over the band.
-        hb = hw - step * smooth(1 - (reach - fine.half) / (band * fine.spacing))
+        # (b), option B: outside the edge the window moves towards the model by the step, fading out
+        # over the band (the rule of scripts/terrain-seams-option-b.mjs: d is the distance to the square).
+        dist_out = np.hypot(np.maximum(0, np.abs(E) - fine.half), np.maximum(0, np.abs(N) - fine.half))
+        hb = hw - step * smooth(1 - dist_out / args.band)
         rms = lambda x: float(np.sqrt(np.mean(x * x))) if x.size else float('nan')
         r = {
             'shots': int(h.size), 'inside': int(inside.sum()), 'core': int(core.sum()), 'band': int(in_band.sum()), 'outside': int(out.sum()), 'tracks': sorted(set(day.tolist())),
@@ -484,6 +506,9 @@ def cmd_lola(args):
         }
         if out.sum() >= 3 and np.ptp(step[out]) > 0:
             r['outSlope'] = float(np.polyfit(step[out], hw[out] - T[out], 1)[0])
+        mad = lambda x: float(np.median(np.abs(x))) if x.size else float('nan')
+        r['outWindowMedAbs'], r['outBMedAbs'] = mad(hw[out] - T[out]), mad(hb[out] - T[out])
+        r['optionBBandM'], r['outsideReachM'] = args.band, args.reach
         pooled['outErrWin'] += (hw[out] - T[out]).tolist(); pooled['outStep'] += step[out].tolist()
         pooled['inErrModel'] += (hm[in_band] - T[in_band]).tolist(); pooled['inStep'] += step[in_band].tolist()
         rows[sid] = r
@@ -520,6 +545,10 @@ def main():
     p = sub.add_parser('lola')
     p.add_argument('--sites')
     p.add_argument('--fetch', action='store_true')
+    p.add_argument('--band', type=float, default=129.0, help='option B: metres outside the edge over which the 60 m window is eased onto the model')
+    p.add_argument('--reach', type=float, default=129.0, help='"outside" = shots up to this far beyond the edge')
+    p.add_argument('--ring', help='a ring grid written by terrain-seams-option-b.mjs --ring: compared with this file\'s own rule')
+    p.add_argument('--ring-site', default='blue-ghost-1')
     p.add_argument('--json')
     p = sub.add_parser('skyline')
     p.add_argument('--sites')
