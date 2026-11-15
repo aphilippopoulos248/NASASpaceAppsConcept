@@ -1,0 +1,99 @@
+{
+ "source": "https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/",
+ "polar": [
+  {
+   "layer": "LOLA south pole, 87.5S square at 40 m",
+   "pdsFile": "polar/img/ldem_875s_20m.img",
+   "samples": 320,
+   "places": [
+    "Shackleton rim pin",
+    "connecting ridge pin",
+    "Shackleton floor",
+    "88.5 S 87 W",
+    "87.8 S 40 E"
+   ],
+   "worstM": 0.25,
+   "allowedM": 0.25,
+   "ok": true,
+   "controlShiftedM": 31.375,
+   "controlMirroredM": 3711.375
+  },
+  {
+   "layer": "LOLA south pole, 85S square at 80 m",
+   "pdsFile": "polar/img/ldem_85s_40m.img",
+   "samples": 448,
+   "places": [
+    "Shackleton rim pin",
+    "connecting ridge pin",
+    "Shackleton floor",
+    "IM-2",
+    "88.5 S 87 W",
+    "87.8 S 40 E",
+    "86 S 160 E"
+   ],
+   "worstM": 0.5,
+   "allowedM": 0.5,
+   "ok": true,
+   "controlShiftedM": 57.875,
+   "controlMirroredM": 3753.875
+  },
+  {
+   "layer": "LOLA south pole, 80S square at 160 m",
+   "pdsFile": "polar/img/ldem_80s_80m.img",
+   "samples": 512,
+   "places": [
+    "Shackleton rim pin",
+    "connecting ridge pin",
+    "Shackleton floor",
+    "IM-2",
+    "88.5 S 87 W",
+    "87.8 S 40 E",
+    "86 S 160 E",
+    "82 S 100 W"
+   ],
+   "worstM": 0.5,
+   "allowedM": 0.5,
+   "ok": true,
+   "controlShiftedM": 111.875,
+   "controlMirroredM": 3747.375
+  }
+ ],
+ "global": [
+  {
+   "row": 16,
+   "latitude": 88.96875,
+   "worstM": 0.5,
+   "ok": true,
+   "controlUnshiftedM": 1324.5
+  },
+  {
+   "row": 1022,
+   "latitude": 26.09375,
+   "worstM": 0.5,
+   "ok": true,
+   "controlUnshiftedM": 9509.0
+  },
+  {
+   "row": 1428,
+   "latitude": 0.71875,
+   "worstM": 0.5,
+   "ok": true,
+   "controlUnshiftedM": 10313.0
+  },
+  {
+   "row": 2166,
+   "latitude": -45.40625,
+   "worstM": 0.5,
+   "ok": true,
+   "controlUnshiftedM": 6578.0
+  },
+  {
+   "row": 2796,
+   "latitude": -84.78125,
+   "worstM": 0.5,
+   "ok": true,
+   "controlUnshiftedM": 10047.0
+  }
+ ],
+ "ok": true
+}

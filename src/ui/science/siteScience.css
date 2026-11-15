@@ -1,0 +1,36 @@
+/* "Site science" section: readouts from the science layers for the active site.
+   Tokens and ly-* classes from src/styles; only the block layout is defined here. */
+.ss { display: grid; gap: var(--sp-3); }
+.ss[hidden] { display: none; }
+.ss > .ly-section-title { margin-bottom: 0; }
+
+.ss-block { display: grid; gap: var(--sp-1); min-width: 0; }
+.ss-block[hidden] { display: none; }
+.ss-head { margin: 0; font-size: var(--fs-sm); font-weight: var(--fw-semibold); line-height: var(--lh-tight); }
+.ss-block .ly-kv { font-size: var(--fs-sm); }
+.ss-block .ly-kv dd { overflow-wrap: anywhere; }
+.ss-status { color: var(--text-muted); font-size: var(--fs-sm); }
+
+.ss-table { width: 100%; border-collapse: collapse; font-size: var(--fs-sm); }
+.ss-table th, .ss-table td { padding: 2px var(--sp-3) 2px 0; text-align: left; vertical-align: baseline; font-weight: var(--fw-regular); }
+.ss-table th:last-child, .ss-table td:last-child { padding-right: 0; }
+.ss-table thead th { color: var(--text-muted); font-size: var(--fs-xs); }
+.ss-table tbody th { color: var(--text-muted); }
+.ss-table tbody tr:last-child th, .ss-table tbody tr:last-child td { padding-top: var(--sp-1); border-top: 1px solid var(--border); }
+
+/* Long-term averages are a different kind of number from the dated mission-window results
+   above them: set apart with a rule and a tag, so the two are not read as one list. */
+.ss-block--average { padding: var(--sp-2) var(--sp-3); border-left: 2px solid var(--accent-line); background: var(--surface-2); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+.ss-tag { justify-self: start; padding: 1px var(--sp-2); border: 1px solid var(--accent-line); border-radius: var(--radius-pill); color: var(--accent); font-size: var(--fs-xs); letter-spacing: var(--tracking-caps); text-transform: uppercase; }
+
+.ss-links { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--sp-1); font-size: var(--fs-sm); }
+.ss-links a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+.ss-links a:hover { color: var(--text); }
+.ss-links .ly-note { display: block; }
+
+.ss-more { font-size: var(--fs-xs); }
+.ss-more > summary { cursor: pointer; color: var(--text-muted); }
+.ss-more > summary:hover { color: var(--text); }
+.ss-more > .ly-note, .ss-more > .ss-links { margin-top: var(--sp-1); }
+
+.ss-none:empty { display: none; }

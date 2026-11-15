@@ -1,14 +1,23 @@
-// Left "Filters" panel of the globe view, as in the mockup: date/time (UTC), the point at the
-// screen centre (live, editable), the solar elevation requirement, mission parameters,
+// Left "Filters" panel of the globe view, as in the mockup: the date (arrival, UTC), the point
+// at the screen centre (live, editable), the solar elevation requirement, mission parameters,
 // "Show previous missions" with their filters, and "Show optimal landing area" with a legend.
 // Every control runs an action.
+//
+// The date at the top is the arrival: it starts the mission window and brings the clock there,
+// so the analysis, the time slider and the lighting are all about the date that was typed.
 import { runAction } from '../../core/actions';
+import { effectiveStartMs } from '../../core/scenario';
 import { store } from '../../core/store';
-import { isoUtc } from '../../core/time';
+import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { mountMissionFilters } from '../filters';
+import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
+import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
+import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
+import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
 import { OVERLAYS, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayLegend';
+import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './filtersPanel.css';
 
 let uid = 0;
@@ -49,21 +58,23 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
 
-  // ---- Date and time (UTC) ----
+  // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
-  const dateLab = el('label', 'ly-label', 'Date and time (UTC)');
+  const dateLab = el('label', 'ly-label', 'Arrival date and time (UTC)');
   dateLab.htmlFor = dateId;
   const date = el('input', 'ly-input');
   date.id = dateId;
   date.type = 'datetime-local';
   date.step = '60';
+  date.title = 'Start of the mission window (UTC). Changing it also sets the clock to the arrival; the time slider then scrubs through the window.';
   date.addEventListener('change', async () => {
     if (!date.value) return;
-    const r = await runAction('setTime', { utc: `${date.value}Z` });
+    const r = await runAction('setMissionWindow', { startUtc: `${date.value}Z`, moveClock: true });
     date.setAttribute('aria-invalid', String(!r.ok));
   });
+  const dateNote = el('p', 'ly-note fp-datenote');
   const dateField = el('div', 'ly-field');
-  dateField.append(dateLab, date);
+  dateField.append(dateLab, date, dateNote);
   panel.append(dateField);
 
   // ---- Point at the screen centre ----
@@ -103,13 +114,61 @@ export function mountFiltersPanel(region: HTMLElement): void {
   winLab.htmlFor = winId;
   const win = el('select', 'ly-select');
   win.id = winId;
-  for (const [h, label] of [[24, '24 hours'], [72, '3 days'], [168, '7 days'], [336, '14 days'], [708, '29.5 days (one lunar day)']] as const) win.append(new Option(label, String(h)));
+  for (const [h, label] of [[24, '24 hours'], [72, '3 days'], [168, '7 days'], [336, '14 days'], [708, '29.5 days (lunar day)']] as const) win.append(new Option(label, String(h)));
   win.addEventListener('change', () => void runAction('setMissionWindow', { durationH: Number(win.value) }));
   const winField = el('div', 'fp-num');
   winField.append(winLab, win);
+  const delay = numberField('Arrival delay', 'h', { min: 0, max: 720, step: 1, width: '5em' }, (v) => runAction('setDelay', { hours: v }));
+  delay.input.title = 'Explore a late arrival at the same site: the mission window starts this many hours after the arrival date.';
   const mission = el('div', 'fp-pair');
-  mission.append(mast.wrap, winField);
+  mission.append(mast.wrap, winField, delay.wrap);
   panel.append(mission);
+
+  // ---- Terrain relief ----
+  panel.append(el('h3', 'ly-section-title', 'Terrain relief'));
+  const reliefId = `fp-${++uid}`;
+  const reliefLab = el('label', 'ly-label', 'Exaggeration');
+  reliefLab.htmlFor = reliefId;
+  const relief = el('select', 'ly-select');
+  relief.id = reliefId;
+  const reliefLabel = (f: number) => (f === 0 ? 'Off (smooth sphere)' : f === 1 ? 'True scale (×1)' : `×${f}${f === DEFAULT_RELIEF ? ' (default)' : ''}`);
+  for (const f of RELIEF_CHOICES) relief.append(new Option(reliefLabel(f), String(f)));
+  relief.addEventListener('change', () => void runAction('setReliefExaggeration', { factor: Number(relief.value) }));
+  const reliefField = el('div', 'fp-num');
+  reliefField.append(reliefLab, relief);
+  const reliefNote = el('p', 'ly-note');
+  const cover = el('label', 'ly-check');
+  const coverBox = el('input');
+  coverBox.type = 'checkbox';
+  coverBox.addEventListener('change', () => void runAction('showCoverage', { show: coverBox.checked }));
+  cover.append(coverBox, el('span', undefined, 'Show elevation data coverage'));
+  const coverLegend = el('div', 'ly-legend fp-coverlegend');
+  for (const c of COVERAGE_STYLE) {
+    const row = el('div', 'ly-legend-row');
+    const sw = el('span', 'ly-swatch fp-outline');
+    sw.style.borderColor = c.colour;
+    row.append(sw, el('span', undefined, c.label));
+    coverLegend.append(row);
+  }
+  coverLegend.append(
+    el('p', 'ly-note', 'Squares show where each elevation grid exists: three around the south pole (LRO LOLA polar grids) and one set around each of the 28 catalogued landing sites (SLDEM2015, LOLA and LROC NAC models). Everywhere else rests on the LOLA whole-Moon grid (1.9 km per sample); for a pin, a 60 m window is built on request when the elevation server can be reached. No north-polar grid is bundled.'),
+  );
+  // Mapped ice targets (a science layer, not elevation data).
+  const ice = el('label', 'ly-check');
+  const iceBox = el('input');
+  iceBox.type = 'checkbox';
+  iceBox.addEventListener('change', () => void runAction('showIceTargets', { show: iceBox.checked }));
+  ice.append(iceBox, el('span', undefined, 'Show mapped ice targets'));
+  const iceLegend = el('div', 'ly-legend fp-coverlegend');
+  const iceRow = el('div', 'ly-legend-row');
+  const iceSwatch = el('span', 'ly-swatch fp-outline');
+  iceSwatch.style.borderColor = ICE_COLOUR;
+  iceRow.append(iceSwatch, el('span', undefined, 'Permanently shaded regions with water-ice signatures'));
+  iceLegend.append(
+    iceRow,
+    el('p', 'ly-note', 'South polar region only: 169 regions of interest, outlined about 0.3 km wider than the listed shadowed areas. Targets for study, not confirmed deposits. Lemelin et al. 2021 (Zenodo 4646092), CC BY 4.0. Distances from a site are in its card.'),
+  );
+  panel.append(reliefField, reliefNote, cover, coverLegend, ice, iceLegend);
 
   // ---- Lighting ----
   panel.append(el('h3', 'ly-section-title', 'Sunlight on the globe'));
@@ -177,20 +236,37 @@ export function mountFiltersPanel(region: HTMLElement): void {
       sw.style.background = SUN_BAND_COLOUR;
       row.append(sw, el('span', undefined, `Sun between ${s.sunElMinDeg}° and ${s.sunElMaxDeg}° at ${isoUtc(s.timeMs)}`));
       legend.append(row);
-    } else {
-      const ramp = el('div', 'ly-legend-ramp');
-      ramp.style.background = `linear-gradient(to right, ${OVERLAY_RAMP.join(', ')})`;
-      const scale = el('div', 'ly-legend-scale');
-      scale.append(el('span', undefined, '0 %'), el('span', undefined, '50 %'), el('span', undefined, '100 % of time'));
-      legend.append(ramp, scale);
+      legend.append(el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+      return;
     }
-    legend.append(el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+    // The multi-year average maps: their own legend, in the words of the data's own index.
+    const avg = globeDisplay.getLive().averages;
+    const ramp = el('div', 'ly-legend-ramp');
+    ramp.style.background = `linear-gradient(to right, ${OVERLAY_RAMP.join(', ')})`;
+    const scale = el('div', 'ly-legend-scale');
+    scale.append(el('span', undefined, '0 % (never)'), el('span', undefined, '50 %'), el('span', undefined, '100 % of time'));
+    legend.append(ramp, scale);
+    if (avg.state !== 'ready') {
+      const status = el('p', 'ly-note fp-avgstatus', avg.state === 'missing' ? avg.reason : 'Loading the map…');
+      status.setAttribute('role', 'status');
+      legend.append(status, el('p', 'ly-note', info.meaning(s.sunElMinDeg, s.sunElMaxDeg)));
+      return;
+    }
+    const l = avg.legend;
+    legend.append(el('p', 'ly-note', l.meaning), el('p', 'ly-note', `Where: ${l.extent}`));
+    const more = el('details', 'fp-avgmore');
+    more.append(el('summary', undefined, 'Source, averaging period and limits'));
+    for (const text of [`Averaging period: ${l.period}`, `Source: ${l.source}`, ...l.processing, ...l.caveats, l.citation]) more.append(el('p', 'ly-note', text));
+    legend.append(more);
   };
 
   let lastLegendMs = -Infinity;
   const sync = (changed?: ReadonlySet<string>) => {
     const s = store.get();
-    set(date, isoUtc(s.timeMs).slice(0, 16));
+    set(date, isoUtc(s.windowStartMs).slice(0, 16));
+    dateNote.hidden = s.delayH === 0;
+    dateNote.textContent = s.delayH === 0 ? '' : `With the ${s.delayH} h delay the mission window starts ${formatUtc(effectiveStartMs(s))}.`;
+    set(delay.input, String(s.delayH));
     set(lat.input, s.globeCenter.lat.toFixed(2));
     set(lon.input, s.globeCenter.lon.toFixed(2));
     const alt = s.globeCenter.altitudeKm;
@@ -213,13 +289,45 @@ export function mountFiltersPanel(region: HTMLElement): void {
       lastLegendMs = performance.now();
     }
   };
-  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowDurationH', 'lightMode', 'showMissions', 'overlay'], (_s, changed) => sync(changed));
+  const syncDisplay = () => {
+    const d = globeDisplay.get(), live = globeDisplay.getLive();
+    if (![...relief.options].some((o) => Number(o.value) === d.reliefFactor)) relief.append(new Option(reliefLabel(d.reliefFactor), String(d.reliefFactor)));
+    relief.value = String(d.reliefFactor);
+    const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
+    const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
+    reliefNote.textContent = `${data}${rule}`;
+    coverBox.checked = d.coverage;
+    coverLegend.hidden = !d.coverage;
+    iceBox.checked = d.iceTargets;
+    iceLegend.hidden = !d.iceTargets;
+  };
+  let shownAverages = globeDisplay.getLive().averages;
+  globeDisplay.subscribe(() => {
+    syncDisplay();
+    // The average map's legend follows its loading state.
+    if (globeDisplay.getLive().averages !== shownAverages) {
+      shownAverages = globeDisplay.getLive().averages;
+      renderLegend();
+    }
+  });
+  syncDisplay();
+
+  // A field is not overwritten while it has the focus (someone may be typing in it); bring it
+  // back in step when the focus leaves.
+  panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
+  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'overlay'], (_s, changed) => sync(changed));
   sync();
 
-  // Narrow screens: the panel is a sheet opened from the "Filters" button.
+  // Narrow screens: the panel is a sheet opened from the "Filters" button (the showPanel action).
+  initPanels();
   const toggle = document.getElementById('left-toggle');
-  toggle?.addEventListener('click', () => {
-    const open = document.body.classList.toggle('left-open');
-    toggle.setAttribute('aria-expanded', String(open));
-  });
+  const syncSheet = () => {
+    const open = isPanelOpen('filters');
+    document.body.classList.toggle('left-open', open);
+    toggle?.setAttribute('aria-expanded', String(open));
+  };
+  toggle?.addEventListener('click', () => void runAction('showPanel', { panel: 'filters', open: !document.body.classList.contains('left-open') }));
+  onPanelChange((which) => which === 'filters' && syncSheet());
+  window.matchMedia('(max-width: 700px)').addEventListener('change', syncSheet);
+  syncSheet();
 }

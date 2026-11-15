@@ -1,0 +1,16 @@
+{
+ "note": "Sites used by the T-26 checks. 'landing' sites use the app's pins (public/data/landings.json) and their bundled site windows; the others are custom pins chosen here. Longitudes are east-positive.",
+ "sites": {
+  "blue-ghost-1":     { "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562,   "lon": 61.81 },
+  "chandrayaan-3":    { "name": "Chandrayaan-3",        "kind": "landing", "lat": -69.3741, "lon": 32.32 },
+  "apollo-15":        { "name": "Apollo 15",            "kind": "landing", "lat": 26.13239, "lon": 3.6333 },
+  "im-2":             { "name": "IM-2",                 "kind": "landing", "lat": -84.79,   "lon": 29.2 },
+  "shackleton-rim":   { "name": "Shackleton rim pin",   "kind": "custom",  "lat": -89.78,   "lon": -155.73, "why": "On the rim crest of Shackleton (IAU centre 89.67 S 129.78 E, 21 km across): 10.4 km from that centre, 1730 m high." },
+  "connecting-ridge": { "name": "Connecting ridge pin", "kind": "custom",  "lat": -89.45,   "lon": -137.2,  "why": "On the ridge between Shackleton and de Gerlache, 1956 m high; the pin @analysis used." },
+  "shackleton-floor": { "name": "Shackleton floor",     "kind": "custom",  "lat": -89.67,   "lon": 129.78,  "why": "IAU centre of Shackleton: permanently shadowed floor." },
+  "ridge-top":        { "name": "Connecting ridge, brightest PGDA pixel", "kind": "custom", "lat": -89.4749, "lon": -137.4431, "why": "Brightest pixel of AVGVISIB_85S_060M_201608 (88.44 %)." },
+  "rim-top":          { "name": "Shackleton rim, brightest PGDA pixel",   "kind": "custom", "lat": -89.7843, "lon": -155.9041, "why": "Brightest pixel of AVGVISIB_85S_060M_201608 on Shackleton's rim (85.46 %)." },
+  "limb-east":        { "name": "East limb pin",        "kind": "custom",  "lat": 0,        "lon": 90,      "why": "Earth rides the horizon; only the 1.9 km whole-Moon grid is bundled here." },
+  "limb-west":        { "name": "West limb pin",        "kind": "custom",  "lat": -35,      "lon": -88,     "why": "Earth rides the horizon; only the 1.9 km whole-Moon grid is bundled here." }
+ }
+}

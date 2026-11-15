@@ -8,8 +8,9 @@ import {
   SRGBColorSpace,
   Texture,
 } from 'three';
+import { MOON_RADIUS_M } from '../core/types';
 import { latLonToVec3 } from '../data/landings';
-import { applyLunarShading } from './sky';
+import { patchSurfaceMaterial, type SurfaceUniforms } from './globe/surfaceShader';
 
 // NASA Moon Trek WMTS (equirectangular, 2 x 1 tiles at level 0, 256 px tiles).
 const TREK = 'https://trek.nasa.gov/tiles/Moon/EQ';
@@ -34,6 +35,9 @@ export const DETAIL_LAYER: ImageryLayer = {
   id: 'Kaguya_TCortho_Mosaic_Global_4096ppd', ext: 'png', zoom: 10, rows: 8, radius: 1.0001, gain: 1.8, credit: 'Kaguya TC (JAXA/SELENE)',
 };
 const LAYERS = [CONTEXT_LAYER, DETAIL_LAYER];
+
+/** The imagery is equirectangular: poleward of this latitude it is stretched into streaks, so it is not drawn there. */
+export const IMAGERY_MAX_LAT = 80;
 
 export const SITE_IMAGERY_CREDIT = `${LAYERS.map((l) => l.credit).join(' · ')}, via NASA Moon Trek`;
 
@@ -145,7 +149,13 @@ function feather(): Texture {
   return featherTexture;
 }
 
-function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: number): { mesh: Mesh; mosaic: TileMosaic } {
+/** Height of the drawn terrain above the reference sphere at a point, metres. */
+export type HeightSampler = (lat: number, lon: number) => number;
+
+/** Grid lines per side of a patch: as fine as the relief tiles underneath, so the two surfaces stay together. */
+const PATCH_SEGMENTS = 96;
+
+function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: number, uniforms: SurfaceUniforms, heightM: HeightSampler): { mesh: Mesh; mosaic: TileMosaic } {
   const mosaic = createTileMosaic(lat, lon, layer, anisotropy);
   const { latN, latS, lonW, lonE } = mosaic;
 
@@ -157,25 +167,32 @@ function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: n
     transparent: true,
     opacity: 0,
     depthWrite: false,
+    // The patch lies a little above terrain that follows the same heights: let it win where they meet.
+    polygonOffset: true,
+    polygonOffsetFactor: -2,
+    polygonOffsetUnits: -8,
   });
   material.color.setScalar(layer.gain);
-  applyLunarShading(material);
+  // Drawn on the relief (same displacement as the tiles), lifted by the layer's own small offset.
+  patchSurfaceMaterial(material, uniforms, { lift: layer.radius - 1 });
   mosaic.ready.then((ok) => (material.userData.loaded = ok));
 
   // Curved grid following the sphere; UVs are linear in lat/lon, matching the tile grid.
-  const seg = 32;
+  // Positions are on the unit sphere: the shader adds the terrain height and the layer's lift.
+  const seg = PATCH_SEGMENTS;
   const pos: number[] = [];
-  const nrm: number[] = [];
   const uv: number[] = [];
+  const hgt: number[] = [];
   const idx: number[] = [];
   for (let j = 0; j <= seg; j++) {
     for (let i = 0; i <= seg; i++) {
       const u = i / seg;
       const v = j / seg;
-      const p = latLonToVec3(latS + (latN - latS) * v, lonW + (lonE - lonW) * u);
-      pos.push(p.x * layer.radius, p.y * layer.radius, p.z * layer.radius);
-      nrm.push(p.x, p.y, p.z);
+      const pLat = Math.max(-90, Math.min(90, latS + (latN - latS) * v)), pLon = lonW + (lonE - lonW) * u;
+      const p = latLonToVec3(pLat, pLon);
+      pos.push(p.x, p.y, p.z);
       uv.push(u, v);
+      hgt.push(heightM(pLat, pLon) / MOON_RADIUS_M);
     }
   }
   for (let j = 0; j < seg; j++) {
@@ -188,12 +205,16 @@ function buildLayer(lat: number, lon: number, layer: ImageryLayer, anisotropy: n
     }
   }
   const geo = new BufferGeometry();
-  geo.setAttribute('position', new Float32BufferAttribute(pos, 3));
-  geo.setAttribute('normal', new Float32BufferAttribute(nrm, 3));
+  const position = new Float32BufferAttribute(pos, 3);
+  geo.setAttribute('position', position);
+  geo.setAttribute('normal', position);
   geo.setAttribute('uv', new Float32BufferAttribute(uv, 2));
+  geo.setAttribute('aHeight', new Float32BufferAttribute(hgt, 1));
   geo.setIndex(idx);
-
-  return { mesh: new Mesh(geo, material), mosaic };
+  const mesh = new Mesh(geo, material);
+  mesh.frustumCulled = false; // small, and its bounds move with the relief
+  mesh.userData.bounds = { latN, latS, lonW, lonE };
+  return { mesh, mosaic };
 }
 
 /** High-resolution imagery draped over the globe around one landing site. */
@@ -201,13 +222,28 @@ export class SitePatch {
   readonly root = new Group();
   private readonly mosaics: TileMosaic[] = [];
 
-  constructor(lat: number, lon: number, anisotropy: number) {
+  constructor(lat: number, lon: number, anisotropy: number, uniforms: SurfaceUniforms, heightM: HeightSampler) {
     LAYERS.forEach((layer, i) => {
-      const { mesh, mosaic } = buildLayer(lat, lon, layer, anisotropy);
+      const { mesh, mosaic } = buildLayer(lat, lon, layer, anisotropy, uniforms, heightM);
       mesh.renderOrder = 1 + i;
       this.root.add(mesh);
       this.mosaics.push(mosaic);
     });
+  }
+
+  /** Reads the terrain heights again (finer elevation data has arrived). */
+  refreshHeights(heightM: HeightSampler): void {
+    for (const child of this.root.children) {
+      const mesh = child as Mesh;
+      const { latN, latS, lonW, lonE } = mesh.userData.bounds as { latN: number; latS: number; lonW: number; lonE: number };
+      const attr = mesh.geometry.getAttribute('aHeight');
+      const n = PATCH_SEGMENTS + 1;
+      for (let j = 0; j < n; j++) {
+        const pLat = Math.max(-90, Math.min(90, latS + ((latN - latS) * j) / PATCH_SEGMENTS));
+        for (let i = 0; i < n; i++) attr.setX(j * n + i, heightM(pLat, lonW + ((lonE - lonW) * i) / PATCH_SEGMENTS) / MOON_RADIUS_M);
+      }
+      attr.needsUpdate = true;
+    }
   }
 
   /** Fade the patch in as the camera descends; it is invisible from globe distance. */
