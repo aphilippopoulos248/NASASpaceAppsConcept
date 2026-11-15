@@ -119,16 +119,24 @@ screen. `slopeLimitDeg` also sets the app's slope limit (default: the current on
 before it starts: no site, a grid of more than 2000 points, a grid holding only the site.
 `radiusM` 50 to 50 000, `spacingM` 10 to 10 000.
 
+Values from the browser check (IM-2, 24 h from touchdown, 1 km every 200 m):
+
 ```jsonc
 {
   "scenario": { /* as getAnalysis.scenario: the scenario that was scanned */ },
-  "options": { "radiusM": 2000, "spacingM": 300, "slopeLimitDeg": 10 },
-  "scanned": 137,                       // points, the site itself included
-  "rankedCount": 98,                    // alternatives within the limits, all ranked
-  "reference": { /* Row */, "rank": 0, "isReference": true, "overSlopeLimit": false },
-  "betterThanReference": 12,            // alternatives scoring higher than the site; null if the site has no score
-  "candidates": [ /* Row, best first, at most 10: rank 1..10 */ ],
-  "rejected": { "slope": 30, "noData": 8 },   // alternatives left out (the site itself is not counted)
+  "options": { "radiusM": 1000, "spacingM": 200, "slopeLimitDeg": 10 },
+  "scanned": 81,                        // points, the site itself included
+  "rankedCount": 80,                    // alternatives within the limits, all ranked
+  "reference": { "rank": 0, "id": "im-2", "name": "IM-2 Athena", "latDeg": -84.79, "lonDegEast": 29.2,
+                 "distanceM": 0, "bearingDeg": null, "elevationM": 5321, "slopeDeg": 2.06,
+                 "illuminationPct": 100, "longestDarknessH": 0, "earthVisiblePct": 100,
+                 "longestEarthGapH": 0, "score": 100, "isReference": true, "overSlopeLimit": false },
+  "betterThanReference": 0,             // alternatives scoring higher than the site; null if the site has no score
+  "candidates": [ { "rank": 1, "id": "pin:-84.79660,29.20000", "name": "Candidate 200 m S of IM-2 Athena",
+                    "latDeg": -84.7966, "lonDegEast": 29.2, "distanceM": 200, "bearingDeg": 180, "elevationM": 5329,
+                    "slopeDeg": 2.44, "illuminationPct": 100, "longestDarknessH": 0, "earthVisiblePct": 100,
+                    "longestEarthGapH": 0, "score": 100 }, /* … best first, at most 10 */ ],
+  "rejected": { "slope": 0, "noData": 0 },    // alternatives left out (the site itself is not counted)
   "ranking": "score = mean of illuminationPct and earthVisiblePct over the mission window; rank 1 is the highest score",
   "basis": "Slope over 120 m from …, the same measure for every candidate. Skyline every 1 deg from …; window sampled every 30 min (scan settings, coarser than the main analysis).",
   "replacedByNewerScan"?: true          // another scan replaced this one on screen while it ran
@@ -172,7 +180,21 @@ set" (last limb), "Sun starts rising" (first limb), "Earth's centre sets / rises
 figure is "Earth's centre in view". The other end of each transition and an any-part Earth
 figure come from Lunyx Science (@events, T-31 items 2-3); the panel will show them when they land.
 
-## Checked in a browser (headless Chromium, dev server, IM-2, 7-day window)
+## Slice 2 checked in a browser (headless Chromium on the GPU, dev server, IM-2, 24 h from touchdown)
+
+Save A → "Nearby sites" tab by keyboard (ArrowRight on the tab list) → radius 1000, spacing 200
+(the field says "81 points: the site itself and 80 candidates…") → Scan: progress bar while it
+runs, 19 s for 81 points on a busy machine → the list (the site itself first, then 1..80; all
+100 % sunlit and Earth's centre in view in that day, so ranked by distance) → "Compare as B" on
+row 1: the panel switches to "A and B" with A = IM-2 Athena, B = "Candidate 200 m S of IM-2
+Athena", the candidate is the site on screen, and the sentence "The ground at Candidate 200 m
+S … is 0.2 deg steeper than at IM-2 Athena (2.3 deg over 120 m vs 2.1 deg over 120 m)". The
+rankNearby action returned the same rows as the screen. In the surface view the launcher sits
+at the top centre; Escape closes the panel and leaves the surface view and the site as they
+were. No console errors; no horizontal overflow at 390 px (the list becomes one card per site).
+Screens: `t11-nearby-*.png`, `t11-candidate-as-b-*.png`, `t11-surface-1280.png`.
+
+## Slice 1 checked in a browser (headless Chromium, dev server, IM-2, 7-day window)
 
 Launcher → panel; delayed arrival by keyboard (type 24, Enter): result on screen in 14 s on a
 busy machine, sentences and B − A equal to the `compare` action's `diff`; requirements typed
