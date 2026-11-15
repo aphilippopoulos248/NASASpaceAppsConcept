@@ -768,6 +768,16 @@ export const flags: Intent = (step) => {
   });
 };
 
+export const territories: Intent = (step) => {
+  const m = /^(show|display|turn on|enable|hide|remove|turn off|disable)\s+(?:the\s+)?(?:country\s+)?territor(?:y|ies)(?:\s+(?:colours?|colors?|colouring|coloring))?(?:\s+on the globe)?$/.exec(step);
+  if (!m) return null;
+  const show = !/hide|remove|off|disable/.test(m[1]);
+  return plan(`${show ? 'show' : 'hide'} the country territories on the globe`, async (ctx) => {
+    const r = await ctx.run('showTerritories', { show });
+    return r.showTerritories === true ? 'The globe is coloured by the country of the nearest landing shown.' : 'The country territories are hidden.';
+  });
+};
+
 // ---------------------------------------------------------------- the site card's records, the real clock
 
 const THIS_SITE = '(?:\\s+(?:it|this|this site|the site|this landing|the landing|here|this lander|the lander|this hardware|the hardware))?';
@@ -800,9 +810,8 @@ export const siteRecords: Intent = (step) => {
     const a = site.exploredArea;
     if (a === undefined) throw new Halt('This build does not report the explored area of a site.');
     if (!isObject(a)) return `The explored area of ${name} is not available.`;
-    const scale = num(a, 'displayScale');
     return [
-      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size${scale && scale !== 1 ? `; the globe draws it ${scale} times wider so it can be seen` : ''}).`,
+      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size).`,
       ...(a.located === false ? ['The lander has not been found in LRO images: this is the lander alone at the catalogue\'s approximate position.'] : []),
       ...(str(a, 'note') ? [str(a, 'note')!] : []),
       ...(str(a, 'source') ? [`Source: ${str(a, 'source')}.`] : []),
@@ -837,5 +846,6 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
   [['loadPreset'], 'Replays: "list the presets", "replay the eclipse", "replay IM-2 landing"'],
   [['showFlags'], 'Flags: "show country flags", "hide the flags"'],
+  [['showTerritories'], 'Territories: "show territories", "hide territory colours"'],
   [['getState'], 'Site records and the real clock: "who owns this site", "how big is the explored area", "what is the real time"'],
 ];

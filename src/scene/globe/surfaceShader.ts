@@ -12,6 +12,9 @@ import { lunarFragmentShader } from '../sky';
 /** Colours of the 0..100 % ramp, low to high (same list as the legend). */
 export const RAMP_STEPS = 6;
 
+/** Most landing sites the territory colouring can tell apart (the shader's loop bound). */
+export const MAX_TERRITORY_SITES = 64;
+
 /** Overlay numbers in the shader. */
 export const OVERLAY_CODE = { off: 0, 'sun-band': 1, 'avg-illumination': 2, 'avg-earth-visibility': 2 } as const;
 
@@ -37,6 +40,17 @@ export interface SurfaceUniforms {
   uCoverColor: IUniform<Color[]>;
   /** Base tiles are not drawn where the unit direction's y is below this (the polar close-up covers that part). -2 = draw everything. */
   uCapHole: IUniform<number>;
+  /**
+   * Territories (see territories.ts): every point of the Moon is coloured for the country of the
+   * nearest of these landing sites. xyz = unit direction to the site (scene axes), w = its country's number.
+   */
+  uTerrSite: IUniform<Vector4[]>;
+  /** Colour of each site's country, in the order of uTerrSite. */
+  uTerrColor: IUniform<Color[]>;
+  /** How many entries of uTerrSite are in use. */
+  uTerrCount: IUniform<number>;
+  /** How strongly the country colour tints the ground, 0..1. */
+  uTerrFill: IUniform<number>;
 }
 
 export function createSurfaceUniforms(ramp: readonly string[], bandColor: string, coverColors: readonly string[]): SurfaceUniforms {
@@ -55,6 +69,10 @@ export function createSurfaceUniforms(ramp: readonly string[], bandColor: string
     uPolarHalf: { value: new Vector3(0, 0, 0) },
     uCoverColor: { value: coverColors.slice(0, 3).map((c) => new Color(c)) },
     uCapHole: { value: -2 },
+    uTerrSite: { value: Array.from({ length: MAX_TERRITORY_SITES }, () => new Vector4(1, 0, 0, 0)) },
+    uTerrColor: { value: Array.from({ length: MAX_TERRITORY_SITES }, () => new Color('#000000')) },
+    uTerrCount: { value: 0 },
+    uTerrFill: { value: 0.24 },
   };
 }
 
@@ -104,6 +122,12 @@ uniform float uCapHole;
 	uniform vec3 uPolarHalf;
 	uniform vec3 uCoverColor[ 3 ];
 #endif
+#if LUNYX_TERRITORY == 1
+	uniform vec4 uTerrSite[ ${MAX_TERRITORY_SITES} ];
+	uniform vec3 uTerrColor[ ${MAX_TERRITORY_SITES} ];
+	uniform int uTerrCount;
+	uniform float uTerrFill;
+#endif
 #ifdef LUNYX_POLAR
 	uniform sampler2D uShadowMap;
 	uniform float uShadowOn;
@@ -139,9 +163,37 @@ vec4 lunyxSquare( float m, float halfW, vec3 colour, float fill, float w ) {
 }
 #endif
 
-// The overlays are compiled in only while they are switched on (LUNYX_OVERLAY, LUNYX_COVERAGE):
+// The overlays are compiled in only while they are switched on (LUNYX_OVERLAY, LUNYX_COVERAGE, LUNYX_TERRITORY):
 // a software renderer would otherwise pay for the unused branches on every pixel.
 vec3 lunyxOverlay( vec3 colour, vec3 d ) {
+	#if LUNYX_TERRITORY == 1
+	if ( uTerrCount > 0 ) {
+		// The nearest landing site owns this point: its country's colour tints the ground.
+		float best = - 2.0;
+		vec4 own = uTerrSite[ 0 ];
+		vec3 tint = uTerrColor[ 0 ];
+		for ( int i = 0; i < ${MAX_TERRITORY_SITES}; i ++ ) {
+			if ( i >= uTerrCount ) break;
+			float c = dot( d, uTerrSite[ i ].xyz );
+			if ( c > best ) { best = c; own = uTerrSite[ i ]; tint = uTerrColor[ i ]; }
+		}
+		// Distance (Moon radii) to the nearest border with another country: the plane halfway between
+		// the owning site and a foreign one. Sites of the same country have no border between them.
+		float border = 2.0;
+		for ( int i = 0; i < ${MAX_TERRITORY_SITES}; i ++ ) {
+			if ( i >= uTerrCount ) break;
+			vec4 other = uTerrSite[ i ];
+			if ( abs( other.w - own.w ) > 0.5 ) {
+				vec3 n = own.xyz - other.xyz;
+				border = min( border, dot( d, n ) / max( length( n ), 1e-6 ) );
+			}
+		}
+		float w = max( length( fwidth( d ) ), 1e-7 );
+		float line = 1.0 - smoothstep( 0.3 * w, 0.9 * w, border );
+		colour = mix( colour, tint, uTerrFill );
+		colour = mix( colour, vec3( 1.0 ), 0.7 * line );
+	}
+	#endif
 	#if LUNYX_OVERLAY == 1
 	{
 		// Sun elevation on a smooth sphere: the angle between the local vertical and the Sun, from the horizon.
@@ -254,19 +306,19 @@ export interface SurfacePatch {
 }
 
 const patched = new Set<Material>();
-let features = { overlay: 0, coverage: 0 };
+let features = { overlay: 0, coverage: 0, territory: 0 };
 
 /**
  * Switches the overlay code in every patched material (0 = none, 1 = Sun band, 2 = average
- * map; coverage outlines on or off). The shaders are recompiled, which takes a moment, so
+ * map; coverage outlines on or off; country territories on or off). The shaders are recompiled, which takes a moment, so
  * this is for changes a person makes, not for animation.
  */
-export function setSurfaceFeatures(overlay: number, coverage: boolean): void {
-  const next = { overlay, coverage: coverage ? 1 : 0 };
-  if (next.overlay === features.overlay && next.coverage === features.coverage) return;
+export function setSurfaceFeatures(overlay: number, coverage: boolean, territories = false): void {
+  const next = { overlay, coverage: coverage ? 1 : 0, territory: territories ? 1 : 0 };
+  if (next.overlay === features.overlay && next.coverage === features.coverage && next.territory === features.territory) return;
   features = next;
   for (const m of patched) {
-    m.defines = { ...m.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage };
+    m.defines = { ...m.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: features.territory };
     m.needsUpdate = true;
   }
 }
@@ -277,7 +329,7 @@ export function setSurfaceFeatures(overlay: number, coverage: boolean): void {
  */
 export function patchSurfaceMaterial(material: Material, shared: SurfaceUniforms, options: SurfacePatch = {}): void {
   const lift: IUniform<number> = { value: options.lift ?? 0 };
-  material.defines = { ...material.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, ...(options.hole && { LUNYX_HOLE: '' }), ...(options.polar && { LUNYX_POLAR: '' }) };
+  material.defines = { ...material.defines, LUNYX_OVERLAY: features.overlay, LUNYX_COVERAGE: features.coverage, LUNYX_TERRITORY: features.territory, ...(options.hole && { LUNYX_HOLE: '' }), ...(options.polar && { LUNYX_POLAR: '' }) };
   material.onBeforeCompile = (shader) => {
     Object.assign(shader.uniforms, shared, { uLift: lift }, options.polar ?? {});
     shader.vertexShader = shader.vertexShader.replace('#include <common>', `#include <common>\n${VERTEX_PARS}`).replace('#include <begin_vertex>', VERTEX_BEGIN);

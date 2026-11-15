@@ -1,34 +1,41 @@
-/* The left column belongs to the key metrics and the chart: the strip keeps out of it
-   (edge 24 + panel 288 + gap 12 = 324 px from the left; the region is centred, at most 760 px wide). */
-.surface-hud { padding: var(--sp-2) var(--sp-3); display: grid; gap: var(--sp-1); margin-left: clamp(0px, calc(704px - 50vw), 300px); }
-/* At its large size the chart takes the strip's place; the strip is back when the chart is shrunk or hidden. */
-.surface-hud--chart-expanded { display: none; }
-.sh-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); }
-.sh-title { font-family: var(--font-display); font-weight: var(--fw-semibold); }
+/* Keep the original bottom dock and its clearance to the Key metrics column. */
+.region-surface-hud > .surface-hud {
+  --sh-offset: clamp(0px, calc(704px - 50vw), 300px);
+  width: max-content;
+  max-width: calc(100% - var(--sh-offset));
+  margin-left: var(--sh-offset);
+  padding: var(--sp-1) var(--sp-2);
+}
+body[data-view='surface'] .surface-hud:not(.sp-folded) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-2);
+}
+.surface-hud .sp-toolbar { border-bottom: 0; padding-bottom: 0; }
+.surface-hud:has(details[open]) .sh-controls { flex-basis: 100%; }
+.sh-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
+.sh-menu { min-width: 0; }
+.sh-menu[open] { flex-basis: 100%; }
+.sh-summary { list-style: none; user-select: none; }
+.sh-summary::-webkit-details-marker { display: none; }
+.sh-summary::after { content: ''; width: 6px; height: 6px; border: solid currentColor; border-width: 0 1px 1px 0; transform: translateY(-1px) rotate(45deg); }
+.sh-menu[open] > .sh-summary::after { transform: translateY(2px) rotate(225deg); }
+.sh-pop { margin-top: var(--sp-1); }
+.sh-options .sh-pop { display: flex; flex-wrap: wrap; gap: var(--sp-1); }
+.sh-about .sh-pop {
+  display: grid;
+  gap: var(--sp-1);
+  max-width: min(440px, 100%);
+  max-height: min(34dvh, 260px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-1);
+}
 .sh-status { color: var(--text-muted); font-size: var(--fs-xs); }
-.sh-controls { display: flex; flex-wrap: wrap; gap: var(--sp-1); margin-left: auto; }
-.sh-ground { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
 .sh-ground strong, .sh-body strong { color: var(--text); font-weight: var(--fw-medium); }
 .sh-flag { color: var(--warn); }
-.sh-summary { cursor: pointer; width: fit-content; color: var(--accent); font-size: var(--fs-xs); }
-.sh-body { display: grid; gap: var(--sp-1); margin-top: var(--sp-1); max-height: min(34vh, 260px); overflow-y: auto; padding-right: var(--sp-1); }
-.sh-more[open] ~ .sh-ground, .surface-hud:has(.sh-more[open]) .sh-ground { -webkit-line-clamp: unset; line-clamp: unset; }
+.sh-body { display: grid; gap: var(--sp-1); }
 @media (max-width: 700px) {
-  .surface-hud { margin-left: 0; }
-  /* On a phone the chart, and the blockage explanation, take the strip's place. */
-  .surface-hud--chart-open, .surface-hud--explaining { display: none; }
-  .sh-status { flex-basis: 100%; order: 3; }
-  .sh-ground { -webkit-line-clamp: 1; line-clamp: 1; }
-  .sh-keys { display: none; }
-}
-/* Who the hardware at the site belongs to: a note like the ground line (the strip's grid gap spaces it). */
-.sh-owner { margin: 0; }
-
-/* Windows up to 800 px tall: the ground line and the ownership line are read in "About this view"
-   instead, which keeps the strip below the horizon band at the centre of the screen (a low Sun at a
-   polar site stands there, at the default look). Larger windows show them in the strip itself. */
-.sh-compact-only { display: none; }
-@media (max-height: 800px) {
-  body[data-view='surface'] .sh-ground, body[data-view='surface'] .sh-owner { display: none; }
-  .sh-body > .sh-compact-only:not([hidden]) { display: block; }
+  .region-surface-hud > .surface-hud { --sh-offset: 0px; margin-inline: auto; }
 }
