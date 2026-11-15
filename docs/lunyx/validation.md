@@ -534,3 +534,92 @@ days ... at least 3000 h" for a 5-day window.
 loaded; measured while the machine was busy, load average 7): 12 months at IM-2 0.36 s, at the
 Shackleton rim pin 0.37 s, at Apollo 15 0.36 s (wall-clock 0.31-0.40 s). The skyline is
 computed once (0.09-0.12 s of it).
+
+## 8. Independent end-to-end validation (T-26 by @ephemeris-check)
+
+@ephemeris-check rebuilt the chain without code from `src/`: their own ray march over the
+bundled elevation grids, JPL Horizons and SPICE for the Sun and Earth, and published mission
+facts. Everything is in `tests/fixtures/validation/ephemeris-check/` (`README.md`,
+`T-26-handover.md`, `*/results.txt`; checks 1, 2 and 4 re-run offline from the stored inputs,
+checks 0 and 3 need the PDS, PGDA and SPICE downloads). They compared two builds: integration
+375f816 (before the skyline fine search of section 3) and 32ef35a (with it). The figures below
+are theirs; the observer-on-the-ground repair is in 3a.
+
+**What agrees** (32ef35a, observer 2 m up unless stated)
+
+- *Elevation data.* The bundled LOLA grids equal the PDS originals within rounding at 30 080
+  samples; a one-sample shift or a mirror image would not.
+- *Skyline.* Within 0.05 deg at five sites, 0.002-0.014 deg at four of them (table in 3a).
+- *Event logic.* Fed the same skyline, the app's Earth-visibility share is within 0.02 points
+  of theirs, its Blue Ghost sunset (last limb) within 20 s at three eye heights, eclipse
+  totality at Blue Ghost and Apollo 15 within 6 s.
+- *Events against Horizons and their skyline.* Blue Ghost last limb 2025-03-16 19:30:03 UTC
+  (app 19:30:11; 19:16 at 0.5 m, 19:58 at 5 m); eclipse of 2025-03-14 totality
+  06:17:24-08:34:25 (app 06:17:19-08:34:19); Chandrayaan-3 sunset 2023-09-04 08:02:23 and
+  sunrise 2023-09-19 23:57:08 (app 08:02:08 and 23:56:40); Apollo 15 sunset 1971-08-13
+  11:36:55 (app 11:36:42). Through the bundled Horizons tables: eclipses within 2 s, IM-2
+  Earthset +1.9 min, IM-2 sunset -0.1 min.
+- *Published facts.* Firefly's Blue Ghost eclipse times (first contact, totality, last
+  contact) within 0.8 min of both computations; Chandrayaan-3's published sunset date
+  (4 September 2023).
+- *Apollo Lunar Surface Journal* (J. Scotti's table, 43 instants of Apollo 11-17): the app is
+  within 0.004 deg of an exact SPICE computation at all 43; the table itself agrees at 42 (one
+  Apollo 12 row is 0.40 deg off in Sun azimuth, out of line with its neighbours in the table).
+- *Earth visibility, 60 days from 2025-03-01, five polar and limb pins:* within 0.05 points;
+  rise and set within 23 min, the same number of risings and settings everywhere.
+- *18.6 years, hourly, six south-polar points:* the app within 0.03 points of their any-Sun
+  share at 2 m. Three independent routes agree at IM-2: PGDA product 69 46.55 %, theirs
+  46.35-46.71 %, the app 46.31-46.68 % (0 m to 2 m); Shackleton's floor is permanently dark in
+  all three. On crests, 2 m up, both computations are within 1.4 points of PGDA's brightest
+  pixels (PGDA's own neighbouring 60 m pixels differ there by tens of points, so a single
+  pixel proves nothing).
+- *Sky positions:* `skyAt()` within 0.0036 deg on all 1008 rows of the T-18 fixture on
+  32ef35a (section 1a).
+
+**The defects found, and the builds they affected**
+
+- *Skyline read low near the observer* (fixed by the fine search of section 3, integrated
+  between 375f816 and 32ef35a). In 375f816 and earlier: up to 1.04 deg at a Shackleton rim pin
+  with a 2 m mast; Earth visibility +2.0 points there with Earthrise and Earthset six hours
+  off, +1.2 points and up to 7.7 hours at a west-limb pin (1.9 km data only); Chandrayaan-3
+  sunset 6.6 min late; 2 m sunlight up to 0.79 points high; on the ground 14.5 to 30.8 points
+  too bright on three crest points.
+- *Observer on the ground* (fixed in T-31, section 3a). In every build up to integration
+  cc736f8: up to 1.23 deg low on convex ground at 0 m, +4.7, +1.7 and +0.8 points of 18.6-year
+  any-Sun share at three crest points. Nothing measurable with a 2 m mast.
+- *Not a defect, a definition* (decision D-8): the app's "sunset" is the last limb. Firefly's
+  "operating just over 5 hours into the lunar night with the final data received around
+  6:15 pm CDT on March 16" puts the start of night at about 18:15-18:35 UTC, which is where the
+  skyline first cuts the Sun (18:23 UTC at 2 m), an hour before the last limb (19:30). The
+  other end of each transition is being added (T-31 item 2, now with Lunyx Science, @events).
+  Until it lands, the events the app computes are the last limb (setting) and the first limb
+  (rising) of the Sun and the crossing of Earth's centre, and D-8 asks every panel, countdown
+  and sentence to say which instant it quotes.
+- *Not a defect, a definition:* the app's Earth visibility counts Earth's centre; PGDA's map
+  counts any part of the disc. Counting any part, @ephemeris-check reproduces PGDA within
+  1.1 points at four smooth polar points; the centre figure is 4-5 points lower at the pole
+  and 11 lower at IM-2 (IM-2, 2 m: PGDA 92.26 %, any part 93.34 %, centre 81.12 %, app 81.12 %).
+  An any-part figure alongside the centre one is being added (T-31 item 3, now with Lunyx
+  Science, @events).
+- *Under Node,* `analyse()` uses the model instead of the two bundled Horizons windows unless
+  `setBundleReader` is called (the browser fetches them itself). A script that forgets it does
+  not notice: the model is within 0.004 deg of Horizons, so only seconds move.
+
+**Chandrayaan-3 sunrise: not confirmed by ISRO.** ISRO wrote that the "next sunrise [is]
+expected on September 22, 2023". First sunlight over the skyline is 2023-09-19 23:57 UTC
+(20 September 05:27 IST) by both computations, two days earlier; by 22 September 00:00 IST the
+Sun stands 8.2 deg above the horizontal and 6.8 deg above the skyline. ISRO's date may mean
+usable power; it must not be quoted as confirming the app's sunrise time.
+
+**Not checked**
+
+- No published rise, set or shadow time was found for IM-2, or a sunset time for Apollo 15.
+- The site windows (`public/terrain/*.bin`) against their PDS sources: only the `.lxg` grids
+  were compared with the originals. Where the 3 m site models meet the 60 m windows they
+  stepped by several metres (about 15 min of Blue Ghost sunset; task T-32 eases them at load).
+- The longest darkness over 18.6 years (the two builds differ there: 4221 h and 4896 h at the
+  rim pin, 2 m) and the seasonal outlook of section 7.
+- Anything north of the bundled polar layers at better than 1.9 km, other than at landing
+  sites; PGDA's averaging dates (not stated by PGDA); Earth's atmosphere in eclipse timing.
+- The reference is only as good as the bundled elevation data: agreement says the app computes
+  correctly from that data, not that a 40 m grid describes a rim crest to the metre.

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { SiteAnalysis } from '../../analysis/types';
+import { candidateOffsets } from '../../analysis/nearby';
+import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from '../../analysis/types';
 import { listActions, registerActions, resetActions, runAction } from '../../core/actions';
 import { AnalysisStore } from '../../core/analysisStore';
 import { createCoreActions } from '../../core/coreActions';
@@ -7,7 +8,7 @@ import { MissionFilterStore } from '../../core/missionFilter';
 import { initialState, Store } from '../../core/store';
 import type { Scenario } from '../../core/types';
 import type { Landing } from '../../data/landings';
-import { bindWorkingPair, createCompareActions } from './actions';
+import { bindWorkingPair, createCompareActions, MAX_NEARBY_CANDIDATES, nearbyPointCount } from './actions';
 import { createPanelStore } from './state';
 import { createCompareStorage, MAX_SAVED, STORAGE_KEY } from './storage';
 
@@ -24,6 +25,31 @@ const fake = (sc: Scenario): SiteAnalysis =>
     warnings: [],
   }) as unknown as SiteAnalysis;
 
+/** A scan as the science core returns it: two ranked alternatives around the scenario's site (the site itself between them), one too steep, one without data. */
+const fakeScan = (sc: Scenario, o: NearbyOptions): NearbyCandidate[] => {
+  const at = (e: number, n: number, over: Partial<NearbyCandidate> & { sun?: number }): NearbyCandidate => {
+    const isReference = e === 0 && n === 0;
+    const lat = sc.site.lat + n / 30_000, lon = sc.site.lon + e / 3_000;
+    const scored = over.sun !== undefined;
+    return {
+      site: isReference ? sc.site : { id: `pin:${lat.toFixed(5)},${lon.toFixed(5)}`, name: `Candidate ${Math.abs(e)} m ${e >= 0 ? 'E' : 'W'} of ${sc.site.name}`, kind: 'candidate', lat, lon },
+      eastM: e, northM: n, distanceM: Math.hypot(e, n), bearingDeg: isReference ? NaN : (Math.atan2(e, n) * 180 / Math.PI + 360) % 360, elevationM: 5321,
+      slope: { slopeDeg: 3, aspectDeg: 0, baselineM: 120, demName: 'LOLA' },
+      metrics: scored ? ({ illuminationPct: over.sun, earthVisiblePct: 100, longestDarknessH: 100 - over.sun!, darknessOpenEnded: false, longestEarthGapH: 0, earthGapOpenEnded: false } as NearbyCandidate['metrics']) : null,
+      rejected: null, score: scored ? (over.sun! + 100) / 2 : NaN, rank: 0, isReference,
+      basis: `Slope over 120 m from LOLA (60 m grid), the same measure for every candidate. Limit ${o.slopeLimitDeg} deg.`,
+      ...over,
+    } as NearbyCandidate;
+  };
+  return [
+    at(300, 0, { sun: 90, rank: 1 }),
+    at(0, 0, { sun: 80, rank: 2 }),
+    at(-600, 0, { sun: 70, rank: 3 }),
+    at(900, 0, { rejected: 'slope', slope: { slopeDeg: 21, aspectDeg: 0, baselineM: 120, demName: 'LOLA' } }),
+    at(-1200, 0, { rejected: 'no-data', slope: { slopeDeg: NaN, aspectDeg: NaN, baselineM: 120, demName: 'LOLA' } }),
+  ];
+};
+
 function fakeBackend() {
   const map = new Map<string, string>();
   return { map, getItem: (k: string) => map.get(k) ?? null, setItem: (k: string, v: string) => void map.set(k, v) };
@@ -33,16 +59,28 @@ function setup(options: { real?: boolean; backend?: ReturnType<typeof fakeBacken
   resetActions();
   const store = new Store(initialState(T0));
   const calls: string[] = [];
+  const scans: { site: string; options: NearbyOptions }[] = [];
   const analysis = options.real
     ? new AnalysisStore(store, undefined, 200)
-    : new AnalysisStore(store, { analyse: (sc) => (calls.push(sc.id), Promise.resolve(fake(sc))), rankNearby: () => Promise.resolve([]) }, 200);
+    : new AnalysisStore(
+        store,
+        {
+          analyse: (sc) => (calls.push(sc.id), Promise.resolve(fake(sc))),
+          rankNearby: (sc, o, onProgress) => {
+            scans.push({ site: sc.site.id, options: o });
+            onProgress?.(3, 5);
+            return Promise.resolve(fakeScan(sc, o));
+          },
+        },
+        200,
+      );
   void analysis.start();
   const panel = createPanelStore();
   const backend = options.backend ?? fakeBackend();
   const storage = createCompareStorage(backend);
   registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => [IM2], analysis }));
   registerActions(createCompareActions({ store, analysis, panel, storage, now: () => Date.UTC(2026, 0, 2, 3, 4, 5) }));
-  return { store, analysis, panel, storage, backend, calls };
+  return { store, analysis, panel, storage, backend, calls, scans };
 }
 
 const ok = async (name: string, params: unknown = {}) => {
@@ -71,7 +109,7 @@ describe('the compare panel opens through an action', () => {
 
   it('every action has a description and a parameter schema the assistant can use', () => {
     setup();
-    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons'];
+    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons', 'rankNearby', 'selectCandidate'];
     const registered = listActions();
     for (const name of mine) {
       const def = registered.find((a) => a.name === name);
@@ -305,6 +343,128 @@ describe('the working pair survives a reload', () => {
     bindWorkingPair(second.store, second.storage);
     expect(second.store.get()).toMatchObject({ compareA: { label: 'Fresh' }, compareB: null });
     expect(JSON.parse(first.backend.map.get(STORAGE_KEY)!).current).toMatchObject({ a: { label: 'Fresh' }, b: null });
+  });
+});
+
+describe('nearby alternatives', () => {
+  it('rankNearby scans around the site on screen, opens its tab and returns the ranked list', async () => {
+    const { store, panel, scans } = setup();
+    expect(await fails('rankNearby')).toBe('No site is selected. Select a landing site or drop a pin first, then scan around it.');
+    await ok('selectSite', { site: 'im-2' });
+    const r = await ok('rankNearby', { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8 });
+    expect(scans).toEqual([{ site: 'im-2', options: { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8, weightSun: 1, weightEarth: 1, azStepDeg: 1, stepMin: 30 } }]);
+    expect(store.get()).toMatchObject({ comparing: true, slopeLimitDeg: 8 });
+    expect(panel.get()).toMatchObject({ tab: 'nearby', nearbyRadiusM: 1500, nearbySpacingM: 250 });
+    expect(r).toMatchObject({
+      scenario: { site: { id: 'im-2' }, startUtc: '2025-03-06T17:28Z', durationH: 24, mastHeightM: 2 },
+      options: { radiusM: 1500, spacingM: 250, slopeLimitDeg: 8 },
+      scanned: 5,
+      rankedCount: 2,
+      betterThanReference: 1,
+      rejected: { slope: 1, noData: 1 },
+      reference: { rank: 0, id: 'im-2', name: 'IM-2 Athena', isReference: true, overSlopeLimit: false, distanceM: 0, bearingDeg: null, illuminationPct: 80, longestDarknessH: 20, earthVisiblePct: 100, score: 90 },
+      basis: 'Slope over 120 m from LOLA (60 m grid), the same measure for every candidate. Limit 8 deg.',
+    });
+    // The alternatives are numbered without the site itself: 1 = best.
+    expect(r.candidates).toEqual([
+      { rank: 1, id: 'pin:-84.79000,29.30000', name: 'Candidate 300 m E of IM-2 Athena', latDeg: -84.79, lonDegEast: 29.3, distanceM: 300, bearingDeg: 90, elevationM: 5321, slopeDeg: 3, illuminationPct: 90, longestDarknessH: 10, earthVisiblePct: 100, longestEarthGapH: 0, score: 95 },
+      { rank: 2, id: 'pin:-84.79000,29.00000', name: 'Candidate 600 m W of IM-2 Athena', latDeg: -84.79, lonDegEast: 29, distanceM: 600, bearingDeg: 270, elevationM: 5321, slopeDeg: 3, illuminationPct: 70, longestDarknessH: 30, earthVisiblePct: 100, longestEarthGapH: 0, score: 85 },
+    ]);
+    expect(r.ranking).toMatch(/mean of illuminationPct and earthVisiblePct/);
+    // Defaults: 2 km, 300 m, the current slope limit.
+    await ok('rankNearby');
+    expect(scans[1].options).toMatchObject({ radiusM: 2000, spacingM: 300, slopeLimitDeg: 8 });
+  });
+
+  it('refuses a grid the scan cannot take, before starting it', async () => {
+    const { scans } = setup();
+    await ok('selectSite', { site: 'im-2' });
+    expect(await fails('rankNearby', { radiusM: 20_000, spacingM: 100 })).toBe('A 100 m grid out to 20000 m has 160,801 points; a scan takes at most 2,000. Widen the spacing or shorten the radius.');
+    expect(await fails('rankNearby', { radiusM: 100, spacingM: 300 })).toBe('A 300 m grid out to 100 m holds only the site itself. Shorten the spacing or widen the radius.');
+    expect(await fails('rankNearby', { radiusM: 10 })).toMatch(/at least 50/);
+    expect(scans).toEqual([]);
+    // The count is the science core's own grid.
+    expect(nearbyPointCount(2000, 300)).toBe(candidateOffsets(2000, 300).length);
+    expect(nearbyPointCount(2000, 300)).toBe(137);
+    expect(nearbyPointCount(7000, 300)).toBe(candidateOffsets(7000, 300).length);
+    expect(candidateOffsets(7000, 300).length).toBeLessThanOrEqual(MAX_NEARBY_CANDIDATES);
+    expect(nearbyPointCount(50_000, 10)).toBeGreaterThan(1e8);
+    expect(Number.isNaN(nearbyPointCount(1000, 0))).toBe(true);
+  });
+
+  it('selectCandidate pins a ranked alternative as the site on screen', async () => {
+    const { store } = setup();
+    expect(await fails('selectCandidate', { rank: 1 })).toBe('There is no ranked list of nearby sites yet. Run rankNearby first.');
+    await ok('selectSite', { site: 'im-2' });
+    await ok('rankNearby');
+    expect(await fails('selectCandidate', {})).toBe('Give exactly one of `rank` or `id`.');
+    expect(await fails('selectCandidate', { rank: 1, id: 'x' })).toBe('Give exactly one of `rank` or `id`.');
+    expect(await fails('selectCandidate', { rank: 3 })).toBe('There is no candidate ranked 3: the last scan (around IM-2 Athena) ranked 2.');
+    expect(await fails('selectCandidate', { id: 'im-2' })).toBe('That id is the scanned site itself, not an alternative.');
+    expect(await fails('selectCandidate', { id: 'pin:0.00000,0.00000' })).toMatch(/^No ranked candidate of the last scan/);
+
+    const r = await ok('selectCandidate', { rank: 2 });
+    expect(r).toEqual({
+      view: 'globe',
+      site: { id: 'pin:-84.79000,29.00000', name: 'Candidate 600 m W of IM-2 Athena', kind: 'candidate', latDeg: -84.79, lonDegEast: 29 },
+      candidate: expect.objectContaining({ rank: 2, illuminationPct: 70, distanceM: 600 }),
+      scannedAround: 'IM-2 Athena',
+    });
+    expect(store.get().site).toEqual({ id: 'pin:-84.79000,29.00000', name: 'Candidate 600 m W of IM-2 Athena', kind: 'candidate', lat: -84.79, lon: 29 });
+    expect(store.get().globeCenter).toMatchObject({ lat: -84.79, lon: 29 }); // the globe flies there
+    expect(store.get()).toMatchObject({ compareA: null, compareB: null });
+    // The list stays, so another row can be chosen, by id as well.
+    expect(await ok('selectCandidate', { id: 'pin:-84.79000,29.30000' })).toMatchObject({ site: { name: 'Candidate 300 m E of IM-2 Athena' }, candidate: { rank: 1 } });
+  });
+
+  it('selectCandidate { asB } compares the candidate with the scanned site over the scanned window', async () => {
+    const { store, panel } = setup();
+    await ok('selectSite', { site: 'im-2' });
+    store.set({ windowDurationH: 72, mastHeightM: 5 });
+    await ok('rankNearby');
+    // The screen moves on before the choice: B still gets the scanned window and mast.
+    store.set({ windowDurationH: 24, mastHeightM: 2 });
+    const r = await ok('selectCandidate', { rank: 1, asB: true });
+    expect(r).toMatchObject({
+      site: { kind: 'candidate', name: 'Candidate 300 m E of IM-2 Athena' },
+      comparing: true,
+      A: 'IM-2 Athena',
+      B: 'Candidate 300 m E of IM-2 Athena',
+      scenarioA: { site: { id: 'im-2' }, durationH: 72, mastHeightM: 5, startUtc: '2025-03-06T17:28Z' },
+      scenarioB: { site: { id: 'pin:-84.79000,29.30000', kind: 'candidate' }, durationH: 72, mastHeightM: 5, startUtc: '2025-03-06T17:28Z' },
+      analysisA: { state: 'ready' },
+      analysisB: { state: 'ready' },
+      diff: { meaning: 'B minus A' },
+    });
+    expect(panel.get().tab).toBe('compare');
+    expect(store.get().site?.kind).toBe('candidate');
+
+    // A scenario already saved in A stays there.
+    await ok('selectSite', { site: 'im-2' });
+    await ok('saveScenario', { slot: 'A', label: 'Baseline' });
+    await ok('rankNearby');
+    expect(await ok('selectCandidate', { rank: 2, asB: true })).toMatchObject({ A: 'Baseline', B: 'Candidate 600 m W of IM-2 Athena', scenarioA: { durationH: 24 } });
+  });
+
+  it('the assistant\'s own sequence works: save A, pin the candidate, save B, compare', async () => {
+    setup();
+    await ok('selectSite', { site: 'im-2' });
+    await ok('rankNearby');
+    await ok('saveScenario', { slot: 'A' });
+    await ok('selectCandidate', { rank: 1 });
+    await ok('saveScenario', { slot: 'B' });
+    expect(await ok('compare')).toMatchObject({ A: 'IM-2 Athena', B: 'Candidate 300 m E of IM-2 Athena', analysisA: { state: 'ready' }, analysisB: { state: 'ready' } });
+  });
+
+  it('says when the scan itself failed', async () => {
+    resetActions();
+    const store = new Store(initialState(T0));
+    const analysis = new AnalysisStore(store, { analyse: (sc) => Promise.resolve(fake(sc)), rankNearby: () => Promise.reject(new Error('the 60 m window could not be read')) });
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => [IM2], analysis }));
+    registerActions(createCompareActions({ store, analysis, panel: createPanelStore(), storage: createCompareStorage(null) }));
+    await ok('selectSite', { site: 'im-2' });
+    expect(await fails('rankNearby')).toBe('The scan is not available: the 60 m window could not be read');
+    expect(await fails('selectCandidate', { rank: 1 })).toBe('There is no ranked list of nearby sites yet. Run rankNearby first.');
   });
 });
 
