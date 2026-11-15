@@ -76,21 +76,31 @@ export interface HeightSource {
 }
 
 /**
- * Where a site-centred grid ends and the next, coarser one takes over. The two never agree
- * exactly there, so a skyline point formed right at the edge is uncertain by about the
- * mismatch. Heights are "outer grid minus inner grid" along the inner grid's edge.
+ * Where a square grid the site stands on ends and the next, coarser source takes over. The
+ * two are separate measurements and never agree exactly there. Heights are "outer grid
+ * minus inner grid" along the inner grid's edge.
  */
 export interface TerrainSeam {
   /** The grid that ends here, and the one(s) that continue. */
   inner: string;
   outer: string;
-  /** Distance from the site to the edge (the middle of a side of the square), metres. */
+  /**
+   * Distance from the site to the nearest point of that edge, metres: half the grid's width
+   * for the site's own grids (they are centred on it), less for a neighbouring site's grid.
+   */
   distanceM: number;
+  /** The mismatch as the stack has it now, both grids read at the same points of the edge: nothing where the edge was eased. */
   minM: number;
   maxM: number;
   rmsM: number;
   /** Skyline elevation that one metre of height makes at that distance, degrees. */
   degPerMetre: number;
+  /**
+   * Set when the inner grid was eased onto the outer one: over how many metres inside its
+   * edge, and what the mismatch was before. Inside that band the heights are a blend of
+   * the two grids; at the edge they are the outer grid's.
+   */
+  eased?: { overM: number; minM: number; maxM: number; rmsM: number };
 }
 
 /** The terrain available around one site, finest source first. The last entry should cover the whole Moon. */
@@ -98,7 +108,7 @@ export interface TerrainStack {
   sources: HeightSource[];
   /** Plain-language notes about gaps, e.g. "No high-resolution survey here: nearest relief finer than 1.9 km is not resolved". */
   notes: string[];
-  /** Mismatch at each hand-over between the site's own grids, nearest first (also stated in `notes`). */
+  /** Each hand-over between the site's own grids, nearest first: eased or not, and the mismatch (also stated in `notes`). */
   seams?: TerrainSeam[];
 }
 
