@@ -19,9 +19,10 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   arrival delay. Overlays with legends: where the Sun is inside the elevation band (smooth
   Moon), long-term average sunlight and Earth visibility (NASA PGDA product 69, polar regions
   only), elevation-data coverage and mapped ice-bearing shadowed regions. A compass, a locator
-  map and a mission-window time scrubber with jumps to rise and set events. The site card
-  shows the data behind the site, the Sun and Earth against its skyline, and a site-science
-  section: Deep Space Network station opportunities, long-term averages, the nearest mapped
+  map and a mission-window time scrubber with jumps to rise and set events. Landing markers are
+  coloured by the country their hardware belongs to, with optional flags. The site card shows
+  who owns the hardware (from the GCAT catalogue), the area explored at the site, the data
+  behind the site, the Sun and Earth against its skyline, and a site-science section: Deep Space Network station opportunities, long-term averages, the nearest mapped
   ice targets, Diviner annual maximum and mean temperature, and ShadowCam mosaics as links.
 - **Surface view.** Stand at the site and look around: black sky, terrain drawn from the
   elevation data out to 246 km, the Sun and Earth at their computed positions and sizes,
@@ -33,7 +34,10 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
 - **Compare panel.** Scenarios A and B side by side with B minus A in numbers and sentences;
   "B = A arriving N hours later"; "B = A with another mast"; named comparisons that reload
   exactly. Nearby alternatives: a scan around the site (radius, spacing, slope limit) ranked
-  by sunlight and Earth contact, any candidate taken as B.
+  by sunlight and Earth contact, any candidate taken as B. The mission-window table (every
+  sunlit, dark and Earth-in-view spell), downloadable as CSV or JSON. The seasonal outlook:
+  sunlight and Earth's centre in view for each lunar day over the coming months, as a chart and
+  a table.
 - **Assistant.** A drawer (button lower right) where you ask in words. It operates the app
   through the same actions as the on-screen controls and lists what it ran. Without a
   language-model key it answers in a labelled deterministic mode (see
@@ -44,9 +48,8 @@ or shown as unavailable with the reason. Earth visibility is geometric line of s
 terrain, not a radio link budget. Sunlight percentage is a share of time with the Sun's disc
 visible, not electrical power.
 
-**Not built yet:** the mission-window table with CSV and JSON export; a chart for the
-seasonal outlook (the computation exists); an eclipse replay preset; the start and the end of
-each sunset and sunrise as a pair (see [How accurate it is](#how-accurate-it-is)). What is
+**Not built yet:** an eclipse replay preset; the start and the end of each sunset and sunrise
+as a pair (see [How accurate it is](#how-accurate-it-is)); historical mission trajectories. What is
 shipped, built and planned is tracked in [docs/lunyx/STATUS.md](docs/lunyx/STATUS.md).
 
 ## Run it
@@ -100,6 +103,8 @@ The data the app needs is committed. These scripts rebuild it from the original 
 | `npm run build-diviner` | `public/data/science/diviner/`: annual temperature maps | 103 MB |
 | `npm run build-shadowcam-index` | `public/data/science/shadowcam/`: mosaic index and coverage | 20 MB |
 | `node scripts/build-horizons-bundle.mjs`, `npm run fetch-horizons` | `public/data/horizons/` and `public/data/horizons-check.json` from JPL Horizons | small |
+| `npm run fetch-gcat` | `public/data/sources/gcat-landers.json`: who owns the hardware at each landing (GCAT) | two catalogue tables |
+| `npm run fetch-site-areas` | `public/data/sources/`: LROC's measured hardware positions and the explored area at each site | small |
 
 `scripts/make-surface-detail.mjs` remakes `public/textures/surface_detail_*.jpg` from a
 third-party asset pack that is not in the repository and whose origin and licence are not
@@ -160,8 +165,8 @@ the data and its own code, not from the app's code. They are not a NASA or peer 
 | --- | --- | --- |
 | Sun and Earth azimuth and elevation at a site | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035 | Worst difference 0.0036°. After 2035 it grows (0.006° in 2060, 0.021° in 2099); dates are limited to 1950 to 2100 |
 | Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, which was the version on GitHub `main` on 14 November 2026, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
-| Skyline with the observer on the ground (0 m) | Same | Up to 1.2° too low on convex ground before `3899cb9`; fixed there, and its author reports 0.004° on the stored cases. **The independent re-check is pending** |
-| Bundled elevation grids | The PDS originals, 30 080 samples | Equal within rounding. **Open:** where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. At Blue Ghost the science team found the stored 3 m model supported by LOLA laser altimetry where the sunset skyline forms, so the stored terrain stays |
+| Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs |
+| Bundled elevation grids | The PDS originals, 30 080 samples; LRO LOLA laser shots at 17 of the 19 surveyed sites | Equal within rounding. Where the 3 m site models meet the 60 m windows, 768 m from a landing site, heights step by several metres. The 3 m model is the closer one to LOLA at 16 of 17 sites, so it stays. At Blue Ghost the two products put the 16 March 2025 sunset 3.5 to 3.7 min apart (2 m mast) |
 | Sunset, sunrise and eclipse times | The validator's own skyline with Horizons and SPICE directions | Within 0.5 min |
 | Published mission facts | Firefly (Blue Ghost), ISRO (Chandrayaan-3), the Apollo Lunar Surface Journal table | Blue Ghost eclipse times within 0.8 min; Chandrayaan-3's sunset date agrees; 42 of 43 Apollo rows agree. ISRO's "next sunrise 22 September 2023" is two days after first light by both computations, so the app's time is **not confirmed** by ISRO. No published time was found for IM-2 |
 | 14 March 2025 eclipse at the Blue Ghost site | Reported 05:00, 06:18, 09:52 UTC | Computed 05:00:38, 06:17:21, 09:51:06 UTC |
@@ -208,7 +213,9 @@ SVS CGI Moon Kit and Blue Marble, JPL Horizons ephemerides, PGDA product 69 (Maz
 ice-bearing shadowed regions of Lemelin et al. 2021 (CC BY 4.0), Diviner annual temperature
 maps by Schorghofer and Williams (CC0 1.0) and the ShadowCam archive (credited links only, no
 imagery). Libraries: three.js and astronomy-engine (MIT), the Anthropic SDK (Apache-2.0); fonts
-Inter and Space Grotesk (SIL Open Font License 1.1).
+Inter and Space Grotesk (SIL Open Font License 1.1). Hardware ownership comes from GCAT,
+the General Catalog of Artificial Space Objects by J. McDowell (CC BY 4.0), and hardware
+positions from LROC (Wagner et al. 2017) and the Apollo Analyst's Notebook (NASA PDS).
 
 Every dataset, with version, citation, licence or terms as read at the source, what Lunyx did
 to it and its size, and every software dependency: [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md).
@@ -253,6 +260,11 @@ centre.
   the globe are decoration, not a star map.
 - **Landing catalogue.** The 28 positions and touchdown times have no recorded source yet;
   only Apollo 11's position was compared with a published record.
+- **Ownership, areas and flags.** "Belongs to" is the state responsible for the hardware in the
+  GCAT catalogue (USSR hardware is shown as Russia); no country owns lunar ground. Explored
+  areas are drawn ten times larger than true size on the globe so they can be seen; the card
+  gives the true size. The flags are simplified drawings, and the United States flag shows 30
+  stars instead of 50 until a fix lands.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 
@@ -273,7 +285,8 @@ What a demo can show truthfully today, in the desktop build:
 2. The surface view: the Sun and Earth at their computed positions and sizes, the key metrics
    with countdowns, the skyline chart, and the explanation of what hides the Sun.
 3. Comparison: the same site arriving 24 h later, or another mast height, with the
-   differences in numbers and words; nearby alternatives ranked by sunlight and Earth contact.
+   differences in numbers and words; nearby alternatives ranked by sunlight and Earth contact;
+   the mission-window table and its CSV export; the seasonal outlook.
 4. The long-term average overlays at the south pole, labelled as 18.6-year averages.
 5. The assistant operating the app. Without a key it runs in deterministic mode, which must
    stay labelled as such; showing the language-model mode needs a key and a run that has not

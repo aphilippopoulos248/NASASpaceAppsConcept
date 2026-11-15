@@ -5,10 +5,11 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `bc5fb8e`: `am/lunyx-experience/integration` (`c2df103`)
-  merged with `am/lunyx/integration` at `bbaa93d`. Nothing under `public/` and neither
-  `package.json` nor the lockfile changed since the published `cc736f8`. Work that is on GitHub `main` but not
-  integrated yet is in section 7.
+- **State described:** the tree at `1a5fe7d`: `am/lunyx-experience/integration` at `895c026`,
+  which has the same tree as the published `0cc5553`, plus this task's documents. Since the
+  earlier published `cc736f8`, `public/` gained only `public/data/sources/` (S18 to S20),
+  `package.json` gained the scripts `fetch-gcat` and `fetch-site-areas`, and the lockfile is
+  unchanged.
 - **Checked:** 2026-11-15 (UTC). Every licence, citation and credit line below was read at the
   source named next to it on that day, not copied from a handover note. Where the source says
   nothing, the entry says so and the item is on the open list in
@@ -85,6 +86,9 @@ says so.
 | S15 | ShadowCam controlled-mosaic index (links and footprints, no imagery) | `public/data/science/shadowcam/{index.json,shadowcam_coverage.lxg}` | 0.13 MB | Not stated: the bundle label carries citation information only (checked again 2026-11-15) | Site card, ShadowCam links, under "Credit and terms": the index's credit note and citations; links only |
 | S16 | Catalogue of the 28 landings | `public/data/landings.json` | 8.2 kB | **Not established**: no source is recorded for any entry (open list L3) | None |
 | S17 | List of LROC NAC products near each site | `scripts/nac-dtm-candidates.json` | 12.1 kB | Built from the PDS archive's file listing (as S4) | — |
+| S18 | Who owns the hardware at each landing (GCAT) | `public/data/sources/gcat-landers.json` | 13.1 kB | **CC BY 4.0** (GCAT's copyright notice) | Site card: "source: GCAT" with a link and the catalogue id; surface view: "(GCAT)" |
+| S19 | LROC catalogue of hardware positions on the Moon | `public/data/sources/lroc-anthropogenic-objects.csv` | 21.0 kB | As S4 (public domain as a PDS product) | Recorded in `site-areas.json`; not shown on screen |
+| S20 | Explored area at each site (made in this repository from S19 and traverse maps) | `public/data/sources/site-areas.json` | 34.3 kB | Derived here | Sources listed in the file |
 
 The `README.md` next to each data folder (`public/data/dem/`, `heatmap/`, `ice-targets/`,
 `science/diviner/`, `science/shadowcam/`) carries the same credits for anyone who opens the
@@ -191,7 +195,7 @@ holding `NormalMap.jpeg` and `Diffuse.jpeg` from what its header calls the "moon
 pack, resizes them, cross-fades each with a copy of itself shifted by half its size so that it
 tiles, renormalises the normals and centres the tone at mid-grey. So the textures are derived
 from a third-party source that is not in the repository. The teammate's own data-sources note
-on GitHub `main` (`docs/DATA_SOURCES.md` at `282249d`, not integrated yet) describes the pack as
+(`docs/DATA_SOURCES.md`, from GitHub `main`, in the tree since `0cc5553`) describes the pack as
 "Blender-made crater terrain", "Artist-made, not lunar data", and says "Origin and licence
 unknown — confirm before publishing." Neither image carries any embedded metadata. The app uses
 them only for shading inside its labelled "generated detail" and switches them off with it
@@ -289,13 +293,47 @@ any AI tool made them are not established (open list L2).**
 - Imagery stays as credited links unless the team obtains permission (operator requirement,
   brief section 1).
 
+### S18. GCAT hardware ownership
+
+- **Source:** GCAT, the General Catalog of Artificial Space Objects, by Jonathan C. McDowell,
+  https://planet4589.org/space/gcat/ (read 2026-11-15): "Licence: CC-BY-4.0 Creative
+  Commons/Attribution"; "This data may be freely reproduced as long as you cite it. A minimal
+  citation is "Data from J. McDowell, planet4589.org"." Files read by
+  `scripts/fetch-gcat-landers.mjs`: `tsv/cat/deepcat.tsv` and `tsv/tables/orgs.tsv`; catalogue
+  version recorded in the file: "Updated 2026 Nov 13 0021:56", retrieved 2026-11-14.
+- **What Lunyx did:** one record per landing (GCAT id, designation, object name, owner, the
+  responsible state and its dates), values copied unchanged, plus readable names from GCAT's own
+  organisation table. The app shows USSR hardware as belonging to Russia, its successor state, with
+  the note "launched by the USSR"; the file itself keeps "USSR" (`src/data/ownership.ts`).
+- **Credit on screen:** "source: GCAT" with a link and the object's catalogue id on the site
+  card. CC BY 4.0 asks for the creator, the licence and an indication of changes; they are given
+  here and in the README.
+
+### S19, S20. Hardware positions and explored areas
+
+- **S19:** `ANTHROPOGENIC_OBJECTS_180.csv` from the LROC PDS release `LROLRC_2001`,
+  `EXTRAS/SHAPEFILE/ANTHROPOGENIC_OBJECTS/` on the PDS Imaging Node store. The bundled copy is
+  byte-identical to the archive's current file (compared 2026-11-15). Citation: Wagner, R. V.,
+  Nelson, D. M., Plescia, J. B., Robinson, M. S., Speyerer, E. J., & Mazarico, E. (2017).
+  Coordinates of anthropogenic features on the Moon. *Icarus*, 283, 92-103.
+  https://doi.org/10.1016/j.icarus.2016.05.011 (resolved 2026-11-15). Terms as S4.
+- **S20:** `scripts/fetch-site-areas.mjs` draws, for each landing, the convex hull of every known
+  point (lander, rovers' final positions, instruments, traverse paths) widened by 30 m. Inputs:
+  S19; the LROC traverse files of Apollo 11, 12 and 14 in the same archive (`EXTRAS/SHAPEFILE/APOLLO_11`
+  and so on; the folders exist, listed 2026-11-15), cited by the teammate as Gonzales et al. (2019),
+  LPSC 50, abstract 3089 (not checked here); and the map layers of the Apollo Analyst's Notebook,
+  NASA PDS Geosciences Node (https://an.rsl.wustl.edu/apollo/; its page states no licence or
+  terms), whose rover traverses the teammate attributes to NASA TN D-7469 (not checked here). On
+  the globe each area is drawn ten times larger than true size (`AREA_DISPLAY_SCALE` in
+  `src/scene/siteAreas.ts`); the site card gives the true size and says so.
+
 ### S16. Landing catalogue
 
 `public/data/landings.json`: 28 successful soft landings, 1966 to 2025, with name, programme,
 country, date, touchdown time (UTC), latitude, longitude, region, a one-sentence summary and an
 `approx` flag. It arrived in the teammate's first commit (`4ab3892`, which carries a "Co-Authored-By:
 Claude Fable 5.2" trailer) and has not changed since. The file names no source for any value.
-The teammate's data-sources note on GitHub `main` (not integrated yet) says the list was
+The teammate's data-sources note (`docs/DATA_SOURCES.md`) says the list was
 "entered by hand during development from general knowledge, **not** copied from a single
 published source", that only Apollo 11's coordinates were checked (against NASA's NSSDCA
 record), and that landing times were not checked against a published source. None of the
@@ -475,31 +513,23 @@ LGPL-3.0-or-later AND MIT"), ISC, BSD-3-Clause, 0BSD, CC0-1.0, "MIT AND Zlib" (`
 
 </details>
 
-## 7. Pending: work on GitHub `main` that is not integrated yet
+## 7. The teammate's GitHub `main` work, now integrated
 
-GitHub `main` is at `282249d` (2026-11-14 21:03 -0500, teammate commits `008be62` to
-`282249d`); `origin/Abdel` is at `595fe28`, which is already in `am/lunyx/integration` and adds
-no files. @upstream-sync is staging `main`. Read here from `origin/main`, nothing altered; the
-inventory rows are added once these files reach `am/lunyx/integration`.
-
-| New file on `main` | What it is | Source and licence, checked at the source 2026-11-15 |
-| --- | --- | --- |
-| `docs/DATA_SOURCES.md` | The teammate's own data-sources note | Overlaps this document; its statements on S9 and S16 are quoted above |
-| `public/data/sources/gcat-landers.json` (13.1 kB), `scripts/fetch-gcat-landers.mjs` | Owner and responsible state of the hardware at each landing | GCAT, J. McDowell, https://planet4589.org/space/gcat/: "Licence: CC-BY-4.0 Creative Commons/Attribution"; "A minimal citation is 'Data from J. McDowell, planet4589.org'". Catalogue version recorded in the file: "Updated 2026 Nov 13" |
-| `public/data/sources/lroc-anthropogenic-objects.csv` (21.0 kB) | Measured positions of landers, rovers and instruments | LROC `ANTHROPOGENIC_OBJECTS` (NASA PDS); Wagner, R. V., et al. (2017), *Icarus* 283, 92-103, doi:10.1016/j.icarus.2016.05.011. Public domain per the LROC terms quoted in S4, if read from the PDS as the note says |
-| `public/data/sources/site-areas.json` (34.3 kB), `scripts/fetch-site-areas.mjs` | Explored area at each site, derived from the CSV, LROC traverse maps and the Apollo Analyst's Notebook (NASA PDS Geosciences Node) | Derived in the repository; sources listed in the file. Drawn 10× wider than true size on the globe, as the note says |
-| `src/scene/flags.ts`, `src/data/ownership.ts` | National flags drawn by code next to each site | No image asset. A branding question for the operator: see AI-USE.md section 6 |
+GitHub `main` at `282249d` (the teammate's country labels, flags, ownership and explored
+areas) was merged into the navigator branch and published as `0cc5553` on 2026-11-15; its data
+files are S18 to S20 above, its flags are discussed in AI-USE.md section 6, and its
+`docs/DATA_SOURCES.md` is compared in section 8. `origin/Abdel` (`595fe28`) adds no files.
 
 ## 8. Comparison with the teammate's `docs/DATA_SOURCES.md`
 
-The teammate keeps a data-sources note on GitHub `main` (`282249d`, not integrated yet; read
-with `git show 282249d:docs/DATA_SOURCES.md`). This document is the complete register; it was
-checked against that note entry by entry. The note is the teammate's and was not edited.
+The teammate keeps a data-sources note, `docs/DATA_SOURCES.md` (from GitHub `main`, in the
+tree since `0cc5553`). This document is the complete register; it was checked against that note
+entry by entry. The note is the teammate's and was not edited.
 
 | Entry in DATA_SOURCES.md | Here | Agrees | Differs or adds |
 | --- | --- | --- | --- |
 | 1. Landing list | S16 | Yes: "entered by hand during development from general knowledge"; only Apollo 11 checked | Adds that the file records no source and that its AI status is not established (L3) |
-| 2. Ownership record (GCAT) | Section 7 | Yes: CC BY 4.0, checked at planet4589.org | Pending integration |
+| 2. Ownership record (GCAT) | S18 | Yes: CC BY 4.0, checked at planet4589.org | Adds GCAT's own citation wording |
 | 3. Globe colour and relief | S6, S7 | Yes: `lroc_color_poles_8k.tif`, `ldem_16_uint.tif`, `LDEM_64.IMG` from the MIT mirror, relief ×4 | Quotes the SVS and NASA usage statements instead of a summary |
 | 4. Earth texture | S8 | Yes: SVS 2915, cloud-free | Adds the credit line SVS asks for |
 | 5. Site imagery tiles | R1 | Yes: the two layers and the on-screen credit | Its "To check before public release: JAXA's reuse terms" is answered from Moon Trek's metadata (scientific and educational use; L6) |
@@ -508,7 +538,7 @@ checked against that note entry by entry. The note is the teammate's and was not
 | 8. Photo-derived relief | S5 | Yes | — |
 | 9. Sun and Earth positions | S10, S11 | Yes on the sources | Its agreement figures come from `npm run check-ephemeris` (sub-points at the 28 landing times); the validated figures are those in STATUS.md section 4 |
 | 10. Close-up surface maps | S9 | Yes: third-party pack, "origin and licence unknown" | Adds that its AI status is not established (L2) |
-| 11. Explored area at each site | Section 7 | Yes on sources and the 10× display width | Pending integration |
+| 11. Explored area at each site | S19, S20 | Yes on sources and the 10× display width | Adds that the bundled LROC table is byte-identical to the archive's current file |
 | Not in that note | S1, S2, S12 to S15, S17, sections 4 to 6 | — | The LOLA grids in `public/data/dem`, PGDA product 69, the ice targets, Diviner, the ShadowCam index, the run-time services, the test references and the software licences |
 
 ## 9. What is not established
