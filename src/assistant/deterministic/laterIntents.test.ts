@@ -280,7 +280,7 @@ describe('deterministic mode: the catalogue and the compare panel', () => {
     const e = engine();
     await e.reply('go to IM-2');
     const r = await e.reply('compare with a 24 h delay');
-    expect(names().slice(1)).toEqual(['compareDelayedArrival', 'openCompare']);
+    expect(names().slice(1)).toEqual(['compareDelayedArrival']);
     expect(state.delayH).toBe(0);
     expect(state).toMatchObject({ comparing: true, panelTab: 'compare' });
     expect(r.text).toContain('Comparing the scenario on screen (A, arriving 2026-03-01 12:00 UTC) with the same arriving 24.0 h later (B, 2026-03-02 12:00 UTC).');
@@ -292,19 +292,19 @@ describe('deterministic mode: the catalogue and the compare panel', () => {
     const e = engine();
     await e.reply('go to IM-2');
     const r = await e.reply('compare mast 2 m and 10 m');
-    expect(names().slice(1)).toEqual(['compareMastHeights', 'openCompare']);
+    expect(names().slice(1)).toEqual(['compareMastHeights']);
     expect(state.mastHeightM).toBe(2);
     expect(r.text).toContain('Comparing mast heights 2 m (A) and 10 m (B)');
   });
 
-  it('brings the A/B view back after a nearby scan left the panel on its other tab', async () => {
+  it('after a nearby scan, comparing shows the A/B view again (the panel follows compare)', async () => {
     const e = engine();
     await e.reply('go to IM-2');
     await e.reply('find a flatter nearby site with a shorter blackout');
     expect(state.panelTab).toBe('nearby');
     await e.reply('compare it against this pin');
     expect(state).toMatchObject({ comparing: true, panelTab: 'compare', site: { id: 'cand-2' } });
-    expect(names().slice(-2)).toEqual(['compare', 'openCompare']);
+    expect(names().at(-1)).toBe('compare');
   });
 
   it('saves, lists, loads and deletes comparisons by name, and swaps and empties the slots', async () => {

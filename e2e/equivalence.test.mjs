@@ -65,7 +65,7 @@ function snapshot() {
       compareTab: [...document.querySelectorAll('.cmp-sheet [role="tab"]')].find((t) => t.getAttribute('aria-selected') === 'true')?.textContent.trim() ?? null,
       panels: s.panels ?? null,
       surface: s.view === 'surface' && actions.getAction('getSurfaceView')
-        ? await actions.getAction('getSurfaceView').run({}).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null }))
+        ? await Promise.resolve(actions.getAction('getSurfaceView').run({})).then((v) => ({ look: v.look, position: { eastM: Math.round(v.position.eastM), northM: Math.round(v.position.northM), eyeHeightM: Math.round(v.position.eyeHeightM * 10) / 10 }, tracks: v.annotations.tracks, labels: v.annotations.labels, generated: v.ground?.generatedDetailShown ?? null }))
         : null,
       hud: { chart: document.querySelector('.skc')?.dataset.size ?? null, chartShown: document.querySelector('.skc') ? !document.querySelector('.skc').hidden : null, metricsOpen: document.querySelector('.km .km-body') ? !document.querySelector('.km .km-body').hidden : null },
     };
@@ -152,6 +152,8 @@ async function equivalent({ site = null, prepare, ui, expect, action, keys, wait
   if (prepare) await prepare();
   const from = await lastSeq(page);
   await ui();
+  // A control's action is logged when it has finished (some wait for analyses): wait for it before reading the screen.
+  await until(page, ([names, seq]) => names.every((n) => window.lunyx.actions.actionLog().some((e) => e.seq > seq && e.name === n)), [[expect].flat(), from]);
   if (wait) await wait();
   const viaUi = await snapshot();
   const logged = (await log(page, from)).filter((e) => e.origin === 'ui');
@@ -576,7 +578,8 @@ describe('equivalence: cameras (a gesture ends in a pose the action reaches)', (
 });
 
 describe('equivalence: controls added since the 33-action build', () => {
-  const status = (text) => () => until(page, (t) => [...document.querySelectorAll('.cmp-status')].some((e) => e.textContent.includes(t)), text);
+  // What the panel says after the control ran (the UI path only: an action run by the assistant writes no status line).
+  const said = (text) => until(page, (t) => [...document.querySelectorAll('.cmp-status')].some((e) => e.textContent.includes(t)), text);
   const enterSurface = async () => {
     await result(page, 'enterSurface');
     await until(page, () => document.body.dataset.view === 'surface' && window.lunyx.actions.getAction('getSurfaceView') !== undefined);
@@ -601,18 +604,22 @@ describe('equivalence: controls added since the 33-action build', () => {
     const opened = await equivalent({ site: 'im-2', ui: () => page.locator('.cmp-launcher').click(), expect: 'openCompare', action: ['openCompare', {}], keys: ['comparing', 'compareTab'] });
     assert.deepEqual([opened.comparing, opened.compareTab], [true, 'A and B']);
     const open = () => result(page, 'openCompare', { tab: 'compare' });
-    const late = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare arrivals' }).click(), expect: 'compareDelayedArrival', action: ['compareDelayedArrival', { delayH: 24 }], keys: ['slots', 'comparing', 'compareTab', 'window'], wait: status('B is A arriving 24 h later') });
+    const late = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare arrivals' }).click(), expect: 'compareDelayedArrival', action: ['compareDelayedArrival', { delayH: 24 }], keys: ['slots', 'comparing', 'compareTab', 'window'] });
     assert.match(late.slots.B, /arrival 24 h later/);
+    await reset('im-2');
+    await open();
+    await page.getByRole('button', { name: 'Compare arrivals' }).click();
+    await said('B is A arriving 24 h later');
     assert.equal(late.window.delayH, 0, 'the scenario on screen keeps its own delay');
-    const masts = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare masts' }).click(), expect: 'compareMastHeights', action: ['compareMastHeights', { heightBM: 10 }], keys: ['slots', 'comparing', 'mastHeightM'], wait: status('B is A with a 10 m mast') });
+    const masts = await equivalent({ site: 'im-2', prepare: open, ui: () => page.getByRole('button', { name: 'Compare masts' }).click(), expect: 'compareMastHeights', action: ['compareMastHeights', { heightBM: 10 }], keys: ['slots', 'comparing', 'mastHeightM'] });
     assert.match(masts.slots.B, /10 m mast/);
     const pair = async () => {
       await open();
       await result(page, 'compareDelayedArrival', { delayH: 24 });
     };
-    const swapped = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Swap A and B' }).click(), expect: 'swapComparison', action: ['swapComparison', {}], keys: ['slots'], wait: status('Swapped A and B.') });
+    const swapped = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Swap A and B' }).click(), expect: 'swapComparison', action: ['swapComparison', {}], keys: ['slots'] });
     assert.match(swapped.slots.A, /arrival 24 h later/);
-    const emptied = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Empty A and B' }).click(), expect: 'clearComparison', action: ['clearComparison', {}], keys: ['slots'], wait: status('Slots A and B are empty') });
+    const emptied = await equivalent({ site: 'im-2', prepare: pair, ui: () => page.getByRole('button', { name: 'Empty A and B' }).click(), expect: 'clearComparison', action: ['clearComparison', {}], keys: ['slots'] });
     assert.deepEqual(emptied.slots, { A: null, B: null });
   });
 

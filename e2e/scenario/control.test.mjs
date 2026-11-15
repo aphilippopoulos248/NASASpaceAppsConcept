@@ -569,11 +569,9 @@ describe('control: every action through the scripted model and the real route', 
     });
   }
 
-  // F-5 in docs/lunyx/actions.md: after a scan the panel stays on "Nearby sites" when the core
-  // compare action opens the comparison, so the side-by-side it reports is not on screen.
-  // Deterministic mode and the scenario script ask openCompare for the A/B tab; a model that
-  // follows compare's description would not. The mark comes off when the panel follows compare.
-  test('after a scan, compare shows the A/B tab', { ...SLOW, todo: 'F-5: compare leaves the compare panel on its "Nearby sites" tab (reported to @analysis / @globe)' }, async (t) => {
+  // F-5 in docs/lunyx/actions.md, fixed in the compare panel (src/ui/compare/panel.ts follows a
+  // successful compare): after a scan, the side-by-side that compare reports is on screen.
+  test('after a scan, compare shows the A/B tab', SLOW, async (t) => {
     if (!(await has(page, 'rankNearby'))) return t.skip('this build has no rankNearby');
     await run(page, 'dropPin', { lat: -88, lon: 136.7 });
     await run(page, 'setMissionWindow', { startUtc: IM2, durationH: 24, moveClock: true });

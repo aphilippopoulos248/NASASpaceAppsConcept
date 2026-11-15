@@ -84,8 +84,6 @@ const COMPARE: Planned[] = [
   (k) => ({ name: 'selectCandidate', input: { rank: n(pickCandidate(k.get('rankNearby')).pick!.rank) ?? 1 } }),
   () => ({ name: 'saveScenario', input: { slot: 'B' } }),
   () => ({ name: 'compare', input: {} }),
-  // The scan left the compare panel on its "Nearby sites" tab: show A and B.
-  (k) => (k.has('openCompare') ? { name: 'openCompare', input: { tab: 'compare' } } : null),
 ];
 
 const RIDGE: Planned[] = [

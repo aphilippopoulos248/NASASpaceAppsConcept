@@ -121,8 +121,7 @@ export class Ctx {
   /**
    * Runs `compare` (or another action that opens a comparison and returns what `compare`
    * returns, such as compareDelayedArrival) and waits until both sides have finished
-   * analysing. Then makes sure the A/B view is the one on screen: a scan of nearby sites
-   * leaves the compare panel on its other tab.
+   * analysing. The compare panel shows its A/B tab for each of them itself.
    */
   async comparison(action = 'compare', params: Json = {}): Promise<Json> {
     let r = await this.run(action, params);
@@ -142,8 +141,6 @@ export class Ctx {
       // Keep what the first action added (planned arrival, mast heights) beside the settled sides.
       r = again ? { ...r, ...again } : r;
     }
-    // A failure here leaves the comparison as it is: it is open, only perhaps not on its A/B tab.
-    if (this.has('openCompare')) await this.api.run('openCompare', { tab: 'compare' });
     return r;
   }
 }

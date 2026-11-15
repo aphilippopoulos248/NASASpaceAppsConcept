@@ -194,6 +194,7 @@ describe('scenario: deterministic mode', () => {
     Object.assign(ctx, await checkStep1(page, r, ctx.pinId));
     const { pick, scan } = ctx;
     const ref = scan.reference;
+    t.diagnostic(`window ${WINDOW.startUtc} + ${WINDOW.durationH} h; pin slope ${ref.slopeDeg}°, longest darkness ${ref.longestDarknessH} h, sunlight ${ref.illuminationPct} %; ${scan.rankedCount} ranked of ${scan.scanned}; pick rank ${pick.rank} ${pick.name}: slope ${pick.slopeDeg}°, darkness ${pick.longestDarknessH} h, sunlight ${pick.illuminationPct} %, Earth's centre ${pick.earthVisiblePct} %`);
     assert.ok(r.text.includes(`Found a site with flatter and a shorter blackout: ${pick.name}`), r.text);
     assert.ok(r.text.includes(`slope ${f1(pick.slopeDeg)}° (this pin: ${f1(ref.slopeDeg)}°)`), r.text);
     assert.ok(r.text.includes(`longest darkness ${f1(pick.longestDarknessH)} h (this pin: ${f1(ref.longestDarknessH)} h)`), r.text);
@@ -205,8 +206,9 @@ describe('scenario: deterministic mode', () => {
     if (skip) return t.skip(skip);
     assert.ok(ctx.pick, 'step 1 did not run');
     const r = await send(page, STEP2);
-    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['getState', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare']);
+    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['getState', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare']);
     const cmp = (ctx.cmp = await checkStep2(page, r, ctx));
+    t.diagnostic(`A ${cmp.A}: sunlight ${cmp.analysisA.illuminationPct} %, darkness ${cmp.analysisA.longestDarknessH} h; B ${cmp.B}: sunlight ${cmp.analysisB.illuminationPct} %, darkness ${cmp.analysisB.longestDarknessH} h; B minus A sunlight ${cmp.diff.illuminationPct} points`);
     for (const [tag, side] of [['A', cmp.analysisA], ['B', cmp.analysisB]]) {
       assert.ok(r.text.includes(`${tag}: ${cmp[tag]}: illumination ${f1(side.illuminationPct)} %, longest darkness ${f1(side.longestDarknessH)} h, Earth's centre in view ${f1(side.earthVisiblePct)} %, longest Earth-centre gap ${f1(side.longestEarthGapH)} h, slope ${f1(side.slopeDeg)}°.`), `${tag}: ${r.text}`);
     }
@@ -219,6 +221,7 @@ describe('scenario: deterministic mode', () => {
     assert.ok(ctx.cmp, 'step 2 did not run');
     const r = await send(page, STEP3);
     const { jump, ridge } = await checkStep3(page, r, ctx);
+    t.diagnostic(`Earthset ${jump.timeUtc} (${jump.label}); ridge ${ridge.ridgeDistanceM} m away, ${ridge.ridgeHeightM} m, ${ridge.demName} ${ridge.demResolutionM} m; Earth ${ridge.bodyElDeg}° vs skyline ${ridge.skylineElDeg}°`);
     assert.ok(r.text.includes(`Moved the clock to the next Earthset: ${jump.label ? `${jump.label} ` : ''}${isoToText(jump.timeUtc)}`), r.text);
     assert.ok(r.text.includes(ridge.explanation), r.text);
     assert.ok(r.text.includes(`Ridge: ${distanceText(ridge.ridgeDistanceM)} away, ${Math.round(ridge.ridgeHeightM)} m above the reference sphere; clearance ${f2(ridge.clearanceDeg)}°.`), r.text);
@@ -237,7 +240,7 @@ describe('scenario: deterministic mode', () => {
     assert.ok(ctx.pick, 'the follow-ups did not run');
     const at = await setUp(page);
     const r = await send(page, SENTENCE);
-    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['getState', 'rankNearby', 'getState', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare', 'jumpToEvent', 'explainBlockage', 'getState', 'enterSurface', 'lookAt']);
+    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['getState', 'rankNearby', 'getState', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'jumpToEvent', 'explainBlockage', 'getState', 'enterSurface', 'lookAt']);
     const scan = named(r.entries, 'rankNearby').result;
     const pick = expectedPick(scan);
     assert.equal(pick?.id, ctx.pick.id, 'the same candidate as the follow-ups chose');
@@ -282,7 +285,7 @@ describe('scenario: scripted test model through /api/assistant (LUNYX_LLM_SCRIPT
     if (skip) return t.skip(skip);
     assert.ok(ctx.pick, 'step 1 did not run');
     const r = await send(page, STEP2);
-    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare']);
+    assert.deepEqual(r.entries.filter((e) => e.origin === 'assistant').map((e) => e.name), ['saveScenario', 'selectCandidate', 'saveScenario', 'compare']);
     assert.equal(named(r.entries, 'selectCandidate').params.rank, ctx.pick.rank);
     const cmp = (ctx.cmp = await checkStep2(page, r, ctx));
     for (const v of [cmp.A, cmp.B, cmp.diff.illuminationPct, cmp.diff.longestDarknessH, cmp.diff.earthVisiblePct, cmp.analysisA.illuminationPct, cmp.analysisB.illuminationPct]) assert.ok(r.text.includes(String(v)), `${v} not in: ${r.text}`);

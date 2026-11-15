@@ -72,7 +72,7 @@ describe('scripted test model, scenario script', () => {
 
     from = lastSeq();
     await s.send('compare it against this pin for the same dates');
-    expect(ranSince(from).map((e) => e.name)).toEqual(['saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare']);
+    expect(ranSince(from).map((e) => e.name)).toEqual(['saveScenario', 'selectCandidate', 'saveScenario', 'compare']);
     const cmp = ranSince(from).find((e) => e.name === 'compare')!.result as Record<string, Row & { illuminationPct: number }>;
     r = reply(s);
     expect(r.text).toContain(`A = ${cmp.A}`);
@@ -94,7 +94,7 @@ describe('scripted test model, scenario script', () => {
     const s = session();
     const from = lastSeq();
     await s.send('Find a flatter nearby site with a shorter blackout, compare it against this pin for the same dates, then show me the ridge at Earthset.');
-    expect(ranSince(from).map((e) => e.name)).toEqual(['rankNearby', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare', 'jumpToEvent', 'explainBlockage', 'enterSurface', 'lookAt']);
+    expect(ranSince(from).map((e) => e.name)).toEqual(['rankNearby', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'jumpToEvent', 'explainBlockage', 'enterSurface', 'lookAt']);
     // One line per step after the heading, all from this one turn.
     const answer = reply(s).text;
     expect(answer.slice(answer.indexOf('Scripted test model:\n')).split('\n')).toHaveLength(4);
@@ -106,7 +106,7 @@ describe('scripted test model, scenario script', () => {
     await runAction('selectSite', { site: 'apollo-11' }, 'test');
     const from = lastSeq();
     await s.send('compare it against this pin');
-    expect(ranSince(from).map((e) => e.name)).toEqual(['selectSite', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare', 'openCompare']);
+    expect(ranSince(from).map((e) => e.name)).toEqual(['selectSite', 'saveScenario', 'selectCandidate', 'saveScenario', 'compare']);
     expect(state.compareA?.label).toContain('IM-2 Athena');
   });
 

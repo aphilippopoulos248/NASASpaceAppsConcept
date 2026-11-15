@@ -347,6 +347,8 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const missing = [!state.compareA && 'A', !state.compareB && 'B'].filter(Boolean);
         if (missing.length) throw new ActionError(`Save a scenario in slot ${missing.join(' and ')} first (saveScenario).`);
         state.comparing = true;
+        // As the real panel: a successful compare shows its A/B tab.
+        if (options.comparePanel) state.panelTab = 'compare';
         const settle = options.compareSettleCalls ?? 0;
         const call = compareCalls++;
         const side = (s: NonNullable<FakeState['compareA']>) =>
