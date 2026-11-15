@@ -4,9 +4,21 @@
 // chart and the strip stand above the scrubber and the assistant's button where they would
 // meet, and the chart never grows over the metrics' title row. Sizes are measured, not
 // assumed, so the shell can move its regions without this breaking.
+//
+// The horizon band at the middle of the screen stays clear: entering a site, the view is level
+// and a low Sun (a polar site) stands just above the screen's centre, its label just below it.
+// Where the strip, in its place above the time scrubber, would reach up into that band (short
+// windows, e.g. 1280x720), it docks at the top right instead: under the close and "Reset panels"
+// buttons and wholly right of the screen's centre column, where a body the view faces is drawn.
 export type HudPart = 'metrics' | 'chart' | 'strip';
 
 const GAP = 12;
+/** The horizon band the strip keeps out of: this far below the middle of the screen. */
+const HORIZON_BAND_PX = 44;
+/** Kept free either side of the screen's vertical centre line when the strip docks. */
+const CENTRE_CLEAR_PX = 48;
+/** Margin to the window's right edge when docked. */
+const EDGE_PX = 24;
 /** Room always left for the key metrics: their title row. */
 const METRICS_MIN = 46;
 const CHART_MIN = 150;
@@ -29,28 +41,39 @@ export function hudLimits(input: {
   strip: (Span & { floor: number; height: number }) | null;
   /** What the shell keeps at the bottom of the screen and is on show: the time scrubber, the assistant's button. */
   below: (Span & { top: number })[];
-}): { metricsMaxH: number; chartMaxH: number; chartLift: number; stripLift: number } {
-  const { metrics, chart, strip, below } = input;
+  /** Where the strip may dock: the window's width, the top it may use (below the close button) and its usual width. */
+  dock?: { viewportW: number; top: number; naturalWidth: number };
+}): { metricsMaxH: number; chartMaxH: number; chartLift: number; stripLift: number; stripDock: { x: number; y: number; width: number } | null } {
+  const { metrics, chart, strip, below, dock } = input;
   const floor = Math.min(input.floor, input.viewportH);
   // A part rests on its region's floor, or a gap above whatever of the shell shares its column.
   const liftOver = (part: Span, partFloor: number) => below.reduce((lift, b) => (overlap(part, b) ? Math.max(lift, Math.ceil(partFloor - (b.top - GAP))) : lift), 0);
   const chartLift = chart ? liftOver(chart, floor) : 0;
   const stripLift = strip ? liftOver(strip, strip.floor) : 0;
+  // In its place the strip would reach into the horizon band: it docks at the top right instead.
+  let stripDock: { x: number; y: number; width: number } | null = null;
+  if (strip && dock && strip.floor - stripLift - strip.height < input.viewportH / 2 + HORIZON_BAND_PX) {
+    const right = dock.viewportW - EDGE_PX, leftMost = dock.viewportW / 2 + CENTRE_CLEAR_PX;
+    const width = Math.max(0, Math.floor(Math.min(dock.naturalWidth, right - leftMost)));
+    stripDock = { x: Math.round(right - width), y: Math.round(dock.top), width };
+  }
   const chartBottom = floor - chartLift;
   const chartMaxH = Math.max(CHART_MIN, Math.floor(chartBottom - (metrics.top + METRICS_MIN + GAP)));
 
   // The metrics end above whatever lies under them; a part beside them does not limit them.
   let under = floor;
   if (chart && overlap(chart, metrics)) under = Math.min(under, chartBottom - Math.min(chart.height, chartMaxH));
-  if (strip && overlap(strip, metrics)) under = Math.min(under, strip.floor - stripLift - strip.height);
+  if (strip && !stripDock && overlap(strip, metrics)) under = Math.min(under, strip.floor - stripLift - strip.height);
   for (const b of below) if (overlap(b, metrics)) under = Math.min(under, b.top);
-  return { metricsMaxH: Math.max(METRICS_MIN, Math.floor(under - GAP - metrics.top)), chartMaxH, chartLift, stripLift };
+  return { metricsMaxH: Math.max(METRICS_MIN, Math.floor(under - GAP - metrics.top)), chartMaxH, chartLift, stripLift, stripDock };
 }
 
 /** The shell's regions at the bottom of the screen that the HUD must stand clear of. */
 const SHELL_BELOW = ['region-scrubber', 'region-assistant'];
 const parts = new Map<HudPart, HTMLElement>();
 let queued = false;
+/** The strip's width in its place, kept while it is docked (docked, it is narrower). */
+let stripNaturalWidth = 0;
 let observer: ResizeObserver | null = null;
 
 function layout(): void {
@@ -68,6 +91,9 @@ function layout(): void {
   const region = chart?.parentElement?.getBoundingClientRect();
   const stripRegion = strip?.parentElement?.getBoundingClientRect();
   const c = moved(chart) ? null : box(chart), s = moved(strip) ? null : box(strip);
+  const docked = Boolean(strip?.classList.contains('sp-docked'));
+  if (s && !docked) stripNaturalWidth = s.width;
+  const closeBox = box(document.getElementById('region-close'));
   const below = SHELL_BELOW.map((id) => box(document.getElementById(id))).filter((r): r is DOMRect => r !== null);
   const limits = hudLimits({
     viewportH: window.innerHeight,
@@ -76,6 +102,7 @@ function layout(): void {
     chart: c && { left: c.left, right: c.right, height: c.height },
     strip: s && { left: s.left, right: s.right, height: s.height, floor: stripRegion ? stripRegion.bottom : s.bottom },
     below: below.map((r) => ({ left: r.left, right: r.right, top: r.top })),
+    dock: { viewportW: window.innerWidth, top: closeBox ? closeBox.bottom + GAP : EDGE_PX, naturalWidth: stripNaturalWidth || (s ? s.width : 0) },
   });
   const set = (el: HTMLElement, prop: 'maxHeight' | 'marginBottom', px: number) => {
     const value = `${px}px`;
@@ -87,6 +114,15 @@ function layout(): void {
     set(chart, 'marginBottom', limits.chartLift);
   }
   if (strip && !moved(strip)) set(strip, 'marginBottom', limits.stripLift);
+  // Docking: a strip the user moved stays where it was put; a hidden one keeps its state until it shows again.
+  if (strip && (moved(strip) || s)) {
+    const dock = moved(strip) ? null : limits.stripDock;
+    strip.classList.toggle('sp-docked', Boolean(dock));
+    for (const [key, v] of [['--sp-dock-x', dock?.x], ['--sp-dock-y', dock?.y], ['--sp-dock-width', dock?.width]] as const) {
+      if (v === undefined) strip.style.removeProperty(key);
+      else if (strip.style.getPropertyValue(key) !== `${v}px`) strip.style.setProperty(key, `${v}px`);
+    }
+  }
 }
 
 /** Lays the HUD out again on the next frame. Call after anything that shows, hides or resizes a part. */

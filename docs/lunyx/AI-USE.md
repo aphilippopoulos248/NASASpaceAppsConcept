@@ -160,14 +160,14 @@ what it does stays visible in the app.
 
 | Mode | When | AI? | How it is labelled |
 | --- | --- | --- | --- |
-| Claude API, server-side relay (`server/llm/anthropic.ts`) | The server has `ANTHROPIC_API_KEY` (or SDK credentials) | Yes: default model `claude-opus-5-5` (`server/llm/env.ts`); `LUNYX_LLM_MODEL` can name another (labels exist for `claude-fable-5-2`, `claude-sonnet-5-5`, `claude-haiku-5-5`). With the default betas on, a declined request is retried by the API on the model it recommends (server-side fallback; `LUNYX_LLM_BETAS=off` turns it off) | Every reply shows the model's name; the drawer's status line reads "Language model: <name>" |
+| Claude API, server-side relay (`server/llm/anthropic.ts`) | The server has Claude credentials (`ant auth login` or SDK-resolved) | Yes: default model `claude-opus-5-5` (`server/llm/env.ts`); `LUNYX_LLM_MODEL` can name another (labels exist for `claude-fable-5-2`, `claude-sonnet-5-5`, `claude-haiku-5-5`). With the default betas on, a declined request is retried by the API on the model it recommends (server-side fallback; `LUNYX_LLM_BETAS=off` turns it off) | Every reply shows the model's name; the drawer's status line reads "Language model: <name>" |
 | Jev router, TypeSafe AI (`server/llm/jev.ts`) | `LUNYX_LLM_ROUTER=jev` and `TYPESAFE_API_KEY` | Yes: a classification model that decides how much effort the Claude model spends on a request; the user's latest message and the action names are sent to TypeSafe's API. It never removes a tool | Not shown separately |
 | Deterministic mode (`src/assistant/deterministic/`) | No key (the default) | No: a fixed command grammar | "Deterministic mode: no language model" on every reply |
 | Scripted test model (`server/llm/scripted.ts`) | `LUNYX_LLM_PROVIDER=scripted`, for tests | No | "Scripted test model (not a language model)" |
 | Voice dictation (`src/assistant/voice.ts`) | The user presses the microphone, where the browser offers speech recognition | Yes, the browser vendor's speech recognition ("it may send audio to the browser vendor", per the code); Lunyx receives text only and puts it in the message box for review | Microphone button |
 
-Keys stay on the server and are never sent to the browser. **The assistant has never been
-run against a real language model or the real Jev service on the build machine** (no keys
+Credentials stay on the server and are never sent to the browser. **The assistant has never been
+run against a real language model or the real Jev service on the build machine** (no credentials
 there; STATUS.md section 4): everything about the model modes above is read from the code and
 its tests with a scripted stand-in, not observed. The committed screenshots that show the
 assistant (`t15-*.png`, `t11-ab-with-assistant-1280.png`) show deterministic mode.

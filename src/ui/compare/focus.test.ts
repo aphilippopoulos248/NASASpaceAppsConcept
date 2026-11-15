@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { focusIndexAfterRedraw, focusInHiddenPanel, returnFocusOnClose, type Holder } from './focus';
+import { compareTakesEscape, focusIndexAfterRedraw, focusInHiddenPanel, returnFocusOnClose, type Holder } from './focus';
 
 /** A stand-in element holding the named nodes. */
 const holder = (...nodes: string[]): Holder => ({ contains: (n) => typeof n === 'string' && nodes.includes(n) });
@@ -41,5 +41,25 @@ describe('focus in a list drawn again', () => {
     expect(focusIndexAfterRedraw(saved, ['load:a', 'delete:a', 'load:b', 'delete:b'], 'delete:c')).toBe(3);
     // Nothing left: the caller's fallback.
     expect(focusIndexAfterRedraw(['load:a', 'delete:a'], [], 'delete:a')).toBe(-1);
+  });
+});
+
+describe('which layer takes Escape (F-10: the one that holds the focus)', () => {
+  const at = (over: Partial<Parameters<typeof compareTakesEscape>[0]>) => compareTakesEscape({ inside: false, inDrawer: false, typingOutside: false, drawerOpen: false, ...over });
+
+  it('focus inside the compare sheet closes the panel, even with the assistant drawer open', () => {
+    expect(at({ inside: true })).toBe(true);
+    expect(at({ inside: true, drawerOpen: true })).toBe(true);
+  });
+
+  it('focus in the drawer, or in a field outside the sheet, leaves the key to them', () => {
+    expect(at({ inDrawer: true, drawerOpen: true })).toBe(false);
+    expect(at({ typingOutside: true })).toBe(false);
+    expect(at({ typingOutside: true, drawerOpen: true })).toBe(false);
+  });
+
+  it('focus on the page closes the drawer when it is open, and the panel otherwise', () => {
+    expect(at({ drawerOpen: true })).toBe(false);
+    expect(at({})).toBe(true);
   });
 });
