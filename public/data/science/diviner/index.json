@@ -1,0 +1,458 @@
+{
+ "format": "lunyx-polar-temperatures/1",
+ "title": "Annual maximum and annual mean surface temperature at the lunar poles, measured by LRO Diviner",
+ "what": "Two maps per pole, poleward of 80 degrees, in 240 m cells: the annual maximum and the annual mean of the surface (bolometric) temperature. They summarise many years of measurements; they are not the temperature at the date on screen.",
+ "notIncluded": "Separate summer and winter maps are not included. No such maps are published; the seasonal measurements exist only as about 190 GB of tables in the NASA PDS (Williams et al. 2019).",
+ "projection": "Polar stereographic on a sphere of radius 1737.4 km, true scale at the pole, pole at the centre of the grid. South: longitude 0 points to the top row, 90E to the right. North: longitude 0 points to the bottom row, 90E to the right. Mean Earth / Polar Axis frame, east-positive longitude.",
+ "values": "One 16-bit integer per cell: kelvin, rounded to 1 K. -32768 = no value: the corners of the square beyond 80 degrees, and cells the authors left empty.",
+ "quantities": {
+  "annual-max": {
+   "label": "Annual maximum temperature (Diviner)",
+   "unit": "K",
+   "sourceDescription": "Maximum temperature, after frequency-domain Fourier-filtering [K]",
+   "meaning": "Highest surface temperature over the year at this place, from LRO Diviner bolometric temperatures binned by local time (96 bins) and season (2 bins) in 240 m cells; the authors fill gaps in each cell's time series and smooth it before taking the maximum. An annual value: separate summer and winter maps are not included."
+  },
+  "annual-mean": {
+   "label": "Annual mean temperature (Diviner)",
+   "unit": "K",
+   "sourceDescription": "Mean temperature, averaged over ecliptic and subsolar longitudes [K]",
+   "meaning": "Mean surface temperature over the lunar day and the year at this place, from LRO Diviner bolometric temperatures binned by local time (96 bins) and season (2 bins) in 240 m cells. An annual value: separate summer and winter maps are not included."
+  }
+ },
+ "caveats": [
+  "Annual values only: separate summer and winter maps are not included.",
+  "Cells without a value in the published maps are left empty here: 1.8 % of the cells inside 80 degrees south, 0.01 % of the cells inside 80 degrees north.",
+  "The maximum is taken after the authors interpolate and Fourier-filter each cell's time series; it is not the highest single measurement.",
+  "A 240 m cell averages over small cold spots and warm slopes; Diviner's footprint and the binning limit what is resolved.",
+  "South: data from July 2009 to February 2019. North: July 2009 to January 2024."
+ ],
+ "citation": "Schorghofer, N., & Williams, J.-P. (2024). Lunar polar maps derived from Diviner temperatures organized by subsolar and ecliptic longitude (version 3.0) [Data set]. Harvard Dataverse. https://doi.org/10.7910/DVN/EGOOCL . Method: Schorghofer, N., & Williams, J.-P. (2020). Mapping of ice storage processes on the Moon with time-dependent temperatures. Planetary Science Journal, 1, 54. https://doi.org/10.3847/PSJ/abb6ff . Underlying measurements: Williams, J.-P., et al. (2019). Seasonal polar temperatures on the Moon. Journal of Geophysical Research: Planets, 124, 2505-2521.",
+ "licence": "CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/), as stated by the Harvard Dataverse record.",
+ "source": "https://doi.org/10.7910/DVN/EGOOCL",
+ "fileFormat": "LXG (gzip-compressed lossless int16 grid; see src/terrain/lxg.ts). Rebuild with: node --experimental-strip-types --no-warnings scripts/build-diviner.mjs",
+ "totalBytes": 9540983,
+ "layers": [
+  {
+   "id": "south-annual-max",
+   "file": "diviner_south_annual_max_240m.lxg",
+   "quantity": "annual-max",
+   "pole": "S",
+   "size": 2533,
+   "metresPerPx": 240.036,
+   "halfWidthM": 304005.5,
+   "latCompleteTo": -80,
+   "unit": "K",
+   "valueStepK": 1,
+   "noData": -32768,
+   "period": "July 2009 to February 2019",
+   "source": {
+    "dataset": "https://doi.org/10.7910/DVN/EGOOCL",
+    "version": "3.0",
+    "licence": "CC0 1.0",
+    "file": "polar_south_96x2/polar_south_80_Tmax.grd",
+    "url": "https://dataverse.harvard.edu/api/access/datafile/8134803",
+    "md5": "b0d096f3519d4d13d73d38f025dcfee1",
+    "description": "Maximum temperature, after frequency-domain Fourier-filtering [K]",
+    "binning": "96 local-time bins x 2 seasons, 240 m cells",
+    "internalTitle": ":polar_south_80_24x6",
+    "dataOffset": 41160
+   },
+   "processing": "Published 240 m grid, unchanged in position; temperatures rounded to 1 K (largest change 0.50 K). Cells the authors left empty are kept empty (stored as -32768); nothing is interpolated.",
+   "stats": {
+    "minK": 44.58,
+    "maxK": 391.4,
+    "meanK": 231.31,
+    "cellsInside80": 5039157,
+    "emptyInside80": 92903,
+    "emptyInside80Fraction": 0.0184,
+    "filledOutside80": 0
+   },
+   "coldest": {
+    "lat": -86.9677,
+    "lon": 22.884,
+    "row": 913,
+    "col": 1415,
+    "sourceK": 44.58,
+    "storedK": 45
+   },
+   "warmest": {
+    "lat": -81.3825,
+    "lon": 2.049,
+    "row": 176,
+    "col": 1305,
+    "sourceK": 391.4,
+    "storedK": 391
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "row": 1293,
+     "col": 1298,
+     "sourceK": 91.6,
+     "storedK": 92
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "row": 1266,
+     "col": 1266,
+     "sourceK": 243.74,
+     "storedK": 244
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "row": 760,
+     "col": 1266,
+     "sourceK": 203.65,
+     "storedK": 204
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "row": 1772,
+     "col": 1266,
+     "sourceK": 209.13,
+     "storedK": 209
+    },
+    {
+     "name": "82S 90E",
+     "lat": -82,
+     "lon": 90,
+     "row": 1266,
+     "col": 2278,
+     "sourceK": 226.69,
+     "storedK": 227
+    },
+    {
+     "name": "81S 135W",
+     "lat": -81,
+     "lon": -135,
+     "row": 2072,
+     "col": 460,
+     "sourceK": 275.32,
+     "storedK": 275
+    }
+   ],
+   "bytes": 3237188,
+   "sha256": "8f30aaf50f3a6a33967ab4e35ec1256173cb547697477a38459bf8f70e36a5ae"
+  },
+  {
+   "id": "south-annual-mean",
+   "file": "diviner_south_annual_mean_240m.lxg",
+   "quantity": "annual-mean",
+   "pole": "S",
+   "size": 2533,
+   "metresPerPx": 240.036,
+   "halfWidthM": 304005.5,
+   "latCompleteTo": -80,
+   "unit": "K",
+   "valueStepK": 1,
+   "noData": -32768,
+   "period": "July 2009 to February 2019",
+   "source": {
+    "dataset": "https://doi.org/10.7910/DVN/EGOOCL",
+    "version": "3.0",
+    "licence": "CC0 1.0",
+    "file": "polar_south_96x2/polar_south_80_Tmean.grd",
+    "url": "https://dataverse.harvard.edu/api/access/datafile/8134809",
+    "md5": "8b0813862ab4383cb3faced7070d4d47",
+    "description": "Mean temperature, averaged over ecliptic and subsolar longitudes [K]",
+    "binning": "96 local-time bins x 2 seasons, 240 m cells",
+    "internalTitle": ":polar_south_80_24x6",
+    "dataOffset": 41160
+   },
+   "processing": "Published 240 m grid, unchanged in position; temperatures rounded to 1 K (largest change 0.50 K). Cells the authors left empty are kept empty (stored as -32768); nothing is interpolated.",
+   "stats": {
+    "minK": 30.33,
+    "maxK": 191.16,
+    "meanK": 112.1,
+    "cellsInside80": 5039157,
+    "emptyInside80": 92903,
+    "emptyInside80Fraction": 0.0184,
+    "filledOutside80": 0
+   },
+   "coldest": {
+    "lat": -87.0284,
+    "lon": 14.813,
+    "row": 903,
+    "col": 1362,
+    "sourceK": 30.33,
+    "storedK": 30
+   },
+   "warmest": {
+    "lat": -89.791,
+    "lon": -155.376,
+    "row": 1290,
+    "col": 1255,
+    "sourceK": 191.16,
+    "storedK": 191
+   },
+   "checks": [
+    {
+     "name": "Shackleton crater, centre of the floor (IAU 89.67S 129.78E)",
+     "lat": -89.67,
+     "lon": 129.78,
+     "row": 1293,
+     "col": 1298,
+     "sourceK": 58.32,
+     "storedK": 58
+    },
+    {
+     "name": "South pole (on Shackleton's rim)",
+     "lat": -90,
+     "lon": 0,
+     "row": 1266,
+     "col": 1266,
+     "sourceK": 153.32,
+     "storedK": 153
+    },
+    {
+     "name": "Near side, 86S 0E",
+     "lat": -86,
+     "lon": 0,
+     "row": 760,
+     "col": 1266,
+     "sourceK": 124.16,
+     "storedK": 124
+    },
+    {
+     "name": "Far side, 86S 180E",
+     "lat": -86,
+     "lon": 180,
+     "row": 1772,
+     "col": 1266,
+     "sourceK": 73.31,
+     "storedK": 73
+    },
+    {
+     "name": "82S 90E",
+     "lat": -82,
+     "lon": 90,
+     "row": 1266,
+     "col": 2278,
+     "sourceK": 115.59,
+     "storedK": 116
+    },
+    {
+     "name": "81S 135W",
+     "lat": -81,
+     "lon": -135,
+     "row": 2072,
+     "col": 460,
+     "sourceK": 151.65,
+     "storedK": 152
+    }
+   ],
+   "bytes": 2361803,
+   "sha256": "b88a8a7a37ee479e532e6c2a19efca8630a97e8ec387975645895426bd6fd3c9"
+  },
+  {
+   "id": "north-annual-max",
+   "file": "diviner_north_annual_max_240m.lxg",
+   "quantity": "annual-max",
+   "pole": "N",
+   "size": 2533,
+   "metresPerPx": 240.036,
+   "halfWidthM": 304005.5,
+   "latCompleteTo": 80,
+   "unit": "K",
+   "valueStepK": 1,
+   "noData": -32768,
+   "period": "July 2009 to January 2024",
+   "source": {
+    "dataset": "https://doi.org/10.7910/DVN/EGOOCL",
+    "version": "3.0",
+    "licence": "CC0 1.0",
+    "file": "polar_north_96x2_2024/polar_north_80_Tmax.grd",
+    "url": "https://dataverse.harvard.edu/api/access/datafile/9263280",
+    "md5": "95942cbbd47aadb3386498b5689ceed1",
+    "description": "Maximum temperature, after frequency-domain Fourier-filtering [K]",
+    "binning": "96 local-time bins x 2 seasons, 240 m cells",
+    "internalTitle": "polar_north_80_96x2",
+    "dataOffset": 40796
+   },
+   "processing": "Published 240 m grid, unchanged in position; temperatures rounded to 1 K (largest change 0.50 K). Cells the authors left empty are kept empty (stored as -32768); nothing is interpolated.",
+   "stats": {
+    "minK": 49.53,
+    "maxK": 329.13,
+    "meanK": 230.61,
+    "cellsInside80": 5039157,
+    "emptyInside80": 268,
+    "emptyInside80Fraction": 0.0001,
+    "filledOutside80": 2331
+   },
+   "coldest": {
+    "lat": 88.8354,
+    "lon": -87.663,
+    "row": 1272,
+    "col": 1119,
+    "sourceK": 49.53,
+    "storedK": 50
+   },
+   "warmest": {
+    "lat": 80.4635,
+    "lon": -50.073,
+    "row": 2041,
+    "col": 340,
+    "sourceK": 329.13,
+    "storedK": 329
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "row": 1266,
+     "col": 1266,
+     "sourceK": 185.04,
+     "storedK": 185
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "row": 1772,
+     "col": 1266,
+     "sourceK": 210.66,
+     "storedK": 211
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "row": 760,
+     "col": 1266,
+     "sourceK": 202.44,
+     "storedK": 202
+    },
+    {
+     "name": "82N 90W",
+     "lat": 82,
+     "lon": -90,
+     "row": 1266,
+     "col": 254,
+     "sourceK": 269.33,
+     "storedK": 269
+    },
+    {
+     "name": "81N 45E",
+     "lat": 81,
+     "lon": 45,
+     "row": 2072,
+     "col": 2072,
+     "sourceK": 262.59,
+     "storedK": 263
+    }
+   ],
+   "bytes": 2545475,
+   "sha256": "9afafecfa1ee66232c15ae3e36cdb1b6aa21ed13402f74719bc84551b86aa405"
+  },
+  {
+   "id": "north-annual-mean",
+   "file": "diviner_north_annual_mean_240m.lxg",
+   "quantity": "annual-mean",
+   "pole": "N",
+   "size": 2533,
+   "metresPerPx": 240.036,
+   "halfWidthM": 304005.5,
+   "latCompleteTo": 80,
+   "unit": "K",
+   "valueStepK": 1,
+   "noData": -32768,
+   "period": "July 2009 to January 2024",
+   "source": {
+    "dataset": "https://doi.org/10.7910/DVN/EGOOCL",
+    "version": "3.0",
+    "licence": "CC0 1.0",
+    "file": "polar_north_96x2_2024/polar_north_80_Tmean.grd",
+    "url": "https://dataverse.harvard.edu/api/access/datafile/9263266",
+    "md5": "863bf6e834b8b81bce4d14d73a46dc2b",
+    "description": "Mean temperature, averaged over ecliptic and subsolar longitudes [K]",
+    "binning": "96 local-time bins x 2 seasons, 240 m cells",
+    "internalTitle": "polar_north_80_96x2",
+    "dataOffset": 40796
+   },
+   "processing": "Published 240 m grid, unchanged in position; temperatures rounded to 1 K (largest change 0.50 K). Cells the authors left empty are kept empty (stored as -32768); nothing is interpolated.",
+   "stats": {
+    "minK": 38.3,
+    "maxK": 192.72,
+    "meanK": 114.06,
+    "cellsInside80": 5039157,
+    "emptyInside80": 268,
+    "emptyInside80Fraction": 0.0001,
+    "filledOutside80": 2331
+   },
+   "coldest": {
+    "lat": 89.0717,
+    "lon": 176.088,
+    "row": 1149,
+    "col": 1274,
+    "sourceK": 38.3,
+    "storedK": 38
+   },
+   "warmest": {
+    "lat": 88.0601,
+    "lon": -117.192,
+    "row": 1154,
+    "col": 1048,
+    "sourceK": 192.72,
+    "storedK": 193
+   },
+   "checks": [
+    {
+     "name": "North pole",
+     "lat": 90,
+     "lon": 0,
+     "row": 1266,
+     "col": 1266,
+     "sourceK": 80.09,
+     "storedK": 80
+    },
+    {
+     "name": "Near side, 86N 0E",
+     "lat": 86,
+     "lon": 0,
+     "row": 1772,
+     "col": 1266,
+     "sourceK": 109.99,
+     "storedK": 110
+    },
+    {
+     "name": "Far side, 86N 180E",
+     "lat": 86,
+     "lon": 180,
+     "row": 760,
+     "col": 1266,
+     "sourceK": 97.2,
+     "storedK": 97
+    },
+    {
+     "name": "82N 90W",
+     "lat": 82,
+     "lon": -90,
+     "row": 1266,
+     "col": 254,
+     "sourceK": 144.84,
+     "storedK": 145
+    },
+    {
+     "name": "81N 45E",
+     "lat": 81,
+     "lon": 45,
+     "row": 2072,
+     "col": 2072,
+     "sourceK": 139.33,
+     "storedK": 139
+    }
+   ],
+   "bytes": 1396517,
+   "sha256": "abb60376e46e79a143da39501deb13f8d82123ec5700afc3058012a83cd30622"
+  }
+ ]
+}
