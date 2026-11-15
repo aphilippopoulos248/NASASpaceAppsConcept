@@ -3,8 +3,8 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the tree at `e78ed65`: `am/lunyx-experience/integration` at `47b5043`
-  merged with `am/lunyx/integration` at `6d4da06` (the published feature set with the mission
+- **State described:** the tree at `e514747`: `am/lunyx-experience/integration` at `47b5043`
+  merged with `am/lunyx/integration` at `7d3803a` (the published feature set with the mission
   presets, the T-37 notices, the T-38 landing sources, the T-39 flags, the T-43 coordinate entry
   and the science project's deliveries), plus this task's documents; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
@@ -106,13 +106,13 @@ in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `e78ed65` the history has 323 commits:
+At `e514747` the history has 331 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 167 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 166 (71 "Claude Fable 5.2", 95 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 171 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 170 (71 "Claude Fable 5.2", 99 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
 | 10 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 8: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix); AI status not recorded (open item L4) |
-| 146 merge commits | 48 | 98 (58 by the hub's integration bot, 1 GitHub pull-request merge, 37 by the local account, 2 by the teammate) |
+| 150 merge commits | 48 | 102 (61 by the hub's integration bot, 1 GitHub pull-request merge, 38 by the local account, 2 by the teammate) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -178,7 +178,7 @@ the operator; relayed through @coordinator, not patched here:
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `e78ed65` that is an image, texture, document image or data
+**Scope:** every tracked file at `e514747` that is an image, texture, document image or data
 file: everything except source code, configuration and Markdown. **416 files, 165.9 MB**: 127
 images (JPEG, PNG, WebP), 1 PDF, 288 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
@@ -196,7 +196,8 @@ images (JPEG, PNG, WebP), 1 PDF, 288 data and text files. Each was checked as st
   third-party notices (A29), which a script assembles from the packages' licence texts. At
   run time the app generates rocks, small craters and sub-metre texture (labelled "generated
   detail" on screen, `src/scene/surface/assets.ts`) and the stars behind the globe (2 500 random
-  points, `createStars` in `src/scene/globe.ts`: decoration, not a star map, and not labelled).
+  points, `createStars` in `src/scene/globe.ts`: decoration, not a star map; since the original
+  team's T-42 the globe's relief chip says "Background stars are decorative").
 - **AI, AI-generated media**: an image, video or audio file produced by a generative AI model.
   **No file is confirmed in this class**; the close-up textures (A11) are not established.
 - **A, written by an AI agent**: a data or configuration file that a coding agent wrote
@@ -680,7 +681,7 @@ like the rest of `docs/`).
 | --- | --- | --- | --- | --- |
 | W1 | Screenshots of the app (A23, and any new ones under `docs/lunyx/screenshots/`) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 168 of 177 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 172 of 181 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
@@ -696,7 +697,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `e78ed65`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `e514747`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a

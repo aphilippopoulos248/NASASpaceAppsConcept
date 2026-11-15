@@ -5,8 +5,8 @@ to settle before the project is published. Prepared for the NASA Space Apps 2026
 (task T-3 of the hub project "Lunyx Navigator and Submission"; requirements in
 `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 1).
 
-- **State described:** the tree at `e78ed65`: `am/lunyx-experience/integration` at `47b5043`
-  merged with `am/lunyx/integration` at `6d4da06` (T-22 mission presets, T-37 licence notices
+- **State described:** the tree at `e514747`: `am/lunyx-experience/integration` at `47b5043`
+  merged with `am/lunyx/integration` at `7d3803a` (T-22 mission presets, T-37 licence notices
   and the DOI fix, T-38 a source for every landing, T-39 the flags, the science project's
   deliveries), plus this task's documents. Since the published `cc736f8`, `public/` gained
   `public/data/sources/` (S18 to S20), `public/data/presets.json` (S21) and
