@@ -1,0 +1,733 @@
+[
+ {
+  "id": "Apollo 11 Landing",
+  "lat": 0.6875,
+  "lon": 23.4333,
+  "elevationM": 0,
+  "utc": "1969-07-20T20:17:39Z",
+  "published": {
+   "subEarthLon": -7.13,
+   "subEarthLat": 1.69,
+   "earthAlt": 59.43,
+   "earthAz": 272.16,
+   "subSolarLon": 102.8,
+   "subSolarLat": 1.3,
+   "sunAlt": 10.65,
+   "sunAz": 88.81
+  }
+ },
+ {
+  "id": "Apollo 11 EVA st",
+  "lat": 0.6875,
+  "lon": 23.4333,
+  "elevationM": 0,
+  "utc": "1969-07-21T02:39:33Z",
+  "published": {
+   "subEarthLon": -7.25,
+   "subEarthLat": 2.06,
+   "earthAlt": 59.3,
+   "earthAz": 272.88,
+   "subSolarLon": 99.55,
+   "subSolarLat": 1.29,
+   "sunAlt": 13.84,
+   "sunAz": 88.84
+  }
+ },
+ {
+  "id": "Apollo 11 1SSfM1GLfM",
+  "lat": 0.6875,
+  "lon": 23.4333,
+  "elevationM": 0,
+  "utc": "1969-07-21T02:56:15Z",
+  "published": {
+   "subEarthLon": -7.25,
+   "subEarthLat": 2.08,
+   "earthAlt": 59.3,
+   "earthAz": 272.92,
+   "subSolarLon": 99.41,
+   "subSolarLat": 1.29,
+   "sunAlt": 14.03,
+   "sunAz": 88.84
+  }
+ },
+ {
+  "id": "Apollo 11 EVA end",
+  "lat": 0.6875,
+  "lon": 23.4333,
+  "elevationM": 0,
+  "utc": "1969-07-21T05:11:13Z",
+  "published": {
+   "subEarthLon": -7.27,
+   "subEarthLat": 2.21,
+   "earthAlt": 59.27,
+   "earthAz": 273.17,
+   "subSolarLon": 98.27,
+   "subSolarLat": 1.29,
+   "sunAlt": 15.17,
+   "sunAz": 88.85
+  }
+ },
+ {
+  "id": "Apollo 11 Liftoff",
+  "lat": 0.6875,
+  "lon": 23.4333,
+  "elevationM": 0,
+  "utc": "1969-07-21T17:54:00Z",
+  "published": {
+   "subEarthLon": -7.41,
+   "subEarthLat": 2.94,
+   "earthAlt": 59.09,
+   "earthAz": 274.58,
+   "subSolarLon": 91.79,
+   "subSolarLat": 1.27,
+   "sunAlt": 21.65,
+   "sunAz": 88.91
+  }
+ },
+ {
+  "id": "Apollo 12 Landing",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-19T06:54:36Z",
+  "published": {
+   "subEarthLon": 5.02,
+   "subEarthLat": -1.36,
+   "earthAlt": 61.56,
+   "earthAz": 86.95,
+   "subSolarLon": 61.5,
+   "subSolarLat": -1.44,
+   "sunAlt": 5.19,
+   "sunAz": 91.16
+  }
+ },
+ {
+  "id": "Apollo 12 EVA1 st",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-19T11:32:35Z",
+  "published": {
+   "subEarthLon": 5.06,
+   "subEarthLat": -1.65,
+   "earthAlt": 61.54,
+   "earthAz": 87.56,
+   "subSolarLon": 59.16,
+   "subSolarLat": -1.44,
+   "sunAlt": 7.52,
+   "sunAz": 91.03
+  }
+ },
+ {
+  "id": "Apollo 12 EVA1 end",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-19T15:28:38Z",
+  "published": {
+   "subEarthLon": 5.09,
+   "subEarthLat": -1.89,
+   "earthAlt": 61.52,
+   "earthAz": 88.07,
+   "subSolarLon": 57.17,
+   "subSolarLat": -1.44,
+   "sunAlt": 9.51,
+   "sunAz": 90.53
+  }
+ },
+ {
+  "id": "Apollo 12 EVA2 st",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-20T03:54:45Z",
+  "published": {
+   "subEarthLon": 5.17,
+   "subEarthLat": -2.64,
+   "earthAlt": 61.48,
+   "earthAz": 89.65,
+   "subSolarLon": 50.88,
+   "subSolarLat": -1.45,
+   "sunAlt": 15.79,
+   "sunAz": 90.6
+  }
+ },
+ {
+  "id": "Apollo 12 EVA2 end",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-20T07:44:00Z",
+  "published": {
+   "subEarthLon": 5.17,
+   "subEarthLat": -2.85,
+   "earthAlt": 61.48,
+   "earthAz": 90.09,
+   "subSolarLon": 48.95,
+   "subSolarLat": -1.46,
+   "sunAlt": 17.72,
+   "sunAz": 90.51
+  }
+ },
+ {
+  "id": "Apollo 12 Liftoff",
+  "lat": -3.1975,
+  "lon": -23.3856,
+  "elevationM": 0,
+  "utc": "1969-11-20T14:25:47Z",
+  "published": {
+   "subEarthLon": 5.18,
+   "subEarthLat": -3.23,
+   "earthAlt": 61.48,
+   "earthAz": 90.88,
+   "subSolarLon": 45.55,
+   "subSolarLat": -1.46,
+   "sunAlt": 21.11,
+   "sunAz": 90.33
+  }
+ },
+ {
+  "id": "Apollo 14 Landing",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-05T09:18:13Z",
+  "published": {
+   "subEarthLon": 6.4,
+   "subEarthLat": -6.07,
+   "earthAlt": 66.1,
+   "earthAz": 96.7,
+   "subSolarLon": 62.17,
+   "subSolarLat": -0.21,
+   "sunAlt": 10.36,
+   "sunAz": 89.54
+  }
+ },
+ {
+  "id": "Apollo 14 EVA1 st",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-05T14:42:13Z",
+  "published": {
+   "subEarthLon": 6.32,
+   "subEarthLat": -5.92,
+   "earthAlt": 66.19,
+   "earthAz": 96.35,
+   "subSolarLon": 59.44,
+   "subSolarLat": -0.2,
+   "sunAlt": 13.08,
+   "sunAz": 89.35
+  }
+ },
+ {
+  "id": "Apollo 14 EVA1 end",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-05T19:30:03Z",
+  "published": {
+   "subEarthLon": 6.26,
+   "subEarthLat": -5.77,
+   "earthAlt": 66.26,
+   "earthAz": 95.99,
+   "subSolarLon": 57.01,
+   "subSolarLat": -0.2,
+   "sunAlt": 15.51,
+   "sunAz": 89.19
+  }
+ },
+ {
+  "id": "Apollo 14 EVA2 st",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-06T08:11:15Z",
+  "published": {
+   "subEarthLon": 6.0,
+   "subEarthLat": -5.31,
+   "earthAlt": 66.55,
+   "earthAz": 94.88,
+   "subSolarLon": 50.59,
+   "subSolarLat": -0.18,
+   "sunAlt": 21.91,
+   "sunAz": 88.71
+  }
+ },
+ {
+  "id": "Apollo 14 EVA2 end",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-06T12:45:56Z",
+  "published": {
+   "subEarthLon": 5.89,
+   "subEarthLat": -5.12,
+   "earthAlt": 66.67,
+   "earthAz": 94.41,
+   "subSolarLon": 48.27,
+   "subSolarLat": -0.17,
+   "sunAlt": 24.22,
+   "sunAz": 88.53
+  }
+ },
+ {
+  "id": "Apollo 14 Liftoff",
+  "lat": -3.6733,
+  "lon": -17.4653,
+  "elevationM": 0,
+  "utc": "1971-02-06T18:48:42Z",
+  "published": {
+   "subEarthLon": 5.75,
+   "subEarthLat": -4.88,
+   "earthAlt": 66.82,
+   "earthAz": 93.82,
+   "subSolarLon": 45.21,
+   "subSolarLat": -0.17,
+   "sunAlt": 27.28,
+   "sunAz": 88.29
+  }
+ },
+ {
+  "id": "Apollo 15 Landing",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-07-30T22:16:29Z",
+  "published": {
+   "subEarthLon": -4.35,
+   "subEarthLat": 6.84,
+   "earthAlt": 69.28,
+   "earthAz": 203.0,
+   "subSolarLon": 80.33,
+   "subSolarLat": 0.24,
+   "sunAlt": 12.05,
+   "sunAz": 95.73
+  }
+ },
+ {
+  "id": "Apollo 15 SEVA st",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-07-31T00:16:49Z",
+  "published": {
+   "subEarthLon": -4.44,
+   "subEarthLat": 6.85,
+   "earthAlt": 69.26,
+   "earthAz": 203.25,
+   "subSolarLon": 79.31,
+   "subSolarLat": 0.24,
+   "sunAlt": 12.96,
+   "sunAz": 96.2
+  }
+ },
+ {
+  "id": "Apollo 15 SEVA end",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-07-31T00:49:56Z",
+  "published": {
+   "subEarthLon": -4.46,
+   "subEarthLat": 6.85,
+   "earthAlt": 69.25,
+   "earthAz": 203.3,
+   "subSolarLon": 79.03,
+   "subSolarLat": 0.24,
+   "sunAlt": 13.21,
+   "sunAz": 96.33
+  }
+ },
+ {
+  "id": "Apollo 15 EVA1 st",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-07-31T13:13:17Z",
+  "published": {
+   "subEarthLon": -4.91,
+   "subEarthLat": 6.78,
+   "earthAlt": 69.03,
+   "earthAz": 204.4,
+   "subSolarLon": 72.72,
+   "subSolarLat": 0.23,
+   "sunAlt": 18.82,
+   "sunAz": 99.34
+  }
+ },
+ {
+  "id": "Apollo 15 EVA1 end",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-07-31T19:45:59Z",
+  "published": {
+   "subEarthLon": -5.15,
+   "subEarthLat": 6.75,
+   "earthAlt": 68.91,
+   "earthAz": 204.98,
+   "subSolarLon": 69.39,
+   "subSolarLat": 0.22,
+   "sunAlt": 21.76,
+   "sunAz": 101.01
+  }
+ },
+ {
+  "id": "Apollo 15 EVA2 st",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-08-01T11:48:49Z",
+  "published": {
+   "subEarthLon": -5.59,
+   "subEarthLat": 6.51,
+   "earthAlt": 68.52,
+   "earthAz": 205.83,
+   "subSolarLon": 61.23,
+   "subSolarLat": 0.21,
+   "sunAlt": 28.89,
+   "sunAz": 105.41
+  }
+ },
+ {
+  "id": "Apollo 15 EVA2 end",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-08-01T19:01:02Z",
+  "published": {
+   "subEarthLon": -5.76,
+   "subEarthLat": 6.38,
+   "earthAlt": 68.33,
+   "earthAz": 206.12,
+   "subSolarLon": 57.56,
+   "subSolarLat": 0.21,
+   "sunAlt": 32.05,
+   "sunAz": 107.57
+  }
+ },
+ {
+  "id": "Apollo 15 EVA3 st",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-08-02T08:52:14Z",
+  "published": {
+   "subEarthLon": -5.97,
+   "subEarthLat": 6.01,
+   "earthAlt": 67.91,
+   "earthAz": 206.23,
+   "subSolarLon": 50.52,
+   "subSolarLat": 0.19,
+   "sunAlt": 37.98,
+   "sunAz": 112.2
+  }
+ },
+ {
+  "id": "Apollo 15 EVA3 end",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-08-02T13:42:04Z",
+  "published": {
+   "subEarthLon": -6.02,
+   "subEarthLat": 5.86,
+   "earthAlt": 67.75,
+   "earthAz": 206.2,
+   "subSolarLon": 48.07,
+   "subSolarLat": 0.18,
+   "sunAlt": 40.0,
+   "sunAz": 113.99
+  }
+ },
+ {
+  "id": "Apollo 15 Liftoff",
+  "lat": 26.1008,
+  "lon": 3.6528,
+  "elevationM": 0,
+  "utc": "1971-08-02T17:11:23Z",
+  "published": {
+   "subEarthLon": -6.06,
+   "subEarthLat": 5.75,
+   "earthAlt": 67.63,
+   "earthAz": 206.18,
+   "subSolarLon": 46.29,
+   "subSolarLat": 0.18,
+   "sunAlt": 41.45,
+   "sunAz": 115.34
+  }
+ },
+ {
+  "id": "Apollo 16 Landing",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-21T02:23:35Z",
+  "published": {
+   "subEarthLon": 7.25,
+   "subEarthLat": 0.86,
+   "earthAlt": 77.16,
+   "earthAz": 319.7,
+   "subSolarLon": 90.31,
+   "subSolarLat": 1.53,
+   "sunAlt": 14.76,
+   "sunAz": 86.01
+  }
+ },
+ {
+  "id": "Apollo 16 EVA1 st",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-21T16:47:38Z",
+  "published": {
+   "subEarthLon": 6.98,
+   "subEarthLat": 1.72,
+   "earthAlt": 76.32,
+   "earthAz": 321.15,
+   "subSolarLon": 82.99,
+   "subSolarLat": 1.54,
+   "sunAlt": 21.96,
+   "sunAz": 84.65
+  }
+ },
+ {
+  "id": "Apollo 16 EVA1 end",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-21T23:58:40Z",
+  "published": {
+   "subEarthLon": 6.84,
+   "subEarthLat": 2.15,
+   "earthAlt": 75.9,
+   "earthAz": 321.79,
+   "subSolarLon": 79.34,
+   "subSolarLat": 1.54,
+   "sunAlt": 25.55,
+   "sunAz": 83.93
+  }
+ },
+ {
+  "id": "Apollo 16 EVA2 st",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-22T16:33:35Z",
+  "published": {
+   "subEarthLon": 6.34,
+   "subEarthLat": 3.04,
+   "earthAlt": 74.89,
+   "earthAz": 322.36,
+   "subSolarLon": 70.92,
+   "subSolarLat": 1.55,
+   "sunAlt": 33.8,
+   "sunAz": 82.02
+  }
+ },
+ {
+  "id": "Apollo 16 EVA2 end",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-22T23:56:44Z",
+  "published": {
+   "subEarthLon": 6.11,
+   "subEarthLat": 3.44,
+   "earthAlt": 74.43,
+   "earthAz": 322.58,
+   "subSolarLon": 67.17,
+   "subSolarLat": 1.55,
+   "sunAlt": 37.47,
+   "sunAz": 81.04
+  }
+ },
+ {
+  "id": "Apollo 16 EVA3 st",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-23T15:25:28Z",
+  "published": {
+   "subEarthLon": 5.51,
+   "subEarthLat": 4.16,
+   "earthAlt": 73.49,
+   "earthAz": 322.42,
+   "subSolarLon": 59.31,
+   "subSolarLat": 1.56,
+   "sunAlt": 45.11,
+   "sunAz": 78.59
+  }
+ },
+ {
+  "id": "Apollo 16 EVA3 end",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-23T21:05:31Z",
+  "published": {
+   "subEarthLon": 5.29,
+   "subEarthLat": 4.42,
+   "earthAlt": 73.15,
+   "earthAz": 322.36,
+   "subSolarLon": 56.43,
+   "subSolarLat": 1.56,
+   "sunAlt": 47.89,
+   "sunAz": 77.52
+  }
+ },
+ {
+  "id": "Apollo 16 Liftoff",
+  "lat": -8.9914,
+  "lon": 15.5144,
+  "elevationM": 0,
+  "utc": "1972-04-24T01:25:47Z",
+  "published": {
+   "subEarthLon": 5.12,
+   "subEarthLat": 4.61,
+   "earthAlt": 72.9,
+   "earthAz": 322.29,
+   "subSolarLon": 54.22,
+   "subSolarLat": 1.56,
+   "sunAlt": 50.02,
+   "sunAz": 76.61
+  }
+ },
+ {
+  "id": "Apollo 17 Landing",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-11T19:54:58Z",
+  "published": {
+   "subEarthLon": -7.1,
+   "subEarthLat": -4.25,
+   "earthAlt": 45.52,
+   "earthAz": 240.88,
+   "subSolarLon": 106.26,
+   "subSolarLat": -0.76,
+   "sunAlt": 13.33,
+   "sunAz": 95.83
+  }
+ },
+ {
+  "id": "Apollo 17 EVA1 st",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-11T23:54:49Z",
+  "published": {
+   "subEarthLon": -7.2,
+   "subEarthLat": -4.46,
+   "earthAlt": 45.32,
+   "earthAz": 240.72,
+   "subSolarLon": 104.23,
+   "subSolarLat": -0.76,
+   "sunAlt": 15.22,
+   "sunAz": 96.58
+  }
+ },
+ {
+  "id": "Apollo 17 EVA1 end",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-12T07:06:42Z",
+  "published": {
+   "subEarthLon": -7.27,
+   "subEarthLat": -4.76,
+   "earthAlt": 45.09,
+   "earthAz": 240.42,
+   "subSolarLon": 100.58,
+   "subSolarLat": -0.75,
+   "sunAlt": 18.63,
+   "sunAz": 97.96
+  }
+ },
+ {
+  "id": "Apollo 17 EVA2 st",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-12T23:28:06Z",
+  "published": {
+   "subEarthLon": -7.42,
+   "subEarthLat": -5.46,
+   "earthAlt": 44.56,
+   "earthAz": 239.74,
+   "subSolarLon": 92.29,
+   "subSolarLat": -0.73,
+   "sunAlt": 26.3,
+   "sunAz": 101.34
+  }
+ },
+ {
+  "id": "Apollo 17 EVA2 end",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-13T07:05:02Z",
+  "published": {
+   "subEarthLon": -7.37,
+   "subEarthLat": -5.71,
+   "earthAlt": 44.46,
+   "earthAz": 239.41,
+   "subSolarLon": 88.43,
+   "subSolarLat": -0.72,
+   "sunAlt": 29.85,
+   "sunAz": 103.07
+  }
+ },
+ {
+  "id": "Apollo 17 EVA3 st",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-13T22:25:48Z",
+  "published": {
+   "subEarthLon": -7.27,
+   "subEarthLat": -6.2,
+   "earthAlt": 44.25,
+   "earthAz": 238.78,
+   "subSolarLon": 80.66,
+   "subSolarLat": -0.7,
+   "sunAlt": 36.9,
+   "sunAz": 106.98
+  }
+ },
+ {
+  "id": "Apollo 17 EVA3 end",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-14T05:40:56Z",
+  "published": {
+   "subEarthLon": -7.12,
+   "subEarthLat": -6.35,
+   "earthAlt": 44.28,
+   "earthAz": 238.48,
+   "subSolarLon": 76.98,
+   "subSolarLat": -0.69,
+   "sunAlt": 40.19,
+   "sunAz": 109.09
+  }
+ },
+ {
+  "id": "Apollo 17 Liftoff",
+  "lat": 20.1653,
+  "lon": 30.7658,
+  "elevationM": 0,
+  "utc": "1972-12-14T22:54:37Z",
+  "published": {
+   "subEarthLon": -6.71,
+   "subEarthLat": -6.66,
+   "earthAlt": 44.42,
+   "earthAz": 237.8,
+   "subSolarLon": 68.26,
+   "subSolarLat": -0.67,
+   "sunAlt": 47.79,
+   "sunAz": 115.05
+  }
+ }
+]
