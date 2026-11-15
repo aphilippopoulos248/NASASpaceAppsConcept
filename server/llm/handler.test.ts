@@ -1,10 +1,14 @@
 // /api/assistant as the browser sees it: status, the no-model answer, validation, a
 // streamed step from the scripted model, the router guard, and that no credential can
 // appear in anything the handler sends.
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { LIMITS, type AssistantStatus, type StepEvent, type StepRequest, type WireTool } from '../../src/assistant/protocol';
 import { loadConfig, type LlmConfig } from './env';
-import { createAssistantHandler, type HandlerDeps, type HttpRequest, type HttpResponse } from './handler';
+import { NO_CREDENTIALS } from './anthropic';
+import { createAssistantHandler, defaultDeps, type HandlerDeps, type HttpRequest, type HttpResponse } from './handler';
 import { directRouter, registerRouter } from './router';
 import { defaultScript, ScriptedProvider } from './scripted';
 import type { LlmProvider, ProviderRequest } from './types';
@@ -107,11 +111,55 @@ describe('POST /api/assistant', () => {
     expect(ended.at(-1)).toMatchObject({ type: 'error', error: { kind: 'server' } });
   });
 
+  it('redacts an explicit ANTHROPIC_API_KEY even when it does not look like one', async () => {
+    const key = 'plain-CANARY-key-0123456789';
+    const leaky: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { yield { type: 'error', error: { kind: 'auth', message: `rejected ${key}` } }; } };
+    const res = await createAssistantHandler(deps({ ANTHROPIC_API_KEY: key }, () => leaky))(httpRequest('POST', step('hi')));
+    expect(await events(res)).toEqual([{ type: 'error', error: { kind: 'auth', message: 'rejected [redacted]' } }]);
+  });
+
   it('redacts secrets from provider error messages', async () => {
     const leaky: LlmProvider = { info: { provider: 'x', model: 'x', label: 'x' }, async *step() { yield { type: 'error', error: { kind: 'auth', message: `rejected ${SECRET}` } }; } };
     const res = await createAssistantHandler(deps({}, () => leaky))(httpRequest('POST', step('hi')));
     const list = await events(res);
     expect(list).toEqual([{ type: 'error', error: { kind: 'auth', message: 'rejected [redacted]' } }]);
+  });
+});
+
+describe('the default configuration on a machine without Claude credentials (the judges\' case)', () => {
+  // The real provider and SDK client, with nothing to find: no key or token in the environment
+  // and an empty SDK config directory (no `ant auth login` profile).
+  const CREDENTIAL_VARS = ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_PROFILE', 'ANTHROPIC_FEDERATION_RULE_ID', 'ANTHROPIC_ORGANIZATION_ID', 'ANTHROPIC_IDENTITY_TOKEN', 'ANTHROPIC_IDENTITY_TOKEN_FILE', 'ANTHROPIC_CONFIG_DIR'];
+  const saved = new Map<string, string | undefined>();
+  const bare = () => {
+    for (const k of CREDENTIAL_VARS) {
+      saved.set(k, process.env[k]);
+      delete process.env[k];
+    }
+    process.env.ANTHROPIC_CONFIG_DIR = mkdtempSync(join(tmpdir(), 'lunyx-no-credentials-'));
+  };
+  afterEach(() => {
+    for (const [k, v] of saved) {
+      if (v === undefined) delete process.env[k];
+      else process.env[k] = v;
+    }
+    saved.clear();
+  });
+
+  it('reports no model in the status, so the drawer starts in deterministic mode', async () => {
+    bare();
+    const handler = createAssistantHandler({ ...defaultDeps, loadConfig: () => config({}), log: () => {} });
+    const res = await handler(httpRequest('GET'));
+    expect(config({}).provider).toBe('anthropic');
+    expect(res.json).toEqual({ available: false, model: null, router: 'direct', reason: NO_CREDENTIALS });
+  });
+
+  it('answers a step 503 no_model, not a failed request', async () => {
+    bare();
+    const handler = createAssistantHandler({ ...defaultDeps, loadConfig: () => config({ LUNYX_LLM_EFFORT: 'low' }), log: () => {} });
+    const res = await handler(httpRequest('POST', step('hello')));
+    expect(res.status).toBe(503);
+    expect(res.json).toEqual({ error: { kind: 'no_model', message: NO_CREDENTIALS } });
   });
 });
 

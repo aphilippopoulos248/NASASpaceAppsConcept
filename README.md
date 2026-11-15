@@ -15,30 +15,37 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
 
 ## What it does
 
-- **Globe view.** A 3D Moon with real relief from the LOLA whole-Moon grid, 28 catalogued
-  landings and a pin anywhere. Filters: UTC date and time, the latitude and longitude at the
-  centre of the view, the required solar elevation band, mast height, mission window and arrival
-  delay, "Missions to replay" (see [Run it](#run-it)) and "Go to a landing site", a list that
-  also works from the keyboard. Overlays with legends: where the Sun is inside the elevation
-  band (smooth Moon), long-term average sunlight and Earth visibility (NASA PGDA product 69,
-  polar regions only), elevation-data coverage and mapped ice-bearing shadowed regions. A
-  compass, a locator map and a mission-window time scrubber that draws each sunrise and sunset
-  from its start to its end, with jumps to either end. Landing markers are coloured by the
-  country their hardware belongs to, with optional flags. The site card shows who owns the
-  hardware (from the GCAT catalogue), the area explored at the site, the data behind the site,
-  the Sun and Earth against its skyline with both ends of their next rise or set, the mission
-  window's sunlight and Earth in view (by Earth's centre and by any part of its disc), and a
-  site-science section: Deep Space Network station opportunities, long-term averages, the
-  nearest mapped ice targets, Diviner annual maximum and mean temperature, and ShadowCam mosaics
-  as links.
+- **Globe view.** A 3D Moon with real relief from the LOLA whole-Moon grid, drawn at true scale,
+  28 catalogued landings and a pin anywhere. Filters: UTC date and time, the latitude and
+  longitude at the centre of the view, the required solar elevation band, mast height, mission
+  window and arrival delay, "Missions to replay" (see [Run it](#run-it)) and "Go to a landing
+  site", a list that also works from the keyboard: choosing a landing opens its card, and a
+  double-click goes down to its surface view. Overlays with legends: where the Sun is inside the
+  elevation band (smooth Moon), long-term average sunlight and Earth visibility (NASA PGDA
+  product 69, polar regions only), elevation-data coverage and mapped ice-bearing shadowed
+  regions. A compass, a locator map and a mission-window time scrubber that draws each sunrise
+  and sunset from its start to its end, with jumps to either end. Landing markers are coloured
+  by the country their hardware belongs to, with optional flags and a "Territory size
+  exaggeration" control for the explored areas. The site card shows who owns the hardware (from
+  the GCAT catalogue), the area explored at the site, the data behind the site, the Sun and
+  Earth against its skyline with both ends of their next rise or set, the mission window's
+  sunlight and Earth in view (by Earth's centre and by any part of its disc), and a site-science
+  section: Deep Space Network station opportunities, long-term averages, the nearest mapped ice
+  targets, Diviner annual maximum and mean temperature, and ShadowCam mosaics as links.
 - **Surface view.** Stand at the site and look around: black sky, terrain drawn from the
-  elevation data out to 246 km, the Sun and Earth at their computed positions and sizes,
-  Earth's phase, terrain shadows and both bodies' tracks. Key metrics (upper left): Sun and
-  Earth position and clearance above the skyline now, countdowns to the next sunset, sunrise,
-  Earthset and Earthrise (to whichever end of each comes next, with both ends below it), the
+  elevation data out to 246 km, the Sun and Earth at their computed positions and sizes, Earth's
+  phase, terrain shadows and both bodies' tracks. Key metrics (upper left): Sun and Earth
+  position and clearance above the skyline now, countdowns to the next sunset, sunrise, Earthset
+  and Earthrise (to whichever end of each comes next, with both ends below it), the
   mission-window figures with Earth by its centre and by any part of its disc, and where the
   numbers come from. A skyline chart (lower left) with the Sun's and Earth's samples over the
-  window, a time mode that marks each rise and set as a band, and a table. An explanation of what hides the Sun or Earth at a given instant.
+  window, a time mode that marks each rise and set as a band, and a table. An explanation of
+  what hides the Sun or Earth at a given instant. "Track Sun" and "Track Earth" keep the view
+  turned to that body as the clock runs; dragging or the arrow keys stop it. In the surface view
+  every panel (key metrics, skyline chart, surface controls, time, locator map, compare,
+  assistant) has a handle to move it, with the mouse or the arrow keys, and a Fold button;
+  "Reset panels" puts them back, the assistant can move, fold and reset them too, and leaving
+  the surface view restores the usual layout.
 - **Compare panel.** Scenarios A and B side by side with B minus A in numbers and sentences;
   "B = A arriving N hours later"; "B = A with another mast"; named comparisons that reload
   exactly. Nearby alternatives: a scan around the site (radius, spacing, slope limit) ranked
@@ -46,10 +53,10 @@ Lunyx is a desktop website (WebGL). Phone layouts exist but are not a target.
   sunlit, dark and Earth-in-view spell, and every rise and set with both ends), downloadable as
   CSV or JSON. The seasonal outlook: sunlight and Earth in view (by its centre and by any part of
   its disc) for each lunar day over the coming months, as a chart and a table.
-- **Assistant.** A drawer (button lower right) where you ask in words. It operates the app
-  through the same actions as the on-screen controls and lists what it ran. Without a
-  language-model key it answers in a labelled deterministic mode (see
-  [The assistant](#the-assistant)).
+- **Assistant.** A drawer (button lower right) where you ask in words; "Close ×" or Escape
+  closes it without leaving the surface view. It operates the app through the same actions as
+  the on-screen controls and lists what it ran. Without Claude credentials it answers in a
+  labelled deterministic mode (see [The assistant](#the-assistant)).
 
 Every number comes from the datasets in [docs/lunyx/SOURCES.md](docs/lunyx/SOURCES.md), is
 computed from them, or is shown as unavailable with the reason. Earth visibility is geometric line of sight over the
@@ -139,21 +146,23 @@ Its tools are generated from the app's action registry (`src/core/actions.ts`), 
 registry every control uses, so it can do what a user can do and leaves the same state on
 screen. It may quote numbers only from the results of those actions.
 
-**Without credentials** (the default) it answers in **deterministic mode** and says so on every
-reply: a fixed set of commands such as `go to IM-2`, `set time to 2026-03-01 12:00`,
+**Without Claude credentials** (the default) it answers in **deterministic mode** and says so:
+`GET /api/assistant` reports `available: false`, and the drawer labels every reply "Deterministic
+mode". It understands a fixed set of commands such as `go to IM-2`, `set time to 2026-03-01 12:00`,
 `compare with a 24 h delay`, `what is the illumination?`. Type `help` for the list and
 `/actions` for every action by name. It does not guess: if part of a request is not
 understood, nothing is run and it says which part.
 
-**With a Claude subscription** it uses Claude through the server. Authenticate once and start:
+**With Claude credentials** it uses Claude through the server. Authenticate once and start:
 
 ```bash
-ant auth login   # opens a browser, log in with your Claude account
+ant auth login   # opens a browser to log in
 npm run dev
 ```
 
-Credentials are resolved by the Anthropic SDK (auth profile from `ant auth login`, workload
-identity, or an `ANTHROPIC_API_KEY` env var) and never reach the browser.
+The Anthropic SDK finds the credentials itself: an auth profile from `ant auth login`, workload
+identity, or an `ANTHROPIC_API_KEY` environment variable. They are read by the server only and
+never reach the browser.
 
 | Variable | Meaning |
 | --- | --- |
@@ -195,6 +204,7 @@ round, by the science project; its record is `tests/fixtures/validation/science-
 | What | Checked against | Result |
 | --- | --- | --- |
 | The release candidate `41be074` as a whole | One full `npm test` and GPU runs on trees whose app code equals the release candidate's (`649fc4e`), and a fresh clone from GitHub at the release candidate | `npm test`: 946 passed, 6 skipped; science checks 10/10. GPU smoke 18/18. Browser suites on the GPU: flow 15 pass and 1 todo (Q-7, deferred), accessibility 15/15, assistant 17/17, equivalence 29 pass and 1 todo, control 134/134, scenario 11/11. Desktop release walkthrough with real controls: 41/41 steps and 247/247 checks at 1280x720, the same at 1920x1080, with no failed request or console error. The fresh clone passed every README step: install, development server, build and preview; offline with no key it opened Apollo 11 and IM-2 on the globe and in the surface view, and the assistant answered in its labelled deterministic mode. Nothing here involves a real language model |
+| The release candidate `bce6816` (the nearby-scan settings fix on top of `41be074`) | The fix's own tree, the release candidate's tree, a review of each merge and a regression over every redraw path | `npm test`: 995 passed, 6 skipped; science checks 10/10. GPU smoke 18/18. The operator's scenario in GPU Chromium: Radius 900 and Spacing 150 keep their values through "Slope at most" 30, the scan uses 900/150/30, and its summary reads "within 900 m, every 150 m, slope at most 30°". The flow tests pass 16/16 with the Q-7 test enabled; the redraw-path regression passes 26/26. The release walkthrough on `bce6816`: 41/41 steps and 252/252 value checks at each desktop size. The app change over `41be074` is only the nearby tab's settings code and its test |
 | Sun and Earth azimuth and elevation at a site | 1008 JPL Horizons rows (airless, topocentric), 15 sets, 1969 to 2035 | Worst difference 0.0036°. After 2035 it grows (0.006° in 2060, 0.021° in 2099); dates are limited to 1950 to 2100 |
 | Terrain skyline, observer 2 m up | An independent ray march over the bundled elevation files, five sites | Within 0.05° since `319fba0`. Builds up to and including `375f816`, GitHub `main`'s version on 14 November 2026 until `595fe28` brought the fix, read the skyline up to 1.04° too low at crest sites; at a Shackleton-rim pin that put Earth visibility 2.0 points high and rise and set times up to 6 h off |
 | Skyline with the observer on or near the ground | An independent re-check at 0, 0.5 and 2 m at 9 pins, two of them chosen by a fixed rule before any app output was seen | Up to 1.2° too low on convex ground before `3899cb9`. Since then: worst difference 0.017° over 27 runs, no azimuth over 0.02° |
@@ -249,7 +259,7 @@ March to April 2025) are bundled. The network is used only for:
   coverage from NASA's PDS (first use takes some seconds); offline, such a pin falls back to the
   1.9 km whole-Moon grid and the result says so;
 - `/api/horizons`, a proxy to JPL Horizons;
-- the language model and the Jev router, when keys are configured;
+- the language model and the Jev router, when credentials are configured;
 - voice dictation, through the browser's speech service.
 
 ## Data sources and credits
@@ -272,14 +282,16 @@ endorsed Lunyx.
 
 ## How AI was used
 
-Most of the code, the data-processing scripts, the tests, the validation and the
-documentation were written by AI coding agents (Anthropic's Claude Code with Claude Fable 5.2
-and Claude Opus 5.5) under the team's direction; the concept and the screens come from the
-team's own design. The commit history carries a "Co-Authored-By: Claude …" line on such
-commits. No image, video or audio in the project was made with a generative AI model, as far as
-the records show; two items whose origin is not recorded are listed for the team. The full
-disclosure, the inventory of every image, texture and data file and the NASA branding check
-are in [docs/lunyx/AI-USE.md](docs/lunyx/AI-USE.md).
+Most of the code, the data-processing scripts, the tests, the validation and the documentation
+were written by AI coding agents (Anthropic's Claude Code with Claude Fable 5.2 and Claude Opus
+5.5) under the team's direction; the concept and the screens come from the team's own design.
+The commit history carries a "Co-Authored-By: Claude …" line on such commits. One later change,
+the Track Sun and Track Earth toggles, came from a branch named in the style of OpenAI's Codex;
+whether Codex wrote it is not recorded yet (AI-USE.md, open item L16). No image, video or audio
+in the project was made with a generative AI model, as far as the records show; two items whose
+origin is not recorded are listed for the team. The full disclosure, the inventory of every
+image, texture and data file and the NASA branding check are in
+[docs/lunyx/AI-USE.md](docs/lunyx/AI-USE.md).
 
 ## Conventions
 
@@ -326,10 +338,13 @@ centre.
   Luna 13 are approximate (not found in LRO images), and three touchdown times are not confirmed
   to the minute shown (Luna 23, Chandrayaan-3, IM-2).
 - **Ownership, areas and flags.** "Belongs to" is the state responsible for the hardware in the
-  GCAT catalogue (USSR hardware is shown as Russia); no country owns lunar ground. Explored
-  areas are drawn up to ten times larger than true size seen from orbit, so they can be seen,
-  and true to size close to the ground; the card gives the true size. The flags are simplified
-  drawings made by the code.
+  GCAT catalogue (USSR hardware is shown as Russia); no country owns lunar ground. Seen from
+  orbit, each explored area is drawn enlarged so it can be seen: by default to between 150 and
+  500 km across; Filters > "Territory size exaggeration" is a display setting, not a width
+  multiplier: 1 is true size, 100 (the default) that enlargement, and the settings in between
+  blend linearly between the two. Close to the ground the areas are true to size. The card gives
+  the true size and the enlargement drawn from orbit. The flags are simplified drawings made by
+  the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Nearby tab status line (Q-8): known defect, low, on hold, not fixed in release candidate
@@ -354,8 +369,12 @@ centre.
 sites" used to be put back to the last scan's value when a requirement changed before the scan,
 which then ran with the old value (Q-7). The operator first deferred it (decision D-14), then
 lifted that (decision D-16): the original team's T-56 (`8c58f49`) keeps a typed radius and
-spacing through every redraw, and the scan uses them. It is to be verified in the release
-candidate that follows `41be074`.
+spacing through every redraw, and the scan uses them. Release candidate `bce6816` carries the
+fix, and its checks passed (STATUS.md section 4): the operator's scenario in a GPU browser (Radius
+900 and Spacing 150 kept through "Slope at most" 30, and the scan uses them), the flow tests 16/16
+with the Q-7 test enabled, and a redraw-path regression 26/26. The release walkthrough on
+`bce6816` saw the same at both desktop sizes (41/41 steps and 252/252 value checks each;
+[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)).
 
 ## The demo for the submission
 
@@ -372,16 +391,19 @@ release candidate's app code (`41be074`, identical outside `*.md` to team integr
 at 1280x720 and 1920x1080 on a real GPU at full settings, 60 frames per second: 41 of 41 steps
 and 247 of 247 value checks at each size, with no failed request, HTTP error or console error
 ([docs/lunyx/qa-findings.md](docs/lunyx/qa-findings.md),
-[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)). It covered a typed pin and
-its card, the search criteria, the nearby scan and "Compare as B"; IM-2 and Apollo 11 in the
+[docs/lunyx/screenshots/REVIEW.md](docs/lunyx/screenshots/REVIEW.md)). It covered a typed pin
+and its card, the search criteria, the nearby scan and "Compare as B"; IM-2 and Apollo 11 in the
 surface view (key metrics, the skyline chart, the countdown and scrubber jumps to each end of a
 sunset); the assistant in deterministic mode, including a three-request scenario whose answers
 equalled the panels; the window table, both downloads and the outlook; country flags; and the
 IM-2 preset from "Missions to replay", which played to the end of its 14-day window on the
 bundled JPL Horizons table with no network. The Blue Ghost and eclipse presets were not part of
-that run, so check them before recording them. Its screenshots are in
+that run, so check them before recording them. That run's screenshots are in
 `docs/lunyx/screenshots/649fc4e/`; in shots 33 and 34 a leftover message ("End of the mission
-window…") sits at the top, and in 36 a flag covers part of the wordmark.
+window…") sits at the top, and in 36 a flag covers part of the wordmark. The teammates' later
+changes (relief at true scale, the territory size control, movable panels, the Track Sun and
+Track Earth toggles) came after the walkthroughs on `41be074` and `bce6816`: check those screens
+too before recording them.
 
 - **Video, 30 seconds or less.** The guide's own beats: who you are (0-2 s), the challenge
   (2-5 s), the project's name (5-10 s), how it works (10-20 s), what it could do (20-30 s). For
