@@ -25,11 +25,13 @@ import skygeom as sg  # noqa: E402
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--write', action='store_true')
+ap.add_argument('--app', default='app-now.json', help='app dump under dsn/ to test')
+ap.add_argument('--tag', default='', help='write results-<tag>.* instead of results.* (keeps the earlier record)')
 args = ap.parse_args()
 DIR = os.path.join(common.BASE, 'dsn')
 with open(os.path.join(DIR, 'scenarios.json')) as fh:
     scenarios = json.load(fh)
-with open(os.path.join(DIR, 'app-now.json')) as fh:
+with open(os.path.join(DIR, args.app)) as fh:
     app = json.load(fh)
 by_id = {r['id']: r for r in app['results']}
 hms = lambda t: sg.to_iso(t)[5:19].replace('T', ' ')
@@ -163,8 +165,9 @@ report['worst'] = worst
 text = '\n'.join(lines)
 print(text)
 if args.write:
-    with open(os.path.join(DIR, 'results.json'), 'w') as fh:
+    stem = 'results-%s' % args.tag if args.tag else 'results'
+    with open(os.path.join(DIR, stem + '.json'), 'w') as fh:
         json.dump(report, fh, indent=1)
         fh.write('\n')
-    with open(os.path.join(DIR, 'results.txt'), 'w') as fh:
+    with open(os.path.join(DIR, stem + '.txt'), 'w') as fh:
         fh.write(text + '\n')
