@@ -33,12 +33,18 @@ export function mountLandingPicker(parent: HTMLElement): void {
   label.htmlFor = id;
   const select = el('select', 'ly-select');
   select.id = id;
-  select.title = 'Opens the landing in the site card and turns the globe to it. The list follows the mission filters.';
+  select.title = 'Choose a mission to see its details. Double-click the selected mission to enter surface view, or use Enter surface view on its card.';
   field.append(label, select);
   parent.append(field);
 
   select.addEventListener('change', () => {
-    if (select.value) void runAction('selectSite', { site: select.value });
+    if (select.value) {
+      void runAction('selectSite', { site: select.value });
+      void runAction('showPanel', { panel: 'site-details', open: true });
+    }
+  });
+  select.addEventListener('dblclick', () => {
+    if (select.value) void runAction('selectSite', { site: select.value, surface: true });
   });
 
   /** Shows the selected site in the list when it is one of the listed landings. */

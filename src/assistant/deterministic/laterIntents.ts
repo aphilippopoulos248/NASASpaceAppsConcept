@@ -32,9 +32,53 @@ const round1 = (v: number) => Math.round(v * 10) / 10;
 
 // ---------------------------------------------------------------- how the globe is drawn
 
+/**
+ * The landings' explored areas ("territories") are drawn enlarged so they show from orbit (T-64).
+ * The control's factor is a display setting, not a width multiple: it eases between true size and
+ * the default enlargement (with x5 a 60 m area is drawn about 100 times wider). So a reply never
+ * says "N times wider"; it quotes the real enlargement only when the result gives it.
+ */
+const TERRITORY = /\b(territor(?:y|ies)|explored areas?|landing areas?)\b/;
+
+/**
+ * The selected landing's area as drawn from orbit, from setTerritoryScale's `selectedSiteArea`
+ * (T-64 fix 3b4fb45): the site card's own sentence, else its width factor and drawn width.
+ * Nothing when no landing with a mapped area is selected.
+ */
+function enlargementText(r: Json): string {
+  const a = r.selectedSiteArea;
+  if (!isObject(a)) return '';
+  const name = str(a, 'name') ?? 'the selected site';
+  const text = str(a, 'text');
+  if (text) return ` At ${name} the explored area is ${text}.`;
+  const factor = num(a, 'widthFactorFromOrbit'), km = num(a, 'drawnWidthFromOrbitKm');
+  if (factor === undefined) return '';
+  return ` At ${name} the explored area is drawn ${factor}× its true width from orbit${km !== undefined ? `, about ${km} km across` : ''}; true size close to the ground.`;
+}
+
+export const territory: Intent = (step) => {
+  if (!TERRITORY.test(step) || QUESTION.test(step)) return null;
+  let factor: number | undefined;
+  if (/\b(true|real|actual)[- ]?(size|scale)\b|\bno exaggeration\b|\bexaggerat\w*\b.*\b(off|none)\b/.test(step)) factor = 1;
+  else {
+    const n = /(?:\b(?:times|factor(?: of)?|to|by|at)\s*|[x×=]\s*)(\d+(?:\.\d+)?)\b/.exec(step) ?? /\b(\d+(?:\.\d+)?)\s*(?:[x×]|times)(?=\s|$)/.exec(step) ?? /\b(?:size|exaggeration|scale)\s+(\d+(?:\.\d+)?)$/.exec(step);
+    if (n) factor = Number(n[1]);
+  }
+  if (factor === undefined) return null;
+  const want = factor;
+  // A factor the action does not take is refused by the action itself, as for the relief.
+  return plan(want === 1 ? 'draw the explored areas at true size' : `set the territory size exaggeration to ×${want}`, async (ctx) => {
+    const r = await ctx.run('setTerritoryScale', { factor: want });
+    const chosen = num(r, 'territoryScale') ?? want;
+    if (chosen === 1) return `The landings' explored areas are drawn at true size on the globe.${enlargementText(r)}`;
+    // The setting is not a width multiplier (territoryRule says how it works): never "N times wider".
+    return `Territory size exaggeration set to ${chosen}, the Filters setting of that name: a display setting, not a width multiplier; only the drawing changes, not the sizes on the site card.${enlargementText(r)}`;
+  });
+};
+
 export const relief: Intent = (step) => {
   const about = /\b(relief|exaggerat\w*)\b/.test(step) || /\bsmooth (sphere|globe|moon)\b/.test(step);
-  if (!about || QUESTION.test(step)) return null;
+  if (!about || QUESTION.test(step) || TERRITORY.test(step)) return null;
   let factor: number | undefined;
   if (/\b(true|real)[- ]scale\b|\bno exaggeration\b|\bexaggerat\w*\b.*\b(off|none)\b|^(remove|turn off|disable|stop|undo)\b.*\bexaggerat/.test(step)) factor = 1;
   else if (/\bsmooth (sphere|globe|moon)\b|\bno relief\b|\brelief\b.*\b(off|none)\b|^(hide|remove|turn off|disable|flatten)\b.*\brelief\b/.test(step)) factor = 0;
@@ -407,6 +451,112 @@ export const surfaceStatus: Intent = (step) => {
 
 // ---------------------------------------------------------------- the surface HUD: chart, key metrics, explanation
 
+// ---------------------------------------------------------------- tracking the Sun or Earth (PR #2)
+
+/** "Track the Sun" keeps the view on it as the clock runs (the HUD's Track toggles); "face the Sun" turns to it once (lookAtBody). */
+export const tracking: Intent = (step) => {
+  const on = /^(?:track|follow|keep (?:facing|looking at|the view on)|lock (?:the view )?on(?:to)?)\s+(?:the\s+)?(sun|earth)(?:\s+as (?:the )?(?:clock|time) (?:runs|moves|passes))?$/.exec(step);
+  const off = /^(?:stop|end|cancel|turn off)\s+(?:tracking|following)(?:\s+(?:the\s+)?(sun|earth))?$|^untrack(?:\s+(?:the\s+)?(sun|earth))?$/.exec(step);
+  if (!on && !off) return null;
+  if (on) {
+    const body = on[1] as 'sun' | 'earth';
+    const name = body === 'sun' ? 'the Sun' : 'Earth';
+    return plan(`keep facing ${name} as the clock runs`, async (ctx) => {
+      const r = await ctx.run('setBodyTracking', { body, on: true });
+      const look = isObject(r.look) ? ` Facing azimuth ${degrees(num(r, 'look.azDeg'))}, elevation ${degrees(num(r, 'look.elDeg'))} now.` : '';
+      return `The view now keeps facing ${name} as simulated time changes.${look} Dragging the view or the arrow keys stop the tracking.`;
+    });
+  }
+  const named = (off![1] ?? off![2]) as 'sun' | 'earth' | undefined;
+  return plan(named ? `stop tracking ${named === 'sun' ? 'the Sun' : 'Earth'}` : 'stop tracking', async (ctx) => {
+    let body = named;
+    if (!body) {
+      // Which one is tracked is in the surface view's state.
+      const v = await ctx.run('getSurfaceView');
+      const t = str(v, 'trackingBody');
+      if (t !== 'sun' && t !== 'earth') return 'Neither the Sun nor Earth is being tracked.';
+      body = t;
+    }
+    const r = await ctx.run('setBodyTracking', { body, on: false });
+    const still = str(r, 'tracking');
+    return still && still !== body ? `${body === 'sun' ? 'The Sun' : 'Earth'} was not being tracked; ${still === 'sun' ? 'the Sun' : 'Earth'} still is.` : `Tracking stopped: the view stays where it is now.`;
+  });
+};
+
+// ---------------------------------------------------------------- the surface view's movable panels (T-65)
+
+/** Panel words to the ids of setSurfacePanel (src/ui/surface/panelLayout.ts). The key metrics keep their own fold (showKeyMetrics). */
+const PANEL_WORDS: [RegExp, string][] = [
+  [/^(?:skyline )?chart$/, 'skyline-chart'],
+  [/^(?:surface )?controls$/, 'surface-controls'],
+  [/^(?:time|time slider|scrubber|clock)$/, 'time'],
+  [/^(?:locator(?: map)?|map)$/, 'locator-map'],
+  [/^(?:compare|comparison)$/, 'compare'],
+  [/^(?:assistant|chat)$/, 'assistant'],
+  [/^key metrics$/, 'key-metrics'],
+];
+const PANEL_NAME = '((?:skyline )?chart|(?:surface )?controls|time slider|time|scrubber|clock|locator map|locator|map|compare|comparison|assistant|chat|key metrics)';
+const panelId = (word: string): string | undefined => PANEL_WORDS.find(([re]) => re.test(word))?.[1];
+
+/** "Time: on screen, folded, moved to 300, 200 px (412 × 96 px)". */
+function panelLine(p: Json): string {
+  const where = p.shown !== true ? 'not on screen' : `on screen, ${p.folded === true ? 'folded' : 'open'}, ${p.moved === true ? 'moved' : 'in its place'}`;
+  const box = num(p, 'xPx') !== undefined ? `, top left at ${num(p, 'xPx')}, ${num(p, 'yPx')} px (${num(p, 'widthPx')} × ${num(p, 'heightPx')} px)` : '';
+  return `${str(p, 'title') ?? str(p, 'panel') ?? 'panel'}: ${where}${box}`;
+}
+
+export const surfacePanels: Intent = (step) => {
+  if (/^(?:reset|restore|tidy(?: up)?)\s+(?:all\s+)?(?:the\s+)?(?:surface\s+)?panels(?:\s+(?:positions?|layout))?$|^panels? reset$/.test(step)) {
+    return plan('put every surface panel back in its place', async (ctx) => {
+      const r = await ctx.run('resetSurfacePanels');
+      const n = Array.isArray(r.panels) ? r.panels.length : 0;
+      return `Every surface panel is back in its place and open${n ? ` (${plural(n, 'panel')})` : ''}.`;
+    });
+  }
+  if (/^(?:list|show me|where are|which are|what are)\s+(?:all\s+)?(?:the\s+)?(?:surface\s+)?panels$|^surface panels$/.test(step)) {
+    return plan('list the surface panels', async (ctx) => {
+      const r = await ctx.run('getSurfacePanels');
+      const list = Array.isArray(r.panels) ? r.panels.filter(isObject) : [];
+      const head = r.surfaceView === true ? 'Surface panels (the surface view is shown):' : 'Surface panels (they move and fold in the surface view only; it is not shown now):';
+      return [head, ...list.map((p) => `- ${panelLine(p)}`)].join('\n');
+    });
+  }
+  // Folding needs the word "panel": "fold the key metrics" and "expand the chart" keep their own actions.
+  const fold = new RegExp(`^(fold|collapse|unfold|open|reopen)\\s+(?:the\\s+)?${PANEL_NAME}\\s+panel$`).exec(step);
+  const moveTo = new RegExp(`^(?:move|put|drag|place)\\s+(?:the\\s+)?${PANEL_NAME}(?:\\s+panel)?\\s+(?:to|at)\\s+(?:x\\s*=?\\s*)?(-?\\d+)(?:\\s*(?:px|pixels))?\\s*(?:,|and)?\\s*(?:y\\s*=?\\s*)?(-?\\d+)(?:\\s*(?:px|pixels))?$`).exec(step);
+  const moveBy = new RegExp(`^(?:move|nudge|shift|drag)\\s+(?:the\\s+)?${PANEL_NAME}(?:\\s+panel)?\\s+(left|right|up|down)(?:\\s+by)?\\s+(\\d+)\\s*(?:px|pixels)?$`).exec(step);
+  const word = fold?.[2] ?? moveTo?.[1] ?? moveBy?.[1];
+  if (!word) return null;
+  const panel = panelId(word);
+  if (!panel || (fold && panel === 'key-metrics')) return null;
+  if (fold) {
+    const folded = /^(fold|collapse)$/.test(fold[1]);
+    return plan(`${folded ? 'fold' : 'open'} the ${word} panel`, async (ctx) => {
+      const r = await ctx.run('setSurfacePanel', { panel, folded });
+      return `The ${str(r, 'title') ?? word} panel is ${r.folded === true ? 'folded to its title row' : 'open'}.`;
+    });
+  }
+  return plan(`move the ${word} panel`, async (ctx) => {
+    let xPx: number, yPx: number;
+    if (moveTo) {
+      xPx = Number(moveTo[2]);
+      yPx = Number(moveTo[3]);
+    } else {
+      // Relative to where it is now, as the grip's arrow keys move it.
+      const now = await ctx.run('getSurfacePanels');
+      const p = (Array.isArray(now.panels) ? now.panels.filter(isObject) : []).find((x) => str(x, 'panel') === panel);
+      if (!p || num(p, 'xPx') === undefined) throw new Halt(`The ${word} panel is not on screen${now.surfaceView === true ? '' : ': the panels move in the surface view only'}.`);
+      const d = Number(moveBy![3]);
+      const dir = moveBy![2];
+      xPx = num(p, 'xPx')! + (dir === 'left' ? -d : dir === 'right' ? d : 0);
+      yPx = num(p, 'yPx')! + (dir === 'up' ? -d : dir === 'down' ? d : 0);
+    }
+    const r = await ctx.run('setSurfacePanel', { panel, xPx, yPx });
+    const kept = num(r, 'xPx') !== xPx || num(r, 'yPx') !== yPx ? ' (kept inside the window)' : '';
+    return `The ${str(r, 'title') ?? word} panel is now at ${num(r, 'xPx') ?? '?'}, ${num(r, 'yPx') ?? '?'} px, its top left corner from the top left of the window${kept}.`;
+  });
+};
+
 export const hudPanels: Intent = (step) => {
   if (QUESTION.test(step)) return null;
   const chartWords = /\b(skyline )?chart\b/;
@@ -674,11 +824,14 @@ export const realClock: Intent = (step) => {
 /** For the help text: one example per group, shown only when the build has the action. */
 export const LATER_HELP: [needs: string[], text: string][] = [
   [['setReliefExaggeration'], 'Globe drawing: "relief x5", "true scale relief", "relief off", "show elevation coverage", "show the ice targets"'],
+  [['setTerritoryScale'], 'Explored areas: "territory size x25", "territories at true size"'],
   [['getSiteScience'], 'Site science: "dsn stations", "long-term averages here", "temperature", "shadowcam", "site science"'],
   [['nearestIceTargets'], 'Ice targets: "nearest ice targets", "how far is the nearest ice"'],
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],
   [['setFieldOfView'], 'Surface view: "face the sun", "field of view 10", "hide the sky paths", "what is the ground made of"'],
   [['setChart'], 'Surface HUD: "show the skyline chart", "expand the chart", "chart against time", "show the chart as a table", "fold the key metrics", "close the explanation"'],
+  [['setBodyTracking'], 'Tracking (surface): "track the sun", "follow earth", "stop tracking"'],
+  [['setSurfacePanel'], 'Surface panels: "fold the time panel", "move the locator map to 300, 200", "move the compare panel left by 100", "reset the panels", "list the surface panels"'],
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],

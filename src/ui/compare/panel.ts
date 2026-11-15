@@ -11,7 +11,7 @@ import { store } from '../../core/store';
 import { button, el, isTypingTarget } from '../dom';
 import { mountAbTab } from './abTab';
 import { bindWorkingPair, createCompareActions } from './actions';
-import { focusInHiddenPanel, returnFocusOnClose } from './focus';
+import { compareTakesEscape, focusInHiddenPanel, returnFocusOnClose } from './focus';
 import { mountNearbyTab } from './nearbyTab';
 import { mountOutlookTab } from './outlookTab';
 import { mountWindowsTab } from './windowsTab';
@@ -227,16 +227,18 @@ export function mountComparePanel(region: HTMLElement): void {
 
   // Keys pressed inside the sheet stay inside it (the globe and the site card listen on the window).
   sheet.addEventListener('keydown', (e) => e.stopPropagation());
-  // Escape closes the topmost layer first: this panel, before the site card or the surface view react.
+  // Escape goes to the layer that holds the focus (F-10, agreed with the assistant drawer): this panel
+  // when the focus is inside it, even with the drawer open, and before the site card or the surface
+  // view react; the drawer when the focus is in it, or on the page while it is open.
   window.addEventListener(
     'keydown',
     (e) => {
       if (e.key !== 'Escape' || !isOpen() || e.defaultPrevented) return;
       const target = e.target instanceof Element ? e.target : null;
       const inside = target !== null && sheet.contains(target);
-      // Another layer with its own Escape (the assistant drawer), or a field outside the sheet, keeps the key.
-      if (!inside && target && (target.closest('#region-drawer') || isTypingTarget(target))) return;
-      // Taken: the surface view and the site card leave an Escape that was handled alone.
+      const focus = { inside, inDrawer: !inside && target !== null && target.closest('#region-drawer') !== null, typingOutside: !inside && target !== null && isTypingTarget(target), drawerOpen: store.get().assistantOpen };
+      if (!compareTakesEscape(focus)) return;
+      // Taken: the drawer, the surface view and the site card leave an Escape that was handled alone.
       e.preventDefault();
       e.stopPropagation();
       void closePanel();

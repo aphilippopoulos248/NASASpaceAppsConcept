@@ -33,11 +33,6 @@ export interface LlmConfig {
   maxTokens: number;
   /** Server-side refusal fallback and thinking-binding controls (beta features of the Claude API). */
   betas: boolean;
-  /** Present only on the server. Never serialised. */
-  apiKey?: string;
-  authToken?: string;
-  /** Let the SDK find credentials itself (an `ant auth login` profile or workload identity). */
-  sdkCredentials: boolean;
   /** A custom API base URL is in use (a proxy or gateway). */
   customBaseUrl: boolean;
   router: string;
@@ -121,9 +116,6 @@ export function readSettings(src: EnvSource): { get(name: string): string | unde
 
 export function loadConfig(src: EnvSource = { processEnv: process.env, root: process.cwd() }): LlmConfig {
   const s = readSettings(src);
-  const apiKey = s.get('ANTHROPIC_API_KEY');
-  const authToken = apiKey ? undefined : s.get('ANTHROPIC_AUTH_TOKEN');
-  const sdkCredentials = s.get('LUNYX_LLM_AUTH')?.toLowerCase() === 'profile';
   const wanted = s.get('LUNYX_LLM_PROVIDER')?.toLowerCase();
   const effortRaw = s.get('LUNYX_LLM_EFFORT')?.toLowerCase() as Effort | undefined;
   const maxTokensRaw = Number(s.get('LUNYX_LLM_MAX_TOKENS'));
@@ -137,7 +129,6 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
     effort: effortRaw && EFFORTS.includes(effortRaw) ? effortRaw : DEFAULT_EFFORT,
     maxTokens: Number.isInteger(maxTokensRaw) && maxTokensRaw >= 1024 && maxTokensRaw <= 128_000 ? maxTokensRaw : DEFAULT_MAX_TOKENS,
     betas: (s.get('LUNYX_LLM_BETAS') ?? 'on').toLowerCase() !== 'off',
-    sdkCredentials,
     customBaseUrl: Boolean(s.get('ANTHROPIC_BASE_URL')),
     router: (s.get('LUNYX_LLM_ROUTER') ?? 'direct').toLowerCase(),
     ...(typesafeKey && {
@@ -150,7 +141,9 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
       },
     }),
     script: s.get('LUNYX_LLM_SCRIPT') ?? 'default',
-    secrets: [apiKey, authToken, typesafeKey].filter((v): v is string => Boolean(v)),
+    // The SDK reads ANTHROPIC_API_KEY / ANTHROPIC_AUTH_TOKEN itself; when one is set it is still
+    // removed from anything that leaves the server, not only by the sk-ant- pattern.
+    secrets: [s.get('ANTHROPIC_API_KEY'), s.get('ANTHROPIC_AUTH_TOKEN'), typesafeKey].filter((v): v is string => Boolean(v)),
   };
 
   if (wanted === 'off' || wanted === 'none' || wanted === 'deterministic') {
@@ -160,14 +153,10 @@ export function loadConfig(src: EnvSource = { processEnv: process.env, root: pro
   if (wanted !== undefined && wanted !== 'anthropic') {
     return { ...base, provider: 'none', reason: `Unknown LUNYX_LLM_PROVIDER "${wanted}". Use anthropic, scripted or off.` };
   }
-  if (apiKey || authToken || sdkCredentials) return { ...base, provider: 'anthropic', apiKey, authToken };
-  return {
-    ...base,
-    provider: 'none',
-    reason: s.envFileMissing
-      ? 'No language model key on this server: the file named by LUNYX_ENV_FILE does not exist.'
-      : 'No language model key on this server. Set ANTHROPIC_API_KEY in the server environment or in .env.local (see .env.example).',
-  };
+  // The Anthropic SDK resolves credentials itself: an `ant auth login` profile, workload
+  // identity, or the ANTHROPIC_API_KEY env var. If none are found the provider creation
+  // will fail and the handler reports no model available.
+  return { ...base, provider: 'anthropic' };
 }
 
 /** Removes credentials from text that is about to leave the server (responses, logs). */

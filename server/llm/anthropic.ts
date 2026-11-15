@@ -13,6 +13,7 @@
 //     on the model it recommends (LUNYX_LLM_BETAS=off turns that off).
 //   - Tools are never run from a turn that was refused or cut off at max_tokens.
 import Anthropic from '@anthropic-ai/sdk';
+import { defaultCredentials } from '@anthropic-ai/sdk/lib/credentials/credential-chain';
 import type { AssistantWireMessage, ModelInfo, StepEvent, StepUsage, StopKind, WireError, WireMessage, WireTool, WireToolCall } from '../../src/assistant/protocol';
 import { modelLabel, redact, type LlmConfig } from './env';
 import { renderUserTurn } from './prompt';
@@ -205,10 +206,43 @@ export function finish(message: BetaMessage, requested: ModelInfo): StepEvent {
 }
 
 /** Maps an SDK failure to a sentence for the user. Most specific class first. */
+/** Said when the SDK finds no credentials: the browser then answers in deterministic mode. */
+export const NO_CREDENTIALS = 'No Claude credentials found on this server. Run `ant auth login` (or set ANTHROPIC_API_KEY in the server environment), then restart the server.';
+
+/**
+ * True for the SDK's "no credentials" failures. With nothing configured, SDK 1.8 builds the
+ * client without complaint and the first request fails with a plain Error ("Could not resolve
+ * authentication method ..."), not an AuthenticationError; a named profile that does not exist
+ * fails as "Profile ... could not be resolved".
+ */
+export function isMissingCredentials(err: unknown): boolean {
+  return err instanceof Error && /could not resolve authentication method|profile ".*" could not be resolved/i.test(err.message);
+}
+
+/** Where the default credential chain is looked up (exported for tests). */
+export type CredentialLookup = () => Promise<unknown>;
+
+/**
+ * Null when the SDK client can authenticate a request, else why not, found without sending one:
+ * an API key or token (from the environment), or credentials from the SDK's default chain (an
+ * `ant auth login` profile, workload identity), which the client itself only resolves lazily.
+ */
+export async function credentialsProblem(client: { apiKey?: string | null; authToken?: string | null; baseURL?: string }, lookup?: CredentialLookup): Promise<string | null> {
+  if (client.apiKey || client.authToken) return null;
+  try {
+    const found = await (lookup ?? (() => defaultCredentials({ baseURL: client.baseURL ?? 'https://api.anthropic.com', fetch: globalThis.fetch })))();
+    return found ? null : NO_CREDENTIALS;
+  } catch (err) {
+    return `${NO_CREDENTIALS} (${err instanceof Error ? err.message : String(err)})`;
+  }
+}
+
 export function describeFailure(err: unknown, cfg: Pick<LlmConfig, 'model' | 'secrets'>): WireError {
   if (err instanceof Anthropic.APIUserAbortError) return { kind: 'aborted', message: 'The request was cancelled.' };
+  // Before the generic Error branch: the browser turns no_model into its deterministic mode.
+  if (isMissingCredentials(err)) return { kind: 'no_model', message: NO_CREDENTIALS };
   if (err instanceof Anthropic.AuthenticationError || err instanceof Anthropic.PermissionDeniedError) {
-    return { kind: 'auth', status: err.status, message: `The Claude API rejected the server's credentials (HTTP ${err.status}). Check ANTHROPIC_API_KEY on the server.` };
+    return { kind: 'auth', status: err.status, message: `The Claude API rejected the server's credentials (HTTP ${err.status}). Run \`ant auth login\` to re-authenticate.` };
   }
   if (err instanceof Anthropic.NotFoundError) {
     return { kind: 'model_request', status: 404, message: `The Claude API does not know the model "${cfg.model}". Check LUNYX_LLM_MODEL on the server.` };
@@ -231,11 +265,9 @@ export function describeFailure(err: unknown, cfg: Pick<LlmConfig, 'model' | 'se
   return { kind: 'server', message: 'The language model request failed.' };
 }
 
-export function createClient(cfg: LlmConfig): MessagesClient {
-  // The key comes from the server's settings only. With neither key nor token the SDK
-  // resolves credentials itself (an `ant auth login` profile or workload identity).
-  if (cfg.apiKey) return new Anthropic({ apiKey: cfg.apiKey });
-  if (cfg.authToken) return new Anthropic({ authToken: cfg.authToken });
+export function createClient(): MessagesClient {
+  // The SDK resolves credentials itself: an `ant auth login` profile, workload identity,
+  // or the ANTHROPIC_API_KEY env var if one happens to be set.
   return new Anthropic();
 }
 
@@ -244,13 +276,22 @@ const MAX_JSON_RETRIES = 2;
 
 export class AnthropicProvider implements LlmProvider {
   readonly info: ModelInfo;
+  private readiness: Promise<string | null> | null = null;
 
   constructor(
     private readonly cfg: LlmConfig,
-    private readonly client: MessagesClient = createClient(cfg),
+    private readonly client: MessagesClient = createClient(),
     private readonly log: (line: string) => void = (line) => console.warn(line),
+    /** The credentials check; by default the SDK client's own (a stand-in client in tests is ready). */
+    private readonly checkCredentials: () => Promise<string | null> = () =>
+      client instanceof Anthropic ? credentialsProblem(client) : Promise.resolve(null),
   ) {
     this.info = { provider: PROVIDER_ID, model: cfg.model, label: modelLabel(cfg.model) };
+  }
+
+  /** Checked once per provider (the handler keeps one per configuration): new credentials need a server restart, as the message says. */
+  ready(): Promise<string | null> {
+    return (this.readiness ??= this.checkCredentials());
   }
 
   async *step(req: ProviderRequest): AsyncIterable<StepEvent> {

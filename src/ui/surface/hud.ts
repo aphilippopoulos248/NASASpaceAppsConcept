@@ -30,8 +30,10 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const controls = el('div', 'sh-controls');
   controls.setAttribute('role', 'group');
   controls.setAttribute('aria-label', 'Surface view controls');
-  const faceSun = button('Face Sun', 'ly-btn ly-btn--small', () => void runAction('lookAtBody', { body: 'sun' }));
-  const faceEarth = button('Face Earth', 'ly-btn ly-btn--small', () => void runAction('lookAtBody', { body: 'earth' }));
+  const trackSun = button('Track Sun', 'ly-btn ly-btn--small', () => void runAction('setBodyTracking', { body: 'sun', on: surface.trackingBody !== 'sun' }));
+  trackSun.title = 'Continuously face the Sun as simulated time changes; drag or arrow keys stop tracking';
+  const trackEarth = button('Track Earth', 'ly-btn ly-btn--small', () => void runAction('setBodyTracking', { body: 'earth', on: surface.trackingBody !== 'earth' }));
+  trackEarth.title = 'Continuously face Earth as simulated time changes; drag or arrow keys stop tracking';
   const paths = button('Sky paths', 'ly-btn ly-btn--small', () => {
     const on = !view.annotations.tracks;
     void runAction('setSkyAnnotations', { tracks: on, labels: on });
@@ -42,7 +44,7 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const chart = button('Skyline chart', 'ly-btn ly-btn--small', () => void runAction('setChart', { show: hudState().chart === 'hidden' }));
   chart.title = 'The terrain skyline around the site with the Sun and Earth over the mission window';
   const home = button('Return to site', 'ly-btn ly-btn--small', () => void runAction('walkTo', { eastM: 0, northM: 0 }));
-  controls.append(faceSun, faceEarth, paths, generated, chart, home);
+  controls.append(trackSun, trackEarth, paths, generated, chart, home);
   head.append(el('strong', 'sh-title', 'Surface view'), status, controls);
 
   // Row 2: what the ground is built from, always on screen.
@@ -55,6 +57,10 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   more.append(summary, body);
   // Row 3: who the hardware at this site belongs to (filled in by syncOwner below).
   const owner = el('p', 'ly-note sh-owner');
+  // On windows up to 800 px tall these two lines move into "About this view" (hud.css), so the
+  // strip stays below the horizon at the centre of the screen, where a low Sun stands.
+  const groundCompact = el('p', 'sh-compact-only');
+  const ownerCompact = el('p', 'sh-compact-only');
   hud.append(head, ground, owner, more);
   region.append(hud);
 
@@ -81,6 +87,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const syncStatic = () => {
     const g = view.ground;
     for (const [b, on] of [[paths, view.annotations.tracks], [generated, view.generated]] as const) b.setAttribute('aria-pressed', String(on));
+    trackSun.setAttribute('aria-pressed', String(surface.trackingBody === 'sun'));
+    trackEarth.setAttribute('aria-pressed', String(surface.trackingBody === 'earth'));
     ground.replaceChildren();
     if (!g) {
       ground.textContent = 'Ground: loading elevation data…';
@@ -89,9 +97,10 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
     }
     ground.append(el('strong', undefined, 'Ground (elevation data): '), `${g.summary}. `);
     ground.append(el('span', g.surveyed ? undefined : 'sh-flag', view.generated ? g.generated : 'Generated detail is off: only measured or interpolated terrain is drawn.'));
+    groundCompact.replaceChildren(...[...ground.childNodes].map((n) => n.cloneNode(true)));
 
     const sky = view.skyNow, steps = view.pathSteps;
-    const parts: HTMLElement[] = [];
+    const parts: HTMLElement[] = [groundCompact, ownerCompact];
     if (sky) {
       const ratio = sky.earth.radiusDeg / sky.sun.radiusDeg;
       parts.push(
@@ -138,8 +147,8 @@ export function mountSurfaceHud(region: HTMLElement, surface: SurfaceController,
   const syncOwner = async () => {
     const site = store.get().site;
     const o = site?.kind === 'landing' ? (await loadOwnership())?.byLanding.get(site.id) : undefined;
-    owner.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
-    owner.hidden = !o;
+    owner.textContent = ownerCompact.textContent = o ? `Hardware at this site belongs to ${stateShortName(o)} (GCAT).` : '';
+    owner.hidden = ownerCompact.hidden = !o;
   };
   store.subscribe(['site', 'view'], () => void syncOwner());
   void syncOwner();

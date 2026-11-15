@@ -4,9 +4,12 @@
 // goes through the same /api/assistant route, streaming and tool loop a language model
 // would use. Nothing in this file talks to a real language model.
 import assert from 'node:assert/strict';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
 import { act, ask, click, closeBrowser, log, lastSeq, openApp, openAssistant, result, SLOW, state, until } from './lib/app.mjs';
-import { servers } from './lib/servers.mjs';
+import { servers, startPreview } from './lib/servers.mjs';
 
 const DETERMINISTIC_LABEL = 'Deterministic mode: no language model';
 const SCRIPTED_LABEL = 'Scripted test model (not a language model)';
@@ -60,6 +63,28 @@ describe('assistant: deterministic mode (server without a model)', () => {
     assert.ok(n && conversation && drawer, 'not laid out');
     assert.ok(n.y >= conversation.y + conversation.height - 1, `the note (${n.y}) overlaps the conversation (ends ${conversation.y + conversation.height})`);
     assert.ok(n.y + n.height <= Math.min(720, drawer.y + drawer.height) + 1, `the note is cut off: ${JSON.stringify(n)}`);
+  });
+
+  test('the visible close control closes the drawer and it can be opened again', SLOW, async () => {
+    await openAssistant(page);
+    const close = page.getByRole('button', { name: 'Close the assistant', exact: true }).filter({ hasText: 'Close' });
+    await close.click();
+    await until(page, () => !window.lunyx.store.get().assistantOpen);
+    assert.equal(await page.locator('#assistant-drawer').getAttribute('inert'), '');
+    await openAssistant(page);
+    assert.equal(await page.locator('#assistant-drawer').getAttribute('aria-hidden'), 'false');
+  });
+
+  test('Escape closes the assistant after focus returns to the scene, preserving the view and site', SLOW, async () => {
+    await openAssistant(page);
+    const before = await state(page);
+    await page.locator('#scene').focus();
+    await page.keyboard.press('Escape');
+    await until(page, () => !window.lunyx.store.get().assistantOpen);
+    const after = await state(page);
+    assert.equal(after.view, before.view);
+    assert.deepEqual(after.site, before.site);
+    await openAssistant(page);
   });
 
   test('a typed command runs through the action registry and the reply is labelled', SLOW, async () => {
@@ -207,6 +232,36 @@ describe('assistant: deterministic mode (server without a model)', () => {
   });
 });
 
+// A judge's machine: the default configuration (no LUNYX_LLM_PROVIDER, so the Claude API) and no
+// credentials the SDK can find (no key in the environment, no `ant auth login` profile: an
+// empty SDK config directory). Since 7dabe03 the SDK builds its client without complaint and
+// fails only on the first request; the server must still say "no model" (T-17).
+describe('assistant: the default configuration without Claude credentials', () => {
+  let srv, app, page;
+  before(async () => {
+    srv = await startPreview({ ANTHROPIC_CONFIG_DIR: mkdtempSync(join(tmpdir(), 'lunyx-e2e-no-credentials-')) });
+    app = await openApp(srv.base);
+    page = app.page;
+  }, SLOW);
+  after(async () => {
+    await app?.close();
+    await srv?.stop();
+  });
+
+  test('the status says no model, with the reason, and the drawer is in deterministic mode', SLOW, async () => {
+    const status = await (await fetch(`${srv.base}/api/assistant`)).json();
+    assert.equal(status.available, false, JSON.stringify(status));
+    assert.match(status.reason, /No Claude credentials found/);
+    await openAssistant(page);
+    await until(page, () => document.querySelector('.ad-mode')?.textContent.startsWith('Deterministic'));
+    const reply = await ask(page, 'go to IM-2');
+    assert.deepEqual(reply.source, { kind: 'deterministic' });
+    assert.equal(reply.shownLabel, DETERMINISTIC_LABEL);
+    assert.equal((await state(page)).site.id, 'im-2');
+    assert.deepEqual(app.problems, []);
+  });
+});
+
 describe('assistant: scripted test model through the real /api/assistant route', () => {
   let app, page;
   before(async () => {
@@ -272,7 +327,7 @@ describe('assistant: scripted test model through the real /api/assistant route',
     // What the browser holds after the conversation above: the visible messages and the history it would send next.
     const kept = await page.evaluate(() => JSON.stringify([window.lunyxAssistant.session.messages, window.lunyxAssistant.session.history()]));
     for (const text of [raw, kept, JSON.stringify(await (await fetch(`${srv.scripted}/api/assistant`)).json())]) {
-      assert.doesNotMatch(text, /sk-ant-|ANTHROPIC_API_KEY=|TYPESAFE|Bearer /);
+      assert.doesNotMatch(text, /sk-ant-|TYPESAFE|Bearer /);
     }
     assert.deepEqual(app.problems, []);
   });

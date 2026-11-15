@@ -3,15 +3,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { describe, expect, it } from 'vitest';
 import type { StepEvent, WireMessage, WireTool } from '../../src/assistant/protocol';
-import { AnthropicProvider, BETAS, buildParams, describeFailure, echoBlocks, toMessageParams, toToolParams, type MessagesClient } from './anthropic';
+import { AnthropicProvider, BETAS, buildParams, credentialsProblem, describeFailure, echoBlocks, NO_CREDENTIALS, toMessageParams, toToolParams, type MessagesClient } from './anthropic';
 import type { LlmConfig } from './env';
 import type { ProviderRequest } from './types';
 
-const KEY = 'sk-ant-test-CANARY-0123456789abcdef';
+const SECRET = 'sk-ant-test-CANARY-0123456789abcdef';
 
 const cfg = (over: Partial<LlmConfig> = {}): LlmConfig => ({
-  provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium', maxTokens: 64000, betas: true, apiKey: KEY,
-  sdkCredentials: false, customBaseUrl: false, router: 'direct', script: 'default', secrets: [KEY], ...over,
+  provider: 'anthropic', model: 'claude-opus-5-5', effort: 'medium', maxTokens: 64000, betas: true,
+  customBaseUrl: false, router: 'direct', script: 'default', secrets: [SECRET], ...over,
 });
 
 const TOOLS: WireTool[] = [
@@ -209,13 +209,13 @@ describe('failures and recovery', () => {
     expect(second.messages[1].content.map((b: any) => b.type)).toEqual(['tool_use']);
   });
 
-  it('gives up after the second rejection and never leaks the key in the message', async () => {
-    const client = fakeClient([{ throws: apiError(400, `bad request for key ${KEY}`) }, { throws: apiError(400, `still bad ${KEY}`) }]);
+  it('gives up after the second rejection and never leaks the secret in the message', async () => {
+    const client = fakeClient([{ throws: apiError(400, `bad request for key ${SECRET}`) }, { throws: apiError(400, `still bad ${SECRET}`) }]);
     const events = await collect(provider(client), request([USER]));
     const last = events.at(-1) as Extract<StepEvent, { type: 'error' }>;
     expect(last.error.kind).toBe('model_request');
     expect(last.error.message).toContain('still bad [redacted]');
-    expect(JSON.stringify(events)).not.toContain(KEY);
+    expect(JSON.stringify(events)).not.toContain(SECRET);
     expect(client.calls).toHaveLength(2);
   });
 
@@ -231,11 +231,11 @@ describe('failures and recovery', () => {
 
   it('words API failures by class, without retrying them as JSON problems', async () => {
     for (const [status, kind] of [[401, 'auth'], [403, 'auth'], [404, 'model_request'], [429, 'rate_limit'], [529, 'overloaded'], [500, 'overloaded']] as const) {
-      const client = fakeClient([{ throws: apiError(status, `failure ${KEY}`) }]);
+      const client = fakeClient([{ throws: apiError(status, `failure ${SECRET}`) }]);
       const events = await collect(provider(client), request([USER]));
       expect(events.at(-1), String(status)).toMatchObject({ type: 'error', error: { kind } });
       expect(client.calls, String(status)).toHaveLength(1);
-      expect(JSON.stringify(events)).not.toContain(KEY);
+      expect(JSON.stringify(events)).not.toContain(SECRET);
     }
     expect(describeFailure(new Anthropic.APIConnectionError({ message: 'socket hang up' }), cfg())).toMatchObject({ kind: 'network' });
     expect(describeFailure(new Anthropic.APIUserAbortError(), cfg())).toMatchObject({ kind: 'aborted' });
@@ -251,10 +251,37 @@ describe('failures and recovery', () => {
     expect(client.calls).toHaveLength(1);
   });
 
-  it('never writes the key to the log', async () => {
+  it('never writes secrets to the log', async () => {
     logs.length = 0;
-    await collect(provider(fakeClient([{ throws: apiError(400, `x ${KEY}`) }, { throws: apiError(401, `y ${KEY}`) }])), request([USER]));
+    await collect(provider(fakeClient([{ throws: apiError(400, `x ${SECRET}`) }, { throws: apiError(401, `y ${SECRET}`) }])), request([USER]));
     expect(logs.length).toBeGreaterThan(0);
-    expect(logs.join('\n')).not.toContain(KEY);
+    expect(logs.join('\n')).not.toContain(SECRET);
+  });
+});
+
+describe('no credentials (SDK 1.8: the client builds, the first request fails with a plain Error)', () => {
+  it('maps the SDK\'s plain "Could not resolve authentication method" and a missing profile to no_model', () => {
+    const cfg = { model: 'claude-opus-5-5', secrets: [] };
+    const plain = new Error('Could not resolve authentication method. Expected one of apiKey, authToken, credentials, config, or profile to be set. Or for the "Authorization" header to be explicitly omitted');
+    expect(describeFailure(plain, cfg)).toEqual({ kind: 'no_model', message: NO_CREDENTIALS });
+    expect(describeFailure(new Anthropic.AnthropicError('Profile "work" could not be resolved (no <config_dir>/configs/work.json found).'), cfg).kind).toBe('no_model');
+    expect(describeFailure(new Error('something else'), cfg).kind).not.toBe('no_model');
+  });
+
+  it('finds the credentials problem without sending a request', async () => {
+    expect(await credentialsProblem({ apiKey: 'k' }, async () => null)).toBeNull();
+    expect(await credentialsProblem({ authToken: 't' }, async () => null)).toBeNull();
+    expect(await credentialsProblem({ apiKey: null, authToken: null }, async () => ({ provider: {} }))).toBeNull();
+    expect(await credentialsProblem({ apiKey: null, authToken: null }, async () => null)).toBe(NO_CREDENTIALS);
+    expect(await credentialsProblem({}, async () => { throw new Error('Profile "x" could not be resolved'); })).toBe(`${NO_CREDENTIALS} (Profile "x" could not be resolved)`);
+  });
+
+  it('checks once per provider, and a stand-in client is ready', async () => {
+    let calls = 0;
+    const p = new AnthropicProvider(cfg(), fakeClient([]), () => {}, async () => (calls++, NO_CREDENTIALS));
+    expect(await p.ready()).toBe(NO_CREDENTIALS);
+    expect(await p.ready()).toBe(NO_CREDENTIALS);
+    expect(calls).toBe(1);
+    expect(await new AnthropicProvider(cfg(), fakeClient([])).ready()).toBeNull();
   });
 });

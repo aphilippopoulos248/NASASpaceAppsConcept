@@ -6,6 +6,7 @@
 // through the action registry (`toolDefinitions()` / `runAction`), like every other control.
 import { DeterministicEngine } from '../../assistant/deterministic/engine';
 import { accuracyNote, isLanguageModel, replyLabel } from '../../assistant/labels';
+import { escapeClosesDrawer } from './escape';
 import { DETERMINISTIC_LABEL } from '../../assistant/protocol';
 import { AssistantSession, type ChatMessage } from '../../assistant/session';
 import { httpTransport } from '../../assistant/transport';
@@ -140,8 +141,9 @@ export function mountAssistantDrawer(region: HTMLElement): void {
   const title = el('h2', 'ly-panel-title', 'Assistant');
   const fresh = button('New chat', 'ly-btn ly-btn--small ly-btn--ghost', () => void runAction('clearConversation'));
   fresh.setAttribute('aria-label', 'Start a new conversation');
-  const close = button('×', 'ly-btn ly-btn--ghost ly-btn--icon ad-close', () => void runAction('setAssistantOpen', { open: false }));
+  const close = button('Close ×', 'ly-btn ad-close', () => void runAction('setAssistantOpen', { open: false }));
   close.setAttribute('aria-label', 'Close the assistant');
+  close.title = 'Close the assistant (Esc)';
   head.append(title, fresh, close);
 
   const mode = el('p', 'ad-mode');
@@ -260,13 +262,17 @@ export function mountAssistantDrawer(region: HTMLElement): void {
   drawer.append(head, mode, log, form);
   region.append(drawer);
 
-  // Escape closes the drawer. It must not reach the views' own Escape shortcuts.
-  drawer.addEventListener('keydown', (e) => {
-    if (e.key !== 'Escape') return;
+  // The drawer remains open when a user returns focus to the scene. Catch Escape before
+  // the scene shortcuts in that case too, so closing chat does not leave surface view.
+  // Escape goes to the layer that holds focus (F-10, escape.ts): focus in another panel, such
+  // as the compare sheet, leaves Escape to that panel.
+  window.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || e.defaultPrevented) return;
+    if (!escapeClosesDrawer(store.get().assistantOpen, document.activeElement, { drawer, scene: document.getElementById('scene'), body: document.body, root: document.documentElement })) return;
     e.stopPropagation();
     e.preventDefault();
     void runAction('setAssistantOpen', { open: false });
-  });
+  }, true);
 
   // ---- rendering ----
   const views = new Map<number, MessageView>();
@@ -354,7 +360,9 @@ export function mountAssistantDrawer(region: HTMLElement): void {
     if (open && !wasOpen) {
       void s.refreshStatus();
       // After the slide-in has started, so the browser does not scroll the page to the field.
-      requestAnimationFrame(() => input.focus({ preventScroll: true }));
+      requestAnimationFrame(() => {
+        if (store.get().assistantOpen) input.focus({ preventScroll: true });
+      });
     } else if (!open && wasOpen) {
       if (dictation?.listening) dictation.stop();
       if (drawer.contains(document.activeElement)) document.getElementById('assistant-button')?.focus();

@@ -56,10 +56,15 @@ function defaultProvider(cfg: LlmConfig): LlmProvider | null {
     return script ? new ScriptedProvider(script, cfg.script) : null;
   }
   // One SDK client per distinct configuration. The cache key stays in this process.
-  const key = JSON.stringify([cfg.model, cfg.effort, cfg.maxTokens, cfg.betas, cfg.apiKey ?? '', cfg.authToken ?? '', cfg.sdkCredentials, cfg.customBaseUrl]);
+  // The SDK resolves credentials itself (ant auth login, workload identity, env var).
+  const key = JSON.stringify([cfg.model, cfg.effort, cfg.maxTokens, cfg.betas, cfg.customBaseUrl]);
   let p = providerCache.get(key);
   if (!p) {
-    p = new AnthropicProvider(cfg);
+    try {
+      p = new AnthropicProvider(cfg);
+    } catch {
+      return null;
+    }
     providerCache.clear();
     providerCache.set(key, p);
   }
@@ -84,21 +89,25 @@ export const defaultDeps: HandlerDeps = {
   log: (line) => console.warn(line),
 };
 
-function resolve(deps: HandlerDeps): { cfg: LlmConfig; provider: LlmProvider | null; router: LlmRouter | null; reason?: string } {
+async function resolve(deps: HandlerDeps): Promise<{ cfg: LlmConfig; provider: LlmProvider | null; router: LlmRouter | null; reason?: string }> {
   const cfg = deps.loadConfig();
   if (cfg.provider === 'none') return { cfg, provider: null, router: null, reason: cfg.reason ?? 'No language model is configured on this server.' };
   const router = (deps.router ?? defaultRouter)(cfg);
   if (typeof router === 'string') return { cfg, provider: null, router: null, reason: router };
   const provider = deps.provider(cfg);
   if (!provider) {
-    const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'The configured model provider could not be created.';
+    const why = cfg.provider === 'scripted' ? `Unknown LUNYX_LLM_SCRIPT "${cfg.script}". Available: ${scriptNames().join(', ')}.` : 'No Claude credentials found. Run `ant auth login` to authenticate with your Claude subscription, then restart the server.';
     return { cfg, provider: null, router: null, reason: why };
   }
+  // A provider that cannot answer (no credentials) counts as none: the browser then uses its
+  // deterministic mode from the start, instead of failing on every message.
+  const problem = provider.ready ? await provider.ready() : null;
+  if (problem) return { cfg, provider: null, router: null, reason: redact(problem, cfg.secrets) };
   return { cfg, provider, router };
 }
 
-function status(deps: HandlerDeps): AssistantStatus {
-  const r = resolve(deps);
+async function status(deps: HandlerDeps): Promise<AssistantStatus> {
+  const r = await resolve(deps);
   return r.provider ? { available: true, model: r.provider.info, router: r.cfg.router } : { available: false, model: null, router: r.cfg.router, reason: r.reason };
 }
 
@@ -107,13 +116,13 @@ const line = (e: StepEvent): string => `${JSON.stringify(e)}\n`;
 export function createAssistantHandler(deps: HandlerDeps = defaultDeps): (req: HttpRequest) => Promise<HttpResponse> {
   return async (req): Promise<HttpResponse> => {
     if (req.subpath && req.subpath !== '/') return { status: 404, json: { error: { kind: 'invalid_request', message: 'Unknown assistant endpoint.' } satisfies WireError } };
-    if (req.method === 'GET' || req.method === 'HEAD') return { status: 200, json: status(deps) };
+    if (req.method === 'GET' || req.method === 'HEAD') return { status: 200, json: await status(deps) };
     if (req.method !== 'POST') return { status: 405, headers: { allow: 'GET, POST' }, json: { error: { kind: 'invalid_request', message: 'Use GET for the status or POST for a conversation step.' } satisfies WireError } };
 
     const parsed = validateStepRequest(req.body);
     if (!parsed.ok) return { status: 400, json: { error: { kind: 'invalid_request', message: parsed.error } satisfies WireError } };
 
-    const r = resolve(deps);
+    const r = await resolve(deps);
     if (!r.provider || !r.router) return { status: 503, json: { error: { kind: 'no_model', message: r.reason ?? 'No language model is configured on this server.' } satisfies WireError } };
 
     const request: ProviderRequest = { system: SYSTEM_PROMPT, tools: parsed.value.tools, messages: parsed.value.messages, signal: req.signal };

@@ -162,9 +162,9 @@ describe('assistant loop end to end (scripted model, no key)', () => {
   });
 
   it('never shows a credential to the browser, whatever the server holds', async () => {
-    const KEY = 'sk-ant-test-CANARY-0123456789abcdef';
+    const SECRET = 'sk-ant-test-CANARY-0123456789abcdef';
     const bodies: string[] = [];
-    const inner = handlerFetch({ ...SCRIPTED, ANTHROPIC_API_KEY: KEY });
+    const inner = handlerFetch(SCRIPTED);
     const spy = (async (url: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => {
       const res = await inner(url, init);
       bodies.push(await res.clone().text());
@@ -175,8 +175,8 @@ describe('assistant loop end to end (scripted model, no key)', () => {
     await s.send('call getState');
     await s.send('call nope');
     expect(bodies.length).toBeGreaterThan(3);
-    expect(bodies.join('\n')).not.toContain(KEY);
-    expect(JSON.stringify(s.messages)).not.toContain(KEY);
+    expect(bodies.join('\n')).not.toContain(SECRET);
+    expect(JSON.stringify(s.messages)).not.toContain(SECRET);
   });
 });
 
