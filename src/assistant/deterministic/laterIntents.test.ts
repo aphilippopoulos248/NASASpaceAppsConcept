@@ -533,3 +533,93 @@ describe('deterministic mode: help follows the build', () => {
     for (const line of ['Globe drawing:', 'Site science:', 'Walking (surface):', 'Saved comparisons:']) expect(old).not.toContain(line);
   });
 });
+
+describe('deterministic mode: tracking the Sun or Earth (PR #2: setBodyTracking)', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('keeps facing a body, stops on request, and tells tracking apart from facing once', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    let from = lastSeq();
+    const on = await e.reply('track the sun');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['setBodyTracking', { body: 'sun', on: true }]]);
+    expect(state.tracking).toBe('sun');
+    expect(on.text).toContain('The view now keeps facing the Sun as simulated time changes.');
+    // Another body replaces it; "face" still turns once without tracking.
+    await e.reply('follow earth');
+    expect(state.tracking).toBe('earth');
+    from = lastSeq();
+    const off = await e.reply('stop tracking');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([['getSurfaceView', {}], ['setBodyTracking', { body: 'earth', on: false }]]);
+    expect(state.tracking).toBeNull();
+    expect(off.text).toBe('Tracking stopped: the view stays where it is now.');
+    expect((await e.reply('stop tracking')).text).toBe('Neither the Sun nor Earth is being tracked.');
+    from = lastSeq();
+    await e.reply('face the sun');
+    const ran = ranSince(from).map((x) => x.name);
+    expect(ran).toContain('lookAtBody');
+    expect(ran).not.toContain('setBodyTracking');
+    expect(state.tracking).toBeNull();
+  });
+
+  it('needs the surface view, as the action says', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    expect((await e.reply('track the sun')).text).toContain('Enter the surface view first');
+  });
+});
+
+describe('deterministic mode: the surface panels (T-65: setSurfacePanel, resetSurfacePanels, getSurfacePanels)', () => {
+  let state: FakeState;
+  beforeEach(() => {
+    state = installFakeApp(ALL_ACTIONS);
+  });
+
+  it('folds, opens, moves (to a point and by an amount), lists and resets the panels', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    let from = lastSeq();
+    expect((await e.reply('fold the time panel')).text).toBe('The Time panel is folded to its title row.');
+    expect((await e.reply('open the time panel')).text).toBe('The Time panel is open.');
+    expect((await e.reply('move the locator map to 300, 200')).text).toBe('The Locator map panel is now at 300, 200 px, its top left corner from the top left of the window.');
+    expect((await e.reply('move the locator map panel left by 100')).text).toBe('The Locator map panel is now at 200, 200 px, its top left corner from the top left of the window.');
+    // Kept inside the window, as the action does.
+    expect((await e.reply('move the time panel to 5000, 5000')).text).toContain('(kept inside the window)');
+    expect(ranSince(from).map((x) => [x.name, x.params])).toEqual([
+      ['setSurfacePanel', { panel: 'time', folded: true }],
+      ['setSurfacePanel', { panel: 'time', folded: false }],
+      ['setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 }],
+      ['getSurfacePanels', {}],
+      ['setSurfacePanel', { panel: 'locator-map', xPx: 200, yPx: 200 }],
+      ['setSurfacePanel', { panel: 'time', xPx: 5000, yPx: 5000 }],
+    ]);
+    const list = await e.reply('list the surface panels');
+    expect(list.text).toContain('Surface panels (the surface view is shown):');
+    expect(list.text).toContain('- Locator map: on screen, open, moved, top left at 200, 200 px (200 × 200 px)');
+    expect(list.text).toContain('- Compare: not on screen');
+    from = lastSeq();
+    expect((await e.reply('reset the panels')).text).toBe('Every surface panel is back in its place and open (7 panels).');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['resetSurfacePanels']);
+    expect(state.panels).toEqual({});
+  });
+
+  it('leaves the key metrics and the chart to their own actions', async () => {
+    const e = engine();
+    await e.reply('go to IM-2 then enter the surface');
+    const from = lastSeq();
+    await e.reply('fold the key metrics');
+    await e.reply('expand the skyline chart');
+    expect(ranSince(from).map((x) => x.name)).toEqual(['showKeyMetrics', 'setChart']);
+  });
+
+  it('says why a panel cannot move: not in the surface view, or not on screen', async () => {
+    const e = engine();
+    await e.reply('go to IM-2');
+    expect((await e.reply('fold the time panel')).text).toContain('The panels move and fold in the surface view only');
+    await e.reply('enter the surface');
+    expect((await e.reply('fold the compare panel')).text).toContain('The Compare panel is not on screen. Open the comparison first.');
+  });
+});

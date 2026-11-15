@@ -443,6 +443,38 @@ export const surfaceStatus: Intent = (step) => {
 
 // ---------------------------------------------------------------- the surface HUD: chart, key metrics, explanation
 
+// ---------------------------------------------------------------- tracking the Sun or Earth (PR #2)
+
+/** "Track the Sun" keeps the view on it as the clock runs (the HUD's Track toggles); "face the Sun" turns to it once (lookAtBody). */
+export const tracking: Intent = (step) => {
+  const on = /^(?:track|follow|keep (?:facing|looking at|the view on)|lock (?:the view )?on(?:to)?)\s+(?:the\s+)?(sun|earth)(?:\s+as (?:the )?(?:clock|time) (?:runs|moves|passes))?$/.exec(step);
+  const off = /^(?:stop|end|cancel|turn off)\s+(?:tracking|following)(?:\s+(?:the\s+)?(sun|earth))?$|^untrack(?:\s+(?:the\s+)?(sun|earth))?$/.exec(step);
+  if (!on && !off) return null;
+  if (on) {
+    const body = on[1] as 'sun' | 'earth';
+    const name = body === 'sun' ? 'the Sun' : 'Earth';
+    return plan(`keep facing ${name} as the clock runs`, async (ctx) => {
+      const r = await ctx.run('setBodyTracking', { body, on: true });
+      const look = isObject(r.look) ? ` Facing azimuth ${degrees(num(r, 'look.azDeg'))}, elevation ${degrees(num(r, 'look.elDeg'))} now.` : '';
+      return `The view now keeps facing ${name} as simulated time changes.${look} Dragging the view or the arrow keys stop the tracking.`;
+    });
+  }
+  const named = (off![1] ?? off![2]) as 'sun' | 'earth' | undefined;
+  return plan(named ? `stop tracking ${named === 'sun' ? 'the Sun' : 'Earth'}` : 'stop tracking', async (ctx) => {
+    let body = named;
+    if (!body) {
+      // Which one is tracked is in the surface view's state.
+      const v = await ctx.run('getSurfaceView');
+      const t = str(v, 'trackingBody');
+      if (t !== 'sun' && t !== 'earth') return 'Neither the Sun nor Earth is being tracked.';
+      body = t;
+    }
+    const r = await ctx.run('setBodyTracking', { body, on: false });
+    const still = str(r, 'tracking');
+    return still && still !== body ? `${body === 'sun' ? 'The Sun' : 'Earth'} was not being tracked; ${still === 'sun' ? 'the Sun' : 'Earth'} still is.` : `Tracking stopped: the view stays where it is now.`;
+  });
+};
+
 // ---------------------------------------------------------------- the surface view's movable panels (T-65)
 
 /** Panel words to the ids of setSurfacePanel (src/ui/surface/panelLayout.ts). The key metrics keep their own fold (showKeyMetrics). */
@@ -790,6 +822,7 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['walkTo'], 'Walking (surface): "walk 200 m north", "walk to 100 m east 50 m north", "rise 20 m", "return to the site"'],
   [['setFieldOfView'], 'Surface view: "face the sun", "field of view 10", "hide the sky paths", "what is the ground made of"'],
   [['setChart'], 'Surface HUD: "show the skyline chart", "expand the chart", "chart against time", "show the chart as a table", "fold the key metrics", "close the explanation"'],
+  [['setBodyTracking'], 'Tracking (surface): "track the sun", "follow earth", "stop tracking"'],
   [['setSurfacePanel'], 'Surface panels: "fold the time panel", "move the locator map to 300, 200", "move the compare panel left by 100", "reset the panels", "list the surface panels"'],
   [['listSites'], 'Catalogue: "list the landing sites"'],
   [['saveComparison'], 'Saved comparisons: "save this comparison as Baseline", "list saved comparisons", "load comparison Baseline", "swap A and B", "clear slot B"'],

@@ -117,7 +117,14 @@ function screen(page) {
       card: card && !card.hidden ? { title: q('.site-card .sc-title')?.textContent, where: q('.site-card .sc-where')?.textContent ?? '', bodyHidden: Boolean(q('.site-card .sc-body')?.hidden), foldExpanded: q('.site-card .sc-fold')?.getAttribute('aria-expanded'), text: card.textContent } : null,
       compass: q('.compass')?.getAttribute('aria-label') ?? '',
       locator: { readout: q('.locator-readout')?.textContent ?? '', zoomOutDisabled: Boolean(q('.locator button[aria-label="Zoom the map out"]')?.disabled) },
-      hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null },
+      hud: { status: q('.surface-hud .sh-status')?.textContent ?? '', ground: q('.surface-hud .sh-ground')?.textContent ?? '', pathsPressed: hudButton('Sky paths')?.getAttribute('aria-pressed') ?? null, generatedPressed: hudButton('Generated detail')?.getAttribute('aria-pressed') ?? null, homeShown: hudButton('Return to site') ? !hudButton('Return to site').hidden : null, trackSunPressed: hudButton('Track Sun')?.getAttribute('aria-pressed') ?? null, trackEarthPressed: hudButton('Track Earth')?.getAttribute('aria-pressed') ?? null },
+      // The surface view's movable panels (T-65): folded, moved, the box on screen, the Fold button's word.
+      panels: Object.fromEntries([['key-metrics', '.km'], ['skyline-chart', '.skc'], ['surface-controls', '.surface-hud'], ['time', '.time-scrubber'], ['locator-map', '.locator'], ['compare', '.cmp-sheet'], ['assistant', '.assistant-drawer']].map(([id, sel]) => {
+        const el = q(sel);
+        if (!el) return [id, null];
+        const r = el.getBoundingClientRect();
+        return [id, { folded: el.classList.contains('sp-folded'), positioned: el.classList.contains('sp-positioned'), x: Math.round(r.x), y: Math.round(r.y), foldWord: el.querySelector(':scope > .sp-toolbar .sp-fold')?.textContent ?? null }];
+      })),
       drawerOpen: Boolean(q('#assistant-drawer')?.classList.contains('is-open')),
       compare: (() => {
         const sheet = q('.cmp-sheet');
@@ -461,6 +468,16 @@ const CASES = [
     near(look.azDeg, r.azDeg, 0.06, 'look azimuth vs Earth azimuth');
     await shows(page, (s) => new RegExp(`^Facing \\w+ ${Math.round(r.azDeg) % 360}°`).test(s.hud.status), `HUD facing ${Math.round(r.azDeg)}°`);
   } },
+  { name: 'setBodyTracking', params: { body: 'sun', on: true }, check: async (r, page) => {
+    assert.deepEqual([r.body, r.tracking], ['sun', 'sun']);
+    const v = (await run(page, 'getSurfaceView')).result;
+    assert.equal(v.trackingBody, 'sun');
+    near(r.look.azDeg, v.sky.sun.azDeg, 0.06, 'tracking faces the Sun');
+    await shows(page, (s) => s.hud.trackSunPressed === 'true' && s.hud.trackEarthPressed === 'false', '"Track Sun" pressed, "Track Earth" released');
+    // Off again, as the toggle does.
+    assert.equal((await run(page, 'setBodyTracking', { body: 'sun', on: false })).result.tracking, null);
+    await shows(page, (s) => s.hud.trackSunPressed === 'false', '"Track Sun" released');
+  } },
   { name: 'walkTo', params: { eastM: 100, northM: 50 }, check: async (r, page) => {
     near(r.position.distanceFromSiteM, Math.hypot(100, 50), 0.6, 'distance from the site');
     await shows(page, (s) => /112 m from the site/.test(s.hud.status) && s.hud.homeShown === true, 'HUD 112 m from the site, "Return to site" shown');
@@ -503,6 +520,30 @@ const CASES = [
   { name: 'dismissBlockageExplanation', check: async (r, page) => {
     assert.equal(r.explanationShown, false);
     await shows(page, (s) => s.chart?.explainShown === false, 'the explanation is closed');
+  } },
+  // ---- the surface view's movable panels (T-65)
+  { name: 'setSurfacePanel', params: { panel: 'time', folded: true }, check: async (r, page) => {
+    assert.deepEqual([r.panel, r.shown, r.folded], ['time', true, true]);
+    await shows(page, (s) => s.panels.time?.folded === true && s.panels.time.foldWord === 'Expand', 'the Time panel folded, its button reads "Expand"');
+    // Moving one: the box on screen is where the result says.
+    const moved = (await run(page, 'setSurfacePanel', { panel: 'locator-map', xPx: 300, yPx: 200 })).result;
+    assert.equal(moved.moved, true);
+    await shows(page, (s) => s.panels['locator-map']?.positioned === true && Math.abs(s.panels['locator-map'].x - moved.xPx) <= 1 && Math.abs(s.panels['locator-map'].y - moved.yPx) <= 1, `the Locator map panel at ${moved.xPx}, ${moved.yPx}`);
+  } },
+  { name: 'getSurfacePanels', check: async (r, page) => {
+    assert.equal(r.surfaceView, true);
+    const by = Object.fromEntries(r.panels.map((p) => [p.panel, p]));
+    assert.equal(by.time.folded, true);
+    assert.equal(by['locator-map'].moved, true);
+    const s = await screen(page);
+    for (const p of r.panels.filter((x) => x.shown)) {
+      assert.equal(s.panels[p.panel].folded || p.panel === 'key-metrics' ? p.folded : false, p.folded, `${p.panel} folded`);
+      assert.ok(Math.abs(s.panels[p.panel].x - p.xPx) <= 1 && Math.abs(s.panels[p.panel].y - p.yPx) <= 1, `${p.panel} box: ${JSON.stringify(s.panels[p.panel])} vs ${p.xPx}, ${p.yPx}`);
+    }
+  } },
+  { name: 'resetSurfacePanels', check: async (r, page) => {
+    assert.ok(r.panels.every((p) => !p.folded && !p.moved), JSON.stringify(r.panels));
+    await shows(page, (s) => Object.values(s.panels).every((p) => !p || (!p.folded && !p.positioned)), 'no panel folded or moved');
   } },
   { name: 'exitSurface', check: async (r, page) => {
     assert.equal(r.view, 'globe');

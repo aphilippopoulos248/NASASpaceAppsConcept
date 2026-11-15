@@ -1161,7 +1161,7 @@ const INTENTS: Intent[] = [
   later.skyPaths, later.surfacePanels, later.hudPanels,
   views,
   later.fieldOfView,
-  look, globe, pin, exportResults,
+  later.tracking, look, globe, pin, exportResults,
   later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags,
   later.siteRecords, later.realClock,
   questions, site,
