@@ -650,9 +650,8 @@ export const siteRecords: Intent = (step) => {
     const a = site.exploredArea;
     if (a === undefined) throw new Halt('This build does not report the explored area of a site.');
     if (!isObject(a)) return `The explored area of ${name} is not available.`;
-    const scale = num(a, 'displayScale');
     return [
-      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size${scale && scale !== 1 ? `; the globe draws it ${scale} times wider so it can be seen` : ''}).`,
+      `The explored area at ${name}: ${str(a, 'description') ?? UNAVAILABLE}${num(a, 'areaM2') !== undefined ? `, ${Math.round(num(a, 'areaM2')!).toLocaleString('en-GB')} m²` : ''} (true size).`,
       ...(a.located === false ? ['The lander has not been found in LRO images: this is the lander alone at the catalogue\'s approximate position.'] : []),
       ...(str(a, 'note') ? [str(a, 'note')!] : []),
       ...(str(a, 'source') ? [`Source: ${str(a, 'source')}.`] : []),

@@ -172,7 +172,7 @@ export interface FakeAppOptions {
 export const SITE_RECORDS: Record<string, { ownership: Record<string, unknown> | null; exploredArea: Record<string, unknown> | null }> = {
   'im-2': {
     ownership: { state: 'United States', stateCode: 'US', owner: 'Intuitive Machines', gcatId: 'fixture-im-2', labelDisagrees: false, source: 'GCAT stand-in record' },
-    exploredArea: { description: 'about 40 m across', extentM: 40, areaM2: 1257, located: true, displayScale: 25, source: 'stand-in area' },
+    exploredArea: { description: 'about 40 m across', extentM: 40, areaM2: 1257, located: true, source: 'stand-in area' },
   },
 };
 
