@@ -1,8 +1,8 @@
 // What the compare panel says, worked out from the analyses: pure functions from results to
 // rows and sentences, so they can be tested without a browser. Every number comes from a
 // SiteAnalysis; a value that does not exist is "not available", never a stand-in.
-import { blockageAt as realBlockageAt, nextEvents as realNextEvents } from '../../analysis/api';
-import type { Blockage, FullSpan, SiteAnalysis, SkyEvent } from '../../analysis/types';
+import { blockageAt as realBlockageAt, nextEvents as realNextEvents, nextTransitions as realNextTransitions, TRANSITION_WORDS, transitionSummary } from '../../analysis/api';
+import type { Blockage, FullSpan, SiteAnalysis, SkyEvent, SkyTransition } from '../../analysis/types';
 import { checkRequirements } from '../../core/analysisReport';
 import { EVENT_INFO } from '../../core/skyEvents';
 import { spanText } from '../../core/scenario';
@@ -10,12 +10,14 @@ import { formatDuration } from '../../core/time';
 import { MOON_RADIUS_M, type AppState, type Scenario } from '../../core/types';
 import { coordsText, degText, distanceText, hoursText, NOT_AVAILABLE, pctText, resolutionText, signedText, utcText } from './format';
 
-/** The two instant lookups of the science core; replaceable in tests. */
+/** The instant lookups of the science core; replaceable in tests. */
 export interface Science {
   blockageAt: (a: SiteAnalysis, body: 'sun' | 'earth', timeMs: number) => Blockage;
   nextEvents: (a: SiteAnalysis, timeMs: number) => Record<SkyEvent['type'], SkyEvent | null>;
+  /** The passage of each body under way at the clock, else the next one; unlike nextEvents it may end beyond the window. */
+  nextTransitions?: (a: SiteAnalysis, timeMs: number) => Record<'sun' | 'earth', SkyTransition | null>;
 }
-export const SCIENCE: Science = { blockageAt: realBlockageAt, nextEvents: realNextEvents };
+export const SCIENCE: Science = { blockageAt: realBlockageAt, nextEvents: realNextEvents, nextTransitions: realNextTransitions };
 
 /** How a difference reads for a planner: B better than A, worse, the same, or no judgement implied. */
 export type Tone = 'better' | 'worse' | 'same' | 'none';
@@ -120,8 +122,11 @@ export function windowRows(a: SiteAnalysis | null, b: SiteAnalysis | null): Comp
     numberRow('darkness', 'Longest darkness in the window', 'Longest unbroken spell with the Sun entirely hidden, inside the mission window. "or more" means it runs into the edge of the window.', a, b, (x) => x.metrics.longestDarknessH, (x) => `${hoursText(x.metrics.longestDarknessH)}${x.metrics.darknessOpenEnded && x.metrics.longestDarknessH >= 0.05 ? ' or more' : ''}`, 'h', true),
     fullRow('darknessFull', 'Longest darkness in full', 'The longest darkness that touches the window, followed past the window\'s edges to its real start and end (searched up to 60 days each way).', a, b, (x) => [x.metrics.longestDarknessFull, x.metrics.longestDarknessH]),
     numberRow('earth', 'Earth\'s centre in view', 'Share of the window with geometric line of sight to Earth\'s centre over the terrain skyline. Geometry only: not a statement about a radio link.', a, b, (x) => x.metrics.earthVisiblePct, (x) => pctText(x.metrics.earthVisiblePct), 'points', false),
-    numberRow('gap', 'Longest Earth gap in the window', 'Longest unbroken spell without line of sight to Earth\'s centre, inside the mission window.', a, b, (x) => x.metrics.longestEarthGapH, (x) => `${hoursText(x.metrics.longestEarthGapH)}${x.metrics.earthGapOpenEnded && x.metrics.longestEarthGapH >= 0.05 ? ' or more' : ''}`, 'h', true),
-    fullRow('gapFull', 'Longest Earth gap in full', 'The longest spell without Earth in view that touches the window, followed past the window\'s edges (searched up to 60 days each way).', a, b, (x) => [x.metrics.longestEarthGapFull, x.metrics.longestEarthGapH]),
+    // Any part of Earth's disc (D-8): the definition of PGDA's long-term map, named beside the centre figure.
+    anyEarth(a, b) ? numberRow('earthAny', 'Any part of Earth\'s disc in view', 'Share of the window with any part of Earth\'s disc above the terrain skyline: the definition of the long-term map (NASA PGDA product 69). At least the centre figure. Geometry only: not a statement about a radio link.', a, b, (x) => x.metrics.earthAnyPct ?? NaN, (x) => pctText(x.metrics.earthAnyPct ?? NaN), 'points', false) : null,
+    numberRow('gap', 'Longest Earth gap (centre hidden)', 'Longest unbroken spell without line of sight to Earth\'s centre, inside the mission window.', a, b, (x) => x.metrics.longestEarthGapH, (x) => `${hoursText(x.metrics.longestEarthGapH)}${x.metrics.earthGapOpenEnded && x.metrics.longestEarthGapH >= 0.05 ? ' or more' : ''}`, 'h', true),
+    fullRow('gapFull', 'Longest Earth gap in full (centre hidden)', 'The longest spell without Earth\'s centre in view that touches the window, followed past the window\'s edges (searched up to 60 days each way).', a, b, (x) => [x.metrics.longestEarthGapFull, x.metrics.longestEarthGapH]),
+    anyEarth(a, b) ? numberRow('gapAny', 'Longest Earth gap (whole disc hidden)', 'Longest unbroken spell with no part of Earth\'s disc above the terrain skyline, inside the mission window. "or more" means it runs into the edge of the window.', a, b, (x) => x.metrics.longestEarthAnyGapH ?? NaN, (x) => `${hoursText(x.metrics.longestEarthAnyGapH ?? NaN)}${x.metrics.earthAnyGapOpenEnded && (x.metrics.longestEarthAnyGapH ?? 0) >= 0.05 ? ' or more' : ''}`, 'h', true) : null,
     slopeRow(a, b),
     {
       key: 'sunRange', label: 'Sun elevation in the window', hint: 'Lowest and highest elevation of the Sun\'s centre above the local horizontal during the window (not against the skyline).',
@@ -132,6 +137,9 @@ export function windowRows(a: SiteAnalysis | null, b: SiteAnalysis | null): Comp
   ];
   return rows.filter((r): r is CompareRow => r !== null);
 }
+
+/** The any-part Earth figures are shown when the science core gave them for either side (every analysis since T-45 has them). */
+const anyEarth = (a: SiteAnalysis | null, b: SiteAnalysis | null) => a?.metrics.earthAnyPct !== undefined || b?.metrics.earthAnyPct !== undefined;
 
 const rangeText = (x: SiteAnalysis) => (Number.isFinite(x.metrics.minSunElDeg) ? `${degText(x.metrics.minSunElDeg)} to ${degText(x.metrics.maxSunElDeg)}` : NOT_AVAILABLE);
 
@@ -157,13 +165,29 @@ function bodyNowText(k: Blockage): string {
   return k.clearanceDeg > 0 ? `${where}, ${degText(k.clearanceDeg)} above the skyline${covered}` : `${where}, ${degText(-k.clearanceDeg)} below the skyline (centre hidden)${covered}`;
 }
 
-// Which instant each event is (decision D-8): the app's shared wording (src/core/skyEvents.ts).
+// Both ends of each rise and set (decision D-8): "starts setting HH:MM, fully set HH:MM UTC". The event
+// itself is one instant of its passage (src/core/skyEvents.ts names it); the countdown and B − A are for it.
+const EVENT_NAME: Record<SkyEvent['type'], string> = { sunset: 'Sunset', sunrise: 'Sunrise', earthset: 'Earthset', earthrise: 'Earthrise' };
+const EVENT_INSTANT: Record<SkyEvent['type'], string> = { sunset: 'fully set', sunrise: 'starts rising', earthset: 'centre sets', earthrise: 'centre rises' };
+const PASSAGE_EDGES: Record<SkyEvent['type'], readonly ['first-cut' | 'first-limb', 'last-limb' | 'whole-clear']> = {
+  sunset: ['first-cut', 'last-limb'], sunrise: ['first-limb', 'whole-clear'], earthset: ['first-cut', 'last-limb'], earthrise: ['first-limb', 'whole-clear'],
+};
 const EVENT_HINT = (type: SkyEvent['type']): string => {
   const info = EVENT_INFO[type];
-  const other = info.body === 'sun' ? (info.rising ? ' The whole disc is clear later; that instant is not listed here yet.' : ' Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.') : '';
-  return `${info.label}: the next time ${info.instant}, after the shared clock.${other}`;
+  const words = TRANSITION_WORDS[info.body];
+  const [from, to] = PASSAGE_EDGES[type].map((edge) => words[edge]);
+  const centre = info.body === 'earth' ? ` In between, ${info.instant} ("${info.label}").` : '';
+  return `${EVENT_NAME[type]}: from the moment ${from.instant} ("${from.label}") to the moment ${to.instant} ("${to.label}").${centre} The next one after the shared clock in each side's window; an end beyond the window says so. The countdown and B − A are for "${info.label}".`;
 };
 const EVENT_ORDER: readonly SkyEvent['type'][] = ['sunset', 'sunrise', 'earthset', 'earthrise'];
+
+/** A passage under way at the clock (or next) that is this kind of event but whose event instant lies beyond the window, where nextEvents has none. */
+function passageBeyond(tr: SkyTransition | null | undefined, type: SkyEvent['type']): SkyTransition | null {
+  if (!tr || tr.body !== EVENT_INFO[type].body) return null;
+  const setting = tr.kind === 'set' || (tr.kind === 'unresolved' && (tr.start.edge === 'first-cut' || tr.end.edge === 'last-limb'));
+  const rising = tr.kind === 'rise' || (tr.kind === 'unresolved' && (tr.start.edge === 'first-limb' || tr.end.edge === 'whole-clear'));
+  return (EVENT_INFO[type].rising ? rising : setting) ? tr : null;
+}
 
 /** Where the Sun and Earth are for each side at the shared clock, and the next rise and set of each inside its window. */
 export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: number, science: Science = SCIENCE): CompareRow[] {
@@ -184,19 +208,29 @@ export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: 
     });
   }
   const na = a ? science.nextEvents(a, timeMs) : null, nb = b ? science.nextEvents(b, timeMs) : null;
-  const when = (e: SkyEvent | null) => (e ? `${utcText(e.timeMs)} (in ${formatDuration((e.timeMs - timeMs) / 3_600_000)})` : 'none after the clock in this window');
+  const ta = a && science.nextTransitions ? science.nextTransitions(a, timeMs) : null, tb = b && science.nextTransitions ? science.nextTransitions(b, timeMs) : null;
+  const when = (type: SkyEvent['type'], e: SkyEvent | null, beyond: SkyTransition | null) => {
+    if (e) {
+      const countdown = `${EVENT_INSTANT[type]} in ${formatDuration((e.timeMs - timeMs) / 3_600_000)}`;
+      return e.span ? `${transitionSummary(e.span)} (${countdown})` : `${EVENT_INFO[type].label} ${utcText(e.timeMs)} (${countdown})`;
+    }
+    // Under way near the window's end: the passage is known although its event lies beyond the window.
+    return beyond ? transitionSummary(beyond) : 'none after the clock in this window';
+  };
   for (const type of EVENT_ORDER) {
     const ea = na?.[type] ?? null, eb = nb?.[type] ?? null;
-    if (!ea && !eb && type !== 'sunset' && type !== 'earthset') continue; // the two the planner always asks for stay, the others show when they exist
+    const body = EVENT_INFO[type].body;
+    const pa = ea ? null : passageBeyond(ta?.[body], type), pb = eb ? null : passageBeyond(tb?.[body], type);
+    if (!ea && !eb && !pa && !pb && type !== 'sunset' && type !== 'earthset') continue; // the two the planner always asks for stay, the others show when they exist
     let delta = '';
     if (ea && eb) {
       const dh = (eb.timeMs - ea.timeMs) / 3_600_000;
-      delta = Math.abs(dh) < 1 / 60 ? 'same time' : `${formatDuration(dh)} ${dh > 0 ? 'later' : 'earlier'}`;
+      delta = Math.abs(dh) < 1 / 60 ? `${EVENT_INSTANT[type]} at the same time` : `${EVENT_INSTANT[type]} ${formatDuration(Math.abs(dh))} ${dh > 0 ? 'later' : 'earlier'}`;
     }
     rows.push({
-      key: type, label: EVENT_INFO[type].label,
+      key: type, label: EVENT_NAME[type],
       hint: EVENT_HINT(type),
-      a: a ? when(ea) : EMPTY, b: b ? when(eb) : EMPTY, delta, tone: 'none',
+      a: a ? when(type, ea, pa) : EMPTY, b: b ? when(type, eb, pb) : EMPTY, delta, tone: 'none',
     });
   }
   return rows;
