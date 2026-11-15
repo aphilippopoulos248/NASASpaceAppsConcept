@@ -189,11 +189,13 @@ without downloading again.
 
 ## 11. Explored area at each site
 
-- **What it is:** the ground each mission is known to have worked on, drawn on the globe in the country's
-  colour (orbit view only). **Drawn 10× larger in width (100× in area) than true size by default**, enlarged about each
-  area's centre so it reads at globe scale; the "Territory size exaggeration" control (the `setTerritoryScale` action,
-  `DEFAULT_AREA_SCALE` in `src/scene/globe/displayState.ts`) sets it from true size to 50×. The data in
-  `site-areas.json` and the size in the info card are true size. **No country owns any lunar ground** — the Outer Space Treaty (1967)
+- **What it is:** the ground each mission is known to have worked on, quoted at true size in the info card
+  (`site-areas.json`). It is no longer drawn on the globe. Instead the globe shows **territories**
+  (`src/scene/globe/territories.ts`): the whole Moon is coloured by the country of the nearest landing site
+  currently shown, so neighbouring sites of one country share one continuous territory and borders run halfway
+  between sites of different countries. Hiding sites with the mission filters redivides the Moon among the rest.
+  **The territories are a display of who landed nearest, derived only from the landing coordinates; they are
+  not data and not a boundary of any kind. No country owns any lunar ground** — the Outer Space Treaty (1967)
   forbids national claims. What a country does keep is ownership of its hardware, and that hardware (landers,
   rovers, instruments, equipment left along traverses) is spread across this area. So this is the closest real
   equivalent of "what a country owns" at a site; it is not a legal boundary.

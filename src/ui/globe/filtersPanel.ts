@@ -13,7 +13,7 @@ import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { showFieldOutcome } from '../fieldStatus';
 import { mountMissionFilters } from '../filters';
-import { AREA_SCALE_CHOICES, DEFAULT_AREA_SCALE, globeDisplay, reliefText } from '../../scene/globe/displayState';
+import { globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { MAX_FLY_LAT_DEG } from '../../scene/globe/flyTarget';
@@ -206,29 +206,18 @@ export function mountFiltersPanel(region: HTMLElement): void {
   showBox.type = 'checkbox';
   showBox.addEventListener('change', () => void runAction('showMissions', { show: showBox.checked }));
   show.append(showBox, el('span', undefined, 'Show previous missions'));
+  show.title = 'Marks each landing and colours the whole Moon by the country of the nearest landing shown: neighbouring landings of one country share one territory. Not a legal boundary: no country owns lunar ground.';
   const flags = el('label', 'ly-check fp-flags');
   const flagsBox = el('input');
   flagsBox.type = 'checkbox';
   flagsBox.addEventListener('change', () => void runAction('showFlags', { show: flagsBox.checked }));
   flags.append(flagsBox, el('span', undefined, 'Show country flags'));
   flags.title = 'A flag on each landing for the state its hardware belongs to (GCAT catalogue)';
-  // Territory size: how much larger than life each landing's explored area is drawn.
-  const areaId = `fp-${++uid}`;
-  const areaLab = el('label', 'ly-label', 'Territory size exaggeration');
-  areaLab.htmlFor = areaId;
-  const areaSel = el('select', 'ly-select');
-  areaSel.id = areaId;
-  const areaLabel = (f: number) => (f === 1 ? 'True size (×1)' : `×${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
-  for (const f of AREA_SCALE_CHOICES) areaSel.append(new Option(areaLabel(f), String(f)));
-  areaSel.addEventListener('change', () => void runAction('setTerritoryScale', { factor: Number(areaSel.value) }));
-  const areaField = el('div', 'fp-num fp-territory');
-  areaField.title = "Each landing's explored area is drawn this many times wider than it really is, so it can be seen on the globe. The Moon itself is not changed.";
-  areaField.append(areaLab, areaSel);
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, flags, areaField, missions);
+  panel.append(show, flags, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
@@ -324,8 +313,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);
     missions.classList.toggle('off', !s.showMissions);
-    areaSel.disabled = !s.showMissions;
-    areaField.classList.toggle('off', !s.showMissions);
     optBox.checked = s.overlay !== 'off';
     overlay.value = s.overlay !== 'off' ? s.overlay : lastOverlay;
     overlayBox.hidden = s.overlay === 'off';
@@ -338,8 +325,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
   const syncDisplay = () => {
     const d = globeDisplay.get(), live = globeDisplay.getLive();
-    if (![...areaSel.options].some((o) => Number(o.value) === d.areaScale)) areaSel.append(new Option(areaLabel(d.areaScale), String(d.areaScale)));
-    areaSel.value = String(d.areaScale);
     const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
     const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
     reliefNote.textContent = `${data}${rule}`;
