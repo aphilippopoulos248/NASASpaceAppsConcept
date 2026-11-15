@@ -37,6 +37,8 @@ import skygeom as sg  # noqa: E402
 ap = argparse.ArgumentParser()
 ap.add_argument('--build', required=True)
 ap.add_argument('--write', action='store_true')
+ap.add_argument('--instants-only', action='store_true', help='skip the Earth-by-disc shares (minutes of CPU over 60-day windows)')
+ap.add_argument('--resample', type=float, default=0.0, help='read the own 0.1 deg skylines only every N deg (the app keeps 0.5 deg), to see what the azimuth sampling alone does')
 args = ap.parse_args()
 DIR = os.path.join(common.BASE, 'transitions')
 TOL_DEG, TOL_PCT = 0.01, 0.1
@@ -77,6 +79,8 @@ def skyline_for(s):
         else:
             assert s['mastHeightM'] == 2
             sky_cache[key] = sg.Skyline.load(os.path.join(common.BASE, 'reference', 'skyline.%s.m2.json' % s['siteKey']))
+            if args.resample:
+                sky_cache[key] = sky_cache[key].resampled(args.resample)
     return sky_cache[key]
 
 
@@ -107,7 +111,7 @@ lines = []
 out = lines.append
 report = {'build': args.build, 'toleranceDeg': TOL_DEG, 'tolerancePct': TOL_PCT, 'cases': {}}
 worst = {'deg': 0.0, 'pct': 0.0}
-out('App %s: SiteAnalysis.transitions and the any-part Earth metrics against Horizons + own skylines.' % args.build)
+out('App %s: SiteAnalysis.transitions and the any-part Earth metrics against Horizons + own skylines%s.' % (args.build, ' read only every %g deg (Blue Ghost arcs: 0.05 deg as always)' % args.resample if args.resample else ''))
 out('Each instant: app, reference, app minus reference, and that difference as a skyline error (dt x rate of the clearance). Tolerance %.2f deg; %.1f points.' % (TOL_DEG, TOL_PCT))
 for s in scen:
     if s['id'] not in dumps:
@@ -116,7 +120,7 @@ for s in scen:
     series_src = r['series']['source']
     hz = horizons(s['siteKey'])
     sky = skyline_for(s)
-    t_lo, t_hi = max(hz['sun'].t0, hz['earth'].t0) + 1, min(hz['sun'].t1, hz['earth'].t1) - 1
+    t_lo, t_hi = max(hz['sun'].t0, hz['earth'].t0), min(hz['sun'].t1, hz['earth'].t1)
     w0 = r['series']['startMs'] / 1000.0
     w1 = w0 + s['durationH'] * 3600.0
     case = {'id': s['id'], 'ephemeris': series_src, 'transitions': [], 'checks': []}
@@ -148,7 +152,7 @@ for s in scen:
             out('  %s %s: start %s (%s), end %s (%s): not compared (kind %s)' % (body, kind, hms(tr['start']['timeMs'] / 1000), tr['start']['edge'], hms(tr['end']['timeMs'] / 1000), tr['end']['edge'], kind))
             continue
         a0, a1 = tr['start']['timeMs'] / 1000.0, tr['end']['timeMs'] / 1000.0
-        lo, hi = max(t_lo, a0 - 6 * 3600), min(t_hi, a1 + 6 * 3600)
+        lo, hi = max(t_lo + 1, a0 - 6 * 3600), min(t_hi - 1, a1 + 6 * 3600)
         if hi <= lo:
             out('  %s %s %s .. %s: outside the Horizons rows, not compared' % (body, kind, hms(a0), hms(a1)))
             continue
@@ -164,7 +168,7 @@ for s in scen:
         parts = []
         for name, fk, direction, ta in want:
             edge = tr[name]['edge']
-            if edge == 'unresolved' or not (t_lo <= ta <= t_hi):
+            if edge == 'unresolved' or not (t_lo + 60 <= ta <= t_hi - 60):
                 parts.append('%s %s: %s (not compared: %s)' % (name, edge, hms(ta), 'unresolved' if edge == 'unresolved' else 'beyond the Horizons rows'))
                 continue
             tref = nearest(cl[fk], ta, direction)
@@ -180,7 +184,7 @@ for s in scen:
             parts.append('%s (%s%s) app %s, ref %s, %+.0f s = %.4f deg' % (edge, name, '' if tr[name]['inWindow'] else ', beyond window', hms(ta), hms(tref)[6:], ta - tref, ddeg))
         for c in tr.get('centre', []):
             tc = c['timeMs'] / 1000.0
-            if not (t_lo <= tc <= t_hi):
+            if not (t_lo + 60 <= tc <= t_hi - 60):
                 continue
             tref = nearest(cl['centre'], tc, 'set' if not c['up'] else 'rise')
             if tref is None:
@@ -194,18 +198,19 @@ for s in scen:
         out('  %s %s, %.2f h: %s' % (body, kind, tr['hours'], '; '.join(parts)))
     # Earth by disc over the window.
     m = r['metrics']
-    if m.get('earthAnyPct') is not None:
+    if m.get('earthAnyPct') is not None and not args.instants_only:
         fe = fns.get('earth') or functions(hz['earth'], sky)
-        if w0 >= t_lo and w1 <= t_hi:
-            t = np.arange(w0, w1 + 0.1, 60.0)
+        if w0 >= t_lo - 1e-6 and w1 <= t_hi + 1e-6:
+            t = np.arange(w0, w1 - 0.1, 60.0)
+            t = np.append(t, w1)
             g_any = fe['high'](t)
             g_c = fe['centre'](t)
             spans = []
             for a, b, oa, ob in sg.intervals(t, g_any):
                 if not oa:
-                    a = sg.refine(lambda x: float(fe['high'](np.array([x]))[0]), a - 60, a + 60)
+                    a = sg.refine(lambda x: float(fe['high'](np.array([x]))[0]), max(a - 60, w0), a + 60)
                 if not ob:
-                    b = sg.refine(lambda x: float(fe['high'](np.array([x]))[0]), b - 60, b + 60)
+                    b = sg.refine(lambda x: float(fe['high'](np.array([x]))[0]), b - 60, min(b + 60, w1))
                 spans.append((max(a, w0), min(b, w1)))
             any_pct = 100.0 * sum(b - a for a, b in spans) / (w1 - w0)
             edges = [w0] + [x for ab in spans for x in ab] + [w1]
@@ -227,8 +232,9 @@ out('Worst over all compared instants: %.4f deg as a skyline error (tolerance %.
 text = '\n'.join(lines)
 print(text)
 if args.write:
-    with open(os.path.join(DIR, 'results-%s.json' % args.build), 'w') as fh:
+    stem = 'results-%s%s' % (args.build, '-sky%g' % args.resample if args.resample else '')
+    with open(os.path.join(DIR, stem + '.json'), 'w') as fh:
         json.dump(report, fh, indent=1)
         fh.write('\n')
-    with open(os.path.join(DIR, 'results-%s.txt' % args.build), 'w') as fh:
+    with open(os.path.join(DIR, stem + '.txt'), 'w') as fh:
         fh.write(text + '\n')

@@ -108,6 +108,7 @@ try {
       };
       delete r.events;
       delete r.transitions;
+      if (r.dsn) r.dsn = { anyReceivePct: r.dsn.anyReceive.pct, anyTransmitPct: r.dsn.anyTransmit.pct, note: 'contact intervals dropped by --slim' };
       delete r.provenance;
       r.warnings = a.warnings.map((w) => (w.length > 300 ? `${w.slice(0, 300)}...` : w));
     }
