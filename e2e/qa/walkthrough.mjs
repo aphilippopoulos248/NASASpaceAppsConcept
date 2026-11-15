@@ -272,11 +272,19 @@ async function markerPoint(page, id) {
     const y = r.top + (-v.y * 0.5 + 0.5) * r.height;
     const inView = v.z < 1 && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
     const top = inView ? document.elementFromPoint(x, y) : null;
-    return { found: true, visible: inView, x: Math.round(x), y: Math.round(y), covered: Boolean(top && top !== g.canvas), coveredBy: top && top !== g.canvas ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null };
+    // Other landings drawn within 30 px: a click there may pick one of them (they cycle on slower clicks).
+    const near = g.markers.items
+      .filter((o) => o !== m && o.group.visible)
+      .map((o) => {
+        const w = o.group.position.clone().project(g.camera);
+        return { id: o.landing.id, d: w.z < 1 ? Math.hypot(r.left + (w.x * 0.5 + 0.5) * r.width - x, r.top + (-w.y * 0.5 + 0.5) * r.height - y) : Infinity };
+      })
+      .filter((o) => o.d < 30)
+      .map((o) => o.id);
+    return { found: true, visible: inView, x: Math.round(x), y: Math.round(y), covered: Boolean(top && top !== g.canvas), coveredBy: top && top !== g.canvas ? `${top.tagName.toLowerCase()}.${String(top.className).split(' ')[0]}` : null, near };
   }, id);
 }
 
-/** Types into a number field at a human pace. */
 /**
  * Turns the surface view to the Sun or Earth from the HUD. Since GitHub PR #2 the HUD has toggles,
  * "Track Sun" and "Track Earth": pressed, the view turns to the body and follows it as the clock
@@ -302,6 +310,17 @@ async function faceBody(page, body) {
  * handled; the step's notes say which one this build does.
  */
 async function openFromMarker(page, id, p, { check, note }) {
+  // Overlapping landings (Apollo 11 and Surveyor 5 from far out) take turns on repeated clicks, so
+  // zoom in with the wheel, as a person would, until the marker stands alone.
+  for (let i = 0; i < 8 && p.near?.length; i++) {
+    if (i === 0) note(`Landings drawn next to it: ${p.near.join(', ')}; zooming in with the mouse wheel.`);
+    await page.mouse.move(p.x, p.y);
+    await page.mouse.wheel(0, -400);
+    await globeSettled(page);
+    p = await markerPoint(page, id);
+    if (!p.visible || p.covered) throw new Error(`Marker lost while zooming in: ${JSON.stringify(p)}`);
+  }
+  if (p.near?.length) note(`Still drawn next to: ${p.near.join(', ')}.`);
   await page.mouse.click(p.x, p.y);
   await page.waitForFunction((siteId) => window.lunyx.store.get().site?.id === siteId, id, { timeout: 20_000 });
   await sleep(1200);
@@ -317,9 +336,13 @@ async function openFromMarker(page, id, p, { check, note }) {
   if (!q.visible || q.covered) throw new Error(`Marker not clickable after the click: ${JSON.stringify(q)}`);
   await page.mouse.dblclick(q.x, q.y);
   await page.waitForFunction(() => window.lunyx.store.get().view === 'surface', null, { timeout: 20_000 });
+  const opened = (await appState(page)).site?.id;
+  check('The double-click opened the landing whose details were shown', opened, id, opened === id, { finding: 'Q-9' });
+  if (opened !== id) throw new Error(`The double-click opened ${opened}, not ${id}`);
   note('A click showed the details on the globe; a double-click opened the surface view (original T-64).');
 }
 
+/** Types into a number field at a human pace. */
 async function typeInto(locator, text) {
   await locator.click();
   await locator.fill('');
@@ -562,15 +585,22 @@ async function partSurface(app, step) {
     app.lookBeforeLeaving = null;
   }, { timeout: 180_000 });
 
-  await step('Look around: drag, then arrow keys', 'control', async ({ check }) => {
+  await step('Look around: drag, then arrow keys', 'control', async ({ check, note }) => {
     const c = canvasCentre(app);
+    // A horizontal drag on the scene itself: since T-64 movable panels can cover the middle at 1280x720.
+    const y = await page.evaluate(({ cx, cy }) => {
+      const free = (yy) => [-150, -75, 0, 100, 200].every((dx) => document.elementFromPoint(cx + dx, yy)?.id === 'scene');
+      return [0, -0.1, -0.2, 0.1, -0.3, 0.2].map((f) => Math.round(cy + f * cy * 2)).find(free) ?? null;
+    }, { cx: c.x, cy: c.y });
+    if (y === null) throw new Error('No clear horizontal line on the scene to drag along');
+    if (y !== c.y) note(`Dragged along y = ${y}: the middle of the scene is covered by a panel.`);
     const before = (await appState(page)).look;
-    await mouseDrag(page, { x: c.x + 200, y: c.y }, { x: c.x - 150, y: c.y });
+    await mouseDrag(page, { x: c.x + 200, y }, { x: c.x - 150, y });
     await sleep(600);
     const afterDrag = (await appState(page)).look;
     const turned = Math.abs(((afterDrag.azDeg - before.azDeg + 540) % 360) - 180);
     check('Dragging turns the view (azimuth change, degrees)', turned.toFixed(1), '> 5', turned > 5);
-    await page.mouse.click(c.x, c.y);
+    await page.mouse.click(c.x, y);
     for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
     await sleep(300);
     const afterKeys = (await appState(page)).look;
@@ -1051,7 +1081,7 @@ async function partExtras(app, step) {
     const card = await readCard(page);
     note(`Card of ${card?.title}: Belongs to "${card?.facts['Belongs to']}"; Owner "${card?.facts.Owner}"; Explored "${card?.facts.Explored}".`);
     check('Ownership row on the card', card?.facts['Belongs to'], 'a state', Boolean(card?.facts['Belongs to']));
-    check('Explored area says how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?× larger/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
+    check('Explored area says its size and how much larger it is drawn on the globe', card?.facts.Explored, 'its size and the drawing scale', /\d+(\.\d+)?×/.test(card?.facts.Explored ?? '') && /across/.test(card?.facts.Explored ?? ''));
     await page.locator('.site-card').getByRole('button', { name: 'Whole Moon', exact: true }).click();
     await globeSettled(page);
   }, { shot: 'globe-flags' });
