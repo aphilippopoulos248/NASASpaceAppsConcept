@@ -226,12 +226,14 @@ export class FlagMarkers {
       const owner = ownerOf(marker.landing.id);
       const map = owner ? clothTexture(flagCode(owner)) : null;
       if (!map) return;
-      const metal = new MeshBasicMaterial({ color: 0xd9dde3, toneMapped: false });
+      // Transparent (but opaque-looking) so they draw after the explored areas, which go over the terrain.
+      const metal = new MeshBasicMaterial({ color: 0xd9dde3, toneMapped: false, transparent: true });
       const cloth = new ShaderMaterial({
         uniforms: { uMap: { value: map }, uTime: { value: 0 }, uPhase: { value: i * 1.7 }, uLight: { value: 1 } },
         vertexShader: clothVertex,
         fragmentShader: clothFragment,
         side: DoubleSide,
+        transparent: true,
       });
       const group = new Group();
       group.position.copy(marker.dir).multiplyScalar(1.0003);
@@ -241,6 +243,8 @@ export class FlagMarkers {
       swivel.add(new Mesh(poleGeometry, metal), new Mesh(finialGeometry, metal), new Mesh(clothGeometry, cloth));
       group.add(new Mesh(baseGeometry, metal), swivel);
       group.visible = false;
+      // Over the explored areas (2.5), under the markers (3).
+      group.traverse((o) => (o.renderOrder = 2.8));
       this.root.add(group);
       this.items.push({ marker, group, swivel, cloth, metal });
     });
@@ -263,6 +267,8 @@ export class FlagMarkers {
       const facing = marker.dir.dot(camera.position);
       group.visible = marker.group.visible && facing > 0.98;
       if (!group.visible) continue;
+      // Stand where the marker is: on the drawn surface, which moves with the relief exaggeration.
+      group.position.copy(marker.group.position);
       group.scale.setScalar(camera.position.distanceTo(group.position) * SCREEN_SIZE * 0.73);
       // Turn the cloth about the pole so it faces the viewer.
       this.local.copy(camera.position).sub(group.position).applyQuaternion(this.inverse.copy(group.quaternion).invert());

@@ -12,7 +12,7 @@ import { formatUtc, isoUtc } from '../../core/time';
 import { getLandings } from '../../data/catalog';
 import { button, el } from '../dom';
 import { mountMissionFilters } from '../filters';
-import { DEFAULT_RELIEF, globeDisplay, RELIEF_CHOICES, reliefText } from '../../scene/globe/displayState';
+import { AREA_SCALE_CHOICES, DEFAULT_AREA_SCALE, globeDisplay, reliefText } from '../../scene/globe/displayState';
 import { ICE_COLOUR } from '../../scene/globe/iceOutlines';
 import { COVERAGE_STYLE } from '../../scene/globe/overlayStyle';
 import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from '../../scene/globe/reliefTiles';
@@ -137,16 +137,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
 
   // ---- Terrain relief ----
   panel.append(el('h3', 'ly-section-title', 'Terrain relief'));
-  const reliefId = `fp-${++uid}`;
-  const reliefLab = el('label', 'ly-label', 'Exaggeration');
-  reliefLab.htmlFor = reliefId;
-  const relief = el('select', 'ly-select');
-  relief.id = reliefId;
-  const reliefLabel = (f: number) => (f === 0 ? 'Off (smooth sphere)' : f === 1 ? 'True scale (×1)' : `×${f}${f === DEFAULT_RELIEF ? ' (default)' : ''}`);
-  for (const f of RELIEF_CHOICES) relief.append(new Option(reliefLabel(f), String(f)));
-  relief.addEventListener('change', () => void runAction('setReliefExaggeration', { factor: Number(relief.value) }));
-  const reliefField = el('div', 'fp-num');
-  reliefField.append(reliefLab, relief);
   const reliefNote = el('p', 'ly-note');
   const cover = el('label', 'ly-check');
   const coverBox = el('input');
@@ -179,7 +169,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
     iceRow,
     el('p', 'ly-note', 'South polar region only: 169 regions of interest, outlined about 0.3 km wider than the listed shadowed areas. Targets for study, not confirmed deposits. Lemelin et al. 2021 (Zenodo 4646092), CC BY 4.0. Distances from a site are in its card.'),
   );
-  panel.append(reliefField, reliefNote, cover, coverLegend, ice, iceLegend);
+  panel.append(reliefNote, cover, coverLegend, ice, iceLegend);
 
   // ---- Lighting ----
   panel.append(el('h3', 'ly-section-title', 'Sunlight on the globe'));
@@ -212,11 +202,23 @@ export function mountFiltersPanel(region: HTMLElement): void {
   flagsBox.addEventListener('change', () => void runAction('showFlags', { show: flagsBox.checked }));
   flags.append(flagsBox, el('span', undefined, 'Show country flags'));
   flags.title = 'A flag on each landing for the state its hardware belongs to (GCAT catalogue)';
+  // Territory size: how much larger than life each landing's explored area is drawn.
+  const areaId = `fp-${++uid}`;
+  const areaLab = el('label', 'ly-label', 'Territory size exaggeration');
+  areaLab.htmlFor = areaId;
+  const areaSel = el('select', 'ly-select');
+  areaSel.id = areaId;
+  const areaLabel = (f: number) => (f === 1 ? 'True size (×1)' : `×${f}${f === DEFAULT_AREA_SCALE ? ' (default)' : ''}`);
+  for (const f of AREA_SCALE_CHOICES) areaSel.append(new Option(areaLabel(f), String(f)));
+  areaSel.addEventListener('change', () => void runAction('setTerritoryScale', { factor: Number(areaSel.value) }));
+  const areaField = el('div', 'fp-num fp-territory');
+  areaField.title = "Each landing's explored area is drawn this many times wider than it really is, so it can be seen on the globe. The Moon itself is not changed.";
+  areaField.append(areaLab, areaSel);
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, flags, missions);
+  panel.append(show, flags, areaField, missions);
 
   // ---- Show optimal landing area ----
   const opt = el('label', 'ly-check');
@@ -299,6 +301,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);
     missions.classList.toggle('off', !s.showMissions);
+    areaSel.disabled = !s.showMissions;
+    areaField.classList.toggle('off', !s.showMissions);
     optBox.checked = s.overlay !== 'off';
     overlay.value = s.overlay !== 'off' ? s.overlay : lastOverlay;
     overlayBox.hidden = s.overlay === 'off';
@@ -311,8 +315,8 @@ export function mountFiltersPanel(region: HTMLElement): void {
   };
   const syncDisplay = () => {
     const d = globeDisplay.get(), live = globeDisplay.getLive();
-    if (![...relief.options].some((o) => Number(o.value) === d.reliefFactor)) relief.append(new Option(reliefLabel(d.reliefFactor), String(d.reliefFactor)));
-    relief.value = String(d.reliefFactor);
+    if (![...areaSel.options].some((o) => Number(o.value) === d.areaScale)) areaSel.append(new Option(areaLabel(d.areaScale), String(d.areaScale)));
+    areaSel.value = String(d.areaScale);
     const data = live.reliefPpd ? `LOLA whole-Moon elevation, ${live.reliefPpd} samples per degree (${live.reliefPpd >= 16 ? '1.9' : '7.6'} km).` : live.reliefProblem ?? 'Loading the elevation grid…';
     const rule = d.reliefFactor > 1 ? ` Drawn now: ${reliefText(live.reliefNow)}. The stretch applies above ${FULL_EXAGGERATION_KM.toLocaleString('en-US')} km camera altitude and eases to true scale below ${TRUE_SCALE_BELOW_KM} km.` : '';
     reliefNote.textContent = `${data}${rule}`;

@@ -183,8 +183,9 @@ without downloading again.
 ## 11. Explored area at each site
 
 - **What it is:** the ground each mission is known to have worked on, drawn on the globe in the country's
-  colour (orbit view only). **Drawn 10× larger in width (100× in area) than true size**, enlarged about each
-  area's centre so it reads at globe scale (`AREA_DISPLAY_SCALE` in `src/scene/siteAreas.ts`). The data in
+  colour (orbit view only). **Drawn 10× larger in width (100× in area) than true size by default**, enlarged about each
+  area's centre so it reads at globe scale; the "Territory size exaggeration" control (the `setTerritoryScale` action,
+  `DEFAULT_AREA_SCALE` in `src/scene/globe/displayState.ts`) sets it from true size to 50×. The data in
   `site-areas.json` and the size in the info card are true size. **No country owns any lunar ground** — the Outer Space Treaty (1967)
   forbids national claims. What a country does keep is ownership of its hardware, and that hardware (landers,
   rovers, instruments, equipment left along traverses) is spread across this area. So this is the closest real

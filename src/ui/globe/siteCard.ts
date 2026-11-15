@@ -19,7 +19,8 @@ import { getLandings } from '../../data/catalog';
 import { formatCoords, formatDate, Landing, landingColor, landingDate, quickmapUrl, trekUrl } from '../../data/landings';
 import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabel } from '../../data/ownership';
 import { flagCanvas } from '../../scene/flags';
-import { AREA_DISPLAY_SCALE, describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
+import { globeDisplay } from '../../scene/globe/displayState';
+import { describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
 import { IMAGERY_MAX_LAT, SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
@@ -399,10 +400,18 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (drawn ${AREA_DISPLAY_SCALE}× larger on the globe)` : '—');
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (${globeDisplay.get().areaScale === 1 ? 'drawn at true size' : `drawn ${globeDisplay.get().areaScale}× larger`} on the globe)` : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
+
+  // The card quotes how much larger the area is drawn: keep it in step with the territory size control.
+  let shownScale = globeDisplay.get().areaScale;
+  globeDisplay.subscribe(() => {
+    if (globeDisplay.get().areaScale === shownScale) return;
+    shownScale = globeDisplay.get().areaScale;
+    renderArea(currentLanding());
+  });
 
   const render = () => {
     const site = store.get().site;

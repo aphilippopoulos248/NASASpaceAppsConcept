@@ -180,7 +180,11 @@ export class GlobeView {
     void this.loadCoverage();
     this.applyOverlay();
     store.subscribe(['overlay', 'sunElMinDeg', 'sunElMaxDeg'], () => this.applyOverlay());
-    globeDisplay.subscribe(() => this.applyOverlay());
+    globeDisplay.subscribe(() => {
+      this.applyOverlay();
+      // Territory size: redraw the explored areas, then put them back on the surface with the markers.
+      if (this.areas?.setScale(globeDisplay.get().areaScale)) this.placed.version = -1;
+    });
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
     void this.loadMissionLayers(this.markers);
@@ -198,7 +202,7 @@ export class GlobeView {
   /** The explored areas and flags: built once their small data files are in, then placed with the markers. */
   private async loadMissionLayers(markers: Markers): Promise<void> {
     const [owners, areas] = await Promise.all([loadOwnership(), loadSiteAreas()]);
-    this.areas = new SiteAreaLayer(markers.items, areas);
+    this.areas = new SiteAreaLayer(markers.items, areas, globeDisplay.get().areaScale);
     this.flags = new FlagMarkers(markers.items, (id) => owners?.byLanding.get(id));
     this.scene.add(this.areas.root, this.flags.root);
     this.applyMissions();
