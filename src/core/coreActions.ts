@@ -669,6 +669,17 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
       },
     }),
     defineAction<{ show: boolean }, unknown>({
+      name: 'showTerritories',
+      title: 'Show country territories',
+      description: 'Shows or hides the country territory colouring on the globe (nearest-site Voronoi). Points (landing markers) are not affected.',
+      effect: 'command',
+      params: { type: 'object', properties: { show: { type: 'boolean', description: 'Show the territories.' } }, required: ['show'] },
+      run: ({ show }) => {
+        store.set({ showTerritories: show });
+        return { showTerritories: state().showTerritories };
+      },
+    }),
+    defineAction<{ show: boolean }, unknown>({
       name: 'showFlags',
       title: 'Show country flags',
       description:
@@ -866,6 +877,7 @@ export function createCoreActions(ctx: CoreContext): ActionDef<any, any>[] {
           sunBandDeg: { min: s.sunElMinDeg, max: s.sunElMaxDeg },
           overlay: s.overlay,
           showMissions: s.showMissions,
+          showTerritories: s.showTerritories,
           showFlags: s.showFlags,
           missionsShown: { shown: f.shown, total: f.total, filter: f.filter },
           compare: { A: s.compareA?.label ?? null, B: s.compareB?.label ?? null, open: s.comparing },

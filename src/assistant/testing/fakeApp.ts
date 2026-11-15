@@ -49,6 +49,7 @@ export interface FakeState {
   sunBand: { min: number; max: number };
   overlay: string;
   showMissions: boolean;
+  showTerritories: boolean;
   lightMode: 'real' | 'even';
   globeCenter: { latDeg: number; lonDegEast: number; altitudeKm: number };
   look: { azDeg: number; elDeg: number; fovDeg: number };
@@ -223,6 +224,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     sunBand: { min: 0, max: 90 },
     overlay: 'off',
     showMissions: true,
+    showTerritories: false,
     lightMode: 'real',
     globeCenter: { latDeg: 0, lonDegEast: 0, altitudeKm: 4170 },
     look: { azDeg: 0, elDeg: 0, fovDeg: 70 },
@@ -406,6 +408,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     defineAction<{ minDeg: number; maxDeg: number }, unknown>({ name: 'setSunBand', title: 'Set solar elevation band', description: 'Band.', effect: 'command', params: { type: 'object', properties: { minDeg: { type: 'number', description: 'min' }, maxDeg: { type: 'number', description: 'max' } }, required: ['minDeg', 'maxDeg'] }, run: ({ minDeg, maxDeg }) => { if (!(minDeg < maxDeg)) throw new ActionError('minDeg must be lower than maxDeg.'); state.sunBand = { min: minDeg, max: maxDeg }; return { sunElMinDeg: minDeg, sunElMaxDeg: maxDeg }; } }),
     defineAction<{ mode: string }, unknown>({ name: 'setOverlay', title: 'Set globe overlay', description: 'Overlay.', effect: 'command', params: { type: 'object', properties: { mode: { type: 'string', description: 'mode', enum: ['off', 'sun-band', 'avg-illumination', 'avg-earth-visibility'] } }, required: ['mode'] }, run: ({ mode }) => { state.overlay = mode; return { overlay: mode }; } }),
     defineAction<{ show: boolean }, unknown>({ name: 'showMissions', title: 'Show previous missions', description: 'Markers.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.showMissions = show; return { showMissions: show }; } }),
+    defineAction<{ show: boolean }, unknown>({ name: 'showTerritories', title: 'Show country territories', description: 'Territories.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.showTerritories = show; return { showTerritories: show }; } }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: string; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({
       name: 'setFilters', title: 'Filter landings', description: 'Filters.', effect: 'command',
       params: { type: 'object', properties: { programs: { type: 'array', description: 'programs', items: { type: 'string', description: 'p' } }, countries: { type: 'array', description: 'countries', items: { type: 'string', description: 'c' } }, type: { type: 'string', description: 'type', enum: ['all', 'crewed', 'robotic'] }, fromYear: { type: 'integer', description: 'from' }, toYear: { type: 'integer', description: 'to' }, reset: { type: 'boolean', description: 'reset' } } },
@@ -506,6 +509,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         sunBandDeg: state.sunBand,
         overlay: state.overlay,
         showMissions: state.showMissions,
+        showTerritories: state.showTerritories,
         compare: { A: state.compareA?.label ?? null, B: state.compareB?.label ?? null, open: state.comparing },
         analysis: summary(),
       }),

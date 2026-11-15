@@ -82,6 +82,8 @@ export interface AppState {
   sunElMaxDeg: number;
   overlay: OverlayMode;
   showMissions: boolean;
+  /** Country territory colouring on the globe (nearest-site Voronoi). */
+  showTerritories: boolean;
   /** 3D country flags on the landing markers (globe view). */
   showFlags: boolean;
   lightMode: LightMode;

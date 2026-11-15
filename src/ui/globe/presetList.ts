@@ -1,6 +1,8 @@
-// "Missions to replay", at the top of the Filters panel: the presets of
+// "Missions to replay", at the bottom of the Filters panel: the presets of
 // public/data/presets.json, each a button that runs loadPreset (and nothing else), with what
-// plays in one line and where its data comes from. Under the list, the source of the Sun and
+// plays in one line. Each preset's timing is in its button's tooltip; its data sources are not
+// shown here: they stay in presets.json (`sources`, `sunBehindEarth.reported`) and in what
+// listPresets and loadPreset return. Under the list, the source of the Sun and
 // Earth positions for the window on screen, as the analysis itself reports it: inside the
 // bundled windows it must read "JPL Horizons table bundled with the app".
 import { runAction } from '../../core/actions';
@@ -22,25 +24,15 @@ export function presetTiming(p: MissionPreset): string {
   return `${from}, played in about ${seconds} s`;
 }
 
-/**
- * Accessible name of a preset's "Timing and data sources" disclosure. The three disclosures share
- * one visible text, so each name also says which preset it belongs to (accessibility finding A-6).
- * It starts with the visible text, so speech input still finds it.
- */
-export function sourcesLabel(p: Pick<MissionPreset, 'title'>): string {
-  return `Timing and data sources of ${p.title}`;
-}
-
 export function mountPresetList(parent: HTMLElement): void {
   const box = el('details', 'pl');
   box.open = true;
   const summary = el('summary', 'ly-section-title pl-title', 'Missions to replay');
-  const intro = el('p', 'ly-note', 'Real landings on their real dates, played in one step from data that comes with the app: no network needed.');
   const list = el('ul', 'pl-list');
   const status = el('p', 'ly-note pl-status');
   status.setAttribute('role', 'status');
   const ephemeris = el('p', 'ly-note pl-ephemeris');
-  box.append(summary, intro, list, status, ephemeris);
+  box.append(summary, list, status, ephemeris);
   parent.append(box);
 
   let loading: string | null = null;
@@ -62,7 +54,7 @@ export function mountPresetList(parent: HTMLElement): void {
     syncActive();
     const r = await runAction<{ playing: boolean; note?: string }>('loadPreset', { id: p.id });
     loading = null;
-    status.textContent = r.ok ? (r.result.note ?? (r.result.playing ? `Playing "${p.title}". It stops at the end of the window; pause or scrub at any time.` : `"${p.title}" is loaded.`)) : `Could not load "${p.title}": ${r.error}`;
+    status.textContent = r.ok ? (r.result.note ?? '') : `Could not load "${p.title}": ${r.error}`;
     syncActive();
   };
 
@@ -70,7 +62,6 @@ export function mountPresetList(parent: HTMLElement): void {
     buttons.clear();
     const presets = getPresets();
     const problem = presetProblem();
-    intro.hidden = presets.length === 0;
     if (!presets.length) status.textContent = problem ? `The mission presets could not be read: ${problem}` : 'No mission presets are packaged with this build.';
     list.replaceChildren(
       ...presets.map((p) => {
@@ -85,13 +76,7 @@ export function mountPresetList(parent: HTMLElement): void {
         b.title = `${presetTiming(p)}. Opens the ${p.view} view.`;
         b.addEventListener('click', () => void load(p));
         buttons.set(p.id, b);
-        const more = el('details', 'pl-more');
-        const summary = el('summary', undefined, 'Timing and data sources');
-        summary.setAttribute('aria-label', sourcesLabel(p));
-        more.append(summary, el('p', 'ly-note', `${presetTiming(p)}.`));
-        if (p.sunBehindEarth) more.append(el('p', 'ly-note', p.sunBehindEarth.reported));
-        more.append(...p.sources.map((s) => el('p', 'ly-note', s)));
-        li.append(b, more);
+        li.append(b);
         return li;
       }),
     );

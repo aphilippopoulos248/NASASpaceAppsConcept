@@ -73,9 +73,6 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const panel = el('div', 'ly-panel filters-panel');
   panel.append(el('h2', 'ly-panel-title', 'Filters'));
 
-  // ---- Missions to replay: a real site, date and window in one step ----
-  mountPresetList(panel);
-
   // ---- Arrival date and time (UTC): the start of the mission window ----
   const dateId = `fp-${++uid}`;
   const dateLab = el('label', 'ly-label', 'Arrival date and time (UTC)');
@@ -206,7 +203,13 @@ export function mountFiltersPanel(region: HTMLElement): void {
   showBox.type = 'checkbox';
   showBox.addEventListener('change', () => void runAction('showMissions', { show: showBox.checked }));
   show.append(showBox, el('span', undefined, 'Show previous missions'));
-  show.title = 'Marks each landing and colours the whole Moon by the country of the nearest landing shown: neighbouring landings of one country share one territory. Not a legal boundary: no country owns lunar ground.';
+  show.title = 'Marks each catalogued landing on the globe.';
+  const territories = el('label', 'ly-check fp-flags');
+  const territoriesBox = el('input');
+  territoriesBox.type = 'checkbox';
+  territoriesBox.addEventListener('change', () => void runAction('showTerritories', { show: territoriesBox.checked }));
+  territories.append(territoriesBox, el('span', undefined, 'Show country territories'));
+  territories.title = 'Colours the whole Moon by the country of the nearest landing shown: neighbouring landings of one country share one territory. Not a legal boundary: no country owns lunar ground.';
   const flags = el('label', 'ly-check fp-flags');
   const flagsBox = el('input');
   flagsBox.type = 'checkbox';
@@ -217,7 +220,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, flags, missions);
+  panel.append(show, territories, flags, missions);
   // The keyboard and screen-reader way to a landing: the markers answer only to the pointer.
   mountLandingPicker(panel);
 
@@ -241,6 +244,10 @@ export function mountFiltersPanel(region: HTMLElement): void {
   const overlayBox = el('div', 'fp-overlay');
   overlayBox.append(overlay, legend);
   panel.append(el('hr', 'ly-divider'), opt, overlayBox);
+
+  // ---- Missions to replay, last in the panel: a real site, date and window in one step ----
+  panel.append(el('hr', 'ly-divider'));
+  mountPresetList(panel);
 
   region.append(panel);
   mountMissionFilters(body, getLandings());
@@ -309,6 +316,9 @@ export function mountFiltersPanel(region: HTMLElement): void {
     win.value = String(s.windowDurationH);
     for (const [mode, b] of modeButtons) b.setAttribute('aria-pressed', String(s.lightMode === mode));
     showBox.checked = s.showMissions;
+    territoriesBox.checked = s.showTerritories;
+    territoriesBox.disabled = !s.showMissions;
+    territories.classList.toggle('off', !s.showMissions);
     flagsBox.checked = s.showFlags;
     flagsBox.disabled = !s.showMissions;
     flags.classList.toggle('off', !s.showMissions);
@@ -348,7 +358,7 @@ export function mountFiltersPanel(region: HTMLElement): void {
   // A field is not overwritten while it has the focus (someone may be typing in it); bring it
   // back in step when the focus leaves.
   panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
-  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
+  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showTerritories', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
   sync();
   if (flagsWanted()) void runAction('showFlags', { show: true });
   store.subscribe(['showFlags'], (s) => {

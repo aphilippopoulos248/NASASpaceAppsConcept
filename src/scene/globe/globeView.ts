@@ -191,7 +191,7 @@ export class GlobeView {
     this.applyMissions();
     this.sky.setMode(s.lightMode);
     store.subscribe(['site'], (st) => this.applySite(st.site));
-    store.subscribe(['showMissions', 'showFlags'], () => this.applyMissions());
+    store.subscribe(['showMissions', 'showTerritories', 'showFlags'], () => this.applyMissions());
     store.subscribe(['lightMode'], (st) => this.sky.setMode(st.lightMode));
     missionFilter.subscribe(() => this.applyFilter());
   }
@@ -211,6 +211,7 @@ export class GlobeView {
     if (this.markers) this.markers.root.visible = showMissions;
     this.applyFeatures();
     this.flags?.setEnabled(showMissions && showFlags);
+    setTerritories(this.uniforms, showMissions ? this.visibleMarkers.map((m) => m.landing) : []);
   }
 
   setGeometry(g: MoonGeometry): void {
@@ -231,7 +232,7 @@ export class GlobeView {
   /** What the surface shader is compiled with: the overlay, the coverage squares, the territories (shown with the missions). */
   private applyFeatures(): void {
     const s = store.get();
-    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage, s.showMissions);
+    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage, s.showMissions && s.showTerritories);
   }
 
   /** Shows or hides the ice-target outlines; the database is read the first time they are shown. */

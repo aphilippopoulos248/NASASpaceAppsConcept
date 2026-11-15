@@ -618,6 +618,16 @@ export const flags: Intent = (step) => {
   });
 };
 
+export const territories: Intent = (step) => {
+  const m = /^(show|display|turn on|enable|hide|remove|turn off|disable)\s+(?:the\s+)?(?:country\s+)?territor(?:y|ies)(?:\s+(?:colours?|colors?|colouring|coloring))?(?:\s+on the globe)?$/.exec(step);
+  if (!m) return null;
+  const show = !/hide|remove|off|disable/.test(m[1]);
+  return plan(`${show ? 'show' : 'hide'} the country territories on the globe`, async (ctx) => {
+    const r = await ctx.run('showTerritories', { show });
+    return r.showTerritories === true ? 'The globe is coloured by the country of the nearest landing shown.' : 'The country territories are hidden.';
+  });
+};
+
 // ---------------------------------------------------------------- the site card's records, the real clock
 
 const THIS_SITE = '(?:\\s+(?:it|this|this site|the site|this landing|the landing|here|this lander|the lander|this hardware|the hardware))?';
@@ -683,5 +693,6 @@ export const LATER_HELP: [needs: string[], text: string][] = [
   [['showOutlook'], 'Outlook: "show the seasonal outlook", "outlook for 6 months", "show the window table", "export the results as csv"'],
   [['loadPreset'], 'Replays: "list the presets", "replay the eclipse", "replay IM-2 landing"'],
   [['showFlags'], 'Flags: "show country flags", "hide the flags"'],
+  [['showTerritories'], 'Territories: "show territories", "hide territory colours"'],
   [['getState'], 'Site records and the real clock: "who owns this site", "how big is the explored area", "what is the real time"'],
 ];
