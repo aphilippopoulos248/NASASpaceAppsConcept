@@ -1,6 +1,6 @@
 // Left "Filters" panel of the globe view, as in the mockup: the date (arrival, UTC), the point
 // at the screen centre (live, editable), the solar elevation requirement, mission parameters,
-// "Show previous missions" with their filters, and "Show optimal landing area" with a legend.
+// "Show previous missions" with their filters and country flags, and "Show optimal landing area" with a legend.
 // Every control runs an action.
 //
 // The date at the top is the arrival: it starts the mission window and brings the clock there,
@@ -21,6 +21,17 @@ import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './filtersPanel.css';
 
 let uid = 0;
+
+/** The flags choice is remembered per browser; a link with ?flags=1 turns them on. */
+const FLAGS_KEY = 'moon-landings:flags';
+function flagsWanted(): boolean {
+  if (new URLSearchParams(location.search).get('flags') === '1') return true;
+  try {
+    return localStorage.getItem(FLAGS_KEY) === '1';
+  } catch {
+    return false; // storage unavailable: start with flags off
+  }
+}
 
 /** A labelled number input that runs `onCommit` on change and shows action errors inline. */
 function numberField(label: string, unit: string, opts: { min?: number; max?: number; step?: number; width?: string }, onCommit: (v: number) => Promise<{ ok: boolean; error?: string }>) {
@@ -195,11 +206,17 @@ export function mountFiltersPanel(region: HTMLElement): void {
   showBox.type = 'checkbox';
   showBox.addEventListener('change', () => void runAction('showMissions', { show: showBox.checked }));
   show.append(showBox, el('span', undefined, 'Show previous missions'));
+  const flags = el('label', 'ly-check fp-flags');
+  const flagsBox = el('input');
+  flagsBox.type = 'checkbox';
+  flagsBox.addEventListener('change', () => void runAction('showFlags', { show: flagsBox.checked }));
+  flags.append(flagsBox, el('span', undefined, 'Show country flags'));
+  flags.title = 'A flag on each landing for the state its hardware belongs to (GCAT catalogue)';
   const missions = el('details', 'fp-missions');
   missions.append(el('summary', 'fp-summary', 'Mission filters'));
   const body = el('div', 'fp-mission-body');
   missions.append(body);
-  panel.append(show, missions);
+  panel.append(show, flags, missions);
 
   // ---- Show optimal landing area ----
   const opt = el('label', 'ly-check');
@@ -278,6 +295,9 @@ export function mountFiltersPanel(region: HTMLElement): void {
     win.value = String(s.windowDurationH);
     for (const [mode, b] of modeButtons) b.setAttribute('aria-pressed', String(s.lightMode === mode));
     showBox.checked = s.showMissions;
+    flagsBox.checked = s.showFlags;
+    flagsBox.disabled = !s.showMissions;
+    flags.classList.toggle('off', !s.showMissions);
     missions.classList.toggle('off', !s.showMissions);
     optBox.checked = s.overlay !== 'off';
     overlay.value = s.overlay !== 'off' ? s.overlay : lastOverlay;
@@ -315,8 +335,16 @@ export function mountFiltersPanel(region: HTMLElement): void {
   // A field is not overwritten while it has the focus (someone may be typing in it); bring it
   // back in step when the focus leaves.
   panel.addEventListener('focusout', () => queueMicrotask(() => sync()));
-  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'overlay'], (_s, changed) => sync(changed));
+  store.subscribe(['timeMs', 'globeCenter', 'sunElMinDeg', 'sunElMaxDeg', 'mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH', 'lightMode', 'showMissions', 'showFlags', 'overlay'], (_s, changed) => sync(changed));
   sync();
+  if (flagsWanted()) void runAction('showFlags', { show: true });
+  store.subscribe(['showFlags'], (s) => {
+    try {
+      localStorage.setItem(FLAGS_KEY, s.showFlags ? '1' : '0');
+    } catch {
+      /* not remembered; fine */
+    }
+  });
 
   // Narrow screens: the panel is a sheet opened from the "Filters" button (the showPanel action).
   initPanels();
