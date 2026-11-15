@@ -130,6 +130,16 @@ describe('core actions', () => {
     expect(await pending).toMatchObject({ ok: true, result: { view: 'surface' } });
   });
 
+  it('setGlobeCamera says where the view will centre when it cannot centre on a pole', async () => {
+    setup();
+    const plain = await runAction<any>('setGlobeCamera', { lat: -84.79, lon: 29.2 });
+    expect(plain).toMatchObject({ ok: true, result: { view: 'globe', target: { latDeg: -84.79, lonDegEast: expect.closeTo(29.2, 9), altitudeKm: null } } });
+    expect(plain.ok && 'note' in plain.result).toBe(false);
+    const r = await runAction<any>('setGlobeCamera', { lat: -90, lon: 10, altitudeKm: 300 });
+    expect(r).toMatchObject({ ok: true, result: { target: { latDeg: -90, lonDegEast: 10 }, centredLatDeg: -89.9, note: expect.stringContaining('exactly on a pole the globe cannot be turned') } });
+    expect((await runAction<any>('setGlobeCamera', { lat: 89.95, lon: 0 })) as unknown).toMatchObject({ ok: true, result: { centredLatDeg: 89.9 } });
+  });
+
   it('records the globe camera when no scene is listening', async () => {
     const { store } = setup();
     await runAction('setGlobeCamera', { lat: 10, lon: 190, altitudeKm: 500 });

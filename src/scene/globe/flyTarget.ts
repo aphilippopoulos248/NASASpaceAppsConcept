@@ -1,13 +1,14 @@
 // Where a programmatic flight of the globe camera ends (setGlobeCamera, selecting a site,
 // the keyboard): straight over the point asked for, except right over a pole.
 import { Vector3 } from 'three';
+import { MAX_VIEW_LAT_DEG } from '../../core/coreActions';
 
 /**
  * Flights stop this close to a pole, degrees of latitude (0.1 degree is about 3 km on the
  * Moon). Dead-centre on a pole the orbit controls' azimuth is undefined, and dragging spins the
- * view in place instead of moving across the ground.
+ * view in place instead of moving across the ground. setGlobeCamera reports it (core).
  */
-export const MAX_FLY_LAT_DEG = 89.9;
+export const MAX_FLY_LAT_DEG = MAX_VIEW_LAT_DEG;
 
 const DEG = Math.PI / 180;
 
