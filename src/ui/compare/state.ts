@@ -2,15 +2,18 @@
 // contract): the open tab and what each tab was last asked to show.
 // Changed only by the panel's registered actions, so the assistant can reach the same state.
 
-export type CompareTab = 'compare';
+export type CompareTab = 'compare' | 'nearby';
 /** The tabs of the panel, in order. */
-export const COMPARE_TABS: readonly CompareTab[] = ['compare'];
-export const TAB_TITLE: Record<CompareTab, string> = { compare: 'A and B' };
+export const COMPARE_TABS: readonly CompareTab[] = ['compare', 'nearby'];
+export const TAB_TITLE: Record<CompareTab, string> = { compare: 'A and B', nearby: 'Nearby sites' };
 
 export interface PanelState {
   tab: CompareTab;
   /** Goes up each time the list of saved comparisons changes. */
   savedRevision: number;
+  /** Radius and spacing of the nearby scan as last run or typed, metres (the slope limit lives in the app state). */
+  nearbyRadiusM: number;
+  nearbySpacingM: number;
 }
 
 export type PanelListener = (state: Readonly<PanelState>, changed: ReadonlySet<keyof PanelState>) => void;
@@ -22,7 +25,7 @@ export interface PanelStore {
 }
 
 export function createPanelStore(): PanelStore {
-  let state: PanelState = { tab: 'compare', savedRevision: 0 };
+  let state: PanelState = { tab: 'compare', savedRevision: 0, nearbyRadiusM: 2000, nearbySpacingM: 300 };
   const listeners = new Set<PanelListener>();
   return {
     get: () => state,
