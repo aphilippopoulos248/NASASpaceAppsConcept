@@ -279,6 +279,18 @@ const CASES = [
     near(first(card.Slope), r.slope.slopeDeg, 0.051, 'card slope vs getAnalysis');
     assert.ok(s.card);
   } },
+  { name: 'exportResults', params: { format: 'csv' }, check: async (r) => {
+    assert.equal(r.format, 'csv');
+    assert.equal(r.downloaded, true);
+    assert.match(r.filename, /\.csv$/);
+    assert.ok(r.bytes > 0 && r.spells > 0, JSON.stringify(r));
+  } },
+  { name: 'showOutlook', params: { months: 2 }, check: async (r, page) => {
+    assert.equal(r.months, 2);
+    assert.ok(r.lunarDays.length >= 2 && r.planned && r.best && r.worst, JSON.stringify({ rows: r.lunarDays.length, planned: r.planned, best: r.best }));
+    await shows(page, (s) => s.compare?.open === true && s.compare.tab === 'Outlook' && s.compare.text.length > 0, 'the compare panel on its "Outlook" tab');
+    await run(page, 'stopCompare');
+  } },
   { name: 'getSiteScience', check: async (r, page) => {
     assert.equal(r.site.id, 'im-2');
     assert.equal(r.dsn.available, true, r.dsn.reason);
