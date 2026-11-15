@@ -49,6 +49,7 @@ export interface FakeState {
   sunBand: { min: number; max: number };
   overlay: string;
   showMissions: boolean;
+  showTerritories: boolean;
   lightMode: 'real' | 'even';
   globeCenter: { latDeg: number; lonDegEast: number; altitudeKm: number };
   look: { azDeg: number; elDeg: number; fovDeg: number };
@@ -58,8 +59,6 @@ export interface FakeState {
   filter: { programs: string[] | null; countries: string[] | null; type: string; fromYear: number | null; toYear: number | null };
   /** Globe drawing (displayActions). */
   reliefFactor: number;
-  /** How many times wider than life the explored areas are drawn (setTerritoryScale, T-64). */
-  territoryScale: number;
   coverage: boolean;
   iceTargets: boolean;
   locatorZoom: number;
@@ -174,7 +173,17 @@ export interface FakeAppOptions {
   siteRecords?: boolean;
   /** T-65: the surface view's movable panels (setSurfacePanel, resetSurfacePanels, getSurfacePanels). */
   surfacePanels?: boolean;
+  /**
+   * T-67 (@globe, f420c44): what is actually drawn, which needs the markers shown and at least one
+   * landing through the filters: showTerritories' result gives territoriesShown and territoryRule,
+   * showFlags' gives flagsShown, showMissions' both. Without it, the earlier results (the replies
+   * then read getState).
+   */
+  drawnLayers?: boolean;
 }
+
+/** As T-67's showTerritories result: the territories are a display of who landed nearest. */
+export const TERRITORY_RULE = 'A display of who landed nearest, not a boundary; no country owns lunar ground (Outer Space Treaty, Article II).';
 
 /** As src/ui/surface/panelLayout.ts SURFACE_PANELS, with stand-in boxes (1280 x 720 window). */
 export const FAKE_PANELS = [
@@ -191,15 +200,15 @@ export const FAKE_PANELS = [
 export const SITE_RECORDS: Record<string, { ownership: Record<string, unknown> | null; exploredArea: Record<string, unknown> | null }> = {
   'im-2': {
     ownership: { state: 'United States', stateCode: 'US', owner: 'Intuitive Machines', gcatId: 'fixture-im-2', labelDisagrees: false, source: 'GCAT stand-in record' },
-    exploredArea: { description: 'about 40 m across', extentM: 40, areaM2: 1257, located: true, displayScale: 25, source: 'stand-in area' },
+    exploredArea: { description: 'about 40 m across', extentM: 40, areaM2: 1257, located: true, source: 'stand-in area' },
   },
 };
 
 /** As public/data/presets.json (ids, titles, sites, views). */
 export const PRESETS = [
   { id: 'blue-ghost-landing', title: 'Blue Ghost Mission 1, Mare Crisium', siteId: 'blue-ghost-1', view: 'surface' },
-  { id: 'im-2-landing', title: 'IM-2 Athena, Mons Mouton', siteId: 'im-2', view: 'surface' },
-  { id: 'eclipse-2025-03-14', title: 'Eclipse of 14 March 2025 at the Blue Ghost site', siteId: 'blue-ghost-1', view: 'surface' },
+  { id: 'im-2-landing', title: 'IM-2 Athena, Mons Mouton', siteId: 'im-2', view: 'surface', caveat: 'The touchdown minute is not confirmed by an official source.' },
+  { id: 'eclipse-2025-03-14', title: 'Eclipse of 14 March 2025 at the Blue Ghost site', siteId: 'blue-ghost-1', view: 'surface', caveat: 'The times of the Sun behind Earth are computed by this app.', reported: 'Reported for the lander: eclipse from 05:00 to about 09:52 UTC.' },
 ] as const;
 
 /** As src/core/skyEvents.ts EVENT_INFO. */
@@ -211,7 +220,7 @@ export const EVENT_INFO: Record<string, { label: string; instant: string }> = {
 };
 
 /** Every option on: the stand-in has every action the real build has or is about to get. */
-export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true, siteRecords: true, surfacePanels: true };
+export const ALL_ACTIONS: FakeAppOptions = { analysisActions: true, getAnalysis: true, landingActions: true, displayActions: true, scienceActions: 't30', surfaceActions: true, catalogActions: true, comparePanel: true, eventLabels: true, hudActions: true, presetActions: true, eventSpans: true, viewTarget: true, bandRule: true, siteRecords: true, surfacePanels: true, drawnLayers: true };
 
 export const NEARBY: FakeRow[] = [
   { rank: 1, id: 'cand-1', name: 'Candidate 1', latDeg: -84.801, lonDegEast: 29.26, distanceM: 640, bearingDeg: 152, slopeDeg: 6.8, illuminationPct: 71.5, longestDarknessH: 31.0, earthVisiblePct: 64.0, longestEarthGapH: 18.5, score: 0.91 },
@@ -242,6 +251,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     sunBand: { min: 0, max: 90 },
     overlay: 'off',
     showMissions: true,
+    showTerritories: false,
     lightMode: 'real',
     globeCenter: { latDeg: 0, lonDegEast: 0, altitudeKm: 4170 },
     look: { azDeg: 0, elDeg: 0, fovDeg: 70 },
@@ -249,8 +259,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     compareB: null,
     comparing: false,
     filter: { programs: null, countries: null, type: 'all', fromYear: null, toYear: null },
-    reliefFactor: 10,
-    territoryScale: 100,
+    reliefFactor: 1,
     coverage: false,
     iceTargets: false,
     locatorZoom: 1,
@@ -285,6 +294,14 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
   };
   const label = () => `${state.site!.name}, from ${isoUtc(state.windowStartMs + state.delayH * 3_600_000)} for ${state.windowDurationH} h, mast ${state.mastHeightM} m${state.delayH ? `, +${state.delayH} h delay` : ''}`;
   const currentMetrics = () => metricsFor(requireSite(), state.mastHeightM, state.delayH);
+  /** The landings the mission filters let through. */
+  const shownLandings = () => {
+    const f = state.filter;
+    return LANDINGS.filter((l) => (!f.programs || f.programs.includes(l.program)) && (!f.countries || f.countries.includes(l.country)) && (f.type === 'all' || (f.type === 'crewed') === l.crewed) && (f.fromYear === null || l.year >= f.fromYear) && (f.toYear === null || l.year <= f.toYear));
+  };
+  /** As T-67's results: drawn only with the markers shown and at least one landing through the filters. */
+  const territoriesShown = () => state.showTerritories && state.showMissions && shownLandings().length > 0;
+  const flagsShown = () => state.flags && state.showMissions && shownLandings().length > 0;
   /** Earth by any part of its disc: at least the centre figure, the whole-disc gap at most the centre gap. */
   const anyPart = (m: FakeMetrics) => ({ earthAnyPct: Math.min(100, m.earthVisiblePct + 8), longestEarthAnyGapH: Math.round(m.longestEarthGapH * 40) / 100 });
   const inWindow = (t: number) => t >= state.windowStartMs + state.delayH * 3_600_000 && t <= state.windowStartMs + (state.delayH + state.windowDurationH) * 3_600_000;
@@ -427,7 +444,8 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     defineAction<{ hours?: number }, unknown>({ name: 'setMaxEarthGap', title: 'Set max Earth gap', description: 'Gap.', effect: 'command', params: { type: 'object', properties: { hours: { type: 'number', description: 'h', minimum: 0 } } }, run: ({ hours }) => { state.maxEarthGapH = hours ?? null; return { maxEarthGapH: state.maxEarthGapH }; } }),
     defineAction<{ minDeg: number; maxDeg: number }, unknown>({ name: 'setSunBand', title: 'Set solar elevation band', description: 'Band.', effect: 'command', params: { type: 'object', properties: { minDeg: { type: 'number', description: 'min' }, maxDeg: { type: 'number', description: 'max' } }, required: ['minDeg', 'maxDeg'] }, run: ({ minDeg, maxDeg }) => { if (!(minDeg < maxDeg)) throw new ActionError('minDeg must be lower than maxDeg.'); state.sunBand = { min: minDeg, max: maxDeg }; return { sunElMinDeg: minDeg, sunElMaxDeg: maxDeg }; } }),
     defineAction<{ mode: string }, unknown>({ name: 'setOverlay', title: 'Set globe overlay', description: 'Overlay.', effect: 'command', params: { type: 'object', properties: { mode: { type: 'string', description: 'mode', enum: ['off', 'sun-band', 'avg-illumination', 'avg-earth-visibility'] } }, required: ['mode'] }, run: ({ mode }) => { state.overlay = mode; return { overlay: mode }; } }),
-    defineAction<{ show: boolean }, unknown>({ name: 'showMissions', title: 'Show previous missions', description: 'Markers.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.showMissions = show; return { showMissions: show }; } }),
+    defineAction<{ show: boolean }, unknown>({ name: 'showMissions', title: 'Show previous missions', description: 'Markers.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.showMissions = show; return { showMissions: show, ...(options.drawnLayers && { territoriesShown: territoriesShown(), flagsShown: flagsShown() }) }; } }),
+    defineAction<{ show: boolean }, unknown>({ name: 'showTerritories', title: 'Show country territories', description: 'Territories.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.showTerritories = show; return { showTerritories: show, ...(options.drawnLayers && { territoriesShown: territoriesShown(), territoryRule: TERRITORY_RULE }) }; } }),
     defineAction<{ programs?: string[]; countries?: string[]; type?: string; fromYear?: number; toYear?: number; reset?: boolean }, unknown>({
       name: 'setFilters', title: 'Filter landings', description: 'Filters.', effect: 'command',
       params: { type: 'object', properties: { programs: { type: 'array', description: 'programs', items: { type: 'string', description: 'p' } }, countries: { type: 'array', description: 'countries', items: { type: 'string', description: 'c' } }, type: { type: 'string', description: 'type', enum: ['all', 'crewed', 'robotic'] }, fromYear: { type: 'integer', description: 'from' }, toYear: { type: 'integer', description: 'to' }, reset: { type: 'boolean', description: 'reset' } } },
@@ -445,7 +463,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         const prev = reset ? { programs: null, countries: null, type: 'all', fromYear: null, toYear: null } : state.filter;
         state.filter = { programs: p ?? prev.programs, countries: c ?? prev.countries, type: type ?? prev.type, fromYear: fromYear ?? prev.fromYear, toYear: toYear ?? prev.toYear };
         const f = state.filter;
-        const shown = LANDINGS.filter((l) => (!f.programs || f.programs.includes(l.program)) && (!f.countries || f.countries.includes(l.country)) && (f.type === 'all' || (f.type === 'crewed') === l.crewed) && (f.fromYear === null || l.year >= f.fromYear) && (f.toYear === null || l.year <= f.toYear));
+        const shown = shownLandings();
         return { shown: shown.length, total: LANDINGS.length, filter: f, shownIds: shown.map((l) => l.id) };
       },
     }),
@@ -528,6 +546,9 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
         sunBandDeg: state.sunBand,
         overlay: state.overlay,
         showMissions: state.showMissions,
+        showTerritories: state.showTerritories,
+        showFlags: state.flags,
+        missionsShown: { shown: shownLandings().length, total: LANDINGS.length, filter: state.filter },
         compare: { A: state.compareA?.label ?? null, B: state.compareB?.label ?? null, open: state.comparing },
         analysis: summary(),
       }),
@@ -629,9 +650,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     const display = () => ({
       reliefExaggeration: state.reliefFactor,
       reliefDrawnNow: state.reliefFactor,
-      reliefRule: state.reliefFactor > 1 ? 'The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km.' : null,
       reliefDataSamplesPerDegree: 16,
-      territoryScale: state.territoryScale,
       coverageShown: state.coverage,
       iceTargetsShown: state.iceTargets,
       polarCloseUp: null,
@@ -640,20 +659,7 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
     const bool = (name: string, title: string, key: 'coverage' | 'iceTargets') =>
       defineAction<{ show: boolean }, unknown>({ name, title, description: title, effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state[key] = show; return display(); } });
     actions.push(
-      defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Relief exaggeration', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 30 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
-      defineAction<{ factor: number }, unknown>({
-        name: 'setTerritoryScale', title: 'Territory size exaggeration', description: 'Display setting for how much the explored areas are enlarged from orbit. Not a width multiplier.', effect: 'command',
-        params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 1, maximum: 100 } }, required: ['factor'] },
-        run: ({ factor }) => {
-          state.territoryScale = factor;
-          // As src/scene/globe/displayState.ts selectedSiteArea: the selected landing's area in the card's words (IM-2's stand-in record).
-          const site = state.site;
-          const rec = site && site.kind === 'landing' ? SITE_RECORDS[site.id]?.exploredArea : null;
-          const k = factor <= 1 ? 1 : Math.round((1 + (factor - 1) * 0.5) * 10) / 10;
-          const selectedSiteArea = rec && site ? { site: site.id, name: site.name, extentM: 40, widthFactorFromOrbit: k, drawnWidthFromOrbitKm: Math.round(40 * k / 100) / 10, text: k <= 1 ? 'about 40 m across (drawn at true size on the globe)' : `about 40 m across (drawn ${k}× larger in width from orbit, about ${Math.round(40 * k)} m across, so it can be seen; true size close to the ground)` } : null;
-          return { ...display(), territoryRule: factor > 1 ? 'A display setting, not a width multiplier.' : null, selectedSiteArea };
-        },
-      }),
+      defineAction<{ factor: number }, unknown>({ name: 'setReliefExaggeration', title: 'Terrain relief scale', description: 'Relief.', effect: 'command', params: { type: 'object', properties: { factor: { type: 'number', description: 'factor', minimum: 0, maximum: 1 } }, required: ['factor'] }, run: ({ factor }) => { state.reliefFactor = factor; return display(); } }),
       bool('showCoverage', 'Show elevation data coverage', 'coverage'),
       bool('showIceTargets', 'Show mapped ice targets', 'iceTargets'),
       defineAction({ name: 'resetNorth', title: 'North up', description: 'North up.', effect: 'command', params: none, run: () => ({ northAngleDeg: 0 }) }),
@@ -844,7 +850,9 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
   }
   if (options.presetActions) {
     const T = Date.UTC(2025, 2, 14, 2, 0);
-    const describe = (p: (typeof PRESETS)[number]) => ({ id: p.id, title: p.title, description: p.title, site: { id: p.siteId }, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) }, clockStartsUtc: isoUtc(T), view: p.view, rateSimSecondsPerSecond: 600, playsOnLoad: true, sources: [] });
+    // As src/core/presetActions.ts: an optional caveat, and for an eclipse what was reported (sunBehindEarth.reported).
+    const extra = (p: (typeof PRESETS)[number]) => ({ ...('caveat' in p && { caveat: p.caveat }), ...('reported' in p && { sunBehindEarth: { reported: p.reported } }) });
+    const describe = (p: (typeof PRESETS)[number]) => ({ id: p.id, title: p.title, description: p.title, site: { id: p.siteId }, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) }, clockStartsUtc: isoUtc(T), view: p.view, rateSimSecondsPerSecond: 600, playsOnLoad: true, sources: [], ...extra(p) });
     actions.push(
       defineAction({ name: 'listPresets', title: 'Missions to replay', description: 'Lists the presets.', effect: 'query', params: none, run: () => ({ presets: PRESETS.map(describe), loaded: state.preset }) }),
       defineAction<{ id: string; play?: boolean }, unknown>({
@@ -862,10 +870,10 @@ export function createFakeApp(options: FakeAppOptions = {}): { state: FakeState;
           state.playing = play ?? true;
           state.rate = 600;
           state.preset = p.id;
-          return { preset: { id: p.id, title: p.title }, view: 'surface', site: siteOut(state.site), timeUtc: isoUtc(T), playing: state.playing, rateSimSecondsPerSecond: 600, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) } };
+          return { preset: { id: p.id, title: p.title }, view: 'surface', site: siteOut(state.site), timeUtc: isoUtc(T), playing: state.playing, rateSimSecondsPerSecond: 600, missionWindow: { startUtc: isoUtc(T), durationH: 12, endUtc: isoUtc(T + 12 * 3_600_000) }, ...extra(p) };
         },
       }),
-      defineAction<{ show: boolean }, unknown>({ name: 'showFlags', title: 'Show country flags', description: 'Flags.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.flags = show; return { showFlags: show }; } }),
+      defineAction<{ show: boolean }, unknown>({ name: 'showFlags', title: 'Show country flags', description: 'Flags.', effect: 'command', params: { type: 'object', properties: { show: { type: 'boolean', description: 'show' } }, required: ['show'] }, run: ({ show }) => { state.flags = show; return { showFlags: show, ...(options.drawnLayers && { flagsShown: flagsShown() }) }; } }),
     );
   }
   if (options.catalogActions) {

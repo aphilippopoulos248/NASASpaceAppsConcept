@@ -39,7 +39,11 @@ export function createPanelActions(ctx: PanelActionContext): ActionDef<any, any>
         if (!ctx.isSurface()) throw new ActionError('The panels move and fold in the surface view only: enter it first (enterSurface).');
         if (!layout.has(panel)) throw new ActionError(`The ${titleOf(panel)} panel is not on this page.`);
         if (!layout.state(panel).shown) {
-          const how = panel === 'compare' ? ' Open the comparison first.' : panel === 'assistant' ? ' Open the assistant first.' : '';
+          const how =
+            panel === 'compare' ? ' Open the comparison first.'
+            : panel === 'assistant' ? ' Open the assistant first.'
+            : panel === 'surface-controls' ? ' It gives way while the skyline chart is expanded: shrink the chart first (setChart with expanded false).'
+            : '';
           throw new ActionError(`The ${titleOf(panel)} panel is not on screen.${how}`);
         }
         if (folded !== undefined) layout.fold(panel, folded);

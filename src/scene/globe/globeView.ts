@@ -1,5 +1,5 @@
 // The 3D globe: the Moon with real relief (LOLA elevation), stars, Sun/Earth, landing
-// markers (coloured by country) with their explored areas and optional country flags, custom
+// markers (coloured by country), the country territories and optional country flags, custom
 // pin, close-up imagery, colour overlays, orbit controls and fly-to. It
 // follows the store (time, light, site, filters, overlay) and writes the camera pose back
 // (globeCenter); clicks and picks go out as actions.
@@ -20,7 +20,6 @@ import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
-import { areaScale, loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
@@ -36,6 +35,7 @@ import { handleGlobeKey } from './globeKeys';
 import { flyDirection } from './flyTarget';
 import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
+import { setTerritories, territoryFill } from './territories';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
 /** The camera comes no closer to the terrain under the screen centre than this, Moon radii (about 10 km). */
@@ -87,8 +87,7 @@ export class GlobeView {
   private coverage: CoverageOutlines | null = null;
   /** Outlines of the mapped ice-bearing shadowed regions, loaded the first time they are asked for. */
   private ice: IceOutlines | null = null;
-  /** Each landing's explored area in its country's colour, and the optional country flags. */
-  private areas: SiteAreaLayer | null = null;
+  /** The optional country flags. (The country territories are drawn by the surface shader: territories.ts.) */
   private flags: FlagMarkers | null = null;
   private iceRequested = false;
   /** Poleward of about 80S the surface is drawn from the polar elevation layers, with real Sun shadows. */
@@ -99,8 +98,6 @@ export class GlobeView {
   private sunMoonFixed: [number, number, number] = [1, 0, 0];
   /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
   private placed = { relief: NaN, version: -1, site: '', polar: false };
-  /** Enlargement the explored areas were last placed at (it follows the camera altitude). */
-  private placedAreaScale = NaN;
   private patchVersion = -1;
   active = true;
 
@@ -207,27 +204,27 @@ export class GlobeView {
     this.applyMissions();
     this.sky.setMode(s.lightMode);
     store.subscribe(['site'], (st) => this.applySite(st.site));
-    store.subscribe(['showMissions', 'showFlags'], () => this.applyMissions());
+    store.subscribe(['showMissions', 'showTerritories', 'showFlags'], () => this.applyMissions());
     store.subscribe(['lightMode'], (st) => this.sky.setMode(st.lightMode));
     missionFilter.subscribe(() => this.applyFilter());
   }
 
-  /** The explored areas and flags: built once their small data files are in, then placed with the markers. */
+  /** The flags: built once the ownership record is in, then placed with the markers. */
   private async loadMissionLayers(markers: Markers): Promise<void> {
-    const [owners, areas] = await Promise.all([loadOwnership(), loadSiteAreas()]);
-    this.areas = new SiteAreaLayer(markers.items, areas);
+    const owners = await loadOwnership();
     this.flags = new FlagMarkers(markers.items, (id) => owners?.byLanding.get(id));
-    this.scene.add(this.areas.root, this.flags.root);
+    this.scene.add(this.flags.root);
     this.applyMissions();
     this.placed.version = -1; // place them with the markers
   }
 
-  /** Markers, their explored areas and flags show together; flags only when also asked for. */
+  /** Markers, the country territories and flags show together; flags only when also asked for. */
   private applyMissions(): void {
     const { showMissions, showFlags } = store.get();
     if (this.markers) this.markers.root.visible = showMissions;
-    if (this.areas) this.areas.root.visible = showMissions;
+    this.applyFeatures();
     this.flags?.setEnabled(showMissions && showFlags);
+    setTerritories(this.uniforms, showMissions ? this.visibleMarkers.map((m) => m.landing) : []);
   }
 
   setGeometry(g: MoonGeometry): void {
@@ -239,10 +236,16 @@ export class GlobeView {
 
   private applyOverlay(): void {
     const s = store.get();
-    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage);
+    this.applyFeatures();
     if (this.coverage) this.coverage.root.visible = globeDisplay.get().coverage;
     this.applyIce();
     this.uniforms.uBand.value.set(s.sunElMinDeg, s.sunElMaxDeg);
+  }
+
+  /** What the surface shader is compiled with: the overlay, the coverage squares, the territories (shown with the missions). */
+  private applyFeatures(): void {
+    const s = store.get();
+    setSurfaceFeatures(OVERLAY_CODE[s.overlay], globeDisplay.get().coverage, s.showMissions && s.showTerritories);
   }
 
   /** Shows or hides the ice-target outlines; the database is read the first time they are shown. */
@@ -304,6 +307,8 @@ export class GlobeView {
   private applyFilter(): void {
     const f = missionFilter.get();
     this.markers?.setFilter((l) => matchesFilter(f, l));
+    // The Moon is divided among the sites shown: hiding a site hands its ground to its neighbours.
+    setTerritories(this.uniforms, this.visibleMarkers.map((m) => m.landing));
   }
 
   private applySite(site: SiteRef | null): void {
@@ -421,8 +426,8 @@ export class GlobeView {
     cam.matrixWorld.extractBasis(this.right, this.up, this.camDir);
     this.sky.update(cam, this.right, this.up);
     this.updateRelief(altNow * MOON_RADIUS_KM);
+    this.uniforms.uTerrFill.value = territoryFill(altNow * MOON_RADIUS_KM);
     this.markers?.update(cam, nowSec);
-    if (this.areas?.root.visible) this.areas.update(cam);
     this.flags?.update(cam, nowSec, this.sky.litDirection);
     if (this.coverage?.root.visible) this.coverage.update(cam);
     if (this.ice?.root.visible) this.ice.update(cam);
@@ -439,7 +444,7 @@ export class GlobeView {
     const relief = this.relief;
     if (!relief) return;
     const hasData = relief.pyramid.maxPpd > 0;
-    const drawn = hasData ? effectiveRelief(globeDisplay.get().reliefFactor, altitudeKm) : 0;
+    const drawn = hasData ? effectiveRelief(globeDisplay.get().reliefFactor) : 0;
     this.uniforms.uRelief.value = drawn;
     relief.update(this.camera, this.renderer.domElement.height / this.renderer.getPixelRatio(), drawn);
     const site = store.get().site;
@@ -464,16 +469,9 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
-      this.placedAreaScale = NaN; // placed again below
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
-    }
-    // The explored areas are enlarged from orbit (by the chosen territory size) and true to size near the ground.
-    const areaK = areaScale(altitudeKm, globeDisplay.get().areaScale);
-    if (this.areas && !(Math.abs(areaK - this.placedAreaScale) < 0.01 * areaK)) {
-      this.placedAreaScale = areaK;
-      this.areas.place((lat, lon) => this.surfaceRadius(lat, lon), areaK);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {
       this.patchVersion = relief.dataVersion;

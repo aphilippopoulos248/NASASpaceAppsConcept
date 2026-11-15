@@ -48,6 +48,17 @@ async function unnamedControls(page) {
   return out;
 }
 
+/** The accessibility tree's name, description, checked and disabled state of the first node with this role and name. */
+async function axNode(page, role, name) {
+  const cdp = await page.context().newCDPSession(page);
+  const { nodes } = await cdp.send('Accessibility.getFullAXTree');
+  await cdp.detach();
+  const n = nodes.find((x) => !x.ignored && x.role?.value === role && (x.name?.value ?? '').trim() === name);
+  if (!n) return null;
+  const prop = (k) => n.properties?.find((q) => q.name === k)?.value?.value;
+  return { name: n.name?.value ?? '', description: n.description?.value ?? '', checked: prop('checked') ?? null, disabled: prop('disabled') ?? false };
+}
+
 /** Presses Tab until focus returns to where it started; describes every stop. */
 async function tabStops(page, max = 120) {
   await page.evaluate(() => {
@@ -527,5 +538,66 @@ describe('accessibility: Escape goes to the layer that holds the focus (F-10)', 
     const second = await escape();
     assert.equal(second.view, 'globe', 'the second Escape did not leave the surface view');
     assert.equal(await page.evaluate(() => window.lunyx.store.get().site?.id), 'im-2', 'Escape must keep the site (F-1)');
+  });
+});
+
+// T-67 (GitHub main 5972aaf and pull request #4): country territories behind a Filters checkbox,
+// and a compact surface strip whose "Surface options" and "About" are disclosures that close on
+// Escape, an outside click or the focus leaving.
+describe('accessibility: the territories checkbox and the surface strip\'s disclosures (T-67)', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  test('"Show country territories": a named checkbox, off by default, disabled while previous missions are hidden, and its meaning is available', SLOW, async () => {
+    const box = page.getByRole('checkbox', { name: 'Show country territories' });
+    assert.equal(await box.count(), 1, 'no "Show country territories" checkbox');
+    assert.equal(await box.isChecked(), false, 'territories should be off by default');
+    const missions = page.getByRole('checkbox', { name: 'Show previous missions' });
+    await missions.uncheck();
+    const off = await axNode(page, 'checkbox', 'Show country territories');
+    assert.equal(off?.disabled, true, 'not disabled while previous missions are hidden');
+    await missions.check();
+    const on = await axNode(page, 'checkbox', 'Show country territories');
+    assert.equal(on?.disabled, false);
+    // What the colours mean must not hang on a hover tooltip: with the colouring on, a caption
+    // under the checkbox says it, in text everyone gets (and passes the contrast check).
+    await page.getByRole('checkbox', { name: 'Show country territories' }).check();
+    await until(page, () => !document.querySelector('.fp-territory-note')?.hidden);
+    assert.match((await page.locator('.fp-territory-note').textContent()) ?? '', /nearest/i, 'the caption does not say what the territories mean');
+    assert.deepEqual(await lowContrast(page, '.filters-panel'), []);
+    await page.getByRole('checkbox', { name: 'Show country territories' }).uncheck();
+    await until(page, () => document.querySelector('.fp-territory-note')?.hidden);
+  });
+
+  test('the surface strip: "Surface options" and "About" open from the keyboard, and Escape closes them without leaving the view', SLOW, async () => {
+    await result(page, 'selectSite', { site: 'im-2', fly: false });
+    await result(page, 'enterSurface');
+    await until(page, () => document.body.dataset.view === 'surface');
+    for (const label of ['Surface options', 'About']) {
+      const summary = page.locator('.surface-hud summary', { hasText: label });
+      assert.equal(await summary.count(), 1, `no "${label}" disclosure on the strip`);
+      await summary.focus();
+      await page.keyboard.press('Enter');
+      await until(page, (l) => [...document.querySelectorAll('.surface-hud details')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, 5000);
+      assert.deepEqual(await unnamedControls(page), [], `unnamed controls with "${label}" open`);
+      assert.deepEqual(await lowContrast(page, '.surface-hud'), [], `low contrast with "${label}" open`);
+      await page.keyboard.press('Escape');
+      await until(page, (l) => ![...document.querySelectorAll('.surface-hud details')].some((d) => d.open && d.querySelector('summary')?.textContent.trim() === l), label, 5000);
+      assert.equal(await page.evaluate(() => document.body.dataset.view), 'surface', `Escape in "${label}" left the surface view`);
+      assert.equal(await page.evaluate(() => document.activeElement?.tagName.toLowerCase()), 'summary', `the focus did not return to "${label}"`);
+    }
+    // "Sky paths" is reachable by keyboard inside "Surface options".
+    await page.locator('.surface-hud summary', { hasText: 'Surface options' }).focus();
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('Tab');
+    assert.match(await page.evaluate(() => document.activeElement?.textContent.trim() ?? ''), /^Sky paths$/, 'Tab from "Surface options" does not reach its first control');
+    await page.keyboard.press('Escape');
+    await page.locator('#scene').focus();
+    await page.keyboard.press('Escape');
+    await until(page, () => document.body.dataset.view === 'globe');
   });
 });

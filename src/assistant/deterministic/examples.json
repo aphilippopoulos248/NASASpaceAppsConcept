@@ -33,8 +33,7 @@
     {"action":"setOverlay","say":"show the sun band overlay"},
     {"action":"showMissions","say":"hide missions"},
     {"action":"setFilters","say":"only crewed"},
-    {"action":"setReliefExaggeration","say":"relief x5"},
-    {"action":"setTerritoryScale","say":"territory size x25"},
+    {"action":"setReliefExaggeration","say":"true scale relief"},
     {"action":"showCoverage","say":"show elevation coverage"},
     {"action":"showIceTargets","say":"show the ice targets"},
     {"action":"setMastHeight","say":"mast 10 m"},
@@ -67,6 +66,7 @@
     {"action":"listPresets","say":"list the presets"},
     {"action":"loadPreset","say":"replay the eclipse"},
     {"action":"showFlags","say":"show country flags"},
+    {"action":"showTerritories","say":"show territories"},
     {"action":"showPanel","say":"fold the site details"},
     {"action":"setAssistantOpen","say":"close the assistant"},
     {"action":"clearConversation","say":"clear the chat"}

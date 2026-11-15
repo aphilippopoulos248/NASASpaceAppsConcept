@@ -233,7 +233,9 @@ describe('flow: from a pin to a nearby alternative and a comparison, on bundled 
     await page.mouse.dblclick(at.x, at.y);
     await until(page, () => window.lunyx.store.get().site?.id === 'im-2' && document.body.dataset.view === 'surface');
     assert.ok((await log(page, from)).some((e) => e.name === 'selectSite' && e.origin === 'ui' && e.ok));
-    assert.match(await page.locator('.surface-hud').textContent(), /Surface view/);
+    // The surface strip is on screen: since PR #4 a compact card (Track Sun, Track Earth, "Surface
+    // options", "About") without the "Surface view" title.
+    assert.equal(await page.locator('.surface-hud').getByRole('button', { name: 'Track Sun', exact: true }).isVisible(), true, 'the surface strip is not on screen');
     assert.match(page.url(), /site=im-2/);
     assert.match(page.url(), /view=surface/);
     await page.locator('.close-surface').click();

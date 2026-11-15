@@ -219,7 +219,7 @@ describe("deterministic mode: the card's records and the real clock (T-44)", () 
     await e.reply('go to IM-2');
     const from = lastSeq();
     expect((await e.reply('who owns this site?')).text).toBe('IM-2 Athena belongs to United States (GCAT state code US); owner: Intuitive Machines, GCAT id fixture-im-2. Source: GCAT stand-in record.');
-    expect((await e.reply('how big is the explored area?')).text).toBe('The explored area at IM-2 Athena: about 40 m across, 1,257 m² (true size; the globe draws it 25 times wider so it can be seen). Source: stand-in area.');
+    expect((await e.reply('how big is the explored area?')).text).toBe('The explored area at IM-2 Athena: about 40 m across, 1,257 m² (true size). Source: stand-in area.');
     // Read from getState only: nothing changed.
     expect(ranSince(from).map((x) => x.name)).toEqual(['getState', 'getState']);
   });
