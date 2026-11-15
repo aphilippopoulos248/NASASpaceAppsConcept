@@ -78,7 +78,7 @@ describe('assistant session', () => {
     await s.send('and now?');
     expect(t.requests[0].messages.map((m) => m.role)).toEqual(['user', 'assistant', 'user']);
     expect(t.requests[0].messages[1]).toMatchObject({ role: 'assistant', toolCalls: [] });
-    expect(reply(s)).toMatchObject({ text: 'Hello from the model.', source: { kind: 'model', label: MODEL.label } });
+    expect(reply(s)).toMatchObject({ text: 'Hello from the model.', source: { kind: 'model', label: MODEL.label, provider: MODEL.provider } });
   });
 
   it('sends the registry tools and the state snapshot, and runs the model\'s calls through the registry', async () => {
@@ -164,7 +164,7 @@ describe('assistant session', () => {
     await s.send('go to Apollo 11 and tell me about it');
     const r = reply(s);
     expect(r.failed).toBe(true);
-    expect(r.source).toEqual({ kind: 'model', label: MODEL.label });
+    expect(r.source).toEqual({ kind: 'model', label: MODEL.label, provider: MODEL.provider });
     expect(r.note).toContain('overloaded');
     expect(r.note).toContain('The actions above were applied');
     expect(r.actions.map((a) => a.name)).toEqual(['selectSite']);

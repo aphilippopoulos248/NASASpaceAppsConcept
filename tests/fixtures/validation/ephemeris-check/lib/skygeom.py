@@ -183,3 +183,15 @@ def crossings(fn, t_start, t_end, step=60.0, tol=1.0):
         tc = refine(lambda x: float(fn(np.array([x]))[0]), t[i], t[i + 1], tol)
         out.append((tc, 'rise' if g[i + 1] > 0 else 'set'))
     return out
+
+
+def hidden_spans(fn, lo, hi, step=600.0, tol=1.0):
+    """Maximal spans in [lo, hi] where fn <= 0, edges bisected to tol seconds: [(start, end, start_found, end_found)]."""
+    cross = crossings(fn, lo, hi, step=step, tol=tol)
+    edges = [lo] + [t for t, _ in cross] + [hi]
+    hidden_first = float(fn(np.array([lo]))[0]) <= 0
+    out = []
+    for i in range(len(edges) - 1):
+        if (i % 2 == 0) == hidden_first:
+            out.append((edges[i], edges[i + 1], i > 0, i + 2 < len(edges)))
+    return out

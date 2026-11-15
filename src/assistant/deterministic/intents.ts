@@ -9,44 +9,40 @@ import { MOON_RADIUS_KM } from '../../core/types';
 import { isoUtc } from '../../core/time';
 import { Halt, type CandidateMemo, type Ctx } from './context';
 import { at, bearing, coordinates, degrees, distance, hours, isObject, num, percent, plural, span, str, utc, type Json } from './format';
+import * as later from './laterIntents';
 import { COMPASS_WORD, compassAzimuth, findCoordinates, findDateTime, findDuration, findNumbers } from './parse';
+import { EARTH_NOTE, plan, siteText, type Intent, type Plan } from './plan';
 
-export interface Plan {
-  /** What the plan will do, in a few words (shown when another part of the request was not understood). */
-  does: string;
-  run(ctx: Ctx): Promise<string>;
-}
-
-type Intent = (step: string, raw: string) => Plan | null;
-
-const plan = (does: string, run: Plan['run']): Plan => ({ does, run });
+export type { Plan } from './plan';
 
 /** Camera altitude of the whole-Moon view, km above the surface (2.4 lunar radii, as the globe uses). */
 const WHOLE_MOON_ALTITUDE_KM = 2.4 * MOON_RADIUS_KM;
 
-const EARTH_NOTE = 'Earth visibility is geometric line of sight over the terrain, not a guarantee of a working radio link.';
 
 // ---------------------------------------------------------------- reply wording
 
-function siteText(site: unknown): string {
-  if (!isObject(site)) return 'no site';
-  const name = str(site, 'name') ?? 'the site';
-  const where = coordinates(num(site, 'latDeg'), num(site, 'lonDegEast'));
-  const landed = str(site, 'landedUtc');
-  return `${name} (${where}${landed ? `, landed ${utc(landed)}` : ''})`;
-}
-
-/** The headline metrics of an analysis result (either the getState summary or a getAnalysis result). */
+/**
+ * The headline metrics of an analysis result (either the getState summary or a getAnalysis result).
+ * Earth comes in two definitions that are never mixed up: its centre above the skyline
+ * (earthVisiblePct, longestEarthGapH) and, where the result gives it (getAnalysis from T-47 on),
+ * any part of its disc (earthAnyPct, longestEarthAnyGapH: the PGDA long-term map's definition).
+ */
 function metricsText(a: Json): string {
   const slope = num(a, 'slopeDeg', 'slope.slopeDeg');
+  const anyPct = num(a, 'earthAnyPct', 'metrics.earthAnyPct'), anyGap = num(a, 'longestEarthAnyGapH', 'metrics.longestEarthAnyGapH');
   return [
     `illumination ${percent(num(a, 'illuminationPct', 'metrics.illuminationPct'))}`,
     `longest darkness ${hours(num(a, 'longestDarknessH', 'metrics.longestDarknessH'))}`,
-    `Earth line of sight ${percent(num(a, 'earthVisiblePct', 'metrics.earthVisiblePct'))}`,
-    `longest Earth gap ${hours(num(a, 'longestEarthGapH', 'metrics.longestEarthGapH'))}`,
+    `Earth's centre in view ${percent(num(a, 'earthVisiblePct', 'metrics.earthVisiblePct'))}`,
+    `longest Earth-centre gap ${hours(num(a, 'longestEarthGapH', 'metrics.longestEarthGapH'))}`,
+    ...(anyPct !== undefined ? [`any part of Earth's disc in view ${percent(anyPct)}`] : []),
+    ...(anyGap !== undefined ? [`longest spell with Earth's whole disc hidden ${hours(anyGap)}`] : []),
     `slope ${degrees(slope)}`,
   ].join(', ');
 }
+
+/** The Filters panel's solar band when nobody has changed it (src/core/requirements.ts DEFAULT_SUN_BAND): no requirement. For builds before T-46's `required`. */
+const defaultSunBand = (band: Json): boolean => num(band, 'minDeg') === 0 && num(band, 'maxDeg') === 90;
 
 function warningsText(a: Json): string {
   const w = a.warnings;
@@ -82,8 +78,9 @@ function comparisonText(r: Json): string {
     };
     add('illumination', diff('illuminationPct', 'metrics.illuminationPct'), ' percentage points');
     add('longest darkness', diff('longestDarknessH', 'metrics.longestDarknessH'), ' h');
-    add('Earth line of sight', diff('earthVisiblePct', 'metrics.earthVisiblePct'), ' percentage points');
-    add('longest Earth gap', diff('longestEarthGapH', 'metrics.longestEarthGapH'), ' h');
+    add("Earth's centre in view", diff('earthVisiblePct', 'metrics.earthVisiblePct'), ' percentage points');
+    add('longest Earth-centre gap', diff('longestEarthGapH', 'metrics.longestEarthGapH'), ' h');
+    add("any part of Earth's disc in view", diff('earthAnyPct', 'metrics.earthAnyPct'), ' percentage points');
     add('slope', diff('slopeDeg', 'slope.slopeDeg'), '°');
     if (parts.length) lines.push(`B minus A: ${parts.join(', ')}.`);
     const highlights = given && Array.isArray(given.highlights) ? given.highlights.filter((h): h is string => typeof h === 'string') : [];
@@ -139,6 +136,7 @@ const help: Intent = (step) => {
     add(['lookAt'], 'Looking around (surface): "look north", "look at azimuth 120", "turn left", "look at the Sun"');
     add(['setGlobeCamera'], 'Globe: "show the whole Moon", "show the south pole", "zoom in", "turn the globe to 10 N 45 E"');
     add(['getState'], 'Questions: "status", "what time is it", "illumination", "where is the Earth"');
+    for (const [needs, text] of later.LATER_HELP) add(needs, text);
     lines.push('- Anything else by name: "/actions" lists every action, "/setOverlay {"mode":"off"}" runs one.');
     lines.push('It does not understand free-form language: that needs the language model.');
     return lines.join('\n');
@@ -230,6 +228,11 @@ const compareFamily: Intent = (step) => {
     if (heights.length < 2) return null;
     const [a, b] = heights;
     return plan(`compare mast heights ${a} m and ${b} m`, async (ctx) => {
+      // The compare panel's control: B is A with the other mast; the mast on screen is not changed.
+      if (ctx.has('compareMastHeights')) {
+        const r = await ctx.comparison('compareMastHeights', { heightAM: a, heightBM: b, basis: 'current' });
+        return `Comparing mast heights ${num(r, 'mastHeightAM') ?? a} m (A) and ${num(r, 'mastHeightBM') ?? b} m (B) at the same site and over the same mission window. The mast height on screen is not changed.\n${comparisonText(r)}`;
+      }
       await ctx.run('setMastHeight', { metres: a });
       await ctx.run('saveScenario', { slot: 'A' });
       await ctx.run('setMastHeight', { metres: b });
@@ -242,6 +245,11 @@ const compareFamily: Intent = (step) => {
     const d = findDuration(step);
     if (!d || d.hours <= 0) return null;
     return plan(`compare an on-time arrival with a ${hours(d.hours)} delay`, async (ctx) => {
+      // The compare panel's control: B is the scenario on screen arriving later; the scenario on screen is not changed.
+      if (ctx.has('compareDelayedArrival')) {
+        const r = await ctx.comparison('compareDelayedArrival', { delayH: d.hours, basis: 'current' });
+        return `Comparing the scenario on screen (A, arriving ${utc(str(r, 'plannedArrivalUtc'))}) with the same arriving ${hours(num(r, 'delayH') ?? d.hours)} later (B, ${utc(str(r, 'revisedArrivalUtc'))}). The scenario on screen and its own arrival delay are not changed.\n${comparisonText(r)}`;
+      }
       await ctx.run('setDelay', { hours: 0 });
       await ctx.run('saveScenario', { slot: 'A' });
       await ctx.run('setDelay', { hours: d.hours });
@@ -285,13 +293,13 @@ const CRITERIA: { pattern: RegExp; c: Criterion }[] = [
   { pattern: /\b(flatter|less steep|lower slope|gentler|smoother)\b/, c: { words: 'flatter', key: 'slopeDeg', lower: true, unit: degrees, label: 'slope' } },
   { pattern: /\b(shorter|less|smaller|lower)\s+(blackout|darkness|dark|night)s?\b/, c: { words: 'a shorter blackout', key: 'longestDarknessH', lower: true, unit: hours, label: 'longest darkness' } },
   { pattern: /\b(more (sun|sunlight|light|illumination|power)|sunnier|brighter|better (lit|illuminated))\b/, c: { words: 'more sunlight', key: 'illuminationPct', lower: false, unit: percent, label: 'illumination' } },
-  { pattern: /\bshorter (earth )?gaps?\b/, c: { words: 'a shorter Earth gap', key: 'longestEarthGapH', lower: true, unit: hours, label: 'longest Earth gap' } },
-  { pattern: /\b((more|better|longer) earth|better (comms|communication|contact|line of sight))\b/, c: { words: 'more Earth line of sight', key: 'earthVisiblePct', lower: false, unit: percent, label: 'Earth line of sight' } },
+  { pattern: /\bshorter (earth )?gaps?\b/, c: { words: 'a shorter Earth-centre gap', key: 'longestEarthGapH', lower: true, unit: hours, label: 'longest Earth-centre gap' } },
+  { pattern: /\b((more|better|longer) earth|better (comms|communication|contact|line of sight))\b/, c: { words: "more time with Earth's centre in view", key: 'earthVisiblePct', lower: false, unit: percent, label: "Earth's centre in view" } },
 ];
 
 function rowText(row: Json): string {
   const where = num(row, 'distanceM') !== undefined ? `${distance(num(row, 'distanceM'))} to the ${bearing(num(row, 'bearingDeg'))}` : coordinates(num(row, 'latDeg'), num(row, 'lonDegEast'));
-  return `${str(row, 'name') ?? 'candidate'} (${where}): slope ${degrees(num(row, 'slopeDeg'))}, illumination ${percent(num(row, 'illuminationPct'))}, longest darkness ${hours(num(row, 'longestDarknessH'))}, Earth line of sight ${percent(num(row, 'earthVisiblePct'))}`;
+  return `${str(row, 'name') ?? 'candidate'} (${where}): slope ${degrees(num(row, 'slopeDeg'))}, illumination ${percent(num(row, 'illuminationPct'))}, longest darkness ${hours(num(row, 'longestDarknessH'))}, Earth's centre in view ${percent(num(row, 'earthVisiblePct'))}`;
 }
 
 function memoOf(row: Json): CandidateMemo | null {
@@ -347,14 +355,16 @@ const nearby: Intent = (step) => {
     );
     const wanted = criteria.map((c) => c.words).join(' and ');
     const refValues = criteria.map((c) => `${c.label} ${c.unit(num(reference, c.key))}`).join(', ');
+    const rankedCount = num(r, 'rankedCount');
+    const among = rankedCount !== undefined && rankedCount > rows.length ? `${rows.length} best-ranked alternatives (of ${rankedCount} ranked)` : plural(rows.length, 'ranked alternative');
     if (!better.length) {
-      return `None of the ${plural(rows.length, 'ranked alternative')} has ${wanted} than this pin (${refValues}). The best-ranked alternative is ${rowText(rows[0])}.${tail}`;
+      return `None of the ${among} has ${wanted} than this pin (${refValues}). The best-ranked alternative is ${rowText(rows[0])}.${tail}`;
     }
     const pick = better[0];
     const memo = memoOf(pick);
     if (memo) ctx.memory.candidate = memo;
     const versus = criteria.map((c) => `${c.label} ${c.unit(num(pick, c.key))} (this pin: ${c.unit(num(reference, c.key))})`).join(', ');
-    return `Found a site with ${wanted}: ${rowText(pick)}.\nAgainst this pin: ${versus}. ${plural(better.length, 'alternative')} of ${rows.length} met the condition; this is the best-ranked of them.\nSay "compare it against this pin" or "go there".${tail}`;
+    return `Found a site with ${wanted}: ${rowText(pick)}.\nAgainst this pin: ${versus}. ${plural(better.length, 'alternative')} of the ${among} met the condition; this is the best-ranked of them.\nSay "compare it against this pin" or "go there".${tail}`;
   });
 };
 
@@ -383,6 +393,75 @@ const EVENT = '(sunrise|sunset|earthrise|earthset|sun rise|sun set|earth rise|ea
 const eventType = (word: string): string => word.replace(' ', '');
 const eventWhich = (word: string | undefined): 'next' | 'previous' => (word && /previous|last|prior|preceding/.test(word) ? 'previous' : 'next');
 const EVENT_NAME: Record<string, string> = { sunrise: 'sunrise', sunset: 'sunset', earthrise: 'Earthrise', earthset: 'Earthset' };
+/**
+ * A rise or set time with the instant it is (decision D-8): "Sun fully set 2025-03-16 19:30 UTC
+ * (the last part of the Sun's disc goes behind the terrain skyline)" when the result names it;
+ * builds before the labels give the time alone.
+ */
+const whenText = (j: Json): string =>
+  `${str(j, 'label') ? `${str(j, 'label')} ` : ''}${utc(str(j, 'timeUtc'))}${str(j, 'instant') ? ` (${str(j, 'instant')})` : ''}${j.outsideAnalysedWindow === true ? ', just outside the analysed mission window' : ''}`;
+
+/** Times in order, as the science core writes them: the date only when it differs from the time before. */
+function clockText(): (iso: string) => string {
+  let day = '';
+  return (iso) => {
+    const m = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/.exec(iso);
+    if (!m) return iso;
+    const text = m[1] === day ? m[2] : `${m[1]} ${m[2]}`;
+    day = m[1];
+    return text;
+  };
+}
+
+/**
+ * The whole passage of a disc through the skyline (decision D-8: both ends of a set), from the
+ * `span` that jumpToEvent and getAnalysis give (T-47): "The Sun starts setting 2025-03-16 18:23
+ * and is fully set 19:30 UTC." Earth's centre crossings are named in between; a graze is "partly
+ * hidden ... until its whole disc is clear again ...; it never fully sets". An end that was not
+ * found or lies outside the analysed window is worded by the science core's own `summary`.
+ * Without a span it says plainly that only the one labelled instant is available.
+ */
+function passageText(span: unknown, eventName?: string): string {
+  if (!isObject(span)) return `Only this one instant${eventName ? ` of the ${eventName}` : ''} is available here, not the start and end of its passage through the skyline.`;
+  const The = str(span, 'body') === 'earth' ? 'Earth' : 'The Sun';
+  const kind = str(span, 'kind');
+  const start = str(span, 'start.timeUtc'), end = str(span, 'end.timeUtc');
+  // Earth's centre crossings are part of its passage (Earthset and Earthrise are the centre); the science core names none for the Sun.
+  const centre = The === 'Earth' && Array.isArray(span.centre) ? span.centre.filter(isObject) : [];
+  const allInside = at(span, 'start.inWindow') === true && at(span, 'end.inWindow') === true && centre.every((c) => c.inWindow === true && str(c, 'timeUtc'));
+  if (start && end && allInside && (kind === 'set' || kind === 'rise' || kind === 'graze' || kind === 'peek')) {
+    const t = clockText();
+    const from = t(start);
+    // "Earth's centre sets" -> "its centre sets 2025-03-19 04:08"
+    const mids = centre.map((c) => `${(str(c, 'label') ?? '').replace(/^.*?centre\b/, 'its centre')} ${t(str(c, 'timeUtc')!)}`);
+    const between = mids.length ? ` (${mids.join(', ')})` : '';
+    const to = t(end);
+    if (kind === 'set') return `${The} starts setting ${from}${between} and is fully set ${to} UTC.`;
+    if (kind === 'rise') return `${The} starts rising ${from}${between} and is fully risen ${to} UTC.`;
+    if (kind === 'graze') return `${The} is partly hidden from ${from}${between} until its whole disc is clear again ${to} UTC; it never fully sets.`;
+    return `Part of ${The === 'Earth' ? 'Earth' : 'the Sun'} shows from ${from}${between} until it is gone again ${to} UTC; it never fully rises.`;
+  }
+  const summary = str(span, 'summary');
+  return summary ? `${The}: ${summary}.` : `The start and end of this passage are not available, only the instant above.`;
+}
+
+/** Which instant of an event a request asks for (jumpToEvent `instant`, T-47): the event itself, or an end of its passage. */
+type InstantChoice = 'event' | 'start' | 'end';
+
+/**
+ * The event and instant named by an end of a passage: "the Sun starts setting" is the start of a
+ * sunset, "Earth fully risen" the end of an Earthrise. A sunset is itself the last limb and a
+ * sunrise the first limb, so those ends are the events themselves (and work on every build).
+ */
+function edgeEvent(body: string, starts: string | undefined, fully: string | undefined): { type: string; instant: InstantChoice } {
+  const setting = starts ? /^set/.test(starts) : fully === 'set';
+  const type = `${body}${setting ? 'set' : 'rise'}`;
+  if (starts) return { type, instant: type === 'sunrise' ? 'event' : 'start' };
+  return { type, instant: type === 'sunset' ? 'event' : 'end' };
+}
+
+/** "start" of a sunrise and "end" of a sunset are the events themselves. */
+const sameAsEvent = (type: string, instant: InstantChoice): InstantChoice => ((type === 'sunrise' && instant === 'start') || (type === 'sunset' && instant === 'end') ? 'event' : instant);
 
 /** The terrain that forms the skyline under a body, whichever action reported it. */
 interface Blocking {
@@ -441,7 +520,7 @@ const blockage: Intent = (step) => {
     if (event) {
       const j = await ctx.run('jumpToEvent', { type: event, which: eventWhich(ev![1]) });
       eventAz = num(j, 'azDeg');
-      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${utc(str(j, 'timeUtc'))}.`);
+      lines.push(`Moved the clock to the ${eventWhich(ev![1])} ${EVENT_NAME[event]}: ${whenText(j)}. ${passageText(j.span, EVENT_NAME[event])}`);
     }
     // The blocking terrain comes from the dedicated action when the build has it, otherwise
     // from the analysis readout at the simulated time. Both describe the same skyline.
@@ -471,17 +550,42 @@ const blockage: Intent = (step) => {
   });
 };
 
+const JUMP_VERB = '(?:(?:jump|go|skip|move|advance|fast[- ]?forward|rewind|scrub|take me|set (?:the )?(?:time|clock))\\s+)?(?:to\\s+|at\\s+)?(?:the\\s+)?';
+const WHICH = '(next|previous|last|prior|preceding|following|upcoming)';
+/** An end of a passage by its label (T-47 words): "the Sun starts setting", "Earth fully risen". */
+const EDGE = "(sun|earth)(?:'s)?\\s+(?:(?:starts|begins|start|begin)\\s+(?:to\\s+)?(setting|rising|set|rise)|(?:is\\s+|has\\s+)?fully\\s+(set|risen|rose|up))";
+const INSTANT_WORDS: Record<InstantChoice, string> = { event: '', start: 'start of the ', end: 'end of the ' };
+
 const events: Intent = (step) => {
-  const jump = new RegExp(`^(?:(?:jump|go|skip|move|advance|fast[- ]?forward|rewind|scrub|take me|set (?:the )?(?:time|clock))\\s+)?(?:to\\s+|at\\s+)?(?:the\\s+)?(next|previous|last|prior|preceding|following|upcoming)?\\s*${EVENT}$`).exec(step);
-  if (jump) {
-    const type = eventType(jump[2]);
-    const which = eventWhich(jump[1]);
-    return plan(`move the clock to the ${which} ${EVENT_NAME[type]}`, async (ctx) => {
+  const jump = new RegExp(`^${JUMP_VERB}${WHICH}?\\s*${EVENT}$`).exec(step);
+  const part = jump ? null : new RegExp(`^${JUMP_VERB}(start|beginning|end)\\s+of\\s+(?:the\\s+)?${WHICH}?\\s*${EVENT}$`).exec(step);
+  const edge = jump || part ? null : new RegExp(`^${JUMP_VERB}(?:${WHICH}\\s+)?(?:(?:moment|time|point)\\s+)?(?:when\\s+)?(?:the\\s+)?${EDGE}$`).exec(step);
+  if (jump || part || edge) {
+    let type: string, which: 'next' | 'previous', instant: InstantChoice;
+    if (jump) {
+      type = eventType(jump[2]);
+      which = eventWhich(jump[1]);
+      instant = 'event';
+    } else if (part) {
+      type = eventType(part[3]);
+      which = eventWhich(part[2]);
+      instant = part[1] === 'end' ? 'end' : 'start';
+    } else {
+      ({ type, instant } = edgeEvent(edge![2], edge![3], edge![4]));
+      which = eventWhich(edge![1]);
+    }
+    instant = sameAsEvent(type, instant);
+    const what = `${INSTANT_WORDS[instant]}${which} ${EVENT_NAME[type]}`;
+    return plan(`move the clock to the ${what}`, async (ctx) => {
+      // jumpToEvent goes to an end of the passage from T-47 on; earlier builds only to the event itself.
+      if (instant !== 'event' && !ctx.api.def('jumpToEvent')?.params.properties.instant) {
+        throw new Halt(`This build can move the clock to the ${which} ${EVENT_NAME[type]} itself (say "jump to ${which} ${type}"), not to the ${instant} of its passage through the skyline.`);
+      }
       // Older builds fail while the analysis is running; newer ones (with getAnalysis) wait themselves.
       if (!ctx.has('getAnalysis')) await ctx.analysis();
-      const j = await ctx.run('jumpToEvent', { type, which });
+      const j = await ctx.run('jumpToEvent', { type, which, ...(instant !== 'event' && { instant }) });
       const az = num(j, 'azDeg');
-      return `Moved the clock to the ${which} ${EVENT_NAME[type]}: ${utc(str(j, 'timeUtc'))}${az !== undefined ? ` (at azimuth ${degrees(az)})` : ''}. Rise and set times are measured against the terrain skyline.`;
+      return `Moved the clock to the ${what}: ${whenText(j)}${az !== undefined ? `, at azimuth ${degrees(az)}` : ''}. ${passageText(j.span, EVENT_NAME[type])} Rise and set times are measured against the terrain skyline.`;
     });
   }
   const ask = new RegExp(`^(?:when|what time)\\b.*?\\b(next|previous|last)?\\s*${EVENT}\\b`).exec(step);
@@ -491,8 +595,17 @@ const events: Intent = (step) => {
       if (!ctx.has('getAnalysis')) throw new Halt(`I can move the clock there: say "jump to next ${type}". Reading the time without moving the clock is not available in this build.`);
       const a = await ctx.analysis();
       const e = at(a, `nextEvents.${type}`);
-      if (!isObject(e)) return `There is no ${EVENT_NAME[type]} after the simulated time inside the analysed mission window.`;
-      return `The next ${EVENT_NAME[type]} is at ${utc(str(e, 'timeUtc'))}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline).`;
+      if (!isObject(e)) {
+        // No such event in the window, but a passage may be under way, end beyond the window or be a graze (no event at all).
+        const p = at(a, `nextPassages.${type.startsWith('sun') ? 'sun' : 'earth'}`);
+        // After "Next passage of the Sun through the skyline:", the sentence goes on without naming the body twice.
+        const words = isObject(p) ? passageText(p).replace(/^(?:The Sun|Earth): /, '').replace(/^(The|Part) /, (w) => w.toLowerCase()) : '';
+        const next = words ? ` Next passage of ${type.startsWith('sun') ? 'the Sun' : 'Earth'} through the skyline: ${words}` : '';
+        return `There is no ${EVENT_NAME[type]} after the simulated time inside the analysed mission window.${next}`;
+      }
+      const definition = str(a, `eventDefinitions.${type}`);
+      const instant = definition && str(e, 'label') && definition.startsWith(`${str(e, 'label')}: `) ? definition.slice(str(e, 'label')!.length + 2).replace(/\.$/, '') : undefined;
+      return `The next ${EVENT_NAME[type]}: ${whenText({ ...e, ...(instant && { instant }) })}${num(e, 'azDeg') !== undefined ? `, azimuth ${degrees(num(e, 'azDeg'))}` : ''} (against the terrain skyline). ${passageText(e.span, EVENT_NAME[type])}`;
     });
   }
   return null;
@@ -595,13 +708,16 @@ const mission: Intent = (step) => {
   if (/\b(mission )?window\b|\bmission (length|duration)\b|^(arrive|arrival|land|landing|touch ?down)\b/.test(step) && !/^(what|how|why|is|does|when)\b/.test(step)) {
     const dt = findDateTime(step);
     const fromNow = /\b(start\w*|begin\w*|from)\s+(at\s+|from\s+)?(now|here|the current time|the simulated time)\b/.test(step);
+    // "Real" now is the scrubber's "Now" button: the computer's clock, not the simulated time.
+    const fromRealNow = /\b(real[- ]?time|real now|actual time|today|the real date|right now in the real world)\b/.test(step) && /\b(start\w*|begin\w*|from|at|now)\b/.test(step);
     const atLanding = /\b(start\w*|begin\w*|from|at|on)\s+(the\s+)?(landing|touchdown)\b/.test(step);
     const rest = dt ? step.replace(dt.match, ' ') : step;
     const d = /\b(window|length|duration|for|lasting|long)\b/.test(rest) ? findDuration(rest) : null;
-    if (!dt && !fromNow && !atLanding && !d) return null;
+    if (!dt && !fromNow && !fromRealNow && !atLanding && !d) return null;
     const params: Json = {};
     if (dt) params.startUtc = dt.utc;
     else if (atLanding) params.startUtc = 'landing';
+    else if (fromRealNow) Object.assign(params, { startUtc: 'real-now', moveClock: true });
     else if (fromNow) params.startUtc = 'now';
     if (d && d.hours > 0) params.durationH = d.hours;
     return plan('set the mission window', async (ctx) => {
@@ -626,7 +742,7 @@ const mission: Intent = (step) => {
     return plan(none ? 'remove the Earth-gap requirement' : `set the largest tolerated Earth gap to ${hours(d!.hours)}`, async (ctx) => {
       const r = await ctx.run('setMaxEarthGap', none ? {} : { hours: d!.hours });
       const h = num(r, 'maxEarthGapH');
-      return h === undefined ? 'The Earth-gap requirement is removed.' : `Largest tolerated gap in Earth line of sight set to ${hours(h)}.`;
+      return h === undefined ? 'The Earth-gap requirement is removed.' : `Largest tolerated gap with Earth's centre hidden set to ${hours(h)}.`;
     });
   }
 
@@ -743,13 +859,14 @@ const views: Intent = (step) => {
       return `Back on the globe${r.site ? `, with ${str(r, 'site.name') ?? 'the site'} still selected` : ''}.`;
     });
   }
-  const panel = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site (?:details|card)|details|filters?(?: panel| sheet)?)$/.exec(step);
+  const panel = /^(show|open|unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site (?:details|card)|details|filters?(?: panel| sheet)?|site science section|science section)$/.exec(step) ?? /^(unfold|expand|hide|close|fold|collapse)\s+(?:the\s+)?(site science)$/.exec(step);
   if (panel) {
     const open = /show|open|unfold|expand/.test(panel[1]);
-    const which = panel[2].startsWith('filter') ? 'filters' : 'site-details';
+    const which = panel[2].startsWith('filter') ? 'filters' : /science/.test(panel[2]) ? 'site-science' : 'site-details';
     return plan(`${open ? 'open' : 'close'} the ${which === 'filters' ? 'filters panel' : 'site details'}`, async (ctx) => {
       const r = await ctx.run('showPanel', { panel: which, open });
-      return `${which === 'filters' ? 'The filters panel' : 'The site details'} ${r.open === true ? 'are open' : 'are folded away'}.`.replace('panel are', 'panel is');
+      const name = which === 'filters' ? 'The filters panel' : which === 'site-science' ? 'The site science section' : 'The site details';
+      return `${name} ${r.open === true ? 'are open' : 'are folded away'}.`.replace(/(panel|section) are/, '$1 is');
     });
   }
   if (/^(clear|remove|delete|deselect|unselect|forget)\s+(the\s+|this\s+|my\s+)?(site|pin|selection|marker)$/.test(step) || /^(deselect|unselect)$/.test(step)) {
@@ -760,6 +877,24 @@ const views: Intent = (step) => {
   }
   return null;
 };
+
+/** The field-of-view range an action accepts, from its own schema. */
+/**
+ * The point the globe view is on: where it was last asked to centre (getState
+ * globeDisplay.viewTarget, exactly as asked, also while the camera is still flying there), else
+ * the centre drawn now (globeCenter: mid-flight a point on the way, and over a pole 0.1° short).
+ * viewTarget is null once the globe was turned by hand; the drawn centre is then the view.
+ */
+function viewPoint(s: Json): { lat?: number; lon?: number } {
+  const t = at(s, 'globeDisplay.viewTarget');
+  if (isObject(t) && num(t, 'latDeg') !== undefined && num(t, 'lonDegEast') !== undefined) return { lat: num(t, 'latDeg'), lon: num(t, 'lonDegEast') };
+  return { lat: num(s, 'globeCenter.latDeg'), lon: num(s, 'globeCenter.lonDegEast') };
+}
+
+function fovRange(ctx: Ctx, action: string): [number, number] {
+  const p = ctx.api.def(action)?.params.properties.fovDeg;
+  return [p && 'minimum' in p && typeof p.minimum === 'number' ? p.minimum : 20, p && 'maximum' in p && typeof p.maximum === 'number' ? p.maximum : 90];
+}
 
 const look: Intent = (step) => {
   const dir = new RegExp(`^(?:look|face|turn|point|pan|rotate)\\s+(?:due\\s+)?(?:(?:to|toward|towards|at)\\s+)?(?:the\\s+)?${COMPASS_WORD}$`).exec(step);
@@ -779,11 +914,25 @@ const look: Intent = (step) => {
       return `Looking towards azimuth ${degrees(num(r, 'look.azDeg'))}, elevation ${degrees(num(r, 'look.elDeg'))}.`;
     });
   }
-  const body = /^(?:look|face|turn|point)\s+(?:at|to|toward|towards)\s+(?:the\s+)?(sun|earth)$/.exec(step) ?? /^show (?:me )?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^find (?:the\s+)?(sun|earth)$/.exec(step);
+  const body = /^(?:look|face|turn|point)\s+(?:(?:at|to|toward|towards)\s+)?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^show (?:me )?(?:the\s+)?(sun|earth)$/.exec(step) ?? /^find (?:the\s+)?(sun|earth)$/.exec(step);
   if (body) {
     const which = body[1];
     const name = which === 'sun' ? 'the Sun' : 'Earth';
     return plan(`look at ${name}`, async (ctx) => {
+      if (ctx.has('lookAtBody')) {
+        const st = await ctx.state();
+        if (str(st, 'view') !== 'surface') await ctx.run('enterSurface');
+        const outcome = await ctx.api.run('lookAtBody', { body: which });
+        if (outcome.ok && isObject(outcome.result)) {
+          const r = outcome.result;
+          let clearance: number | undefined;
+          if (ctx.has('getAnalysis')) clearance = num(await ctx.analysis(), `now.${which}.clearanceDeg`);
+          const below = r.belowHorizontal === true ? ' It is below the horizontal, so the view looks at the horizon at its azimuth.' : '';
+          return `Facing ${name}: azimuth ${degrees(num(r, 'azDeg'))}, elevation ${degrees(num(r, 'elDeg'))}${clearance !== undefined ? `, its centre ${degrees(Math.abs(clearance), 2)} ${clearance >= 0 ? 'above' : 'below'} the terrain skyline` : ''}.${below}${which === 'earth' ? ` ${EARTH_NOTE}` : ''}`;
+        }
+        // The sky can be a moment behind a site that has just been entered: fall back to the analysis readout below.
+        if (!ctx.has('getAnalysis')) throw new Halt(outcome.ok ? `Could not face ${name}.` : outcome.error);
+      }
       if (!ctx.has('getAnalysis')) throw new Halt(`Turning to ${name} needs its direction from the site analysis, which this build does not expose to me. Its azimuth and elevation are shown in the key metrics; you can say "look at azimuth <number>".`);
       const a = await ctx.analysis();
       const azDeg = num(a, `now.${which}.azDeg`), elDeg = num(a, `now.${which}.elDeg`);
@@ -792,7 +941,7 @@ const look: Intent = (step) => {
       if (str(st, 'view') !== 'surface') await ctx.run('enterSurface');
       await ctx.run('lookAt', { azDeg, elDeg: Math.max(-85, Math.min(85, elDeg)) });
       const clearance = num(a, `now.${which}.clearanceDeg`);
-      return `Looking at ${name}: azimuth ${degrees(azDeg)}, elevation ${degrees(elDeg)}${clearance !== undefined ? `, ${degrees(Math.abs(clearance), 2)} ${clearance >= 0 ? 'above' : 'below'} the terrain skyline` : ''}.${which === 'earth' ? ` ${EARTH_NOTE}` : ''}`;
+      return `Looking at ${name}: azimuth ${degrees(azDeg)}, elevation ${degrees(elDeg)}${clearance !== undefined ? `, its centre ${degrees(Math.abs(clearance), 2)} ${clearance >= 0 ? 'above' : 'below'} the terrain skyline` : ''}.${which === 'earth' ? ` ${EARTH_NOTE}` : ''}`;
     });
   }
   const rel = /^(?:look|turn|pan|rotate|face)\s+(left|right|up|down|around|back|behind)$/.exec(step) ?? /^(turn around)$/.exec(step);
@@ -816,10 +965,16 @@ const look: Intent = (step) => {
       if (str(s, 'view') === 'surface') {
         const fov = num(s, 'look.fovDeg'), azDeg = num(s, 'look.azDeg');
         if (fov === undefined || azDeg === undefined) throw new Halt('The current field of view is not available.');
-        const r = await ctx.run('lookAt', { azDeg, fovDeg: Math.max(20, Math.min(90, inward ? fov * 0.7 : fov / 0.7)) });
+        const want = inward ? fov * 0.7 : fov / 0.7;
+        // The surface scene's own zoom (the same as scrolling); older builds only had lookAt.
+        const action = ctx.has('setFieldOfView') ? 'setFieldOfView' : 'lookAt';
+        const [min, max] = fovRange(ctx, action);
+        const fovDeg = Math.round(Math.max(min, Math.min(max, want)) * 10) / 10;
+        const r = await ctx.run(action, action === 'setFieldOfView' ? { fovDeg } : { azDeg, fovDeg });
         return `Field of view: ${degrees(num(r, 'look.fovDeg'))}.`;
       }
-      const lat = num(s, 'globeCenter.latDeg'), lon = num(s, 'globeCenter.lonDegEast'), alt = num(s, 'globeCenter.altitudeKm');
+      const { lat, lon } = viewPoint(s);
+      const alt = num(s, 'globeCenter.altitudeKm');
       if (lat === undefined || lon === undefined || alt === undefined) throw new Halt('The current globe camera is not available.');
       const altitudeKm = Math.max(10, Math.min(8 * MOON_RADIUS_KM, inward ? alt / 2 : alt * 2));
       await ctx.run('setGlobeCamera', { lat, lon, altitudeKm });
@@ -832,8 +987,8 @@ const look: Intent = (step) => {
 const globe: Intent = (step) => {
   if (/^(show|see|view|display|zoom out to|back to|go to)?\s*(the\s+)?(whole|entire|full) (moon|globe)$/.test(step) || /^zoom (all the way|fully) out$/.test(step)) {
     return plan('show the whole Moon', async (ctx) => {
-      const s = await ctx.state();
-      await ctx.run('setGlobeCamera', { lat: num(s, 'globeCenter.latDeg') ?? 0, lon: num(s, 'globeCenter.lonDegEast') ?? 0, altitudeKm: WHOLE_MOON_ALTITUDE_KM });
+      const { lat, lon } = viewPoint(await ctx.state());
+      await ctx.run('setGlobeCamera', { lat: lat ?? 0, lon: lon ?? 0, altitudeKm: WHOLE_MOON_ALTITUDE_KM });
       return 'Showing the whole Moon.';
     });
   }
@@ -893,7 +1048,8 @@ const exportResults: Intent = (step) => {
   const format = /\bjson\b/.test(step) ? 'json' : 'csv';
   return plan(`export the results as ${format.toUpperCase()}`, async (ctx) => {
     const r = await ctx.run('exportResults', { format });
-    return `Exported the mission-window results as ${format.toUpperCase()}${str(r, 'filename') ? `: ${str(r, 'filename')}` : ''}.`;
+    const size = num(r, 'bytes'), spells = num(r, 'spells');
+    return `Downloaded the mission-window results as ${format.toUpperCase()}${str(r, 'filename') ? `: ${str(r, 'filename')}` : ''}${size !== undefined ? ` (${size} bytes${spells !== undefined ? `, ${plural(spells, 'spell')}` : ''})` : ''}.`;
   });
 };
 
@@ -912,7 +1068,7 @@ const questions: Intent = (step) => {
   const body = /\b(sun|earth)\b/.exec(step);
   if (body && /\b(where|position|elevation|azimuth|up|visible|above|below|clearance|angle|high|risen|see)\b/.test(step) && /^(where|what|is|can|how|does|tell|give|show|sun|earth|the)\b/.test(step)) {
     const which = body[1];
-    const name = which === 'sun' ? 'The Sun' : 'Earth';
+    const name = which === 'sun' ? "The Sun's centre" : "Earth's centre";
     return plan(`say where ${which === 'sun' ? 'the Sun' : 'Earth'} is`, async (ctx) => {
       if (!ctx.has('getAnalysis')) throw new Halt(`${name}'s azimuth, elevation and clearance are shown in the key metrics of the surface view. Reading them out here needs the analysis readout, which this build does not expose to me.`);
       const a = await ctx.analysis();
@@ -929,11 +1085,21 @@ const questions: Intent = (step) => {
       const lines = [`${str(s, 'site.name') ?? 'The selected site'}, mission window from ${utc(str(s, 'missionWindow.startUtc'))} for ${hours(num(s, 'missionWindow.durationH'))}, mast ${num(s, 'mastHeightM') ?? 'unavailable'} m:`, `${metricsText(a)}.`];
       // Requirements the user set, when the analysis checked them and they are not met.
       const band = at(a, 'requirements.sunElevationBand');
-      if (isObject(band) && band.metForWholeWindow === false) {
-        lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(num(band, 'windowMinSunElDeg'))} to ${degrees(num(band, 'windowMaxSunElDeg'))}.`);
+      if (isObject(band)) {
+        const lo = num(band, 'windowMinSunElDeg'), hi = num(band, 'windowMaxSunElDeg');
+        // The default 0 to 90 deg is no requirement (finding Q-5). From T-46 the core says so itself
+        // (`required: false`, with a `note`); before it, it reported that default band as left
+        // whenever the Sun went below the horizontal, so the band's values decide there.
+        const unset = band.required === false || (band.required === undefined && defaultSunBand(band));
+        if (unset) {
+          const range = lo !== undefined && hi !== undefined ? ` The Sun's elevation ranges from ${degrees(lo)} to ${degrees(hi)} during the window${lo < 0 ? ', so it goes below the horizontal' : ''}.` : '';
+          lines.push(`${str(band, 'note') ?? 'No solar elevation band is set (the Filters default, 0° to 90°, means no requirement).'}${range}`);
+        } else if (band.metForWholeWindow === false) {
+          lines.push(`The Sun leaves the required elevation band (${degrees(num(band, 'minDeg'))} to ${degrees(num(band, 'maxDeg'))}) during the window: it ranges from ${degrees(lo)} to ${degrees(hi)}.`);
+        }
       }
       const gap = at(a, 'requirements.maxEarthGap');
-      if (isObject(gap) && gap.met === false) lines.push(`The longest Earth gap (${hours(num(gap, 'longestEarthGapH'))}) is longer than the tolerated ${hours(num(gap, 'limitH'))}.`);
+      if (isObject(gap) && gap.met === false) lines.push(`The longest Earth-centre gap (${hours(num(gap, 'longestEarthGapH'))}) is longer than the tolerated ${hours(num(gap, 'limitH'))}.`);
       const dem = at(a, 'provenance.elevationData');
       if (Array.isArray(dem) && dem.some(isObject)) {
         lines.push(`Elevation data, finest first: ${dem.filter(isObject).slice(0, 3).map((d) => `${str(d, 'name') ?? 'unnamed'} (${num(d, 'resolutionM') ?? '?'} m)`).join('; ')}.`);
@@ -981,7 +1147,25 @@ const site: Intent = (step) => {
   });
 };
 
-const INTENTS: Intent[] = [help, listAll, rawCall, assistantUi, compareFamily, nearby, pickCandidate, blockage, events, delay, clock, mission, timeShift, timeSet, overlays, missions, lighting, views, look, globe, pin, exportResults, questions, site];
+// Order matters: the first match wins. The science queries sit early because their words
+// ("ice near here", "average sunlight here") would otherwise read as a nearby scan or as the
+// mission-window metrics; walking sits before the clock commands, whose "m" means minutes.
+const INTENTS: Intent[] = [
+  help, listAll, rawCall, assistantUi,
+  later.iceNearest, later.siteScience,
+  compareFamily, later.comparePanel, nearby, pickCandidate, blockage, events, delay, clock, mission,
+  later.walk,
+  timeShift, timeSet,
+  later.relief, later.coverage, later.iceOutlines,
+  overlays, missions, lighting,
+  later.skyPaths, later.hudPanels,
+  views,
+  later.fieldOfView,
+  look, globe, pin, exportResults,
+  later.surfaceStatus, later.listSites, later.outlook, later.presets, later.flags,
+  later.siteRecords, later.realClock,
+  questions, site,
+];
 
 /** The plan for one step of a request, or null when no intent matches it. */
 export function matchIntent(step: string, raw: string): Plan | null {

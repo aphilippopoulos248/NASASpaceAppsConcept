@@ -9,6 +9,15 @@ import { globeFovDeg, viewFootprint } from './footprint';
 import './locatorMap.css';
 
 const MAX_ZOOM = 16;
+
+// Map view: zoom 1 shows the whole Moon; when zoomed it follows the globe centre / site.
+// Presentation state of the one locator map, kept here rather than in AppState.
+let zoom = 1;
+
+/** Zoom of the locator map (1 = the whole Moon), as getState reports it. */
+export function locatorZoom(): number {
+  return zoom;
+}
 const fmt = (lat: number, lon: number) => `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? 'E' : 'W'}`;
 
 export function mountLocatorMap(region: HTMLElement): void {
@@ -33,8 +42,6 @@ export function mountLocatorMap(region: HTMLElement): void {
   img.src = `${import.meta.env.BASE_URL}textures/moon_color_2k.jpg`;
   img.onload = () => draw();
 
-  // Map view: zoom 1 shows the whole Moon; when zoomed it follows the globe centre / site.
-  let zoom = 1;
   let hover: { lat: number; lon: number } | null = null;
 
   registerActions([

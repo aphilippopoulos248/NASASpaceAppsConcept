@@ -1,0 +1,1930 @@
+{
+ "build": "9bc4878",
+ "toleranceDeg": 0.01,
+ "tolerancePct": 0.1,
+ "cases": {
+  "chandrayaan-3.surface": {
+   "id": "chandrayaan-3.surface",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 3.140625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2023-09-04T04:53:52Z",
+       "reference": "2023-09-04T04:53:35Z",
+       "diffS": 16.40625,
+       "rateDegPerMin": 0.003174610198122263,
+       "asSkylineDeg": 0.0008680574760490563
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2023-09-04T08:02:18Z",
+       "reference": "2023-09-04T08:02:23Z",
+       "diffS": -5.15625,
+       "rateDegPerMin": 0.0027512029680432093,
+       "asSkylineDeg": 0.0002364315050662133
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2023-09-04T06:25:35Z",
+       "reference": "2023-09-04T06:25:47Z",
+       "diffS": -12.65625,
+       "rateDegPerMin": 0.002709822748445667,
+       "asSkylineDeg": 0.0005716032360002579
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 2.7526041666666665,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2023-09-19T23:56:40Z",
+       "reference": "2023-09-19T23:57:08Z",
+       "diffS": -27.65625,
+       "rateDegPerMin": 0.003219389432279396,
+       "asSkylineDeg": 0.001483937316441284
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2023-09-20T02:41:50Z",
+       "reference": "2023-09-20T02:42:19Z",
+       "diffS": -29.53125,
+       "rateDegPerMin": 0.003216335044647911,
+       "asSkylineDeg": 0.0015830399047876437
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2023-09-20T01:19:20Z",
+       "reference": "2023-09-20T01:19:43Z",
+       "diffS": -22.96875,
+       "rateDegPerMin": 0.0032175762389925477,
+       "asSkylineDeg": 0.0012317284039893347
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 100,
+     "longestEarthAnyGapH": 0,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 100
+    },
+    "reference": {
+     "earthAnyPct": 100.0,
+     "longestEarthAnyGapH": 0.0,
+     "earthCentrePct": 100.0
+    },
+    "anyMinusReference": 0.0
+   }
+  },
+  "earth-60d.im-2": {
+   "id": "earth-60d.im-2",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 4.859375,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-05T22:44:08Z",
+       "reference": "2025-03-05T22:43:45Z",
+       "diffS": 23.90625,
+       "rateDegPerMin": 0.0026761499226686247,
+       "asSkylineDeg": 0.0010662784848132802
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-06T03:35:42Z",
+       "reference": "2025-03-06T03:38:08Z",
+       "diffS": -145.78125,
+       "rateDegPerMin": 0.002186334906066234,
+       "asSkylineDeg": 0.005312110592082803
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-06T00:40:33Z",
+       "reference": "2025-03-06T00:32:49Z",
+       "diffS": 463.59375,
+       "rateDegPerMin": 0.0023894561691992777,
+       "asSkylineDeg": 0.018462282432328794
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 49.088541666666664,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-18T06:22:16Z",
+       "reference": "2025-03-18T06:25:37Z",
+       "diffS": -201.26953125,
+       "rateDegPerMin": 0.0007344802155528907,
+       "asSkylineDeg": 0.0024638081449454875
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-20T07:27:35Z",
+       "reference": "2025-03-20T07:40:58Z",
+       "diffS": -803.02734375,
+       "rateDegPerMin": 0.0005629716954669295,
+       "asSkylineDeg": 0.0075346944202873715
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-19T04:05:42Z",
+       "reference": "2025-03-19T04:07:46Z",
+       "diffS": -123.92578125,
+       "rateDegPerMin": 0.0006377894210560786,
+       "asSkylineDeg": 0.0013173092046226624
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 6.578125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-19T16:42:07Z",
+       "reference": "2025-03-19T16:43:56Z",
+       "diffS": -109.21875,
+       "rateDegPerMin": 0.0012347455119233741,
+       "asSkylineDeg": 0.002247622689673017
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-19T23:16:48Z",
+       "reference": "2025-03-19T23:17:13Z",
+       "diffS": -24.84375,
+       "rateDegPerMin": 0.001425416452953021,
+       "asSkylineDeg": 0.0005902115000508603
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-19T20:03:31Z",
+       "reference": "2025-03-19T20:03:48Z",
+       "diffS": -17.34375,
+       "rateDegPerMin": 0.0013186013703477828,
+       "asSkylineDeg": 0.00038115820861615596
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 42.8671875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-24T07:59:27Z",
+       "reference": "2025-03-24T07:56:11Z",
+       "diffS": 195.99609375,
+       "rateDegPerMin": 0.0005254086153407833,
+       "asSkylineDeg": 0.0017163006038231642
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-26T02:51:29Z",
+       "reference": "2025-03-26T02:53:45Z",
+       "diffS": -136.23046875,
+       "rateDegPerMin": 0.0009581261301530031,
+       "asSkylineDeg": 0.0021754328638727855
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-25T08:18:59Z",
+       "reference": "2025-03-25T08:15:54Z",
+       "diffS": 185.44921875,
+       "rateDegPerMin": 0.0007854995728100445,
+       "asSkylineDeg": 0.0024278380351013583
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 4.5625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-04T19:03:40Z",
+       "reference": "2025-04-04T19:04:44Z",
+       "diffS": -63.28125,
+       "rateDegPerMin": 0.0015265749886461677,
+       "asSkylineDeg": 0.001610059558337755
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-04T23:37:25Z",
+       "reference": "2025-04-04T23:37:30Z",
+       "diffS": -5.15625,
+       "rateDegPerMin": 0.001999693239679301,
+       "asSkylineDeg": 0.00017184863778493993
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-04T21:25:33Z",
+       "reference": "2025-04-04T21:25:05Z",
+       "diffS": 27.65625,
+       "rateDegPerMin": 0.0021953663491367514,
+       "asSkylineDeg": 0.0010119266765552214
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 55.169270833333336,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-14T13:15:52Z",
+       "reference": "2025-04-14T13:11:06Z",
+       "diffS": 285.64453125,
+       "rateDegPerMin": 0.0007124876651585232,
+       "asSkylineDeg": 0.0033919700855935555
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-16T20:26:01Z",
+       "reference": "2025-04-16T20:32:33Z",
+       "diffS": -391.69921875,
+       "rateDegPerMin": 0.00037228480055051527,
+       "asSkylineDeg": 0.0024303944254689402
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-15T12:47:16Z",
+       "reference": "2025-04-15T12:51:48Z",
+       "diffS": -271.58203125,
+       "rateDegPerMin": 0.0006015442679894178,
+       "asSkylineDeg": 0.0027228102364560075
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 9.869791666666666,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-17T16:13:12Z",
+       "reference": "2025-04-17T16:13:26Z",
+       "diffS": -13.59375,
+       "rateDegPerMin": 0.0009476440837632438,
+       "asSkylineDeg": 0.00021470061272760993
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-18T02:05:23Z",
+       "reference": "2025-04-18T02:06:39Z",
+       "diffS": -75.46875,
+       "rateDegPerMin": 0.0011716206129837037,
+       "asSkylineDeg": 0.0014736790522685648
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-17T20:53:03Z",
+       "reference": "2025-04-17T20:46:13Z",
+       "diffS": 410.15625,
+       "rateDegPerMin": 0.0006186065302509203,
+       "asSkylineDeg": 0.00422875557788715
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 46.645833333333336,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-20T12:04:55Z",
+       "reference": "2025-04-20T12:02:00Z",
+       "diffS": 174.90234375,
+       "rateDegPerMin": 0.00046338975729809384,
+       "asSkylineDeg": 0.001350799243686338
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-22T10:43:40Z",
+       "reference": "2025-04-22T10:43:43Z",
+       "diffS": -2.63671875,
+       "rateDegPerMin": 0.0008877767080466281,
+       "asSkylineDeg": 3.901362486533034e-05
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-21T14:48:50Z",
+       "reference": "2025-04-21T14:48:50Z",
+       "diffS": -0.29296875,
+       "rateDegPerMin": 0.0007132575534551933,
+       "asSkylineDeg": 3.482702897730436e-06
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 87.20974392361111,
+     "longestEarthAnyGapH": 96.53125,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 79.56615306712963
+    },
+    "reference": {
+     "earthAnyPct": 87.23990912889992,
+     "longestEarthAnyGapH": 96.25398496058253,
+     "earthCentrePct": 79.5777826645525
+    },
+    "anyMinusReference": -0.03016520528881017
+   }
+  },
+  "earth-60d.shackleton-rim": {
+   "id": "earth-60d.shackleton-rim",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 32.828125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-02T21:58:40Z",
+       "reference": "2025-03-02T21:55:57Z",
+       "diffS": 163.76953125,
+       "rateDegPerMin": 0.001122960977375076,
+       "asSkylineDeg": 0.003065113214612634
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-04T06:48:22Z",
+       "reference": "2025-03-04T06:49:30Z",
+       "diffS": -68.26171875,
+       "rateDegPerMin": 0.0009019621886068308,
+       "asSkylineDeg": 0.0010261581540302323
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-03T13:35:14Z",
+       "reference": "2025-03-03T13:36:05Z",
+       "diffS": -50.68359375,
+       "rateDegPerMin": 0.0010228825428995059,
+       "asSkylineDeg": 0.0008640560543047584
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 35.078125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-11T03:23:59Z",
+       "reference": "2025-03-11T03:25:26Z",
+       "diffS": -87.01171875,
+       "rateDegPerMin": 0.0007842160304361023,
+       "asSkylineDeg": 0.001137266411325793
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-12T14:28:40Z",
+       "reference": "2025-03-12T14:29:15Z",
+       "diffS": -34.86328125,
+       "rateDegPerMin": 0.0009655532360599572,
+       "asSkylineDeg": 0.0005610392338434322
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-11T21:52:44Z",
+       "reference": "2025-03-11T21:53:25Z",
+       "diffS": -41.30859375,
+       "rateDegPerMin": 0.0008852816969566746,
+       "asSkylineDeg": 0.000609495699564898
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 32.6640625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-30T07:33:50Z",
+       "reference": "2025-03-30T07:31:43Z",
+       "diffS": 126.26953125,
+       "rateDegPerMin": 0.0011540799548410696,
+       "asSkylineDeg": 0.002428752248713384
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-31T16:13:40Z",
+       "reference": "2025-03-31T16:14:05Z",
+       "diffS": -24.90234375,
+       "rateDegPerMin": 0.000921874142067125,
+       "asSkylineDeg": 0.0003826137796665314
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-30T22:58:03Z",
+       "reference": "2025-03-30T22:55:14Z",
+       "diffS": 168.45703125,
+       "rateDegPerMin": 0.0010513704728571938,
+       "asSkylineDeg": 0.0029518458100238594
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 35.1328125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-07T08:57:44Z",
+       "reference": "2025-04-07T08:58:25Z",
+       "diffS": -41.30859375,
+       "rateDegPerMin": 0.0007761695530148494,
+       "asSkylineDeg": 0.000534374545776825
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-08T20:05:42Z",
+       "reference": "2025-04-08T20:05:45Z",
+       "diffS": -2.63671875,
+       "rateDegPerMin": 0.0009625782703088781,
+       "asSkylineDeg": 4.230080289443312e-05
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-08T03:27:35Z",
+       "reference": "2025-04-08T03:26:20Z",
+       "diffS": 74.70703125,
+       "rateDegPerMin": 0.0008897121937980756,
+       "asSkylineDeg": 0.0011077959444263149
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 33.661458333333336,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-26T18:22:07Z",
+       "reference": "2025-04-26T18:21:39Z",
+       "diffS": 27.83203125,
+       "rateDegPerMin": 0.0011351313026306542,
+       "asSkylineDeg": 0.0005265501647944929
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-28T04:01:48Z",
+       "reference": "2025-04-28T03:59:05Z",
+       "diffS": 163.18359375,
+       "rateDegPerMin": 0.000875268702100751,
+       "asSkylineDeg": 0.002380491538428312
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-27T10:06:29Z",
+       "reference": "2025-04-27T10:03:38Z",
+       "diffS": 170.80078125,
+       "rateDegPerMin": 0.0010238462944962556,
+       "asSkylineDeg": 0.002914562449664634
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 37.4071361400463,
+     "longestEarthAnyGapH": 430.2734375,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 31.85248480902777
+    },
+    "reference": {
+     "earthAnyPct": 37.414037630647236,
+     "longestEarthAnyGapH": 430.2647117836608,
+     "earthCentrePct": 31.857270170484135
+    },
+    "anyMinusReference": -0.006901490600938587
+   }
+  },
+  "earth-60d.connecting-ridge": {
+   "id": "earth-60d.connecting-ridge",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 34.400065104166664,
+     "instants": [
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-01T09:36:29Z",
+       "reference": "2025-03-01T09:39:00Z",
+       "diffS": -150.70703125,
+       "rateDegPerMin": 0.000990600126085539,
+       "asSkylineDeg": 0.0024881734026371213
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 31.205729166666668,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-14T02:56:20Z",
+       "reference": "2025-03-14T02:54:08Z",
+       "diffS": 132.12890625,
+       "rateDegPerMin": 0.0009999178934136932,
+       "asSkylineDeg": 0.002201967626609256
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-15T10:08:40Z",
+       "reference": "2025-03-15T10:09:56Z",
+       "diffS": -75.87890625,
+       "rateDegPerMin": 0.0008970035082562777,
+       "asSkylineDeg": 0.00113439408514832
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-14T18:19:55Z",
+       "reference": "2025-03-14T18:21:52Z",
+       "diffS": -116.30859375,
+       "rateDegPerMin": 0.0009763327715155423,
+       "asSkylineDeg": 0.0018925981947835464
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 30.7421875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-27T07:06:01Z",
+       "reference": "2025-03-27T07:05:58Z",
+       "diffS": 2.63671875,
+       "rateDegPerMin": 0.0010252997620128212,
+       "asSkylineDeg": 4.505711844782906e-05
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-28T13:50:33Z",
+       "reference": "2025-03-28T13:48:17Z",
+       "diffS": 135.64453125,
+       "rateDegPerMin": 0.0011445585407532377,
+       "asSkylineDeg": 0.0025875517791442825
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-27T22:33:59Z",
+       "reference": "2025-03-27T22:35:01Z",
+       "diffS": -61.81640625,
+       "rateDegPerMin": 0.0010393587518517933,
+       "asSkylineDeg": 0.0010708237140660565
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 21.809895833333332,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-07T23:47:44Z",
+       "reference": "2025-04-07T23:48:06Z",
+       "diffS": -22.03125,
+       "rateDegPerMin": 0.0005206147669791772,
+       "asSkylineDeg": 0.00019116323475016662
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-08T21:36:20Z",
+       "reference": "2025-04-08T21:36:11Z",
+       "diffS": 8.90625,
+       "rateDegPerMin": 0.0005435234247790355,
+       "asSkylineDeg": 8.067925836563808e-05
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-08T12:11:20Z",
+       "reference": "2025-04-08T12:12:27Z",
+       "diffS": -67.03125,
+       "rateDegPerMin": 0.0005259839508566788,
+       "asSkylineDeg": 0.0005876226950976959
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 30.388020833333332,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-10T08:53:59Z",
+       "reference": "2025-04-10T08:54:51Z",
+       "diffS": -51.85546875,
+       "rateDegPerMin": 0.0010393490937636862,
+       "asSkylineDeg": 0.0008982655742000609
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-11T15:17:16Z",
+       "reference": "2025-04-11T15:18:17Z",
+       "diffS": -61.23046875,
+       "rateDegPerMin": 0.0009449270929533515,
+       "asSkylineDeg": 0.0009643054806018089
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-10T23:43:22Z",
+       "reference": "2025-04-10T23:39:12Z",
+       "diffS": 249.31640625,
+       "rateDegPerMin": 0.0010125739544653012,
+       "asSkylineDeg": 0.004207521656494
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 21.416666666666668,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-10T22:55:23Z",
+       "reference": "2025-04-10T22:53:40Z",
+       "diffS": 103.59375,
+       "rateDegPerMin": 0.0004076103259464947,
+       "asSkylineDeg": 0.0007037647033919948
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-11T20:20:23Z",
+       "reference": "2025-04-11T20:18:30Z",
+       "diffS": 113.90625,
+       "rateDegPerMin": 0.0004280725431842214,
+       "asSkylineDeg": 0.0008126689687012953
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-11T09:30:23Z",
+       "reference": "2025-04-11T09:29:06Z",
+       "diffS": 77.34375,
+       "rateDegPerMin": 0.00041736816349091654,
+       "asSkylineDeg": 0.0005380136482500096
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 4.299479166666667,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-12T04:29:27Z",
+       "reference": "2025-04-12T04:32:00Z",
+       "diffS": -152.34375,
+       "rateDegPerMin": 0.002312582603361646,
+       "asSkylineDeg": 0.005871791766347929
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-12T08:47:25Z",
+       "reference": "2025-04-12T08:41:45Z",
+       "diffS": 340.78125,
+       "rateDegPerMin": 0.0009699383944234974,
+       "asSkylineDeg": 0.005508946974577208
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-12T06:18:50Z",
+       "reference": "2025-04-12T06:16:59Z",
+       "diffS": 111.09375,
+       "rateDegPerMin": 0.0025065673787882936,
+       "asSkylineDeg": 0.0046410661622877
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 14.645833333333334,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-12T13:08:40Z",
+       "reference": "2025-04-12T13:05:29Z",
+       "diffS": 191.71875,
+       "rateDegPerMin": 0.0013006263640947813,
+       "asSkylineDeg": 0.004155907679021606
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-13T03:47:25Z",
+       "reference": "2025-04-13T03:48:20Z",
+       "diffS": -54.84375,
+       "rateDegPerMin": 0.002036938068057381,
+       "asSkylineDeg": 0.0018618887028337
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-13T00:34:37Z",
+       "reference": "2025-04-13T00:35:01Z",
+       "diffS": -24.84375,
+       "rateDegPerMin": 0.0019025557740797172,
+       "asSkylineDeg": 0.0007877770002048829
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 18.1875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-22T17:15:42Z",
+       "reference": "2025-04-22T17:15:38Z",
+       "diffS": 4.21875,
+       "rateDegPerMin": 0.0003801255775524037,
+       "asSkylineDeg": 2.6727579671653387e-05
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-23T11:26:57Z",
+       "reference": "2025-04-23T11:27:27Z",
+       "diffS": -29.53125,
+       "rateDegPerMin": 0.0006782420682158591,
+       "asSkylineDeg": 0.00033382226794999314
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-23T04:00:14Z",
+       "reference": "2025-04-23T04:00:54Z",
+       "diffS": -39.84375,
+       "rateDegPerMin": 0.0004900030755736751,
+       "asSkylineDeg": 0.0003253926673731436
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 31.8671875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-23T12:56:38Z",
+       "reference": "2025-04-23T12:42:43Z",
+       "diffS": 835.25390625,
+       "rateDegPerMin": 0.00100598961657683,
+       "asSkylineDeg": 0.014004279281545618
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-24T20:48:40Z",
+       "reference": "2025-04-24T20:53:02Z",
+       "diffS": -261.62109375,
+       "rateDegPerMin": 0.0010799356029758123,
+       "asSkylineDeg": 0.004708898893834962
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-24T05:03:22Z",
+       "reference": "2025-04-24T05:00:26Z",
+       "diffS": 175.48828125,
+       "rateDegPerMin": 0.001001822846148137,
+       "asSkylineDeg": 0.0029301361564586627
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 50.65625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-26T09:13:50Z",
+       "reference": "2025-04-26T09:21:23Z",
+       "diffS": -453.28125,
+       "rateDegPerMin": 0.0001873773110079302,
+       "asSkylineDeg": 0.0014155770292552227
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-28T11:53:12Z",
+       "reference": "2025-04-28T11:55:57Z",
+       "diffS": -164.53125,
+       "rateDegPerMin": 0.0005452248043168462,
+       "asSkylineDeg": 0.0014951086430876016
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-28T00:36:20Z",
+       "reference": "2025-04-28T00:42:45Z",
+       "diffS": -385.78125,
+       "rateDegPerMin": 0.00033805479795456783,
+       "asSkylineDeg": 0.0021735867087235104
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 60.37416811342594,
+     "longestEarthAnyGapH": 285.65625,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 56.00224247685184
+    },
+    "reference": {
+     "earthAnyPct": 60.39294011214817,
+     "longestEarthAnyGapH": 285.40748809463446,
+     "earthCentrePct": 56.001666647376766
+    },
+    "anyMinusReference": -0.018771998722229455
+   }
+  },
+  "earth-60d.limb-east": {
+   "id": "earth-60d.limb-east",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 31.1875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-01T19:59:55Z",
+       "reference": "2025-03-01T19:59:35Z",
+       "diffS": 20.21484375,
+       "rateDegPerMin": 0.001096384853375619,
+       "asSkylineDeg": 0.0003693874750142466
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-03T03:11:10Z",
+       "reference": "2025-03-03T03:11:29Z",
+       "diffS": -19.04296875,
+       "rateDegPerMin": 0.0010404658288204003,
+       "asSkylineDeg": 0.0003302259710611622
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-02T11:24:18Z",
+       "reference": "2025-03-02T11:24:18Z",
+       "diffS": 0.29296875,
+       "rateDegPerMin": 0.0010822863115841248,
+       "asSkylineDeg": 5.2846011307818595e-06
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.0546875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-14T12:04:37Z",
+       "reference": "2025-03-14T12:04:22Z",
+       "diffS": 14.53125,
+       "rateDegPerMin": 0.00843833221021581,
+       "asSkylineDeg": 0.0020436585821616412
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-14T13:07:53Z",
+       "reference": "2025-03-14T13:07:43Z",
+       "diffS": 10.78125,
+       "rateDegPerMin": 0.008438487435009585,
+       "asSkylineDeg": 0.001516290710978285
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-14T12:36:10Z",
+       "reference": "2025-03-14T12:36:02Z",
+       "diffS": 7.96875,
+       "rateDegPerMin": 0.008438494419782935,
+       "asSkylineDeg": 0.0011207375401274212
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 32.703125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-15T17:29:37Z",
+       "reference": "2025-03-15T17:27:18Z",
+       "diffS": 138.57421875,
+       "rateDegPerMin": 0.0008871340720671694,
+       "asSkylineDeg": 0.00204889851605357
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-17T02:11:48Z",
+       "reference": "2025-03-17T02:10:21Z",
+       "diffS": 86.42578125,
+       "rateDegPerMin": 0.0009406067532255341,
+       "asSkylineDeg": 0.0013548778916090457
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-16T10:05:52Z",
+       "reference": "2025-03-16T10:03:59Z",
+       "diffS": 112.20703125,
+       "rateDegPerMin": 0.0009230854851933201,
+       "asSkylineDeg": 0.0017262780313918047
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 1.0520833333333333,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-29T06:22:16Z",
+       "reference": "2025-03-29T06:21:15Z",
+       "diffS": 60.46875,
+       "rateDegPerMin": 0.008486227072331973,
+       "asSkylineDeg": 0.008552525721334567
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-29T07:25:23Z",
+       "reference": "2025-03-29T07:24:20Z",
+       "diffS": 63.28125,
+       "rateDegPerMin": 0.008485377602470617,
+       "asSkylineDeg": 0.008949421690105729
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-29T06:53:50Z",
+       "reference": "2025-03-29T06:52:47Z",
+       "diffS": 62.34375,
+       "rateDegPerMin": 0.008486195542726074,
+       "asSkylineDeg": 0.008817687556113812
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 25.486979166666668,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-30T02:37:44Z",
+       "reference": "2025-03-30T02:37:31Z",
+       "diffS": 12.59765625,
+       "rateDegPerMin": 0.0013353164363823118,
+       "asSkylineDeg": 0.0002803642908419893
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-31T04:06:57Z",
+       "reference": "2025-03-31T04:07:11Z",
+       "diffS": -13.76953125,
+       "rateDegPerMin": 0.0013126874254957102,
+       "asSkylineDeg": 0.0003012515087807538
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-30T15:19:37Z",
+       "reference": "2025-03-30T15:19:40Z",
+       "diffS": -3.22265625,
+       "rateDegPerMin": 0.0013375698315988066,
+       "asSkylineDeg": 7.184212962688902e-05
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 31.950520833333332,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-12T13:29:37Z",
+       "reference": "2025-04-12T13:28:26Z",
+       "diffS": 70.60546875,
+       "rateDegPerMin": 0.0009337871475746384,
+       "asSkylineDeg": 0.001098841321120546
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-13T21:26:38Z",
+       "reference": "2025-04-13T21:26:14Z",
+       "diffS": 24.31640625,
+       "rateDegPerMin": 0.0009348569828018238,
+       "asSkylineDeg": 0.0003788727029909735
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-13T05:28:50Z",
+       "reference": "2025-04-13T05:28:00Z",
+       "diffS": 49.51171875,
+       "rateDegPerMin": 0.0009407117088492817,
+       "asSkylineDeg": 0.000776270892556292
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.0442708333333333,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-13T00:57:44Z",
+       "reference": "2025-04-13T00:57:42Z",
+       "diffS": 2.34375,
+       "rateDegPerMin": 0.008449405183376647,
+       "asSkylineDeg": 0.0003300548899756503
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-13T02:00:23Z",
+       "reference": "2025-04-13T02:00:26Z",
+       "diffS": -2.34375,
+       "rateDegPerMin": 0.008449496510904084,
+       "asSkylineDeg": 0.00033005845745719077
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-13T01:29:08Z",
+       "reference": "2025-04-13T01:29:03Z",
+       "diffS": 5.15625,
+       "rateDegPerMin": 0.008449602231658332,
+       "asSkylineDeg": 0.0007261376917831379
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 23.760416666666668,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-27T11:51:57Z",
+       "reference": "2025-04-27T11:51:56Z",
+       "diffS": 0.87890625,
+       "rateDegPerMin": 0.0014244077016960506,
+       "asSkylineDeg": 2.086534719281324e-05
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-28T11:37:35Z",
+       "reference": "2025-04-28T11:37:58Z",
+       "diffS": -23.14453125,
+       "rateDegPerMin": 0.0014266590343583116,
+       "asSkylineDeg": 0.0005503225767300128
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-27T23:45:05Z",
+       "reference": "2025-04-27T23:45:22Z",
+       "diffS": -17.28515625,
+       "rateDegPerMin": 0.0014390422964549385,
+       "asSkylineDeg": 0.0004145678490763739
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 1.0416666666666667,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-27T18:51:57Z",
+       "reference": "2025-04-27T18:51:54Z",
+       "diffS": 3.28125,
+       "rateDegPerMin": 0.008494969190550018,
+       "asSkylineDeg": 0.0004645686276082041
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-27T19:54:27Z",
+       "reference": "2025-04-27T19:54:27Z",
+       "diffS": 0.46875,
+       "rateDegPerMin": 0.008494981198411994,
+       "asSkylineDeg": 6.63670406125937e-05
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-27T19:23:12Z",
+       "reference": "2025-04-27T19:23:10Z",
+       "diffS": 2.34375,
+       "rateDegPerMin": 0.00849503594364659,
+       "asSkylineDeg": 0.0003318373415486949
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 54.246328848379626,
+     "longestEarthAnyGapH": 326.421875,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 49.242711950231474
+    },
+    "reference": {
+     "earthAnyPct": 54.244810329575415,
+     "longestEarthAnyGapH": 326.4285418358114,
+     "earthCentrePct": 49.23785604333283
+    },
+    "anyMinusReference": 0.0015185188042110553
+   }
+  },
+  "earth-60d.limb-west": {
+   "id": "earth-60d.limb-west",
+   "ephemeris": "model",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 1.3098958333333333,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-14T13:08:50Z",
+       "reference": "2025-03-14T13:08:34Z",
+       "diffS": 15.46875,
+       "rateDegPerMin": 0.0068066993321385105,
+       "asSkylineDeg": 0.0017548521715669597
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-14T14:27:25Z",
+       "reference": "2025-03-14T14:27:06Z",
+       "diffS": 19.21875,
+       "rateDegPerMin": 0.006809041584600273,
+       "asSkylineDeg": 0.002181021132567275
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-14T13:48:03Z",
+       "reference": "2025-03-14T13:47:50Z",
+       "diffS": 12.65625,
+       "rateDegPerMin": 0.006808579281516458,
+       "asSkylineDeg": 0.0014361846921948779
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 85.8125,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-03-20T02:06:20Z",
+       "reference": "2025-03-20T01:59:08Z",
+       "diffS": 431.54296875,
+       "rateDegPerMin": 0.0003316540274784785,
+       "asSkylineDeg": 0.0023853827269326115
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-03-23T15:55:05Z",
+       "reference": "2025-03-23T15:48:18Z",
+       "diffS": 406.34765625,
+       "rateDegPerMin": 0.00034814481608158587,
+       "asSkylineDeg": 0.002357797167505662
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-03-21T21:11:01Z",
+       "reference": "2025-03-21T21:03:50Z",
+       "diffS": 430.95703125,
+       "rateDegPerMin": 0.0003727226859657762,
+       "asSkylineDeg": 0.002677124370388949
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.1015625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-28T10:00:23Z",
+       "reference": "2025-03-28T09:59:58Z",
+       "diffS": 25.78125,
+       "rateDegPerMin": 0.008411536027354671,
+       "asSkylineDeg": 0.0036143318867539603
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-28T11:06:29Z",
+       "reference": "2025-03-28T11:06:16Z",
+       "diffS": 12.65625,
+       "rateDegPerMin": 0.008476583484191558,
+       "asSkylineDeg": 0.0017880293286966567
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-28T10:33:22Z",
+       "reference": "2025-03-28T10:33:11Z",
+       "diffS": 10.78125,
+       "rateDegPerMin": 0.008475949288264673,
+       "asSkylineDeg": 0.0015230221377350583
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 65.7890625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-30T12:42:53Z",
+       "reference": "2025-03-30T12:41:50Z",
+       "diffS": 63.57421875,
+       "rateDegPerMin": 0.00043178000823473894,
+       "asSkylineDeg": 0.0004575012782565349
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-02T06:30:14Z",
+       "reference": "2025-04-02T06:31:32Z",
+       "diffS": -78.22265625,
+       "rateDegPerMin": 0.0005450555263029067,
+       "asSkylineDeg": 0.0007105948511859183
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-01T00:49:37Z",
+       "reference": "2025-04-01T00:49:10Z",
+       "diffS": 26.07421875,
+       "rateDegPerMin": 0.0005085311592152308,
+       "asSkylineDeg": 0.00022099254477615012
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "rise",
+     "hours": 1.296875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-13T03:11:10Z",
+       "reference": "2025-04-13T03:11:08Z",
+       "diffS": 2.34375,
+       "rateDegPerMin": 0.006819672476078953,
+       "asSkylineDeg": 0.0002663934560968341
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-13T04:28:59Z",
+       "reference": "2025-04-13T04:28:53Z",
+       "diffS": 6.09375,
+       "rateDegPerMin": 0.006820418649744919,
+       "asSkylineDeg": 0.0006926987691147184
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-13T03:50:05Z",
+       "reference": "2025-04-13T03:50:00Z",
+       "diffS": 4.21875,
+       "rateDegPerMin": 0.00682055739895171,
+       "asSkylineDeg": 0.0004795704421137921
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "rise",
+     "hours": 65.9296875,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-limb",
+       "inWindow": true,
+       "app": "2025-04-17T07:33:59Z",
+       "reference": "2025-04-17T07:34:18Z",
+       "diffS": -18.45703125,
+       "rateDegPerMin": 0.000412171175367515,
+       "asSkylineDeg": 0.00012679093773512425
+      },
+      {
+       "which": "end",
+       "edge": "whole-clear",
+       "inWindow": true,
+       "app": "2025-04-20T01:29:46Z",
+       "reference": "2025-04-20T01:26:44Z",
+       "diffS": 181.93359375,
+       "rateDegPerMin": 0.0005002088437118246,
+       "asSkylineDeg": 0.0015167465427004057
+      },
+      {
+       "which": "centre",
+       "up": true,
+       "app": "2025-04-18T17:57:07Z",
+       "reference": "2025-04-18T17:54:15Z",
+       "diffS": 171.38671875,
+       "rateDegPerMin": 0.00047927678124981554,
+       "asSkylineDeg": 0.0013690279151911235
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.0989583333333333,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-26T21:58:59Z",
+       "reference": "2025-04-26T21:58:51Z",
+       "diffS": 7.96875,
+       "rateDegPerMin": 0.008428152523713983,
+       "asSkylineDeg": 0.0011193640070557634
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-04-26T23:04:55Z",
+       "reference": "2025-04-26T23:04:28Z",
+       "diffS": 27.65625,
+       "rateDegPerMin": 0.008462439297999502,
+       "asSkylineDeg": 0.0039006556139216456
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-26T22:31:57Z",
+       "reference": "2025-04-26T22:31:39Z",
+       "diffS": 18.28125,
+       "rateDegPerMin": 0.0084926600091082,
+       "asSkylineDeg": 0.0025876073465251545
+      }
+     ]
+    },
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 42.5869140625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-04-28T16:54:08Z",
+       "reference": "2025-04-28T16:54:54Z",
+       "diffS": -45.99609375,
+       "rateDegPerMin": 0.0007091304086395134,
+       "asSkylineDeg": 0.0005436204792793145
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-04-29T14:31:20Z",
+       "reference": "2025-04-29T14:29:59Z",
+       "diffS": 81.15234375,
+       "rateDegPerMin": 0.0007943981680882395,
+       "asSkylineDeg": 0.0010744545535177849
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 51.579318576388886,
+     "longestEarthAnyGapH": 361.0625,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 38.835630063657405
+    },
+    "reference": {
+     "earthAnyPct": 51.594027409155245,
+     "longestEarthAnyGapH": 361.04560770942106,
+     "earthCentrePct": 38.84445781877525
+    },
+    "anyMinusReference": -0.014708832766359592
+   }
+  },
+  "blue-ghost-1.sunset-1min": {
+   "id": "blue-ghost-1.sunset-1min",
+   "ephemeris": "horizons",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.10625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-16T18:23:41Z",
+       "reference": "2025-03-16T18:23:40Z",
+       "diffS": 1.40625,
+       "rateDegPerMin": 0.008053302312946209,
+       "asSkylineDeg": 0.00018874927295967677
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-16T19:30:04Z",
+       "reference": "2025-03-16T19:30:03Z",
+       "diffS": 0.46875,
+       "rateDegPerMin": 0.00804598810015178,
+       "asSkylineDeg": 6.285928203243578e-05
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-16T18:56:49Z",
+       "reference": "2025-03-16T18:56:51Z",
+       "diffS": -2.34375,
+       "rateDegPerMin": 0.008049686566308,
+       "asSkylineDeg": 0.0003144408814964063
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 100,
+     "longestEarthAnyGapH": 0,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 100
+    },
+    "reference": {
+     "earthAnyPct": 100.0,
+     "longestEarthAnyGapH": 0.0,
+     "earthCentrePct": 100.0
+    },
+    "anyMinusReference": 0.0
+   }
+  },
+  "blue-ghost-1.sunset-1min.mast0.5": {
+   "id": "blue-ghost-1.sunset-1min.mast0.5",
+   "ephemeris": "horizons",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.1083333333333334,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-16T18:09:41Z",
+       "reference": "2025-03-16T18:09:45Z",
+       "diffS": -3.28125,
+       "rateDegPerMin": 0.008053335243931925,
+       "asSkylineDeg": 0.00044041677115252715
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-16T19:16:11Z",
+       "reference": "2025-03-16T19:16:07Z",
+       "diffS": 4.21875,
+       "rateDegPerMin": 0.008046039219416712,
+       "asSkylineDeg": 0.0005657371326152376
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-16T18:42:56Z",
+       "reference": "2025-03-16T18:42:55Z",
+       "diffS": 1.40625,
+       "rateDegPerMin": 0.008053316562954382,
+       "asSkylineDeg": 0.00018874960694424334
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 100,
+     "longestEarthAnyGapH": 0,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 100
+    },
+    "reference": {
+     "earthAnyPct": 100.0,
+     "longestEarthAnyGapH": 0.0,
+     "earthCentrePct": 100.0
+    },
+    "anyMinusReference": 0.0
+   }
+  },
+  "blue-ghost-1.sunset-1min.mast5": {
+   "id": "blue-ghost-1.sunset-1min.mast5",
+   "ephemeris": "horizons",
+   "transitions": [
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 1.10625,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-16T18:51:34Z",
+       "reference": "2025-03-16T18:51:31Z",
+       "diffS": 2.34375,
+       "rateDegPerMin": 0.008049719217600892,
+       "asSkylineDeg": 0.00031444215693753486
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-16T19:57:56Z",
+       "reference": "2025-03-16T19:57:57Z",
+       "diffS": -0.46875,
+       "rateDegPerMin": 0.008045781710753042,
+       "asSkylineDeg": 6.285766961525814e-05
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-16T19:24:41Z",
+       "reference": "2025-03-16T19:24:44Z",
+       "diffS": -2.34375,
+       "rateDegPerMin": 0.008045975806540206,
+       "asSkylineDeg": 0.0003142959299429768
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 100,
+     "longestEarthAnyGapH": 0,
+     "earthAnyGapOpenEnded": false,
+     "earthVisiblePct": 100
+    },
+    "reference": {
+     "earthAnyPct": 100.0,
+     "longestEarthAnyGapH": 0.0,
+     "earthCentrePct": 100.0
+    },
+    "anyMinusReference": 0.0
+   }
+  },
+  "im-2.surface": {
+   "id": "im-2.surface",
+   "ephemeris": "horizons",
+   "transitions": [
+    {
+     "body": "earth",
+     "kind": "set",
+     "hours": 49.106770833333336,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-18T06:25:35Z",
+       "reference": "2025-03-18T06:25:37Z",
+       "diffS": -2.63671875,
+       "rateDegPerMin": 0.0007344802152753349,
+       "asSkylineDeg": 3.2276962585341866e-05
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-20T07:31:59Z",
+       "reference": "2025-03-20T07:40:58Z",
+       "diffS": -538.76953125,
+       "rateDegPerMin": 0.0005629716948130081,
+       "asSkylineDeg": 0.005055199935357041
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-19T04:09:38Z",
+       "reference": "2025-03-19T04:07:46Z",
+       "diffS": 112.79296875,
+       "rateDegPerMin": 0.0006377894234645964,
+       "asSkylineDeg": 0.001198969375165379
+      }
+     ]
+    },
+    {
+     "body": "sun",
+     "kind": "set",
+     "hours": 6.575520833333333,
+     "instants": [
+      {
+       "which": "start",
+       "edge": "first-cut",
+       "inWindow": true,
+       "app": "2025-03-19T16:42:37Z",
+       "reference": "2025-03-19T16:43:56Z",
+       "diffS": -79.21875,
+       "rateDegPerMin": 0.0012347455119233741,
+       "asSkylineDeg": 0.0016302499337113299
+      },
+      {
+       "which": "end",
+       "edge": "last-limb",
+       "inWindow": true,
+       "app": "2025-03-19T23:17:08Z",
+       "reference": "2025-03-19T23:17:13Z",
+       "diffS": -4.21875,
+       "rateDegPerMin": 0.001425416452953021,
+       "asSkylineDeg": 0.0001002245943482593
+      },
+      {
+       "which": "centre",
+       "up": false,
+       "app": "2025-03-19T20:03:52Z",
+       "reference": "2025-03-19T20:03:48Z",
+       "diffS": 3.28125,
+       "rateDegPerMin": 0.0013186013703477828,
+       "asSkylineDeg": 7.211101244089437e-05
+      }
+     ]
+    }
+   ],
+   "checks": [],
+   "eventsWithoutConsistentSpan": 0,
+   "earthByDisc": {
+    "app": {
+     "earthAnyPct": 97.04357328869048,
+     "longestEarthAnyGapH": 9.93359375,
+     "earthAnyGapOpenEnded": true,
+     "earthVisiblePct": 88.89702690972223
+    },
+    "reference": {
+     "earthAnyPct": 97.08805687218984,
+     "longestEarthAnyGapH": 9.78412890944216,
+     "earthCentrePct": 88.88447993651108
+    },
+    "anyMinusReference": -0.04448358349935688
+   }
+  }
+ },
+ "worst": {
+  "deg": 0.018462282432328794,
+  "pct": 0.04448358349935688
+ }
+}

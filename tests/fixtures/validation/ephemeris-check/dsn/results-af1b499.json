@@ -1,0 +1,945 @@
+{
+ "app": "af1b499",
+ "stations": {
+  "DSS-14": {
+   "app": [
+    35.425900866666666,
+    -116.88953821111113,
+    1001.39
+   ],
+   "horizons": [
+    35.4259009,
+    -116.8895382,
+    1001.39
+   ],
+   "differenceM": [
+    -0.0037106669736886033,
+    -0.0010078998820010673,
+    0.0
+   ],
+   "receiveMaskDeg": 6,
+   "transmitMaskDeg": 10.4
+  },
+  "DSS-43": {
+   "app": [
+    -35.402424233333335,
+    148.98126730833334,
+    688.867
+   ],
+   "horizons": [
+    -35.4024242,
+    148.9812673,
+    688.867
+   ],
+   "differenceM": [
+    -0.0037106669736886033,
+    0.0007561438880072354,
+    0.0
+   ],
+   "receiveMaskDeg": 6,
+   "transmitMaskDeg": 10.2
+  },
+  "DSS-63": {
+   "app": [
+    40.43120975,
+    -4.248008544444417,
+    864.816
+   ],
+   "horizons": [
+    40.4312097,
+    -4.248008499999969,
+    864.82
+   ],
+   "differenceM": [
+    0.005566000460532905,
+    -0.003766001341711595,
+    -0.004000000000019099
+   ],
+   "receiveMaskDeg": 6,
+   "transmitMaskDeg": 10.2
+  }
+ },
+ "scenarios": {
+  "chandrayaan-3.2023-08": {
+   "stations": {
+    "DSS-14": {
+     "stationElWorstDeg": 0.0005191620000033481,
+     "stationAzArcWorstDeg": 0.00036841467226627424,
+     "rangeWorstKm": 51.139991364383604,
+     "siteElWorstDeg": 0.002856371520785217,
+     "siteAzArcWorstDeg": 0.00047700824391063194,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 34.63035300925926,
+       "referencePct": 34.63153271873792,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2023-08-23T20:46:12Z",
+         "reference": "2023-08-23T20:46:12Z",
+         "appMinusReferenceS": 0.5870785713195801,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T05:31:38Z",
+         "reference": "2023-08-24T05:31:39Z",
+         "appMinusReferenceS": -0.5332145690917969,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T21:55:48Z",
+         "reference": "2023-08-24T21:55:48Z",
+         "appMinusReferenceS": 0.45713138580322266,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T06:11:02Z",
+         "reference": "2023-08-25T06:11:03Z",
+         "appMinusReferenceS": -0.4165496826171875,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T23:05:45Z",
+         "reference": "2023-08-25T23:05:45Z",
+         "appMinusReferenceS": 0.7560956478118896,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-26T07:01:07Z",
+         "reference": "2023-08-26T07:01:07Z",
+         "appMinusReferenceS": -0.3077371120452881,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.4,
+       "appPct": 30.538917824074076,
+       "referencePct": 30.540034395769055,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2023-08-23T21:13:37Z",
+         "reference": "2023-08-23T21:13:36Z",
+         "appMinusReferenceS": 0.6087133884429932,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T05:04:12Z",
+         "reference": "2023-08-24T05:04:12Z",
+         "appMinusReferenceS": -0.4279212951660156,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T22:25:22Z",
+         "reference": "2023-08-24T22:25:22Z",
+         "appMinusReferenceS": 0.45955610275268555,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T05:41:24Z",
+         "reference": "2023-08-25T05:41:25Z",
+         "appMinusReferenceS": -0.34185314178466797,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T23:37:05Z",
+         "reference": "2023-08-25T23:37:04Z",
+         "appMinusReferenceS": 0.5962936878204346,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-26T06:29:45Z",
+         "reference": "2023-08-26T06:29:45Z",
+         "appMinusReferenceS": -0.45981621742248535,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-43": {
+     "stationElWorstDeg": 0.0005498209999998949,
+     "stationAzArcWorstDeg": 0.0005870724480090433,
+     "rangeWorstKm": 50.96252012340119,
+     "siteElWorstDeg": 0.0028683795079107455,
+     "siteAzArcWorstDeg": 0.00045212055968606803,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 53.41688368055555,
+       "referencePct": 53.41573810825745,
+       "appSpans": 4,
+       "referenceSpans": 4,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2023-08-23T13:27:46Z",
+         "reference": "2023-08-23T13:27:45Z",
+         "appMinusReferenceS": 0.43248653411865234,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T00:58:50Z",
+         "reference": "2023-08-24T00:58:51Z",
+         "appMinusReferenceS": -0.5196106433868408,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T14:32:25Z",
+         "reference": "2023-08-24T14:32:25Z",
+         "appMinusReferenceS": 0.7083165645599365,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T01:40:42Z",
+         "reference": "2023-08-25T01:40:42Z",
+         "appMinusReferenceS": -0.29010677337646484,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T15:38:47Z",
+         "reference": "2023-08-25T15:38:47Z",
+         "appMinusReferenceS": 0.5767297744750977,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-26T02:31:50Z",
+         "reference": "2023-08-26T02:31:50Z",
+         "appMinusReferenceS": -0.44207310676574707,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 50.169873649691354,
+       "referencePct": 50.1687951295832,
+       "appSpans": 4,
+       "referenceSpans": 4,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2023-08-23T13:05:11Z",
+         "reference": "2023-08-23T13:05:11Z",
+         "appMinusReferenceS": 0.43496179580688477,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T01:21:24Z",
+         "reference": "2023-08-24T01:21:25Z",
+         "appMinusReferenceS": -0.4174501895904541,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T14:09:02Z",
+         "reference": "2023-08-24T14:09:01Z",
+         "appMinusReferenceS": 0.5914211273193359,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T02:04:09Z",
+         "reference": "2023-08-25T02:04:09Z",
+         "appMinusReferenceS": -0.3842597007751465,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T15:14:40Z",
+         "reference": "2023-08-25T15:14:40Z",
+         "appMinusReferenceS": 0.5844345092773438,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-26T02:56:00Z",
+         "reference": "2023-08-26T02:56:01Z",
+         "appMinusReferenceS": -0.3829967975616455,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-63": {
+     "stationElWorstDeg": 0.0007031589999968446,
+     "stationAzArcWorstDeg": 0.0005562564490544941,
+     "rangeWorstKm": 51.28336931671947,
+     "siteElWorstDeg": 0.002908184494971877,
+     "siteAzArcWorstDeg": 0.0005072737295080845,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 32.2582706404321,
+       "referencePct": 32.25935490153454,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2023-08-23T13:11:01Z",
+         "reference": "2023-08-23T13:11:00Z",
+         "appMinusReferenceS": 0.6553668975830078,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-23T21:32:50Z",
+         "reference": "2023-08-23T21:32:50Z",
+         "appMinusReferenceS": -0.3256418704986572,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T14:24:10Z",
+         "reference": "2023-08-24T14:24:10Z",
+         "appMinusReferenceS": 0.5578360557556152,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T22:05:25Z",
+         "reference": "2023-08-24T22:05:25Z",
+         "appMinusReferenceS": -0.27229857444763184,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T15:38:04Z",
+         "reference": "2023-08-25T15:38:03Z",
+         "appMinusReferenceS": 0.7243869304656982,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T22:48:33Z",
+         "reference": "2023-08-25T22:48:34Z",
+         "appMinusReferenceS": -0.2748744487762451,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 27.8637393904321,
+       "referencePct": 27.864800501384853,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2023-08-23T13:39:39Z",
+         "reference": "2023-08-23T13:39:38Z",
+         "appMinusReferenceS": 0.5663769245147705,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-23T21:04:13Z",
+         "reference": "2023-08-23T21:04:14Z",
+         "appMinusReferenceS": -0.4295952320098877,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-24T14:55:49Z",
+         "reference": "2023-08-24T14:55:49Z",
+         "appMinusReferenceS": 0.5782499313354492,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-24T21:33:44Z",
+         "reference": "2023-08-24T21:33:45Z",
+         "appMinusReferenceS": -0.4033195972442627,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2023-08-25T16:12:41Z",
+         "reference": "2023-08-25T16:12:40Z",
+         "appMinusReferenceS": 0.5475437641143799,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2023-08-25T22:13:54Z",
+         "reference": "2023-08-25T22:13:54Z",
+         "appMinusReferenceS": -0.22531414031982422,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    }
+   }
+  },
+  "im-2.2025-03": {
+   "stations": {
+    "DSS-14": {
+     "stationElWorstDeg": 0.0009170789999970452,
+     "stationAzArcWorstDeg": 0.0008406199415905795,
+     "rangeWorstKm": 26.433831536618527,
+     "siteElWorstDeg": 0.002653427305883138,
+     "siteAzArcWorstDeg": 0.0020149421336153983,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 10.244562596450617,
+       "referencePct": 10.279481248631154,
+       "appSpans": 2,
+       "referenceSpans": 2,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2025-03-17T14:43:04Z",
+         "reference": "2025-03-17T14:43:04Z",
+         "appMinusReferenceS": -0.5280900001525879,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-18T06:07:02Z",
+         "reference": "2025-03-18T06:07:01Z",
+         "appMinusReferenceS": 0.7951240539550781,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T10:46:32Z",
+         "reference": "2025-03-18T10:48:01Z",
+         "appMinusReferenceS": -89.18593239784241,
+         "limitedBy": "lunar terrain"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.4,
+       "appPct": 9.067503375771604,
+       "referencePct": 9.102451308273976,
+       "appSpans": 2,
+       "referenceSpans": 2,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2025-03-17T14:18:30Z",
+         "reference": "2025-03-17T14:18:30Z",
+         "appMinusReferenceS": -0.5228369235992432,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-18T06:33:19Z",
+         "reference": "2025-03-18T06:33:18Z",
+         "appMinusReferenceS": 0.8762717247009277,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T10:46:32Z",
+         "reference": "2025-03-18T10:48:01Z",
+         "appMinusReferenceS": -89.18593239784241,
+         "limitedBy": "lunar terrain"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-43": {
+     "stationElWorstDeg": 0.0008980520000001491,
+     "stationAzArcWorstDeg": 0.0009378772555613592,
+     "rangeWorstKm": 26.64783129270654,
+     "siteElWorstDeg": 0.0026094816896620188,
+     "siteAzArcWorstDeg": 0.001992483555914043,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 38.940670814043216,
+       "referencePct": 38.959219017882404,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2025-03-17T22:52:50Z",
+         "reference": "2025-03-17T22:52:49Z",
+         "appMinusReferenceS": 0.7079393863677979,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-18T10:34:54Z",
+         "reference": "2025-03-18T10:34:54Z",
+         "appMinusReferenceS": -0.4623222351074219,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T23:50:53Z",
+         "reference": "2025-03-18T23:50:52Z",
+         "appMinusReferenceS": 0.8806853294372559,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-19T11:07:44Z",
+         "reference": "2025-03-19T11:07:44Z",
+         "appMinusReferenceS": -0.25474023818969727,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-19T15:01:10Z",
+         "reference": "2025-03-19T15:02:01Z",
+         "appMinusReferenceS": -50.38263154029846,
+         "limitedBy": "lunar terrain"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 36.858301986882715,
+       "referencePct": 36.876879905385,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2025-03-17T22:30:41Z",
+         "reference": "2025-03-17T22:30:40Z",
+         "appMinusReferenceS": 0.8811891078948975,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-18T10:56:59Z",
+         "reference": "2025-03-18T10:56:59Z",
+         "appMinusReferenceS": -0.1643996238708496,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T23:28:01Z",
+         "reference": "2025-03-18T23:28:00Z",
+         "appMinusReferenceS": 0.7370543479919434,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2025-03-19T11:30:36Z",
+         "reference": "2025-03-19T11:30:37Z",
+         "appMinusReferenceS": -0.44602370262145996,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-19T15:01:10Z",
+         "reference": "2025-03-19T15:02:01Z",
+         "appMinusReferenceS": -50.38263154029846,
+         "limitedBy": "lunar terrain"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-63": {
+     "stationElWorstDeg": 0.0009922600000038528,
+     "stationAzArcWorstDeg": 0.0009254416618746635,
+     "rangeWorstKm": 26.53636708779959,
+     "siteElWorstDeg": 0.002650078019561075,
+     "siteAzArcWorstDeg": 0.002033140441838718,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 12.098644868827162,
+       "referencePct": 12.098853386938572,
+       "appSpans": 1,
+       "referenceSpans": 1,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2025-03-17T22:31:44Z",
+         "reference": "2025-03-17T22:31:43Z",
+         "appMinusReferenceS": 0.8326892852783203,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T07:14:24Z",
+         "reference": "2025-03-18T07:14:24Z",
+         "appMinusReferenceS": 0.29221034049987793,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 10.83815586419753,
+       "referencePct": 10.838596373796463,
+       "appSpans": 1,
+       "referenceSpans": 1,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2025-03-17T22:59:00Z",
+         "reference": "2025-03-17T22:58:59Z",
+         "appMinusReferenceS": 0.7124202251434326,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2025-03-18T06:47:12Z",
+         "reference": "2025-03-18T06:47:13Z",
+         "appMinusReferenceS": -0.4293806552886963,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    }
+   }
+  },
+  "apollo-11.2031-04": {
+   "stations": {
+    "DSS-14": {
+     "stationElWorstDeg": 0.0008426110000030462,
+     "stationAzArcWorstDeg": 0.0007615931073848977,
+     "rangeWorstKm": 25.09392051224131,
+     "siteElWorstDeg": 0.0018141557673914122,
+     "siteAzArcWorstDeg": 0.0006738522044009635,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 37.54364390432099,
+       "referencePct": 37.544790227839975,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2031-04-10T05:30:35Z",
+         "reference": "2031-04-10T05:30:34Z",
+         "appMinusReferenceS": 0.82723069190979,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-10T14:39:07Z",
+         "reference": "2031-04-10T14:39:08Z",
+         "appMinusReferenceS": -0.16046667098999023,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-11T06:36:37Z",
+         "reference": "2031-04-11T06:36:36Z",
+         "appMinusReferenceS": 0.6452813148498535,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-11T15:33:31Z",
+         "reference": "2031-04-11T15:33:32Z",
+         "appMinusReferenceS": -0.23987436294555664,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T07:37:50Z",
+         "reference": "2031-04-12T07:37:50Z",
+         "appMinusReferenceS": 0.6926021575927734,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-12T16:34:16Z",
+         "reference": "2031-04-12T16:34:17Z",
+         "appMinusReferenceS": -0.40581536293029785,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.4,
+       "appPct": 33.81124614197532,
+       "referencePct": 33.81236780765984,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2031-04-10T05:57:00Z",
+         "reference": "2031-04-10T05:56:59Z",
+         "appMinusReferenceS": 0.7633590698242188,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-10T14:12:42Z",
+         "reference": "2031-04-10T14:12:42Z",
+         "appMinusReferenceS": -0.13683557510375977,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-11T07:03:42Z",
+         "reference": "2031-04-11T07:03:41Z",
+         "appMinusReferenceS": 0.6071405410766602,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-11T15:06:26Z",
+         "reference": "2031-04-11T15:06:26Z",
+         "appMinusReferenceS": -0.3540222644805908,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T08:04:57Z",
+         "reference": "2031-04-12T08:04:57Z",
+         "appMinusReferenceS": 0.6918144226074219,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-12T16:07:10Z",
+         "reference": "2031-04-12T16:07:10Z",
+         "appMinusReferenceS": -0.3541855812072754,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-43": {
+     "stationElWorstDeg": 0.0008394239999987008,
+     "stationAzArcWorstDeg": 0.0009333966159490757,
+     "rangeWorstKm": 24.11555756366579,
+     "siteElWorstDeg": 0.001792096913526109,
+     "siteAzArcWorstDeg": 0.0006542768261435707,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 53.81444106867284,
+       "referencePct": 53.81359581005426,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2031-04-10T10:01:39Z",
+         "reference": "2031-04-10T10:01:39Z",
+         "appMinusReferenceS": -0.128004789352417,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-10T23:18:05Z",
+         "reference": "2031-04-10T23:18:04Z",
+         "appMinusReferenceS": 0.7533071041107178,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-11T10:56:06Z",
+         "reference": "2031-04-11T10:56:06Z",
+         "appMinusReferenceS": -0.29052138328552246,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-12T00:20:16Z",
+         "reference": "2031-04-12T00:20:16Z",
+         "appMinusReferenceS": 0.7414951324462891,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T11:55:49Z",
+         "reference": "2031-04-12T11:55:49Z",
+         "appMinusReferenceS": -0.27758193016052246,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 51.1962890625,
+       "referencePct": 51.19559497386217,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "start",
+         "app": "2031-04-10T10:23:59Z",
+         "reference": "2031-04-10T10:23:59Z",
+         "appMinusReferenceS": -0.24010109901428223,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-10T22:55:25Z",
+         "reference": "2031-04-10T22:55:25Z",
+         "appMinusReferenceS": 0.6175875663757324,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-11T11:18:45Z",
+         "reference": "2031-04-11T11:18:45Z",
+         "appMinusReferenceS": -0.10524606704711914,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-11T23:57:32Z",
+         "reference": "2031-04-11T23:57:32Z",
+         "appMinusReferenceS": 0.5093967914581299,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T12:18:33Z",
+         "reference": "2031-04-12T12:18:33Z",
+         "appMinusReferenceS": -0.32674622535705566,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    },
+    "DSS-63": {
+     "stationElWorstDeg": 0.0008952479999990715,
+     "stationAzArcWorstDeg": 0.0009994835114097195,
+     "rangeWorstKm": 24.85649189312244,
+     "siteElWorstDeg": 0.0018548290295399283,
+     "siteAzArcWorstDeg": 0.0007400816084060664,
+     "kinds": {
+      "receive": {
+       "maskDeg": 6,
+       "appPct": 32.45557243441358,
+       "referencePct": 32.456291674279875,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2031-04-10T06:37:13Z",
+         "reference": "2031-04-10T06:37:13Z",
+         "appMinusReferenceS": -0.12713074684143066,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-10T23:02:52Z",
+         "reference": "2031-04-10T23:02:51Z",
+         "appMinusReferenceS": 0.8299424648284912,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-11T07:27:50Z",
+         "reference": "2031-04-11T07:27:51Z",
+         "appMinusReferenceS": -0.12830352783203125,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T00:06:31Z",
+         "reference": "2031-04-12T00:06:30Z",
+         "appMinusReferenceS": 0.6394302845001221,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-12T08:26:24Z",
+         "reference": "2031-04-12T08:26:24Z",
+         "appMinusReferenceS": -0.13946270942687988,
+         "limitedBy": "station limit"
+        }
+       ]
+      },
+      "transmit": {
+       "maskDeg": 10.2,
+       "appPct": 29.131281346450617,
+       "referencePct": 29.131946487191282,
+       "appSpans": 3,
+       "referenceSpans": 3,
+       "edges": [
+        {
+         "which": "end",
+         "app": "2031-04-10T06:09:32Z",
+         "reference": "2031-04-10T06:09:32Z",
+         "appMinusReferenceS": -0.290402889251709,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-10T23:31:41Z",
+         "reference": "2031-04-10T23:31:40Z",
+         "appMinusReferenceS": 0.6566030979156494,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-11T06:59:02Z",
+         "reference": "2031-04-11T06:59:02Z",
+         "appMinusReferenceS": -0.10623764991760254,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "start",
+         "app": "2031-04-12T00:35:40Z",
+         "reference": "2031-04-12T00:35:39Z",
+         "appMinusReferenceS": 0.5752203464508057,
+         "limitedBy": "station limit"
+        },
+        {
+         "which": "end",
+         "app": "2031-04-12T07:57:15Z",
+         "reference": "2031-04-12T07:57:16Z",
+         "appMinusReferenceS": -0.0955808162689209,
+         "limitedBy": "station limit"
+        }
+       ]
+      }
+     }
+    }
+   }
+  }
+ },
+ "worst": {
+  "el": 0.0009922600000038528,
+  "az": 0.0009994835114097195,
+  "siteEl": 0.002908184494971877,
+  "siteAz": 0.002033140441838718,
+  "range": 51.28336931671947,
+  "mask_s": 0.8811891078948975,
+  "terrain_min": 1.4864322066307067,
+  "pct": 0.03494793250237116
+ }
+}

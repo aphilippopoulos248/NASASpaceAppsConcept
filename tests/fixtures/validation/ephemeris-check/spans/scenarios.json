@@ -1,0 +1,6 @@
+[
+ { "id": "im-2.landing",              "siteKey": "im-2",          "site": { "id": "im-2", "name": "IM-2", "kind": "landing", "lat": -84.79, "lon": 29.2 },                      "mastHeightM": 2, "start": "2025-03-06T17:28:00Z", "durationH": 336, "stepMin": 10 },
+ { "id": "chandrayaan-3.landing",     "siteKey": "chandrayaan-3", "site": { "id": "chandrayaan-3", "name": "Chandrayaan-3", "kind": "landing", "lat": -69.3741, "lon": 32.32 }, "mastHeightM": 2, "start": "2023-08-23T12:33:00Z", "durationH": 336, "stepMin": 10 },
+ { "id": "chandrayaan-3.from-night",  "siteKey": "chandrayaan-3", "site": { "id": "chandrayaan-3", "name": "Chandrayaan-3", "kind": "landing", "lat": -69.3741, "lon": 32.32 }, "mastHeightM": 2, "start": "2023-09-10T00:00:00Z", "durationH": 336, "stepMin": 10 },
+ { "id": "apollo-11.landing",         "siteKey": "apollo-11",     "site": { "id": "apollo-11", "name": "Apollo 11", "kind": "landing", "lat": 0.67416, "lon": 23.47314 },      "mastHeightM": 2, "start": "1969-07-20T20:17:00Z", "durationH": 336, "stepMin": 10 }
+]

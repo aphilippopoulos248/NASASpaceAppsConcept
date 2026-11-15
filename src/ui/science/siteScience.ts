@@ -91,6 +91,11 @@ export function registerSiteScienceActions(): void {
 type Rows = [label: string, value: string][];
 interface More {
   summary: string;
+  /**
+   * The accessible name, where the visible summary alone does not say which block it opens (two
+   * blocks have "Source and limits"). Starts with the visible text, so speech input still finds it.
+   */
+  label?: string;
   lines: string[];
 }
 
@@ -137,7 +142,9 @@ function fill(box: HTMLElement, heading: string, parts: { tag?: string; rows?: R
   for (const n of parts.notes ?? []) nodes.push(el('p', 'ly-note', n));
   if (parts.more && (parts.more.lines.length || parts.moreList)) {
     const d = el('details', 'ss-more');
-    d.append(el('summary', undefined, parts.more.summary));
+    const summary = el('summary', undefined, parts.more.summary);
+    if (parts.more.label) summary.setAttribute('aria-label', parts.more.label);
+    d.append(summary);
     if (parts.moreList) d.append(parts.moreList);
     d.append(...parts.more.lines.map((n) => el('p', 'ly-note', n)));
     nodes.push(d);
@@ -241,7 +248,7 @@ export function mountSiteScience(target: HTMLElement, options: SiteScienceOption
       tag: '18.6-year average, not this date',
       rows,
       notes: ['Share of time with any part of the disc above the terrain horizon, averaged over 18.6 years of a model (NASA PGDA product 69). Not the mission-window figures, not a fraction of solar energy, and not a radio link.'],
-      more: { summary: 'Source and limits', lines: [r.averagingPeriod, ...r.caveats, r.citation] },
+      more: { summary: 'Source and limits', label: 'Source and limits of the long-term averages', lines: [r.averagingPeriod, ...r.caveats, r.citation] },
     });
   };
 
@@ -288,7 +295,7 @@ export function mountSiteScience(target: HTMLElement, options: SiteScienceOption
           ? `The published maps have no value for this ${r.cellM} m cell; nothing is filled in.`
           : `Annual values for the ${r.cellM} m cell around the site, from LRO Diviner measurements of ${r.measuredOver}. Not the temperature on the date shown; separate summer and winter maps are not included.`,
       ],
-      more: { summary: 'Source and limits', lines: [r.citation, `Licence: ${r.licence}`, ...r.caveats] },
+      more: { summary: 'Source and limits', label: 'Source and limits of the Diviner temperatures', lines: [r.citation, `Licence: ${r.licence}`, ...r.caveats] },
     });
   };
 

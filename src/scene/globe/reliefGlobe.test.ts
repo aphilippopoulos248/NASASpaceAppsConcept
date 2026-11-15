@@ -4,6 +4,8 @@ import { MOON_RADIUS_M } from '../../core/types';
 import { polarXY } from '../../terrain/geo';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp, type PolarView } from './polarCloseUp';
+import { clearTerrainCache, setTerrainReader } from '../../terrain/api';
+import { readPublicFile } from '../../terrain/nodeReader';
 import { ReliefGlobe } from './reliefGlobe';
 import { createSurfaceUniforms } from './surfaceShader';
 
@@ -56,6 +58,71 @@ describe('relief globe (bundled LOLA grids, no network)', () => {
     // Mare Tranquillitatis lies about 1.9 km below the reference sphere.
     expect(globe.heightM(0.674, 23.473)).toBeGreaterThan(-2200);
     expect(globe.heightM(0.674, 23.473)).toBeLessThan(-1600);
+  }, 120_000);
+
+  it('asks for the 16 px/deg grid again after a failed load, and says so on screen meanwhile', async () => {
+    clearTerrainCache();
+    let failures = 1;
+    setTerrainReader(async (path) => {
+      if (path.endsWith('lola_global_16ppd.lxg') && failures > 0) {
+        failures--;
+        throw new Error('net::ERR_CACHE_WRITE_FAILURE (tried 3 times)');
+      }
+      return readPublicFile(path);
+    });
+    try {
+      let clock = 1000;
+      const globe = new ReliefGlobe(new MeshStandardMaterial(), () => clock);
+      await globe.loadOverview();
+      const near = cameraAt(0.674, 23.473, 42);
+      globe.update(near, 720, 1);
+      await globe.settled();
+      // Still the overview, and the reason, what is shown and when it tries again are on screen.
+      expect(globe.pyramid.maxPpd).toBe(4);
+      expect(globe.problem).toBe('The 16 px/deg whole-Moon elevation grid could not be loaded (net::ERR_CACHE_WRITE_FAILURE (tried 3 times)). The globe shows the 4 px/deg relief and tries again in 20 s.');
+      // Not before the pause is over.
+      clock += 19_000;
+      globe.update(near, 720, 1);
+      await globe.settled();
+      expect(globe.pyramid.maxPpd).toBe(4);
+      // Then it asks again, gets the grid and the message goes.
+      clock += 2_000;
+      globe.update(near, 720, 1);
+      await globe.settled();
+      expect(globe.pyramid.maxPpd).toBe(16);
+      expect(globe.problem).toBeNull();
+    } finally {
+      setTerrainReader(null);
+      clearTerrainCache();
+    }
+  }, 120_000);
+
+  it('stops asking after three failed rounds and leaves the reason on screen', async () => {
+    clearTerrainCache();
+    let asked = 0;
+    setTerrainReader(async (path) => {
+      if (path.endsWith('lola_global_16ppd.lxg')) {
+        asked++;
+        throw new Error('offline');
+      }
+      return readPublicFile(path);
+    });
+    try {
+      let clock = 0;
+      const globe = new ReliefGlobe(new MeshStandardMaterial(), () => clock);
+      await globe.loadOverview();
+      const near = cameraAt(0.674, 23.473, 42);
+      for (let round = 0; round < 6; round++) {
+        globe.update(near, 720, 1);
+        await globe.settled();
+        clock += 120_000;
+      }
+      expect(asked).toBe(3);
+      expect(globe.problem).toBe('The 16 px/deg whole-Moon elevation grid could not be loaded (offline). The globe shows the 4 px/deg relief.');
+    } finally {
+      setTerrainReader(null);
+      clearTerrainCache();
+    }
   }, 120_000);
 });
 
@@ -120,6 +187,19 @@ describe('south-polar close-up (bundled LOLA polar layers, no network)', () => {
     // Climbing away fades it out and gives the tiles back.
     expect(closeUp.update(view({ altitudeKm: 3000, centre: im2, site: im2, nowMs: 4e7 }))).toBeNull();
     expect(u.uCapHole.value).toBe(-2);
+
+    // Low over the near side, with the data loaded: not on screen, and not reported as on screen
+    // (it used to stay "shown" wherever the camera went low once it had been loaded).
+    expect(closeUp.update(view({ altitudeKm: 42, centre: { lat: 20.19, lon: 30.77 }, nowMs: 5e7 }))).toBeNull();
+    expect(closeUp.root.visible).toBe(false);
+    expect(closeUp.covers(-89)).toBe(false);
+    expect(u.uCapHole.value).toBe(-2);
+    // From 1000 km above 40 S the polar region is in view near the limb: shown, partly faded, the tiles kept.
+    expect(closeUp.update(view({ altitudeKm: 1000, centre: { lat: -40, lon: 0 }, nowMs: 6e7 }))).not.toBeNull();
+    expect(closeUp.root.visible).toBe(true);
+    expect(u.uCapHole.value).toBe(-2);
+    // From 300 km above 40 S it is beyond the horizon.
+    expect(closeUp.update(view({ altitudeKm: 300, centre: { lat: -40, lon: 0 }, nowMs: 7e7 }))).toBeNull();
     closeUp.dispose();
   }, 240_000);
 });

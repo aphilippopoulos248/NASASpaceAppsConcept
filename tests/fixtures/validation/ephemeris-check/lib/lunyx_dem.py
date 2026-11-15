@@ -206,8 +206,42 @@ def polar_layers(root):
     return [_lxg_layer(root, f) for f in ('lola_south_875s_40m.lxg', 'lola_south_85s_80m.lxg', 'lola_south_80s_160m.lxg')]
 
 
-def site_windows(root, site_id):
-    """The bundled windows of a catalogued landing site: NAC model (if any), 60 m and 480 m grids."""
+EASE_BAND_SAMPLES = 43  # T-32: a twelfth of the 513-sample 3 m grid, 129 m
+
+
+def eased_fine(fine, window, band=EASE_BAND_SAMPLES):
+    """A 3 m site model eased onto the 60 m window around it, by the rule T-32 states in words.
+
+    Source of the rule: docs/lunyx/handover/T-32-edge-easing.md on am/lunyx/agent/ice-targets
+    e4b06ef, section "For the independent check"; src/terrain was not read. Every node within
+    `band` samples of the edge of the square moves to h + (h60 - h) * t*t*(3 - 2t), with
+    t = 1 - fromEdge / band, fromEdge the node's distance in samples from the nearest edge of the
+    square and h60 the 60 m window read bilinearly at the node. Nothing else changes. Both grids
+    are azimuthal-equidistant about the same site, so node (row, col) lies at
+    east = (col - c) * spacing, north = (row - c) * spacing in either of them.
+    """
+    n = fine.grid.shape[0]
+    i = np.arange(n)
+    edge1 = np.minimum(i, n - 1 - i)
+    from_edge = np.minimum.outer(edge1, edge1).astype(np.float64)   # [row, col]
+    t = np.clip(1.0 - from_edge / band, 0.0, 1.0)
+    w = t * t * (3.0 - 2.0 * t)
+    c = (n - 1) / 2.0
+    cols, rows = np.meshgrid(i, i)
+    cw = (window.grid.shape[0] - 1) / 2.0
+    h60 = _bilinear(window.grid, cw + (cols - c) * fine.spacing / window.spacing, cw + (rows - c) * fine.spacing / window.spacing)
+    g = fine.grid
+    eased = np.where(w > 0, g + (h60 - g) * w, g)
+    layer = Local(fine.name + ', eased onto the 60 m window (T-32 rule)', eased, fine.lat0, fine.lon0, fine.spacing, fine.resolution_m)
+    layer.stored_grid = g
+    return layer
+
+
+def site_windows(root, site_id, eased=False):
+    """The bundled windows of a catalogued landing site: NAC model (if any), 60 m and 480 m grids.
+
+    eased=True gives the NAC model as T-32 makes the app load it (eased_fine); the files are the same.
+    """
     with open(os.path.join(root, 'public', 'terrain', 'index.json')) as fh:
         index = json.load(fh)
     if index['radius'] != 1737400:
@@ -226,15 +260,48 @@ def site_windows(root, site_id):
     if fine and os.path.exists(fine_path):
         m = fine['size']
         grid = np.fromfile(fine_path, dtype='<f4').reshape(m, m).astype(np.float64)
-        layers.append(Local(fine['source'].split(',')[0] + ', %g m site window' % fine['spacing'], grid, entry['lat'], entry['lon'], fine['spacing']))
+        layer = Local(fine['source'].split(',')[0] + ', %g m site window' % fine['spacing'], grid, entry['lat'], entry['lon'], fine['spacing'])
+        if eased:
+            layer = eased_fine(layer, next(l for l in layers if l.spacing == 60))
+        layers.append(layer)
     return entry, layers
 
 
-def stack_for(root, lat, lon, site_id=None):
-    """Every bundled layer that can hold terrain visible from a point, finest first."""
+def stack_for(root, lat, lon, site_id=None, eased=False):
+    """Every bundled layer that can hold terrain visible from a point, finest first (eased: see site_windows)."""
     layers = [global_layer(root)]
     if lat < 0:
         layers += polar_layers(root)
     if site_id:
-        layers += site_windows(root, site_id)[1]
+        layers += site_windows(root, site_id, eased=eased)[1]
     return Stack(layers)
+
+
+def offset_point(lat0, lon0, east_m, north_m):
+    """Latitude and longitude reached from a point by an azimuthal-equidistant offset: distance hypot(east, north) along the great circle of initial bearing atan2(east, north)."""
+    east, north, up = frame(lat0, lon0)
+    east_m = np.asarray(east_m, dtype=np.float64)
+    north_m = np.asarray(north_m, dtype=np.float64)
+    d = np.hypot(east_m, north_m) / R_M
+    safe = np.maximum(d * R_M, 1e-12)
+    u = np.cos(d)[..., None] * up + np.sin(d)[..., None] * ((east_m / safe)[..., None] * east + (north_m / safe)[..., None] * north)
+    return np.degrees(np.arcsin(np.clip(u[..., 2], -1, 1))), np.degrees(np.arctan2(u[..., 1], u[..., 0]))
+
+
+def plane_slope(stack, lat, lon, baseline_m):
+    """Slope of the least-squares plane through a 3 x 3 pattern of points baseline_m / 2 apart, from the finest layer with data at all nine.
+
+    Returns (slope deg, aspect deg = compass direction the ground falls towards, layer name), or (nan, nan, None).
+    """
+    half = baseline_m / 2.0
+    e, n = np.meshgrid(np.array([-half, 0.0, half]), np.array([-half, 0.0, half]))
+    e, n = e.ravel(), n.ravel()
+    la, lo = offset_point(lat, lon, e, n)
+    for layer in stack.layers:
+        z = layer.sample(la, lo)
+        if np.all(np.isfinite(z)):
+            # For this symmetric pattern the least-squares plane has dz/de = sum(e z) / sum(e^2), and likewise for n.
+            ge = float((e * z).sum() / (e * e).sum())
+            gn = float((n * z).sum() / (n * n).sum())
+            return math.degrees(math.atan(math.hypot(ge, gn))), math.degrees(math.atan2(-ge, -gn)) % 360.0, layer.name
+    return float('nan'), float('nan'), None

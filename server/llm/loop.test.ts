@@ -95,7 +95,7 @@ describe('assistant loop end to end (scripted model, no key)', () => {
 
     await s.send('Find a flatter nearby site with a shorter blackout, compare it against this pin for the same dates, then show me the ridge at Earthset.');
     const r = reply(s);
-    expect(r.source).toEqual({ kind: 'model', label: 'Scripted test model (not a language model)' });
+    expect(r.source).toEqual({ kind: 'model', label: 'Scripted test model (not a language model)', provider: 'scripted' });
     expect(r.failed).toBeUndefined();
 
     // What is left on screen: the comparison, the site, the time and the camera.

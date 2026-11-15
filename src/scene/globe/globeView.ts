@@ -7,8 +7,8 @@ import { Camera, DoubleSide, Group, Mesh, MeshBasicMaterial, PerspectiveCamera, 
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { defineAction, registerActions, runAction } from '../../core/actions';
 import { onCommand } from '../../core/bus';
-import { iceTargetLayer } from '../../core/siteScience';
-import { GLOBE_ALTITUDE_KM, MAX_ALTITUDE_KM, MIN_ALTITUDE_KM } from '../../core/coreActions';
+import { iceTargetLayer } from '../../science/siteScience';
+import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { store } from '../../core/store';
 import { MOON_RADIUS_KM, MOON_RADIUS_M, SiteRef, wrapLon } from '../../core/types';
@@ -20,7 +20,7 @@ import { coverageRegions, demLayers } from '../../terrain/api';
 import { FlagMarkers } from '../flags';
 import { createMoonMaterial, createStars } from '../globe';
 import { Marker, Markers } from '../markers';
-import { loadSiteAreas, SiteAreaLayer } from '../siteAreas';
+import { areaScale, loadSiteAreas, SiteAreaLayer } from '../siteAreas';
 import { IMAGERY_MAX_LAT, SitePatch } from '../sitePatch';
 import { Sky } from '../sky';
 import { AverageMaps } from './averageMaps';
@@ -31,6 +31,9 @@ import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { PolarCloseUp } from './polarCloseUp';
 import { ReliefGlobe } from './reliefGlobe';
 import { effectiveRelief } from './reliefTiles';
+import { handleGlobeKey } from './globeKeys';
+import { flyDirection } from './flyTarget';
+import { vec3ToLatLon } from './latLon';
 import { createSurfaceUniforms, OVERLAY_CODE, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
 
 const GLOBE_DISTANCE = 1 + GLOBE_ALTITUDE_KM / MOON_RADIUS_KM;
@@ -41,13 +44,9 @@ const MIN_DISTANCE = 1 + MIN_CLEARANCE;
 const Z = new Vector3(0, 0, 1);
 const MOON = new Sphere(new Vector3(), 1);
 
-/** Scene direction to selenographic lat/lon (inverse of latLonToVec3). */
 const round5 = (x: number) => Math.round(x * 1e5) / 1e5;
 
-export function vec3ToLatLon(v: Vector3): { lat: number; lon: number } {
-  const n = v.clone().normalize();
-  return { lat: (Math.asin(Math.max(-1, Math.min(1, n.y))) * 180) / Math.PI, lon: wrapLon((Math.atan2(-n.z, n.x) * 180) / Math.PI) };
-}
+export { vec3ToLatLon };
 
 export class GlobeView {
   readonly scene = new Scene();
@@ -58,7 +57,8 @@ export class GlobeView {
   private sitePatch: SitePatch | null = null;
   private patchSiteId = '';
   private readonly pin = new Group();
-  private fly: { dir: Vector3; dist: number; done: (() => void)[] } | null = null;
+  /** The flight under way: where to, and the point asked for (the keyboard steps on from it). */
+  private fly: { dir: Vector3; dist: number; done: (() => void)[]; asked: { lat: number; lon: number } } | null = null;
   private readonly camDir = new Vector3();
   private readonly axis = new Vector3();
   private readonly right = new Vector3();
@@ -85,6 +85,8 @@ export class GlobeView {
   private sunMoonFixed: [number, number, number] = [1, 0, 0];
   /** What the markers, pin and patches were last placed for: exaggeration, height data version, close-up on or off. */
   private placed = { relief: NaN, version: -1, site: '', polar: false };
+  /** Enlargement the explored areas were last placed at (it follows the camera altitude). */
+  private placedAreaScale = NaN;
   private patchVersion = -1;
   active = true;
 
@@ -101,6 +103,8 @@ export class GlobeView {
     c.addEventListener('start', () => {
       c.autoRotate = false;
       this.cancelFly();
+      // Turned by hand: the fields and "Drop pin at centre" follow the camera again.
+      globeDisplay.setLive({ viewTarget: null });
     });
     this.scene.add(this.sky.root, createStars());
 
@@ -120,7 +124,7 @@ export class GlobeView {
     document.body.append(this.tooltip);
 
     onCommand('flyTo', ({ lat, lon, altitudeKm }) => {
-      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM);
+      this.flyTo(latLonToVec3(lat, lon), altitudeKm === undefined ? undefined : 1 + altitudeKm / MOON_RADIUS_KM, { lat, lon: wrapLon(lon) });
     });
     this.averages = new AverageMaps(this.uniforms, Math.min(4096, renderer.capabilities.maxTextureSize));
     this.averages.onChange = () => globeDisplay.setLive({ averages: this.averages.state });
@@ -143,29 +147,26 @@ export class GlobeView {
   }
 
   /** Keyboard on the focused globe: arrows turn, +/- zoom, Enter drops a pin at the centre. */
+  /** Keyboard on the focused globe: arrows turn, +/- zoom, Enter drops a pin at the centre (globeKeys.ts). */
   private bindKeyboard(): void {
     this.canvas.addEventListener('keydown', (e) => {
       if (!this.active) return;
-      const c = store.get().globeCenter;
-      // Turn by about a tenth of the visible width.
-      const stepDeg = Math.min(20, Math.max(0.02, (c.altitudeKm / MOON_RADIUS_KM) * 12));
-      let lat = c.lat, lon = c.lon, alt = c.altitudeKm;
-      switch (e.key) {
-        case 'ArrowUp': lat = Math.min(89, lat + stepDeg); break;
-        case 'ArrowDown': lat = Math.max(-89, lat - stepDeg); break;
-        case 'ArrowLeft': lon = wrapLon(lon - stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
-        case 'ArrowRight': lon = wrapLon(lon + stepDeg / Math.max(0.2, Math.cos((lat * Math.PI) / 180))); break;
-        case '+': case '=': alt = Math.max(MIN_ALTITUDE_KM, alt / 1.5); break;
-        case '-': case '_': alt = Math.min(MAX_ALTITUDE_KM, alt * 1.5); break;
-        case 'Enter':
-          e.preventDefault();
-          void runAction('dropPin', { lat: round5(c.lat), lon: round5(c.lon) });
-          return;
-        default: return;
-      }
+      const used = handleGlobeKey(e.key, {
+        // Step from where the globe is going, so presses within one drawn frame add up (F-7).
+        pose: () => {
+          const f = this.fly;
+          return f ? { lat: f.asked.lat, lon: f.asked.lon, altitudeKm: (f.dist - 1) * MOON_RADIUS_KM } : store.get().globeCenter;
+        },
+        go: (to) => void runAction('setGlobeCamera', { lat: to.lat, lon: to.lon, altitudeKm: to.altitudeKm }),
+        pin: () => {
+          const p = globeDisplay.getLive().viewTarget ?? store.get().globeCenter;
+          void runAction('dropPin', { lat: round5(p.lat), lon: round5(p.lon) });
+        },
+      });
+      if (!used) return;
       e.preventDefault();
-      e.stopPropagation();
-      void runAction('setGlobeCamera', { lat, lon, altitudeKm: alt });
+      // The arrows are the globe's here, not the site card's (Earlier / Later).
+      if (e.key !== 'Enter') e.stopPropagation();
     });
   }
 
@@ -182,8 +183,6 @@ export class GlobeView {
     store.subscribe(['overlay', 'sunElMinDeg', 'sunElMaxDeg'], () => this.applyOverlay());
     globeDisplay.subscribe(() => {
       this.applyOverlay();
-      // Territory size: redraw the explored areas, then put them back on the surface with the markers.
-      if (this.areas?.setScale(globeDisplay.get().areaScale)) this.placed.version = -1;
     });
     this.markers = new Markers([...getLandings()]);
     this.scene.add(this.markers.root);
@@ -202,7 +201,7 @@ export class GlobeView {
   /** The explored areas and flags: built once their small data files are in, then placed with the markers. */
   private async loadMissionLayers(markers: Markers): Promise<void> {
     const [owners, areas] = await Promise.all([loadOwnership(), loadSiteAreas()]);
-    this.areas = new SiteAreaLayer(markers.items, areas, globeDisplay.get().areaScale);
+    this.areas = new SiteAreaLayer(markers.items, areas);
     this.flags = new FlagMarkers(markers.items, (id) => owners?.byLanding.get(id));
     this.scene.add(this.areas.root, this.flags.root);
     this.applyMissions();
@@ -317,8 +316,24 @@ export class GlobeView {
   /** Places the camera above a point at once (deep links straight to the surface). */
   jumpTo(lat: number, lon: number, altitudeKm: number): void {
     this.cancelFly();
-    this.controls.autoRotate = false;
-    this.camera.position.copy(latLonToVec3(lat, lon)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    this.stopMomentum();
+    this.camera.position.copy(flyDirection(latLonToVec3(lat, lon), this.camera.position)).multiplyScalar(1 + altitudeKm / MOON_RADIUS_KM);
+    globeDisplay.setLive({ viewTarget: { lat, lon: wrapLon(lon) } });
+  }
+
+  /**
+   * Stops the auto-rotation and the turn the orbit controls still owe it: with damping on, a
+   * turn is paid out over the following frames, so after the first flight the camera kept
+   * turning and ended east of the point asked for (lunyx-experience Q-3: 0.013 deg on a 1 deg hop).
+   */
+  private stopMomentum(): void {
+    const c = this.controls;
+    c.autoRotate = false;
+    // One undamped update pays out the rest of the turn at once (a small fraction of a degree,
+    // before the flight starts) and leaves nothing for later frames.
+    c.enableDamping = false;
+    c.update();
+    c.enableDamping = true;
   }
 
   /** Resolves when the current flight (if any) has arrived or was interrupted. */
@@ -330,16 +345,18 @@ export class GlobeView {
   private cancelFly(): void {
     const f = this.fly;
     this.fly = null;
+    if (f) globeDisplay.setLive({ flying: false });
     f?.done.forEach((d) => d());
   }
 
-  private flyTo(dir: Vector3, dist?: number): void {
-    const d = dir.clone().normalize();
-    // Keep the poles from ending up dead-centre, where orbiting gets twitchy.
-    d.y = Math.max(-0.985, Math.min(0.985, d.y));
+  private flyTo(dir: Vector3, dist?: number, asked?: { lat: number; lon: number }): void {
+    this.stopMomentum();
+    // Exactly over the point asked for; only right over a pole it stops 0.1 degree short (flyTarget.ts).
+    const d = flyDirection(dir, this.camera.position);
     const waiting = this.fly?.done ?? [];
-    this.fly = { dir: d.normalize(), dist: dist ?? this.camera.position.length(), done: waiting };
-    this.controls.autoRotate = false;
+    const target = asked ?? vec3ToLatLon(dir);
+    this.fly = { dir: d, dist: dist ?? this.camera.position.length(), done: waiting, asked: target };
+    globeDisplay.setLive({ viewTarget: target, flying: true });
   }
 
   private stepFly(dt: number): void {
@@ -425,6 +442,7 @@ export class GlobeView {
         ...polar,
         note: `South-polar close-up: shaded relief from LOLA elevation (${polar.resolutionM} m grid), ${polar.shadows ? 'with the shadows the terrain casts at the simulated time' : 'evenly lit, without shadows'}. Not a photograph.`,
       },
+      closeUp: this.sitePatch ? { state: this.sitePatch.state, credits: this.sitePatch.credits } : null,
     });
 
     // Markers, the pin and site imagery follow the surface when the exaggeration or the data changes.
@@ -432,10 +450,16 @@ export class GlobeView {
     if (Math.abs(key.relief - this.placed.relief) > 1e-4 || key.version !== this.placed.version || key.site !== this.placed.site || key.polar !== this.placed.polar) {
       this.placed = key;
       this.markers?.place((m) => this.surfaceRadius(m.landing.lat, m.landing.lon));
-      this.areas?.place((lat, lon) => this.surfaceRadius(lat, lon));
+      this.placedAreaScale = NaN; // placed again below
       this.coverage?.place((lat, lon) => this.surfaceRadius(lat, lon));
       this.ice?.place((lat, lon) => this.surfaceRadius(lat, lon));
       if (site?.kind === 'custom') this.pin.position.copy(latLonToVec3(site.lat, site.lon)).multiplyScalar(this.surfaceRadius(site.lat, site.lon) + 0.0002);
+    }
+    // The explored areas are enlarged from orbit (by the chosen territory size) and true to size near the ground.
+    const areaK = areaScale(altitudeKm, globeDisplay.get().areaScale);
+    if (this.areas && !(Math.abs(areaK - this.placedAreaScale) < 0.01 * areaK)) {
+      this.placedAreaScale = areaK;
+      this.areas.place((lat, lon) => this.surfaceRadius(lat, lon), areaK);
     }
     if (this.sitePatch && this.patchVersion !== relief.dataVersion) {
       this.patchVersion = relief.dataVersion;

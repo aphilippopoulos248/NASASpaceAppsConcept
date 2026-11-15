@@ -1,0 +1,48 @@
+App cc736f8. Slope = least-squares plane through 3 x 3 points half a baseline apart; aspect = direction the ground falls towards.
+
+site             baseline  app slope  own slope   diff     app aspect  own aspect   diff   layer (own)                                   | own, 120 m on the 60 m window
+luna-9            120 m     7.082      7.082   +0.0000     149.4       149.4     +0.00   SLDEM2015 512 ppd, 60 m site window           |  7.082 deg, aspect 149.4
+surveyor-1        120 m     2.450      2.450   +0.0000     251.1       251.1     -0.00   SLDEM2015 512 ppd, 60 m site window           |  2.450 deg, aspect 251.1
+luna-13           120 m     1.408      1.408   -0.0000     334.9       334.9     +0.00   SLDEM2015 512 ppd, 60 m site window           |  1.408 deg, aspect 334.9
+surveyor-3         10 m    12.513     12.513   +0.0000     248.6       248.6     -0.00   LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG ( |  3.735 deg, aspect 223.7
+surveyor-5        120 m     1.820      1.820   -0.0000     127.8       127.8     -0.00   SLDEM2015 512 ppd, 60 m site window           |  1.820 deg, aspect 127.8
+surveyor-6        120 m     1.441      1.441   -0.0000     139.2       139.2     -0.00   SLDEM2015 512 ppd, 60 m site window           |  1.441 deg, aspect 139.2
+surveyor-7         10 m     5.764      5.764   -0.0000      44.3        44.3     -0.00   LROC NAC DTM NAC_DTM_SURVEYOR7_E413S3485.IMG  |  4.638 deg, aspect  21.5
+apollo-11          10 m     2.481      2.481   -0.0000      10.9        10.9     -0.00   LROC NAC DTM NAC_DTM_APOLLO11_E008N0234.IMG ( |  2.673 deg, aspect  81.0
+apollo-12          10 m     3.220      3.220   -0.0000     167.2       167.2     +0.00   LROC NAC DTM NAC_DTM_APOLLO12_E030S3365.IMG ( |  3.362 deg, aspect 177.9
+luna-16            10 m     1.009      1.009   +0.0000     252.3       252.3     -0.00   LROC NAC DTM NAC_DTM_LUNA16_E005S0563.IMG (2. |  0.282 deg, aspect 207.9
+luna-17           120 m     2.258      2.258   +0.0000     114.8       114.8     +0.00   SLDEM2015 512 ppd, 60 m site window           |  2.258 deg, aspect 114.8
+apollo-14          10 m     7.234      7.234   +0.0000       2.3         2.3     -0.00   LROC NAC DTM NAC_DTM_APOLLO14_E034S3425.IMG ( |  1.300 deg, aspect 112.7
+apollo-15          10 m     1.622      1.622   -0.0000     340.4       340.4     -0.00   LROC NAC DTM NAC_DTM_APOLLO15_E261N0036.IMG ( |  1.420 deg, aspect  59.2
+luna-20            10 m     6.310      6.310   +0.0000     102.7       102.7     +0.00   LROC NAC DTM NAC_DTM_LUNA20_E037N0566.IMG (2. |  6.663 deg, aspect 112.0
+apollo-16          10 m     1.395      1.395   -0.0000      51.9        51.9     +0.00   LROC NAC DTM NAC_DTM_APOLLO16_E091S0155.IMG ( |  2.842 deg, aspect 159.9
+apollo-17          10 m     2.728      2.728   -0.0000     134.0       134.0     -0.00   LROC NAC DTM NAC_DTM_APOLLO17_E203N0308.IMG ( |  2.070 deg, aspect 119.9
+luna-21            10 m     3.015      3.015   -0.0000     293.6       293.6     -0.00   LROC NAC DTM NAC_DTM_LUNOKHOD2_1_E258N0306.IM |  3.075 deg, aspect 310.8
+luna-23            10 m     3.270      3.270   +0.0000     187.8       187.8     +0.00   LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2. |  2.158 deg, aspect  36.7
+luna-24            10 m     3.191      3.191   +0.0000     341.8       341.8     -0.00   LROC NAC DTM NAC_DTM_LUNA24_E126N0622.IMG (2. |  0.986 deg, aspect  97.8
+change-3           10 m     2.662      2.662   -0.0000      87.7        87.7     +0.00   LROC NAC DTM NAC_DTM_CHANGE3_E444N3406.IMG (5 |  3.765 deg, aspect 200.3
+change-4           10 m     0.257      0.257   +0.0000     119.1       119.1     -0.00   LROC NAC DTM NAC_DTM_CHANGE4_E458S1775.IMG (5 |  1.699 deg, aspect 203.5
+change-5           10 m     3.907      3.907   +0.0000     329.2       329.2     +0.00   LROC NAC DTM NAC_DTM_CHANGE501_E430N3081.IMG  |  2.330 deg, aspect 340.4
+chandrayaan-3     120 m     1.302      1.302   +0.0000      58.1        58.1     -0.00   LOLA ldem_60s_60m, 60 m site window           |  1.302 deg, aspect  58.1
+slim               10 m     7.991      7.991   +0.0000     184.9       184.9     -0.00   LROC NAC DTM NAC_DTM_THEOPHILUS_E133S0253.IMG |  7.657 deg, aspect 178.7
+im-1              120 m    11.309     11.309   -0.0000     296.2       296.2     -0.00   LOLA ldem_60s_60m, 60 m site window           | 11.309 deg, aspect 296.2
+change-6           10 m     2.848      2.848   -0.0000     112.2       112.2     -0.00   LROC NAC DTM NAC_DTM_CHANGE6_E421S2060.IMG (4 |  1.655 deg, aspect 211.8
+blue-ghost-1       10 m     1.224      1.224   -0.0000     148.3       148.3     -0.00   LROC NAC DTM NAC_DTM_CRISHORSE_E186N0618.IMG  |  2.592 deg, aspect 201.6
+im-2              120 m     2.064      2.064   +0.0000       1.7         1.7     +0.00   LOLA ldem_80s_20m, 60 m site window           |  2.064 deg, aspect   1.7
+
+28 sites: worst slope difference 0.0000 deg; worst aspect difference, weighted by sin(slope), 0.0000 deg
+
+Nearby scan around IM-2 (radius 2000 m, spacing 300 m, 137 candidates): the ten best-ranked
+rank  offset E, N (m)   position error   app slope  own slope   diff     app aspect  own aspect   app height  own height
+  1     -300,   -600       0.026 m         2.327      2.327   -0.0000     321.2       321.2       5347.25     5347.25
+  2     -600,   -600       0.000 m         2.577      2.577   -0.0000     332.4       332.4       5339.89     5339.89
+  3     -900,   -600       0.000 m         2.349      2.349   +0.0000     313.2       313.2       5331.12     5331.12
+  4     -900,   -900       0.000 m         1.655      1.655   -0.0000     239.6       239.6       5334.04     5334.04
+  5        0,   -600       0.000 m         3.091      3.091   +0.0000       1.8         1.8       5353.67     5353.67
+  6     -300,   -900       0.000 m         2.457      2.457   -0.0000     206.2       206.2       5350.16     5350.16
+  7    -1200,   -900       0.000 m         2.507      2.507   -0.0000     257.3       257.3       5322.26     5322.26
+  8     -300,    600       0.000 m         3.188      3.188   -0.0000     341.7       341.7       5300.28     5300.28
+  9    -1200,   -600       0.000 m         1.394      1.394   +0.0000     292.5       292.5       5323.81     5323.81
+ 10     -600,    600       0.000 m         3.588      3.588   -0.0000     318.6       318.6       5293.10     5293.10
+ten candidates: worst slope difference 0.0000 deg, position 0.026 m, height 0.00 m. Baseline 120 m on the 60 m window for every candidate.
+slope limit 10 deg: 6 of 137 candidates rejected for slope; 0 inconsistent with their own slope value

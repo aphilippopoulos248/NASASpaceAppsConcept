@@ -5,6 +5,7 @@ import type { Scenario } from '../core/types';
 import type { TerrainStack } from '../terrain/types';
 import { computeHorizon, destination, profileIndex, skylineAt, slopeAt, type HorizonOptions } from './horizon';
 import { dsnOpportunities } from './dsn';
+import { fineRayCount, fineSkyline, FINE_PER_DEG, nearSkylineRanges } from './fineSkyline';
 import { EXTEND_LIMIT_DAYS, fullSpans, longestFull } from './extend';
 import { EVENT_PRECISION_MS, hours, intervalsOf, longest } from './intervals';
 import { modelEphemeris, skyAt, tabulatedEphemeris, type Ephemeris } from './sky';
@@ -24,11 +25,13 @@ const STRIPS = 24;
  * Fraction of a disc of angular radius r (deg) centred at (az, el) that stands above the
  * skyline. The disc is cut into vertical strips; each strip's chord is compared with the
  * skyline at that strip's azimuth (azimuth offsets are scaled by 1/cos(el)).
- * Also returns the clearance of the highest visible point ("any part visible" when > 0).
+ * Also returns the clearance of the highest visible point ("any part visible" when > 0) and of the
+ * lowest point of the disc over the same strips ("whole disc clear" when > 0, exactly when the
+ * fraction is 1): the two ends of a rise or set.
  */
-export function discVisibility(p: HorizonProfile, az: number, el: number, r: number): { fraction: number; topClearance: number } {
+export function discVisibility(p: HorizonProfile, az: number, el: number, r: number): { fraction: number; topClearance: number; bottomClearance: number } {
   const ce = Math.max(Math.cos(el * RAD), 1e-3);
-  let num = 0, den = 0, top = -Infinity;
+  let num = 0, den = 0, top = -Infinity, bottom = Infinity;
   for (let k = 0; k < STRIPS; k++) {
     const x = -r + ((k + 0.5) * 2 * r) / STRIPS;
     const c = Math.sqrt(Math.max(0, r * r - x * x));
@@ -37,8 +40,9 @@ export function discVisibility(p: HorizonProfile, az: number, el: number, r: num
     num += vis;
     den += 2 * c;
     top = Math.max(top, el + c - s);
+    bottom = Math.min(bottom, el - c - s);
   }
-  return { fraction: num / den, topClearance: top };
+  return { fraction: num / den, topClearance: top, bottomClearance: bottom };
 }
 
 /** Fraction of a disc of radius rs covered by a disc of radius re whose centre is `sep` away (degrees, small-angle). */
@@ -119,7 +123,7 @@ export function buildSeries(s: Scenario, p: HorizonProfile, eph: Ephemeris): { s
  * Continuous indicators of a skyline and an ephemeris at an instant, each positive while its
  * state is "on": some of the Sun above the skyline; Earth's disc overlapping the Sun's; some of
  * the Sun actually shining (above the skyline and not wholly behind Earth); Earth's centre above
- * the skyline.
+ * the skyline; any part of Earth's disc above the skyline (`earthTop`).
  */
 export function indicators(p: HorizonProfile, eph: Ephemeris) {
   const o = new Float64Array(6);
@@ -133,7 +137,8 @@ export function indicators(p: HorizonProfile, eph: Ephemeris) {
     return top < notTotal ? top : notTotal;
   };
   const earth = (t: number) => { eph.at(t, o); return o[3] - skylineAt(p, o[2]); };
-  return { sunTop, overlap, sunAny, earth };
+  const earthTop = (t: number) => { eph.at(t, o); return discVisibility(p, o[2], o[3], o[5]).topClearance; };
+  return { sunTop, overlap, sunAny, earth, earthTop };
 }
 
 export interface WindowResult {
@@ -157,13 +162,15 @@ export function evaluateWindow(s: Scenario, p: HorizonProfile, eph: Ephemeris): 
   const timeAt = (i: number) => (i < n ? startMs + i * stepMs : endMs);
 
   // Continuous indicators (positive = "on") for refining the crossings.
-  const { sunTop: gSunTop, overlap: gOverlap, sunAny: gSunAny, earth: gEarth } = indicators(p, eph);
+  const { sunTop: gSunTop, overlap: gOverlap, sunAny: gSunAny, earth: gEarth, earthTop: gEarthTop } = indicators(p, eph);
 
   // Above the skyline (sunrise/sunset events) versus actually shining (skyline and Earth eclipses: the metrics).
   const terrain = intervalsOf((i) => (i < n ? sunTop[i] : tail!.sunTop) > 0, gSunTop, timeAt, count, startMs, endMs);
   const sun = intervalsOf((i) => (i < n ? series.sunVisible[i] : tail!.sunVisible) > 0, gSunAny, timeAt, count, startMs, endMs);
   const eclipse = intervalsOf((i) => (i < n ? series.sunEclipsed[i] : tail!.sunEclipsed) > 0, gOverlap, timeAt, count, startMs, endMs);
   const earth = intervalsOf((i) => (i < n ? series.earthClearance[i] : tail!.earthClearance) > 0, gEarth, timeAt, count, startMs, endMs);
+  // Any part of Earth's disc above the skyline (PGDA product 69's definition), beside its centre.
+  const earthAny = intervalsOf((i) => (i < n ? series.earthVisible[i] : tail!.earthVisible) > 0, gEarthTop, timeAt, count, startMs, endMs);
   const windowMs = endMs - startMs;
   const sumH = (l: Interval[]) => l.reduce((a, iv) => a + hours(iv), 0);
 
@@ -173,6 +180,7 @@ export function evaluateWindow(s: Scenario, p: HorizonProfile, eph: Ephemeris): 
   if (tail) integ += ((series.sunVisible[n - 1] + tail.sunVisible) / 2) * (endMs - lastSampleMs);
   const dark = longest(sun.off);
   const gap = longest(earth.off);
+  const anyGap = longest(earthAny.off);
   let maxEl = -Infinity, minEl = Infinity;
   for (let i = 0; i < n; i++) { maxEl = Math.max(maxEl, series.sunEl[i]); minEl = Math.min(minEl, series.sunEl[i]); }
   if (tail) { maxEl = Math.max(maxEl, tail.sunEl); minEl = Math.min(minEl, tail.sunEl); }
@@ -192,6 +200,11 @@ export function evaluateWindow(s: Scenario, p: HorizonProfile, eph: Ephemeris): 
     earthIntervals: earth.on,
     earthGapIntervals: earth.off,
     eclipseIntervals: eclipse.on,
+    earthAnyPct: windowMs > 0 ? (100 * sumH(earthAny.on) * H) / windowMs : NaN,
+    longestEarthAnyGapH: anyGap.h,
+    earthAnyGapOpenEnded: anyGap.open,
+    earthAnyIntervals: earthAny.on,
+    earthAnyGapIntervals: earthAny.off,
   };
 
   const events: SkyEvent[] = [];
@@ -207,6 +220,7 @@ export function unavailableMetrics(): WindowMetrics {
     illuminationPct: NaN, sunAnyPct: NaN, longestDarknessH: NaN, darknessOpenEnded: false, earthVisiblePct: NaN,
     longestEarthGapH: NaN, earthGapOpenEnded: false, maxSunElDeg: NaN, minSunElDeg: NaN,
     sunIntervals: [], darkIntervals: [], earthIntervals: [], earthGapIntervals: [], eclipseIntervals: [],
+    earthAnyPct: NaN, longestEarthAnyGapH: NaN, earthAnyGapOpenEnded: false, earthAnyIntervals: [], earthAnyGapIntervals: [],
   };
 }
 
@@ -257,8 +271,13 @@ function addFullSpans(m: WindowMetrics, scenario: Scenario, p: HorizonProfile, w
     const full = longestFull(fullSpans(m.earthGapIntervals, ind.earth, FOLLOW_EARTH_STEP_MS));
     if (full) {
       m.longestEarthGapFull = full;
-      describe('The longest spell without Earth in view', full, m.longestEarthGapH);
+      describe('The longest spell without Earth\'s centre in view', full, m.longestEarthGapH);
     }
+  }
+  // The same for Earth's disc wholly hidden (any-part definition); its words would repeat the above, so only the figure.
+  if (m.earthAnyGapIntervals?.length) {
+    const full = longestFull(fullSpans(m.earthAnyGapIntervals, ind.earthTop, FOLLOW_EARTH_STEP_MS));
+    if (full) m.longestEarthAnyGapFull = full;
   }
 }
 
@@ -275,9 +294,21 @@ const utcMinute = (t: number) => `${new Date(t).toISOString().slice(0, 16).repla
 /** Terrain notes that only describe what is loaded (shown as provenance) rather than a limitation (shown as a warning). */
 const isDescriptiveNote = (note: string) => /^Elevation data at this point, finest first/.test(note);
 
-export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Ephemeris, horizonOptions: HorizonOptions = {}): SiteAnalysis {
+export interface AnalyseOptions {
+  /**
+   * Read the skyline again every 1 / FINE_PER_DEG deg where the Sun's or Earth's disc comes near it
+   * (fineSkyline.ts; default true). False: the main profile only, as before T-50.
+   */
+  fineSkyline?: boolean;
+}
+
+export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Ephemeris, horizonOptions: HorizonOptions = {}, options: AnalyseOptions = {}): SiteAnalysis {
   const site = { lat: scenario.site.lat, lon: scenario.site.lon };
   const horizon = computeHorizon(stack, site, scenario.mastHeightM, horizonOptions);
+  // Where a disc meets the skyline, a finer skyline: every event, passage and visible fraction below reads it there.
+  if (options.fineSkyline !== false && Number.isFinite(horizon.siteElevationM)) {
+    horizon.fine = fineSkyline(stack, site, scenario.mastHeightM, nearSkylineRanges(scenario, horizon, eph), horizonOptions);
+  }
   const warnings = [...horizon.warnings, ...stack.notes.filter((n) => !isDescriptiveNote(n))];
   const slope = slopeAt(stack, site, slopeBaselineM(stack, site.lat, site.lon));
   if (!Number.isFinite(slope.slopeDeg)) warnings.push('Slope unavailable: no elevation data around the site.');
@@ -320,11 +351,12 @@ export function analyseWith(scenario: Scenario, stack: TerrainStack, eph: Epheme
       assumptions: [
         `Observer ${horizon.mastHeightM} m above the terrain at ${site.lat.toFixed(4)}, ${site.lon.toFixed(4)} (degrees, east-positive, ME frame); heights above the 1737.4 km sphere.`,
         'Positions are topocentric and airless (no refraction), as JPL Horizons APPARENT=AIRLESS for a coord@301 observer.',
-        `Skyline from elevation data, including the Moon's curvature, ${horizon.azStepDeg} deg in azimuth, searched to ${(horizon.maxRangeM / 1000).toFixed(0)} km: ${layersText || 'no data'}.`,
+        `Skyline from elevation data, including the Moon's curvature, ${horizon.azStepDeg} deg in azimuth, searched to ${(horizon.maxRangeM / 1000).toFixed(0)} km: ${layersText || 'no data'}.` +
+          (horizon.fine?.length ? ` Where the Sun's or Earth's disc comes near the skyline in the window, it is read every ${1 / FINE_PER_DEG} deg (${fineRayCount(horizon.fine)} more directions), so features narrower than ${horizon.azStepDeg} deg under a rising or setting disc are seen.` : ''),
         `Sampled every ${scenario.stepMin} min; rise and set times refined to ${EVENT_PRECISION_MS / 1000} s; the Sun and Earth are discs (visible fraction integrated across each disc).`,
-        'Sunrise/sunset = first/last moment any part of the Sun stands above the skyline. Earthrise/Earthset = Earth\'s centre crossing the skyline.',
+        'A rise or set takes time, so each event is one named instant (decision D-8): sunrise = the first part of the Sun\'s disc appears above the skyline ("Sun starts rising"), sunset = the last part goes behind it ("Sun fully set"); Earthrise / Earthset = Earth\'s centre crossing the skyline. Each event\'s span (and `transitions`) gives the whole passage: from the first cut of the disc to the last limb when setting, from the first limb to the whole disc clear when rising.',
         'Sunlight also counts Earth passing in front of the Sun (geometric discs; the faint light refracted by Earth\'s atmosphere is ignored).',
-        'Earth visibility is geometric line of sight only; it says nothing about a working radio link.',
+        'Earth visibility is geometric line of sight only; it says nothing about a working radio link. "Earth in view" (earthVisiblePct) counts Earth\'s centre above the skyline; earthAnyPct counts any part of Earth\'s disc, the definition of the PGDA long-term Earth map.',
         `Slope over a ${slope.baselineM} m baseline from ${slope.demName}: hazards smaller than the grid are not seen.`,
       ],
     },
@@ -393,7 +425,9 @@ export function blockageAt(a: SiteAnalysis, body: 'sun' | 'earth', timeMs: numbe
     explanation = `${Name} is at ${f2(el)} deg elevation, azimuth ${f1(az)} deg at ${utcMinute(timeMs)}; no skyline is available here because no elevation data covers the site.`;
   } else {
     const data = layer ? `${layer.name}, ${Math.round(layer.resolutionM)} m grid` : 'unknown data';
-    const what = `the skyline at azimuth ${f1(az)} deg is ${f2(sky)} deg, formed by terrain ${f1(dist / 1000)} km away at ${Math.round(hgt)} m (${data})`;
+    // Terrain within a metre is the ground under the observer (a mast of 0 m on convex ground).
+    const where = dist < 1 ? `the ground at the observer's own feet, at ${Math.round(hgt)} m` : `terrain ${dist < 1000 ? `${Math.round(dist)} m` : `${f1(dist / 1000)} km`} away at ${Math.round(hgt)} m`;
+    const what = `the skyline at azimuth ${f1(az)} deg is ${f2(sky)} deg, formed by ${where} (${data})`;
     explanation = Math.abs(clearance) < 0.005
       ? `At ${utcMinute(timeMs)} ${name}'s centre is ${f2(el)} deg high and ${what}: its centre is right on the skyline (within 0.01 deg).`
       : clearance > 0
@@ -474,6 +508,7 @@ export function compareAnalyses(a: SiteAnalysis, b: SiteAnalysis): ComparisonDif
     illuminationPct: B.illuminationPct - A.illuminationPct,
     longestDarknessH: B.longestDarknessH - A.longestDarknessH,
     earthVisiblePct: B.earthVisiblePct - A.earthVisiblePct,
+    earthAnyPct: (B.earthAnyPct ?? NaN) - (A.earthAnyPct ?? NaN),
     longestEarthGapH: B.longestEarthGapH - A.longestEarthGapH,
     slopeDeg: b.slope.slopeDeg - a.slope.slopeDeg,
   };
@@ -482,8 +517,8 @@ export function compareAnalyses(a: SiteAnalysis, b: SiteAnalysis): ComparisonDif
   const add = (diff: number, scale: number, text: string) => { if (Number.isFinite(diff) && Math.abs(diff) > 1e-9) items.push({ w: Math.abs(diff) / scale, text: capitalise(text) }); };
   add(d.illuminationPct, 5, `${lb} gets ${f1(Math.abs(d.illuminationPct))} percentage points ${d.illuminationPct > 0 ? 'more' : 'less'} sunlight than ${la} (${f1(B.illuminationPct)} % vs ${f1(A.illuminationPct)} % of the window, time-averaged visible disc).`);
   add(d.longestDarknessH, 12, `with ${lb} the longest darkness is ${f1(Math.abs(d.longestDarknessH))} h ${d.longestDarknessH > 0 ? 'longer' : 'shorter'} than with ${la} (${f1(B.longestDarknessH)} h${edge(B.darknessOpenEnded)} vs ${f1(A.longestDarknessH)} h${edge(A.darknessOpenEnded)}).`);
-  add(d.earthVisiblePct, 5, `${lb} has line of sight to Earth ${f1(Math.abs(d.earthVisiblePct))} percentage points ${d.earthVisiblePct > 0 ? 'more' : 'less'} of the time than ${la} (${f1(B.earthVisiblePct)} % vs ${f1(A.earthVisiblePct)} %; geometry only).`);
-  add(d.longestEarthGapH, 12, `with ${lb} the longest gap without Earth in view is ${f1(Math.abs(d.longestEarthGapH))} h ${d.longestEarthGapH > 0 ? 'longer' : 'shorter'} than with ${la} (${f1(B.longestEarthGapH)} h${edge(B.earthGapOpenEnded)} vs ${f1(A.longestEarthGapH)} h${edge(A.earthGapOpenEnded)}).`);
+  add(d.earthVisiblePct, 5, `${lb} has line of sight to Earth's centre ${f1(Math.abs(d.earthVisiblePct))} percentage points ${d.earthVisiblePct > 0 ? 'more' : 'less'} of the time than ${la} (${f1(B.earthVisiblePct)} % vs ${f1(A.earthVisiblePct)} %; geometry only).`);
+  add(d.longestEarthGapH, 12, `with ${lb} the longest gap without Earth's centre in view is ${f1(Math.abs(d.longestEarthGapH))} h ${d.longestEarthGapH > 0 ? 'longer' : 'shorter'} than with ${la} (${f1(B.longestEarthGapH)} h${edge(B.earthGapOpenEnded)} vs ${f1(A.longestEarthGapH)} h${edge(A.earthGapOpenEnded)}).`);
   add(d.slopeDeg, 3, `the ground at ${lb} is ${f1(Math.abs(d.slopeDeg))} deg ${d.slopeDeg > 0 ? 'steeper' : 'gentler'} than at ${la} (${f1(b.slope.slopeDeg)} deg over ${b.slope.baselineM} m vs ${f1(a.slope.slopeDeg)} deg over ${a.slope.baselineM} m).`);
   items.sort((x, y) => y.w - x.w);
   const highlights = items.filter((x) => x.w >= 0.02).map((x) => x.text);

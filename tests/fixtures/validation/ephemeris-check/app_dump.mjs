@@ -8,7 +8,9 @@
 // --bundle lets the app read its bundled Horizons tables from public/ as it does in the browser (through its own
 //          setBundleReader hook); without it, under Node, the app silently uses its model for every window.
 //
-// Scenario file: [{ id, site: { id, name, kind, lat, lon }, mastHeightM, start: "UTC", durationH, stepMin, blockage?: [{ body, utc }] }]
+// Scenario file: [{ id, site: { id, name, kind, lat, lon }, mastHeightM, start: "UTC", durationH, stepMin, blockage?: [{ body, utc }],
+//                   dsnAt?: ["UTC", ...], outlook?: { months, ... }, nearby?: { radiusM, spacingM, ... } | true }]
+// With `outlook` the app's outlook() is dumped too; with `nearby` its rankNearby() rows; analysis.dsn is dumped whenever the app returns it.
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -50,7 +52,7 @@ try {
         siteElevationM: h.siteElevationM, mastHeightM: h.mastHeightM, azStepDeg: h.azStepDeg, smoothDipDeg: h.smoothDipDeg, maxRangeM: h.maxRangeM,
         layers: h.layers, elevDeg: round(h.elevDeg, 5), distM: round(h.distM, 1), heightM: round(h.heightM, 2),
       },
-      metrics: a.metrics, events: a.events, slope: a.slope, provenance: a.provenance, warnings: a.warnings,
+      metrics: a.metrics, events: a.events, transitions: a.transitions, slope: a.slope, provenance: a.provenance, warnings: a.warnings,
       series: { startMs: a.series.startMs, stepMs: a.series.stepMs, n: a.series.n, source: a.series.source },
     };
     if (WITH_SERIES || s.series) {
@@ -62,15 +64,51 @@ try {
       });
     }
     if (s.skyAt) r.skyAt = s.skyAt.map((utc) => ({ utc, sky: api.skyAt({ lat: s.site.lat, lon: s.site.lon }, h.siteElevationM + h.mastHeightM, Date.parse(utc)) }));
+    if (a.dsn) {
+      const contact = (c) => ({ intervals: c.intervals, pct: c.pct, longestGapH: c.longestGapH, gapOpenEnded: c.gapOpenEnded });
+      r.dsn = {
+        stations: a.dsn.stations.map((st) => ({ station: st.station, receive: contact(st.receive), transmit: contact(st.transmit) })),
+        anyReceive: contact(a.dsn.anyReceive), anyTransmit: contact(a.dsn.anyTransmit), assumptions: a.dsn.assumptions,
+      };
+      if (s.dsnSeries) r.dsn.series = a.dsn.stations.map((st) => ({ id: st.station.id, stationElDeg: round(st.stationElDeg, 4), siteClearanceDeg: round(st.siteClearanceDeg, 4) }));
+      if (s.dsnAt && api.dsnAt) r.dsnAt = s.dsnAt.map((utc) => ({ utc, stations: api.dsnAt(a, Date.parse(utc)) }));
+    }
+    if (s.outlook && api.outlook) {
+      const t1 = Date.now();
+      const o = await api.outlook(scenario, s.outlook === true ? {} : s.outlook);
+      r.outlook = {
+        runtimeMs: Date.now() - t1, startMs: o.startMs, endMs: o.endMs, months: o.months, windowDays: o.windowDays, stepMin: o.stepMin, rows: o.rows,
+        arrivals: { startMs: o.arrivals.startMs, stepMs: o.arrivals.stepMs, n: o.arrivals.n, missionH: o.arrivals.missionH,
+          score: round(o.arrivals.score, 4), illuminationPct: round(o.arrivals.illuminationPct, 4), earthVisiblePct: round(o.arrivals.earthVisiblePct, 4), longestDarknessH: round(o.arrivals.longestDarknessH, 3) },
+        planned: o.planned, best: o.best, worst: o.worst, slips: o.slips, longestDarkness: o.longestDarkness, longestEarthGap: o.longestEarthGap,
+        highlights: o.highlights, assumptions: o.assumptions, warnings: o.warnings,
+      };
+    }
+    if (s.nearby && api.rankNearby) {
+      const t1 = Date.now();
+      const options = s.nearby === true ? api.DEFAULT_NEARBY_OPTIONS : { ...api.DEFAULT_NEARBY_OPTIONS, ...s.nearby };
+      const rows = await api.rankNearby(scenario, options);
+      r.nearby = {
+        runtimeMs: Date.now() - t1, options,
+        rows: rows.map((c) => ({ id: c.site.id, name: c.site.name, lat: c.site.lat, lon: c.site.lon, eastM: c.eastM, northM: c.northM, distanceM: c.distanceM, elevationM: c.elevationM,
+          slope: c.slope, rejected: c.rejected, score: c.score, rank: c.rank, basis: c.basis, isReference: c.isReference,
+          metrics: c.metrics ? { illuminationPct: c.metrics.illuminationPct, sunAnyPct: c.metrics.sunAnyPct, earthVisiblePct: c.metrics.earthVisiblePct, longestDarknessH: c.metrics.longestDarknessH } : null })),
+      };
+    }
     if (SLIM) {
       const m = a.metrics;
       r.horizon = { siteElevationM: h.siteElevationM, mastHeightM: h.mastHeightM, azStepDeg: h.azStepDeg, maxRangeM: h.maxRangeM, layers: h.layers };
       r.metrics = {
         illuminationPct: m.illuminationPct, sunAnyPct: m.sunAnyPct, longestDarknessH: m.longestDarknessH, darknessOpenEnded: m.darknessOpenEnded,
         earthVisiblePct: m.earthVisiblePct, longestEarthGapH: m.longestEarthGapH, earthGapOpenEnded: m.earthGapOpenEnded, maxSunElDeg: m.maxSunElDeg, minSunElDeg: m.minSunElDeg,
-        counts: { sunIntervals: m.sunIntervals.length, darkIntervals: m.darkIntervals.length, earthIntervals: m.earthIntervals.length, events: a.events.length },
+        // T-31 items 2-3 (optional fields; absent in builds before them)
+        earthAnyPct: m.earthAnyPct, longestEarthAnyGapH: m.longestEarthAnyGapH, earthAnyGapOpenEnded: m.earthAnyGapOpenEnded,
+        counts: { sunIntervals: m.sunIntervals.length, darkIntervals: m.darkIntervals.length, earthIntervals: m.earthIntervals.length, events: a.events.length,
+          earthAnyIntervals: m.earthAnyIntervals ? m.earthAnyIntervals.length : undefined, transitions: a.transitions ? a.transitions.length : undefined },
       };
       delete r.events;
+      delete r.transitions;
+      if (r.dsn) r.dsn = { anyReceivePct: r.dsn.anyReceive.pct, anyTransmitPct: r.dsn.anyTransmit.pct, note: 'contact intervals dropped by --slim' };
       delete r.provenance;
       r.warnings = a.warnings.map((w) => (w.length > 300 ? `${w.slice(0, 300)}...` : w));
     }

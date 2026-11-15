@@ -1,0 +1,44 @@
+1. Station coordinates: the app (DSN handbook 810-005) against Horizons' own DSN sites
+   DSS-14  app 35.4259009, -116.8895382, 1001.39 m   Horizons "DSS-14 (70-m)" 35.4259009, -116.8895382, 1001.39 m   difference -0.00 m north, -0.00 m east, 0.00 m up; limits 6 / 10.4 deg
+   DSS-43  app -35.4024242, 148.9812673, 688.87 m   Horizons "DSS-43 (70-m)" -35.4024242, 148.9812673, 688.87 m   difference -0.00 m north, 0.00 m east, 0.00 m up; limits 6 / 10.2 deg
+   DSS-63  app 40.4312098, -4.2480085, 864.82 m   Horizons "DSS-63 (70-m)" 40.4312097, -4.2480085, 864.82 m   difference 0.01 m north, -0.00 m east, -0.00 m up; limits 6 / 10.2 deg
+
+2. chandrayaan-3.2023-08  (-69.3741, 32.3200), 2023-08-23T12:00:00Z + 72 h, app ephemeris: model
+   DSS-14  site in the station's sky: elevation within 0.0005 deg (865 samples), azimuth arc 0.0004 deg, range 51.1 km;  station in the site's sky: elevation 0.0029, azimuth arc 0.0005 deg (25 instants)
+        receive  limit  6.0 deg: app 34.63 % in 3 spans, reference 34.63 % in 3; 6 edges set by the station limit within 4.1 s
+        transmit limit 10.4 deg: app 30.53 % in 3 spans, reference 30.54 % in 3; 6 edges set by the station limit within 4.9 s
+   DSS-43  site in the station's sky: elevation within 0.0005 deg (865 samples), azimuth arc 0.0006 deg, range 51.0 km;  station in the site's sky: elevation 0.0029, azimuth arc 0.0005 deg (25 instants)
+        receive  limit  6.0 deg: app 53.42 % in 4 spans, reference 53.42 % in 4; 6 edges set by the station limit within 2.9 s
+        transmit limit 10.2 deg: app 50.17 % in 4 spans, reference 50.17 % in 4; 6 edges set by the station limit within 4.9 s
+   DSS-63  site in the station's sky: elevation within 0.0007 deg (865 samples), azimuth arc 0.0006 deg, range 51.3 km;  station in the site's sky: elevation 0.0029, azimuth arc 0.0005 deg (25 instants)
+        receive  limit  6.0 deg: app 32.26 % in 3 spans, reference 32.26 % in 3; 6 edges set by the station limit within 3.0 s
+        transmit limit 10.2 deg: app 27.86 % in 3 spans, reference 27.86 % in 3; 6 edges set by the station limit within 4.8 s
+
+2. im-2.2025-03  (-84.7900, 29.2000), 2025-03-17T12:00:00Z + 72 h, app ephemeris: model
+   DSS-14  site in the station's sky: elevation within 0.0009 deg (865 samples), azimuth arc 0.0008 deg, range 26.4 km;  station in the site's sky: elevation 0.0027, azimuth arc 0.0020 deg (25 instants)
+        receive  limit  6.0 deg: app 10.24 % in 2 spans, reference 10.28 % in 2; 2 edges set by the station limit within 5.3 s; 1 set by lunar terrain within 1.5 min
+            end   app 03-18 10:46:29  reference 03-18 10:48:01    -1.5 min  (the station goes behind the Moon's skyline)
+        transmit limit 10.4 deg: app  9.07 % in 2 spans, reference  9.10 % in 2; 2 edges set by the station limit within 3.8 s; 1 set by lunar terrain within 1.5 min
+            end   app 03-18 10:46:29  reference 03-18 10:48:01    -1.5 min  (the station goes behind the Moon's skyline)
+   DSS-43  site in the station's sky: elevation within 0.0009 deg (865 samples), azimuth arc 0.0009 deg, range 26.6 km;  station in the site's sky: elevation 0.0026, azimuth arc 0.0020 deg (25 instants)
+        receive  limit  6.0 deg: app 38.94 % in 3 spans, reference 38.96 % in 3; 4 edges set by the station limit within 4.6 s; 1 set by lunar terrain within 0.8 min
+            end   app 03-19 15:01:10  reference 03-19 15:02:01    -0.8 min  (the station goes behind the Moon's skyline)
+        transmit limit 10.2 deg: app 36.86 % in 3 spans, reference 36.88 % in 3; 4 edges set by the station limit within 4.0 s; 1 set by lunar terrain within 0.8 min
+            end   app 03-19 15:01:10  reference 03-19 15:02:01    -0.8 min  (the station goes behind the Moon's skyline)
+   DSS-63  site in the station's sky: elevation within 0.0010 deg (865 samples), azimuth arc 0.0009 deg, range 26.5 km;  station in the site's sky: elevation 0.0027, azimuth arc 0.0020 deg (25 instants)
+        receive  limit  6.0 deg: app 12.10 % in 1 spans, reference 12.10 % in 1; 2 edges set by the station limit within 4.4 s
+        transmit limit 10.2 deg: app 10.84 % in 1 spans, reference 10.84 % in 1; 2 edges set by the station limit within 3.2 s
+
+2. apollo-11.2031-04  (0.6742, 23.4731), 2031-04-10T00:00:00Z + 72 h, app ephemeris: model
+   DSS-14  site in the station's sky: elevation within 0.0008 deg (865 samples), azimuth arc 0.0008 deg, range 25.1 km;  station in the site's sky: elevation 0.0018, azimuth arc 0.0007 deg (25 instants)
+        receive  limit  6.0 deg: app 37.54 % in 3 spans, reference 37.54 % in 3; 6 edges set by the station limit within 3.7 s
+        transmit limit 10.4 deg: app 33.81 % in 3 spans, reference 33.81 % in 3; 6 edges set by the station limit within 3.6 s
+   DSS-43  site in the station's sky: elevation within 0.0008 deg (865 samples), azimuth arc 0.0009 deg, range 24.1 km;  station in the site's sky: elevation 0.0018, azimuth arc 0.0007 deg (25 instants)
+        receive  limit  6.0 deg: app 53.81 % in 3 spans, reference 53.81 % in 3; 5 edges set by the station limit within 4.2 s
+        transmit limit 10.2 deg: app 51.20 % in 3 spans, reference 51.20 % in 3; 5 edges set by the station limit within 4.4 s
+   DSS-63  site in the station's sky: elevation within 0.0009 deg (865 samples), azimuth arc 0.0010 deg, range 24.9 km;  station in the site's sky: elevation 0.0019, azimuth arc 0.0007 deg (25 instants)
+        receive  limit  6.0 deg: app 32.46 % in 3 spans, reference 32.46 % in 3; 5 edges set by the station limit within 4.7 s
+        transmit limit 10.2 deg: app 29.13 % in 3 spans, reference 29.13 % in 3; 5 edges set by the station limit within 4.8 s
+
+Worst over all sites and stations: site elevation at the station 0.0010 deg, azimuth arc 0.0010 deg, range 51.3 km; station in the site's sky 0.0029 / 0.0020 deg;
+edges set by a station's elevation limit within 5.3 s; edges set by lunar terrain within 1.5 min; share of the window within 0.04 points.

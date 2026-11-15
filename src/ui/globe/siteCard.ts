@@ -4,15 +4,15 @@
 //
 // Layout: a header that always shows (name, coordinates, fold and close buttons), a body that
 // scrolls and can be folded away (the default on phones), and a footer with the actions.
-import { blockageAt, skyAt } from '../../analysis/api';
+import { blockageAt, nextTransitions, skyAt, transitionSummary } from '../../analysis/api';
 import type { Blockage } from '../../analysis/types';
 import { runAction } from '../../core/actions';
 import { analysis } from '../../core/analysisStore';
 import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { spanText } from '../../core/scenario';
-import { averagesReadout, dsnReadout, iceReadout, type AveragesReadout, type IceReadout } from '../../core/siteScience';
 import { store } from '../../core/store';
+import { throttle } from '../../core/throttle';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
@@ -21,10 +21,12 @@ import { flagCode, labelDisagrees, loadOwnership, type OwnershipIndex, stateLabe
 import { flagCanvas } from '../../scene/flags';
 import { globeDisplay } from '../../scene/globe/displayState';
 import { describeExtent, loadSiteAreas, type SiteArea } from '../../scene/siteAreas';
-import { IMAGERY_MAX_LAT, SITE_IMAGERY_CREDIT } from '../../scene/sitePatch';
+import { IMAGERY_MAX_LAT, imageryText } from '../../scene/sitePatch';
 import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
 import { button, el, isTypingTarget } from '../dom';
+import { mountSiteScience } from '../science/siteScience';
+import { bindCardKeys } from './cardKeys';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './siteCard.css';
 
@@ -102,23 +104,41 @@ export function mountSiteCard(region: HTMLElement): void {
   dataMore.append(dataSummary, dataList, dataNotes);
 
   const skyTitle = el('h3', 'ly-section-title');
-  const sky = factList('sc-sky', [['sun', 'Sun'], ['earth', 'Earth']]);
+  const sky = factList('sc-sky', [['sun', 'Sun'], ['sunNext', 'Sun next'], ['earth', 'Earth'], ['earthNext', 'Earth next']]);
   const skyNote = el('p', 'ly-note sc-skynote');
 
   const winTitle = el('h3', 'ly-section-title', 'Mission window');
   const winWhen = el('p', 'ly-note sc-winwhen');
-  const win = factList('sc-window', [['sunlight', 'Sunlight'], ['dark', 'Longest darkness'], ['earth', 'Earth in view'], ['gap', 'Longest Earth gap'], ['slope', 'Slope']]);
+  // Earth in two definitions, never mixed up: its centre (the app's line of sight) and any part of its
+  // disc (the definition of the long-term PGDA map shown under Site science).
+  const win = factList('sc-window', [
+    ['sunlight', 'Sunlight'],
+    ['dark', 'Longest darkness'],
+    ['earth', "Earth's centre in view"],
+    ['earthAny', 'Any part of Earth in view'],
+    ['gap', "Longest gap, Earth's centre"],
+    ['gapAny', 'Longest gap, whole disc'],
+    ['slope', 'Slope'],
+  ]);
   const winStatus = el('p', 'sc-winstatus');
   winStatus.setAttribute('role', 'status');
   const winNote = el('p', 'ly-note sc-winnote');
 
-  // Site science: readouts from the merged data layers, each with its source and caveat beside it.
-  const sciTitle = el('h3', 'ly-section-title', 'Site science');
+  // Site science (@ice-targets' module, src/ui/science): Deep Space Network geometry, long-term
+  // averages, ice targets, Diviner annual temperatures and ShadowCam links, each with its source
+  // and caveat. It keeps itself current; here it only gets a place and a heading that folds it.
+  const sciId = `sc-science-${uid}`;
+  const sciTitle = el('h3', 'ly-section-title sc-scititle');
+  const sciToggle = button('', 'sc-scitoggle', () => void runAction('showPanel', { panel: 'site-science', open: !isPanelOpen('site-science') }));
+  sciToggle.setAttribute('aria-controls', sciId);
+  const sciMark = el('span', 'sc-scimark');
+  sciMark.setAttribute('aria-hidden', 'true');
+  sciToggle.append(el('span', undefined, 'Site science'), sciMark);
+  sciTitle.append(sciToggle);
+  const sciHint = el('p', 'ly-note sc-scihint', 'Deep Space Network geometry, 18.6-year averages, nearest ice targets, annual surface temperatures and ShadowCam links for this site.');
   const sci = el('div', 'sc-science');
-  const dsnBox = el('div', 'sc-sci-block');
-  const avgBox = el('div', 'sc-sci-block');
-  const iceBox = el('div', 'sc-sci-block');
-  sci.append(dsnBox, avgBox, iceBox, el('p', 'ly-note', 'Diviner seasonal temperatures and ShadowCam imagery are not packaged in this build.'));
+  sci.id = sciId;
+  mountSiteScience(sci, { heading: false });
 
   const summary = el('p', 'sc-summary');
   const links = el('div', 'sc-links');
@@ -129,13 +149,13 @@ export function mountSiteCard(region: HTMLElement): void {
     a.rel = 'noopener';
   }
   links.append(quickmap, trek);
-  const credit = el('p', 'ly-note sc-credit', `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`);
+  const credit = el('p', 'ly-note sc-credit');
   const nav = el('div', 'sc-nav');
   const prev = button('← Earlier', 'ly-btn ly-btn--small', () => step(-1));
   const index = el('span', 'ly-label ly-value');
   const next = button('Later →', 'ly-btn ly-btn--small', () => step(1));
   nav.append(prev, index, next);
-  body.append(facts.dl, mismatch, areaNote, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, sciTitle, sci, summary, links, credit, nav);
+  body.append(facts.dl, mismatch, areaNote, dataMore, skyTitle, sky.dl, skyNote, winTitle, winWhen, winStatus, win.dl, winNote, sciTitle, sciHint, sci, summary, links, credit, nav);
 
   // ---------- footer: the actions ----------
   const foot = el('footer', 'sc-foot');
@@ -184,6 +204,37 @@ export function mountSiteCard(region: HTMLElement): void {
   onPanelChange((panel) => panel === 'site-details' && syncFold());
   syncFold();
 
+  const syncScience = () => {
+    const open = isPanelOpen('site-science');
+    sci.hidden = !open;
+    sciHint.hidden = open;
+    sciMark.textContent = open ? '▾' : '▸';
+    sciToggle.setAttribute('aria-expanded', String(open));
+    sciToggle.title = open ? 'Fold the site science away' : 'Show the site science';
+  };
+  onPanelChange((panel) => panel === 'site-science' && syncScience());
+  syncScience();
+
+  // ---------- what the close-up on the globe is made of ----------
+  // Up to 80 degrees of latitude it is imagery fetched from NASA Moon Trek, which may not
+  // arrive: the line says what is on screen, not what was asked for.
+  const renderCredit = (site: SiteRef) => {
+    if (Math.abs(site.lat) > IMAGERY_MAX_LAT) {
+      credit.textContent =
+        site.lat < 0
+          ? 'Close-up on the globe: shaded relief computed from LOLA polar elevation (40, 80 and 160 m grids), with the shadows the terrain casts at the simulated time. Not a photograph: photographic maps are stretched this close to the pole.'
+          : 'No close-up on the globe this close to the north pole: photographic maps are stretched here and no north-polar elevation layer is bundled.';
+      return;
+    }
+    const closeUp = globeDisplay.getLive().closeUp;
+    credit.textContent = imageryText(closeUp?.state ?? 'loading', closeUp?.credits ?? []);
+    credit.classList.toggle('sc-credit--missing', closeUp?.state === 'unavailable');
+  };
+  globeDisplay.subscribe(() => {
+    const site = store.get().site;
+    if (site) renderCredit(site);
+  });
+
   /** The finished analysis of the scenario on screen, or null while there is none for it. */
   const currentAnalysis = () => {
     const st = analysis.get('current');
@@ -191,18 +242,23 @@ export function mountSiteCard(region: HTMLElement): void {
   };
 
   // ---------- Sun and Earth at the simulated time ----------
-  let lastSkyMs = -Infinity;
   const renderSky = (site: SiteRef) => {
     const t = store.get().timeMs;
-    lastSkyMs = performance.now();
     skyTitle.textContent = `Sky at ${formatUtc(t)}`;
     const a = currentAnalysis();
     if (a) {
       sky.set('sun', bodyText(blockageAt(a, 'sun', t), 'Hidden'));
       sky.set('earth', bodyText(blockageAt(a, 'earth', t), 'Hidden'));
-      skyNote.textContent = `Centre of each disc against the terrain skyline, seen from ${a.horizon.mastHeightM} m above the ground at the site. No atmosphere, so no refraction.`;
+      // The passage of each disc through the skyline under way, or the next one: both ends, named (D-8).
+      const next = nextTransitions(a, t);
+      const passage = (tr: (typeof next)['sun']) => (tr ? `${tr.start.timeMs <= t ? 'under way: ' : ''}${transitionSummary(tr)}` : 'no rise or set found in or near the analysed window');
+      sky.set('sunNext', passage(next.sun));
+      sky.set('earthNext', passage(next.earth));
+      skyNote.textContent = `Centre of each disc against the terrain skyline, seen from ${a.horizon.mastHeightM} m above the ground at the site. No atmosphere, so no refraction. A rise or a set is a span: from the first cut of the disc to its last limb.`;
       return;
     }
+    sky.set('sunNext', null);
+    sky.set('earthNext', null);
     try {
       const s = skyAt(site, 0, t);
       const plain = (b: { elDeg: number; azDeg: number }) => `${deg(b.elDeg)} elevation, azimuth ${deg(b.azDeg, 0)}`;
@@ -220,7 +276,6 @@ export function mountSiteCard(region: HTMLElement): void {
   const renderAnalysis = () => {
     const st = analysis.get('current');
     const want = analysis.wanted('current');
-    renderDsn(); // station geometry comes with the same analysis
     for (const key of Object.keys(win.rows)) win.set(key, null);
     winNote.textContent = '';
     if (!want) {
@@ -244,87 +299,12 @@ export function mountSiteCard(region: HTMLElement): void {
     win.set('sunlight', `${pct(m.illuminationPct)} of the window`);
     win.set('dark', span(m.longestDarknessH, m.darknessOpenEnded));
     win.set('earth', `${pct(m.earthVisiblePct)} of the window`);
+    win.set('earthAny', m.earthAnyPct === undefined ? null : `${pct(m.earthAnyPct)} of the window`);
     win.set('gap', span(m.longestEarthGapH, m.earthGapOpenEnded));
+    win.set('gapAny', m.longestEarthAnyGapH === undefined ? null : span(m.longestEarthAnyGapH, m.earthAnyGapOpenEnded ?? false));
     win.set('slope', Number.isFinite(a.slope.slopeDeg) ? `${deg(a.slope.slopeDeg)} over ${Math.round(a.slope.baselineM)} m` : 'not available: no elevation data here');
-    winNote.textContent = 'Sunlight is the time-averaged visible part of the Sun\'s disc. Earth in view is geometric line of sight to Earth\'s centre, not a radio link. Both are measured against the terrain skyline.';
+    winNote.textContent = 'Sunlight is the time-averaged visible part of the Sun\'s disc. Earth is counted two ways: its centre above the skyline, and any part of its disc (the definition of the 18.6-year map under Site science). Both are geometric line of sight, not a radio link, measured against the terrain skyline.';
     if (store.get().site) renderSky(store.get().site!);
-  };
-
-  // ---------- site science ----------
-  const block = (box: HTMLElement, heading: string, rows: [string, string][], notes: string[], more?: { summary: string; lines: string[] }) => {
-    const dl = el('dl', 'ly-kv');
-    for (const [k, v] of rows) dl.append(el('dt', undefined, k), el('dd', undefined, v));
-    box.replaceChildren(el('h4', 'sc-sci-head', heading), ...(rows.length ? [dl] : []), ...notes.map((n) => el('p', 'ly-note', n)));
-    if (more?.lines.length) {
-      const d = el('details', 'sc-more');
-      d.append(el('summary', undefined, more.summary), ...more.lines.map((n) => el('p', 'ly-note', n)));
-      box.append(d);
-    }
-  };
-  const gap = (c: { longestGapH: number | null; gapRunsIntoWindowEdge: boolean }) =>
-    c.longestGapH === null ? 'gap not available' : c.longestGapH < 0.05 ? 'no gap' : `longest gap ${formatDuration(c.longestGapH)}${c.gapRunsIntoWindowEdge ? ' or more' : ''}`;
-  const renderDsn = () => {
-    const want = analysis.wanted('current');
-    const st = analysis.get('current');
-    const r = dsnReadout(st.state !== 'idle' && want && st.scenario.id !== want.id ? { state: 'loading', scenario: want } : st);
-    if (!r.available) {
-      block(dsnBox, 'Deep Space Network stations', [], [r.reason]);
-      return;
-    }
-    const line = (c: { pctOfWindow: number | null; longestGapH: number | null; gapRunsIntoWindowEdge: boolean }) => `${c.pctOfWindow === null ? 'not available' : `${c.pctOfWindow.toFixed(1)} % of the window`}, ${gap(c)}`;
-    block(
-      dsnBox,
-      `Deep Space Network stations, ${spanText(r.windowDurationH, true)} window`,
-      [...r.stations.map((s): [string, string] => [s.complex.split(',')[0], line(s.receive)]), ['Any station', line(r.anyStation.receive)]],
-      [`In view for receiving (station above its ${r.stations[0]?.receiveLimitDeg ?? ''}° limit and above this site's terrain skyline). ${r.meaning}`],
-      { summary: 'Stations, limits and assumptions', lines: [...r.stations.map((s) => `${s.name}: transmit ${line(s.transmit)} (limit ${s.transmitLimitDeg}°).`), ...r.assumptions] },
-    );
-  };
-  const renderAverages = (r: AveragesReadout) => {
-    if (!('sunlight' in r) || !r.sunlight || !r.earthVisibility) {
-      block(avgBox, 'Long-term averages', [], ['reason' in r && r.reason ? r.reason : 'Not available.']);
-      return;
-    }
-    const value = (x: { available: boolean; pctOfTime: number | null; neverInModel: boolean; cellM: number | null }) =>
-      !x.available || x.pctOfTime === null ? null : x.neverInModel ? `never (0 %), ${x.cellM} m cell` : `${x.pctOfTime} % of the time, ${x.cellM} m cell`;
-    const sun = value(r.sunlight), earth = value(r.earthVisibility);
-    if (!sun && !earth) {
-      block(avgBox, 'Long-term averages (18.6 years)', [], [r.sunlight.text]);
-      return;
-    }
-    block(
-      avgBox,
-      'Long-term averages (18.6 years, not this date)',
-      [['Any sunlight', sun ?? 'not mapped here'], ['Any of Earth in view', earth ?? 'not mapped here']],
-      ['Share of time with any part of the disc above the terrain horizon, averaged over 18.6 years of a model (NASA PGDA product 69). Not the mission-window figures above, and not a radio link.'],
-      { summary: 'Source and limits', lines: [r.averagingPeriod, ...r.caveats, r.citation] },
-    );
-  };
-  const renderIce = (r: IceReadout) => {
-    if (!r.available) {
-      block(iceBox, 'Mapped ice targets', [], [r.reason]);
-      return;
-    }
-    if (!r.nearest.length) {
-      block(iceBox, 'Mapped ice targets', [], [r.note ?? 'None nearby.']);
-      return;
-    }
-    block(
-      iceBox,
-      'Nearest mapped ice targets',
-      r.nearest.map((t): [string, string] => [t.label, t.insideOutline ? 'inside its outline' : `${t.distanceText}, bearing ${t.bearingDeg}°`]),
-      [`${r.distanceMeaning} ${r.whatTheseAre}`],
-      { summary: 'Credit and data notes', lines: [r.credit, ...r.dataNotes] },
-    );
-  };
-  let scienceToken = 0;
-  const renderScience = (site: SiteRef) => {
-    const token = ++scienceToken;
-    renderDsn();
-    block(avgBox, 'Long-term averages', [], ['Reading the maps…']);
-    block(iceBox, 'Mapped ice targets', [], ['Reading the database…']);
-    void averagesReadout(site).then((r) => token === scienceToken && renderAverages(r));
-    void iceReadout(site, 3).then((r) => token === scienceToken && renderIce(r));
   };
 
   // ---------- elevation and the data behind it ----------
@@ -400,7 +380,8 @@ export function mountSiteCard(region: HTMLElement): void {
   };
   const renderArea = (l: Landing | undefined) => {
     const area = l ? areas.get(l.id) : undefined;
-    facts.set('area', !l ? null : area ? `${describeExtent(area)} (${globeDisplay.get().areaScale === 1 ? 'drawn at true size' : `drawn ${globeDisplay.get().areaScale}× larger`} on the globe)` : '—');
+    const k = globeDisplay.get().areaScale;
+    facts.set('area', !l ? null : area ? `${describeExtent(area)} (on the globe drawn ${k === 1 ? 'true to size' : `up to ${k}× larger from orbit, true to size close to the ground`})` : '—');
     areaNote.textContent = area?.note ?? '';
     areaNote.hidden = !area?.note;
   };
@@ -427,7 +408,8 @@ export function mountSiteCard(region: HTMLElement): void {
       swatch.style.background = landingColor(l);
       programName.textContent = l.program;
     }
-    title.textContent = l ? l.name : 'Pinned location';
+    // A scan candidate carries its own name ("Candidate 300 m W, 600 m S of ..."), as the nearby list and the assistant say it.
+    title.textContent = l ? l.name : site.kind === 'candidate' ? site.name : 'Pinned location';
     const approx = l && (l as Landing & { approx?: boolean }).approx;
     where.textContent = `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}`;
     facts.set('date', l ? `${formatDate(l.date)}, ${l.time} UTC` : null);
@@ -436,13 +418,7 @@ export function mountSiteCard(region: HTMLElement): void {
     facts.set('region', l?.region ?? null);
     facts.set('coords', `${formatCoords(site.lat, site.lon)}${approx ? ' (approx.)' : ''}; longitude east-positive`);
     renderArea(l);
-    // What the close-up on the globe is made of at this latitude.
-    credit.textContent =
-      Math.abs(site.lat) <= IMAGERY_MAX_LAT
-        ? `Close-up imagery: ${SITE_IMAGERY_CREDIT}.`
-        : site.lat < 0
-          ? 'Close-up on the globe: shaded relief computed from LOLA polar elevation (40, 80 and 160 m grids), with the shadows the terrain casts at the simulated time. Not a photograph: photographic maps are stretched this close to the pole.'
-          : 'No close-up on the globe this close to the north pole: photographic maps are stretched here and no north-polar elevation layer is bundled.';
+    renderCredit(site);
     summary.hidden = !l;
     summary.textContent = l?.summary ?? '';
     links.hidden = !l;
@@ -462,7 +438,6 @@ export function mountSiteCard(region: HTMLElement): void {
     }
     renderSky(site);
     renderAnalysis();
-    renderScience(site);
     void renderTerrain(site);
   };
 
@@ -471,17 +446,25 @@ export function mountSiteCard(region: HTMLElement): void {
   // The window line follows the scenario at once; the numbers follow when the analysis lands.
   store.subscribe(['mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => store.get().site && renderAnalysis());
   analysis.subscribe((slot) => slot === 'current' && store.get().site && renderAnalysis());
-  // While the clock runs, refresh Sun/Earth a few times a second rather than every frame.
-  store.subscribe(['timeMs'], (s) => {
-    if (s.site && !card.hidden && !body.hidden && performance.now() - lastSkyMs > 250) renderSky(s.site);
-  });
+  // While the clock runs, refresh Sun/Earth a few times a second rather than every frame. The
+  // last change is always drawn: a change inside the quiet interval is drawn when it ends.
+  const skyTick = throttle(() => {
+    const site = store.get().site;
+    if (site && !card.hidden && !body.hidden) renderSky(site);
+  }, 250);
+  store.subscribe(['timeMs'], skyTick);
   onPanelChange((panel, open) => panel === 'site-details' && open && store.get().site && renderSky(store.get().site!));
   render();
 
-  window.addEventListener('keydown', (e) => {
-    if (store.get().view !== 'globe' || !store.get().site || isTypingTarget(e.target)) return;
-    if (e.key === 'Escape') void runAction('clearSite');
-    else if (e.key === 'ArrowRight') step(1);
-    else if (e.key === 'ArrowLeft') step(-1);
+  // Escape closes the card, the left and right arrows step through the landings: globe view only,
+  // and only a press nobody else has handled (see cardKeys.ts).
+  bindCardKeys(window, {
+    view: () => store.get().view,
+    hasSite: () => store.get().site !== null,
+    isTyping: (target) => isTypingTarget(target as EventTarget | null),
+    act: (command) => {
+      if (command === 'clearSite') void runAction('clearSite');
+      else step(command === 'next' ? 1 : -1);
+    },
   });
 }

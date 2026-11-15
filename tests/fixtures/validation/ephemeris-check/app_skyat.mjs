@@ -1,6 +1,7 @@
 // Calls the app's skyAt() for a list of places and instants and writes the answers as JSON.
 //   node tests/fixtures/validation/ephemeris-check/app_skyat.mjs --in FILE.json --out FILE.json [--root DIR]
-// Input: [{ id, lat, lon, elevationM, utc }]
+// Input: [{ id, lat, lon, elevationM, utc }], or with --series: [{ id, lat, lon, elevationM, start, stepMin, count }], which writes
+// the Sun's and Earth's azimuth, elevation and angular radius at every step as arrays.
 import { execFileSync } from 'node:child_process';
 import { readFile, writeFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -20,7 +21,17 @@ const vite = await createServer({ root: ROOT, configFile: false, server: { middl
 let out;
 try {
   const api = await vite.ssrLoadModule('/src/analysis/api.ts');
-  out = rows.map((r) => {
+  out = args.includes('--series') ? rows.map((r) => {
+    const t0 = Date.parse(r.start);
+    const cols = { sunAz: [], sunEl: [], sunRadius: [], earthAz: [], earthEl: [], earthRadius: [] };
+    const f = (v) => Number(v.toFixed(5));
+    for (let i = 0; i < r.count; i++) {
+      const s = api.skyAt({ lat: r.lat, lon: r.lon }, r.elevationM, t0 + i * r.stepMin * 60000);
+      cols.sunAz.push(f(s.sun.azDeg)); cols.sunEl.push(f(s.sun.elDeg)); cols.sunRadius.push(f(s.sun.angularRadiusDeg));
+      cols.earthAz.push(f(s.earth.azDeg)); cols.earthEl.push(f(s.earth.elDeg)); cols.earthRadius.push(f(s.earth.angularRadiusDeg));
+    }
+    return { ...r, ...cols };
+  }) : rows.map((r) => {
     const s = api.skyAt({ lat: r.lat, lon: r.lon }, r.elevationM, Date.parse(r.utc));
     return { ...r, sun: { az: s.sun.azDeg, el: s.sun.elDeg }, earth: { az: s.earth.azDeg, el: s.earth.elDeg }, subEarth: s.subEarth, subSolar: s.subSolar, source: s.source };
   });
