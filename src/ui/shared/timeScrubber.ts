@@ -17,6 +17,7 @@ import { MAX_TIME_MS, MIN_TIME_MS, store } from '../../core/store';
 import { throttle } from '../../core/throttle';
 import { formatUtc, isoUtc } from '../../core/time';
 import { button, el } from '../dom';
+import { showFieldOutcome } from '../fieldStatus';
 import './timeScrubber.css';
 
 const GLYPH: Record<SkyEvent['type'], string> = { sunrise: '☀↑', sunset: '☀↓', earthrise: '⊕↑', earthset: '⊕↓' };
@@ -85,8 +86,7 @@ export function mountTimeScrubber(region: HTMLElement): void {
   date.addEventListener('change', async () => {
     if (!date.value) return;
     const r = await runAction('setTime', { utc: `${date.value}Z` });
-    date.setAttribute('aria-invalid', String(!r.ok));
-    date.title = r.ok ? '' : r.error;
+    showFieldOutcome(date, r);
   });
   const now = button('Now', 'ly-btn ly-btn--small', () => void runAction('setMissionWindow', { startUtc: isoUtc(Date.now()), moveClock: true }));
   now.title = 'Start the mission window at the current real time and set the clock there';

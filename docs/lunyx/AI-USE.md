@@ -3,10 +3,10 @@
 Disclosure for the NASA Space Apps 2026 submission (task T-3 of the hub project "Lunyx
 Navigator and Submission"; requirements in `docs/lunyx/SUBMISSION-DOCS-BRIEF.md`, section 3).
 
-- **State described:** the tree at `5dce26c`: `am/lunyx-experience/integration` at `b7595e9`
-  merged with `am/lunyx/integration` at `9f949df` (the published feature set with the mission
-  presets of T-22, the T-37 notices and the T-38 landing sources), plus this task's documents;
-  checked on 2026-11-15 (UTC).
+- **State described:** the tree at `0592ba4`: `am/lunyx-experience/integration` at `34cd324`
+  merged with `am/lunyx/integration` at `50aaace` (the published feature set with the mission
+  presets, the T-37 notices, the T-38 landing sources and the T-39 flags), plus this task's
+  documents; checked on 2026-11-15 (UTC).
 - **Nothing has been altered.** Every watermark, label or metadata change below is a proposal
   for the operator to approve (section 5). Items that could not be established are in section 8.
 - **Who wrote this:** an AI agent (Claude, hub handle @submission) from the repository, its git
@@ -106,13 +106,13 @@ in section 8.)
 
 ### 2.2 Evidence in the repository
 
-At `5dce26c` the history has 261 commits:
+At `0592ba4` the history has 281 commits:
 
 | Commits | With a "Co-Authored-By: Claude …" trailer | Without |
 | --- | --- | --- |
-| 134 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 133 (70 "Claude Fable 5.2", 63 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
+| 144 non-merge commits from the local git account that the operator's sessions and the hub's agents share | 143 (70 "Claude Fable 5.2", 73 "Claude Opus 5.5") | 1: `5763608` "WIP analysis: topocentric sky model, Horizons bundle, skyline", made on the @analysis agent's branch (my reading of the history) |
 | 10 non-merge commits from the teammate's GitHub account | 2 (`4ab3892` the first app, `98964da` a Vite setting; both "Claude Fable 5.2") | 8: `49fee90`, `418760e`, `8bfd842`, `2ab7daa` (surface scene and the close-up textures), `008be62`, `bf39978`, `f812385`, `2855d22` (country labels, flags, explored areas, a merge fix); AI status not recorded (open item L4) |
-| 117 merge commits | 42 | 75 (43 by the hub's integration bot, 1 GitHub pull-request merge, 29 by the local account, 2 by the teammate) |
+| 127 merge commits | 44 | 83 (49 by the hub's integration bot, 1 GitHub pull-request merge, 31 by the local account, 2 by the teammate) |
 
 The hub ran its agents on `claude-fable-5-2` (decision D-2 of the original project) and now
 lists this project's agents on `claude-opus-5-5`; the commit trailers name both models. The
@@ -135,7 +135,7 @@ committed screenshots were taken by agents with headless Chromium.
 - No code in the repository calls an image, video, speech-synthesis or other generative-media
   service (searched all code and configuration files for the usual APIs and service names;
   none found).
-- None of the 114 images in the repository carries EXIF, XMP, C2PA or PNG text metadata, so none
+- None of the 123 images in the repository carries EXIF, XMP, C2PA or PNG text metadata, so none
   carries a generator's signature (absence of metadata is not proof by itself).
 - Every image's origin is traced in section 4 to a NASA or partner source, to a script in this
   repository, to a capture of the app, or to the team's mockups, except the two close-up
@@ -178,8 +178,8 @@ the operator; relayed through @coordinator, not patched here:
 
 ## 4. Asset inventory
 
-**Scope:** every tracked file at `5dce26c` that is an image, texture, document image or data
-file: everything except source code, configuration and Markdown. **411 files, 165.3 MB**: 122
+**Scope:** every tracked file at `0592ba4` that is an image, texture, document image or data
+file: everything except source code, configuration and Markdown. **412 files, 165.3 MB**: 123
 images (JPEG, PNG, WebP), 1 PDF, 288 data and text files. Each was checked as stated in the
 "How verified" column, not assumed from its name.
 
@@ -237,7 +237,7 @@ the file (section 2), which the guide asks to acknowledge for code and data.
 | A20 | `src/analysis/__fixtures__/horizons-{topo,dsn}-check.json` | 2 | 0.11 MB | C | JPL Horizons → `scripts/fetch-horizons-{topo,dsn}-check.mjs` | Commits `5763608`, `30dd8c9` | As A12 |
 | A21 | `tests/fixtures/horizons/**` | 59 | 1.26 MB | V | Horizons raw outputs, parsed tables, checker results, SPICE cross-check results (SOURCES section 5) | Retrieval log and README in the folder | Checking code written by an AI agent (@ephemeris-check) |
 | A22 | `tests/fixtures/validation/**` | 142 | 6.13 MB | V | Horizons outputs, the app's outputs before and after fixes, the validator's results, quotations of published mission facts, a copy of the ALSJ Sun and Earth table | `sources.json` lists every quotation with URL | As A21 |
-| A23 | `docs/lunyx/handover/screens/*` | 74 | 13.11 MB | S | Captures of the app (globe, overlays, site card, compare panel, nearby list, window table and outlook, mission presets including the eclipse, surface view with key metrics and skyline chart, assistant in deterministic mode) | All 74 viewed: app interface and rendered data only, no logos; no metadata | Captured by AI agents; nothing generated by an image model |
+| A23 | `docs/lunyx/handover/screens/*` | 75 | 13.14 MB | S | Captures of the app (globe, overlays, site card, compare panel, nearby list, window table and outlook, mission presets including the eclipse, surface view with key metrics and skyline chart, assistant in deterministic mode) | All 75 viewed: app interface and rendered data only, no logos; no metadata | Captured by AI agents; nothing generated by an image model |
 | A24 | `docs/reference/Lunyx-design.pdf`, `globe.jpg`, `surface.jpg` | 3 | 2.65 MB | H | The team's design document (Google Docs export) and mockups: hand-drawn annotations over pasted third-party screenshots | Viewed page by page; no metadata in the JPEGs | Not AI-generated as far as checked; the PDF's "Transcription" section reads like an automatic speech-to-text transcript (my reading; L11). Contains third-party images and NASA posters with the insignia (section 6, L9) |
 | A26 | `public/data/sources/gcat-landers.json` | 1 | 13.1 kB | K | GCAT catalogue extract, values unchanged (SOURCES S18) → `scripts/fetch-gcat-landers.mjs` | Licence and citation read at planet4589.org; version recorded in the file | Script from a teammate commit without trailer (L4) |
 | A27 | `public/data/sources/lroc-anthropogenic-objects.csv` | 1 | 21.0 kB | K | LROC measured hardware positions (SOURCES S19) → `scripts/fetch-site-areas.mjs` | Byte-identical to the archive's current file | As A26 |
@@ -251,7 +251,7 @@ Not counted above: the data folders' `README.md` files (documentation written by
 like the rest of `docs/`).
 
 <details>
-<summary>Every file, with its group and the commit that added it (411 rows)</summary>
+<summary>Every file, with its group and the commit that added it (412 rows)</summary>
 
 | File | Size | Group | Added in | AI co-author trailer on that commit |
 | --- | ---: | --- | --- | --- |
@@ -319,6 +319,7 @@ like the rest of `docs/`).
 | `docs/lunyx/handover/screens/t30-shackleton-rim-390.png` | 213.4 kB | A23 | `dfe5bd3` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t33-phone-390.jpg` | 41.4 kB | A23 | `96b6337` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t33-scrubber-1440.png` | 21.4 kB | A23 | `96b6337` (local git account) | Claude Fable 5.2 |
+| `docs/lunyx/handover/screens/t39-flags.png` | 31.0 kB | A23 | `75cecfd` (local git account) | Claude Opus 5.5 |
 | `docs/lunyx/handover/screens/t9-apollo11-downsun.jpg` | 83.7 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-apollo11-landing.jpg` | 92.8 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
 | `docs/lunyx/handover/screens/t9-im2-downsun-shadows.jpg` | 115.2 kB | A23 | `736f79d` (local git account) | Claude Fable 5.2 |
@@ -675,7 +676,7 @@ like the rest of `docs/`).
 | --- | --- | --- | --- | --- |
 | W1 | Screenshots of the app (A23, and any new ones under `docs/lunyx/screenshots/`) | Watermark applies to SI-generated images and videos; these are captures of software, not generated images | No watermark. Caption them in text where they appear: "Screenshot of Lunyx; the software was written with AI assistance (see AI-USE.md)" | Doc owners |
 | W2 | The demo (video of 30 s or less, or at most 7 slides) | Any SI-generated image or video in it needs a visible watermark; SI-generated audio (for example an AI voice-over) needs acknowledgement in text and metadata; no NASA insignia or other NASA branding | If the demo is screen recordings of the app and slides made by the team: no watermark, one line "Built with AI coding agents; see AI-USE.md". If any generated picture, clip or voice is added: watermark or acknowledge it as the rule says | Operator |
-| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 135 of 144 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
+| W3 | Code | "Code and data: Must acknowledge SI generation in descriptive text and metadata." | Descriptive text: a short "How AI was used" section in `README.md` linking here (T-9) and this file. Metadata: the Co-Authored-By trailers already on 145 of 154 non-merge commits; optionally one line in `package.json` `description` | README: @submission (T-9); `package.json`: @coordinator |
 | W4 | Data files produced by AI-written scripts (A1 to A10, A12 to A17, A19 to A22; A26 to A28 if L4 shows their scripts were AI-written) and data written by AI agents (A30, A31) | As W3 | Descriptive text: SOURCES.md and the data READMEs name the script that made each file; this file says the scripts were written by AI agents. Metadata: add a field such as `"processedBy": "scripts/<name> (written by AI coding agents)"` to the `index.json` of each data folder | Data owners (@ice-targets, @analysis) |
 | W5 | `public/data/landings.json` (A18) | As W3, if any of its text was written by the AI model | Largely done by T-38: every row cites its sources and the file's `note` explains them; what remains is to say who wrote the one-line summaries (L3) | Operator, after L3 |
 | W6 | Close-up textures (A11) | Licence must be documented; if AI-generated, a visible watermark would be required, which a tiling texture cannot carry sensibly | If origin and licence are not confirmed before submission: replace them with textures generated by a script in this repository, or ship without them | Operator decides; owner of `public/textures` (@ice-targets) |
@@ -691,7 +692,7 @@ Insignia, Logotype or Seal appearing with SI-generated imagery (1.4). NASA's bra
 add that the Insignia, Logotype and Seal "may not be used for any purpose without explicit
 permission" and not on products, publications or web pages that are not NASA-sponsored.
 
-**The app** (checked in `index.html`, `src/**`, `public/**` at `5dce26c`):
+**The app** (checked in `index.html`, `src/**`, `public/**` at `0592ba4`):
 
 - The only wordmark is the text "LUNYX" (`index.html`, set in Space Grotesk).
 - The only icons are four inline SVG drawings written in the code: a chat bubble and a
@@ -711,9 +712,10 @@ permission" and not on products, publications or web pages that are not NASA-spo
   flags by code ("drawn rather than loaded so there are no image assets to license") on the
   landing markers when "flags" is switched on in the Filters panel (off by default), and in the
   site card: the United States, the USSR, Russia (shown for hardware launched by the USSR),
-  China, India and Japan. The United States flag is drawn with 13 stripes and 30 stars in a
-  5 × 6 grid instead of 50 stars; the original team's task T-39 is to correct it. These are
-  national flags, not NASA's flag, insignia or any mission identifier (L10).
+  China, India and Japan (viewed in `t39-flags.png`). Since the original team's T-39
+  (`50aaace`) the United States flag has its 50 stars and China's small stars point at the
+  large one. These are national flags, not NASA's flag, insignia or any mission identifier
+  (L10).
 - Result: **no NASA logo, insignia, seal, NASA flag or mission identifier is used, generated or
   modified by the app.**
 
@@ -750,7 +752,7 @@ at the source.
 | L7 | Copy of the Apollo Lunar Surface Journal Sun and Earth table (J. Scotti) in the test fixtures: no terms found | Third-party material in the repository | Keep with credit (it is hosted by NASA), or remove the copy and keep the URL |
 | L8 | Resolved: the built app used to ship three.js and the two fonts without their licence texts | MIT and OFL notice conditions | Done in T-37 (`27b0f30`): `/licences/THIRD-PARTY-NOTICES.txt` |
 | L9 | `docs/reference/` holds third-party screenshots and NASA posters with the insignia | Insignia rules; "no copyrighted materials … that we don't have permission to use" | Approve W8 before the repository or any copy of it is made public |
-| L10 | National flags drawn by code (in the build since `0cc5553`, off by default), including a United States flag with 30 stars (fix: original T-39); mission names shown as plain text | The SI rule lists "flags" and "mission identifiers" among NASA branding elements. NASA's brand pages use "identifier" for its graphic marks (the Insignia and its lockups), so plain-text mission names look outside it (my reading) | The operator's reading of the rule; keep, change or drop the flags; confirm that plain-text mission names are fine |
+| L10 | National flags drawn by code (in the build since `0cc5553`, off by default), with a 50-star United States flag since the original T-39; mission names shown as plain text | The SI rule lists "flags" and "mission identifiers" among NASA branding elements. NASA's brand pages use "identifier" for its graphic marks (the Insignia and its lockups), so plain-text mission names look outside it (my reading) | The operator's reading of the rule; keep, change or drop the flags; confirm that plain-text mission names are fine |
 | L11 | Ideation: who drafted tab 2 ("Our ideas") of the team document and the text of the design PDF, and whether any AI tool helped; which tool made the PDF's "Transcription" section | The guide says SI "should not be used to (come up with your idea of how to solve the challenge)" | Ask the team |
 | L12 | The operator's channel to the agents: the hub describes the operator as possibly speaking through ChatGPT | If an assistant such as ChatGPT relayed or shaped instructions, it belongs in the SI description | Operator confirms which tools were used |
 | L13 | Assistant findings F1 to F3 (section 3) | NASA's guidance for AI applications | Operator approves; @assistant implements |

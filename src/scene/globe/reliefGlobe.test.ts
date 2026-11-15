@@ -120,6 +120,19 @@ describe('south-polar close-up (bundled LOLA polar layers, no network)', () => {
     // Climbing away fades it out and gives the tiles back.
     expect(closeUp.update(view({ altitudeKm: 3000, centre: im2, site: im2, nowMs: 4e7 }))).toBeNull();
     expect(u.uCapHole.value).toBe(-2);
+
+    // Low over the near side, with the data loaded: not on screen, and not reported as on screen
+    // (it used to stay "shown" wherever the camera went low once it had been loaded).
+    expect(closeUp.update(view({ altitudeKm: 42, centre: { lat: 20.19, lon: 30.77 }, nowMs: 5e7 }))).toBeNull();
+    expect(closeUp.root.visible).toBe(false);
+    expect(closeUp.covers(-89)).toBe(false);
+    expect(u.uCapHole.value).toBe(-2);
+    // From 1000 km above 40 S the polar region is in view near the limb: shown, partly faded, the tiles kept.
+    expect(closeUp.update(view({ altitudeKm: 1000, centre: { lat: -40, lon: 0 }, nowMs: 6e7 }))).not.toBeNull();
+    expect(closeUp.root.visible).toBe(true);
+    expect(u.uCapHole.value).toBe(-2);
+    // From 300 km above 40 S it is beyond the horizon.
+    expect(closeUp.update(view({ altitudeKm: 300, centre: { lat: -40, lon: 0 }, nowMs: 7e7 }))).toBeNull();
     closeUp.dispose();
   }, 240_000);
 });
