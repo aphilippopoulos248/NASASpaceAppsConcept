@@ -21,7 +21,9 @@
     "test:science": "node --experimental-strip-types --no-warnings --test tests/iceTargets.test.ts",
     "build-dem": "node --experimental-strip-types --no-warnings scripts/build-dem.mjs",
     "build-heatmap": "node --experimental-strip-types --no-warnings scripts/build-heatmap.mjs",
-    "e2e": "node e2e/run.mjs"
+    "e2e": "node e2e/run.mjs",
+    "build-diviner": "node --experimental-strip-types --no-warnings scripts/build-diviner.mjs",
+    "build-shadowcam-index": "node --experimental-strip-types --no-warnings scripts/build-shadowcam-index.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.8.0",
