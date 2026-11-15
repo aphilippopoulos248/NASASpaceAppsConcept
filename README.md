@@ -330,6 +330,10 @@ centre.
   drawings made by the code.
 - **Custom pins** away from the south pole need the network for their 60 m window.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
+- **Nearby-scan radius and spacing: deferred (operator decision D-14).** A radius or spacing typed
+  into Compare > "Nearby sites" is reset to the last scan's values when a requirement (such as
+  the slope limit) changes before the scan, which then runs on the old grid; its summary names
+  the grid it used. Set the requirements first, then the radius and spacing, then scan.
 - **Defects fixed upstream, not yet re-checked** (fixed by the original team at the time of
   writing; each entry goes once the desktop walkthrough has confirmed the fix):
   - opening a site could fail to load an elevation file (the 1.9 km whole-Moon grid or a
