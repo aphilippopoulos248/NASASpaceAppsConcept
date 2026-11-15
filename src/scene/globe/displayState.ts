@@ -1,18 +1,18 @@
-// How the globe is drawn, beyond what AppState holds: the relief exaggeration and the data
+// How the globe is drawn, beyond what AppState holds: the relief (true scale or off) and the data
 // coverage outline (changed through actions registered here), and what the scene reports
-// back for labels: the exaggeration drawn right now, which elevation data is loaded, whether
+// back for labels: the relief scale drawn right now, which elevation data is loaded, whether
 // the polar close-up is showing. Presentation state, so it lives beside the scene.
 import { ActionError, defineAction, registerActions } from '../../core/actions';
 import { BACKGROUND_STARS_NOTE } from '../globe';
 import { imageryText, type ImageryState } from '../sitePatch';
 import type { AverageState } from './averageMaps';
-import { FULL_EXAGGERATION_KM, TRUE_SCALE_BELOW_KM } from './reliefTiles';
 
 export const DEFAULT_RELIEF = 1;
-export const MAX_RELIEF = 30;
+/** Relief is never drawn taller than it is: 1 = true scale is the most the globe shows. */
+export const MAX_RELIEF = 1;
 
 export interface GlobeDisplay {
-  /** Chosen relief exaggeration: 0 = smooth sphere, 1 = true scale. */
+  /** Chosen relief scale: 0 = smooth sphere, 1 = true scale (the most allowed: heights are never exaggerated). */
   reliefFactor: number;
   /** Outline where each class of elevation data exists. */
   coverage: boolean;
@@ -21,7 +21,7 @@ export interface GlobeDisplay {
 }
 
 export interface GlobeLive {
-  /** Exaggeration drawn at the camera's present altitude. */
+  /** Relief scale being drawn: 0 to 1. */
   reliefNow: number;
   /** Resolution of the whole-Moon elevation grid behind the relief, samples per degree (0 = none loaded yet). */
   reliefPpd: number;
@@ -93,7 +93,7 @@ class DisplayStore {
 
 export const globeDisplay = new DisplayStore();
 
-/** "relief x10", "relief x5.4", "true scale", "smooth sphere". */
+/** "relief at true scale", "smooth sphere (relief off)", or "relief ×0.5" for a scale in between. */
 export function reliefText(factor: number): string {
   if (factor <= 0) return 'smooth sphere (relief off)';
   if (Math.abs(factor - 1) < 0.05) return 'relief at true scale';
@@ -106,7 +106,6 @@ export function displaySummary() {
   return {
     reliefExaggeration: d.reliefFactor,
     reliefDrawnNow: Math.round(l.reliefNow * 10) / 10,
-    reliefRule: d.reliefFactor > 1 ? `The chosen factor applies above ${FULL_EXAGGERATION_KM} km camera altitude and eases to true scale (1) below ${TRUE_SCALE_BELOW_KM} km.` : null,
     reliefDataSamplesPerDegree: l.reliefPpd || null,
     ...(l.reliefProblem && { reliefProblem: l.reliefProblem }),
     coverageShown: d.coverage,
@@ -135,12 +134,11 @@ export function registerDisplayActions(): void {
   registerActions([
     defineAction<{ factor: number }, unknown>({
       name: 'setReliefExaggeration',
-      title: 'Relief exaggeration',
+      title: 'Terrain relief scale',
       description:
-        `Sets how much the globe's terrain relief (LOLA elevation) is stretched so it can be seen from orbit: 0 = smooth sphere (relief off), 1 = true scale (the default), up to ${MAX_RELIEF}. ` +
-        `A factor above 1 applies from orbit and eases to true scale below ${TRUE_SCALE_BELOW_KM} km camera altitude, so close-ups are never distorted; the factor drawn at the moment is shown on screen and returned as reliefDrawnNow. Analysis results never use the exaggeration.`,
+        "Sets how the globe's terrain relief (LOLA elevation) is drawn: 1 = true scale (the default), 0 = smooth sphere (relief off). Heights are never exaggerated, so a factor above 1 is refused. What is drawn is shown on screen and returned as reliefDrawnNow. Analysis results never depend on it.",
       effect: 'command',
-      params: { type: 'object', properties: { factor: { type: 'number', description: 'Exaggeration factor: 0 off, 1 true scale.', minimum: 0, maximum: MAX_RELIEF } }, required: ['factor'] },
+      params: { type: 'object', properties: { factor: { type: 'number', description: 'Relief scale: 0 off, 1 true scale.', minimum: 0, maximum: MAX_RELIEF } }, required: ['factor'] },
       run: ({ factor }) => {
         if (!Number.isFinite(factor)) throw new ActionError('The factor must be a number.');
         globeDisplay.set({ reliefFactor: factor });

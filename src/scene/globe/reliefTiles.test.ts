@@ -162,22 +162,13 @@ describe('choosing tiles', () => {
   });
 });
 
-describe('exaggeration', () => {
-  it('is the chosen factor from orbit and eases to true scale near the ground', () => {
-    expect(effectiveRelief(10, 4170)).toBe(10);
-    expect(effectiveRelief(10, 1500)).toBe(10);
-    expect(effectiveRelief(10, 100)).toBe(1);
-    expect(effectiveRelief(10, 42)).toBe(1);
-    expect(effectiveRelief(10, 800)).toBeCloseTo(5.5, 6); // half-way
-    const steps = [100, 300, 600, 900, 1200, 1500].map((alt) => effectiveRelief(20, alt));
-    for (let i = 1; i < steps.length; i++) expect(steps[i]).toBeGreaterThan(steps[i - 1]);
-  });
-
-  it('leaves "off" and "true scale" alone at every altitude', () => {
-    for (const alt of [10, 500, 4170]) {
-      expect(effectiveRelief(0, alt)).toBe(0);
-      expect(effectiveRelief(1, alt)).toBe(1);
-    }
-    expect(effectiveRelief(-3, 4170)).toBe(0);
+describe('relief scale', () => {
+  it('is never more than true scale', () => {
+    expect(effectiveRelief(10)).toBe(1);
+    expect(effectiveRelief(1.01)).toBe(1);
+    expect(effectiveRelief(1)).toBe(1);
+    expect(effectiveRelief(0.5)).toBe(0.5);
+    expect(effectiveRelief(0)).toBe(0);
+    expect(effectiveRelief(-3)).toBe(0);
   });
 });

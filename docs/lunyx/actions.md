@@ -69,7 +69,7 @@ Check columns:
 | `stopCompare` | core | | compare panel close, Escape | C D |
 | `getAnalysis`, `getState`, `listSites` (queries) | core | `slot?`; ; `shownOnly?` | what the card, scrubber and panels show | C D U |
 | `resetNorth` | globe view (@globe) | | compass | C D E |
-| `setReliefExaggeration` | globe display (@globe) | `factor` (0 to 30; default 1 since T-64) | none since T-64: the Filters selector is gone and only the assistant sets it; the "Terrain relief" note says what is drawn | C D U |
+| `setReliefExaggeration` | globe display (@globe) | `factor` (0 = off, 1 = true scale; never exaggerated) | none since T-64: the Filters selector is gone, so only the assistant and actions set it; the "Terrain relief" note says what is drawn | C D U |
 | `showCoverage`, `showIceTargets` | globe display (@globe) | `show` | Filters: coverage and ice-target checkboxes | C D E |
 | `showPanel` | panels (@globe) | `panel: filters \| site-details \| site-science`, `open` | card fold buttons (details, site science); phone "Filters" | C D E |
 | `setLocatorZoom` | locator map (@globe) | `zoom` | locator + / -, scroll, keys | C D E |

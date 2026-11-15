@@ -444,7 +444,7 @@ export class GlobeView {
     const relief = this.relief;
     if (!relief) return;
     const hasData = relief.pyramid.maxPpd > 0;
-    const drawn = hasData ? effectiveRelief(globeDisplay.get().reliefFactor, altitudeKm) : 0;
+    const drawn = hasData ? effectiveRelief(globeDisplay.get().reliefFactor) : 0;
     this.uniforms.uRelief.value = drawn;
     relief.update(this.camera, this.renderer.domElement.height / this.renderer.getPixelRatio(), drawn);
     const site = store.get().site;

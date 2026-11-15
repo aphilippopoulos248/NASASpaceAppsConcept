@@ -49,7 +49,7 @@ describe('deterministic mode: how the globe is drawn', () => {
     const e = engine();
     const r = await e.reply('territory size exaggeration 50');
     expect(r.understood).toBe(false);
-    expect(state.reliefFactor).toBe(10);
+    expect(state.reliefFactor).toBe(1);
   });
 
   it('says what the territories and flags draw, from the real results (T-67: territoriesShown, territoryRule, flagsShown)', async () => {
@@ -92,13 +92,13 @@ describe('deterministic mode: how the globe is drawn', () => {
     expect((await e.reply('replay blue-ghost-landing')).text).not.toMatch(/Caveat|Reported/);
   });
 
-  it('sets the relief exaggeration from several phrasings, and says what the factor means', async () => {
+  it('draws the relief at true scale or off from several phrasings, and never exaggerates it', async () => {
     const e = engine();
     const cases: [string, number][] = [
-      ['relief x5', 5],
-      ['set the relief exaggeration to 20', 20],
-      ['exaggerate the relief 2 times', 2],
-      ['relief 3x', 3],
+      ['relief x5', 1],
+      ['set the relief exaggeration to 20', 1],
+      ['exaggerate the relief 2 times', 1],
+      ['relief 3x', 1],
       ['true scale relief', 1],
       ['turn off the exaggeration', 1],
       ['relief off', 0],
@@ -109,12 +109,12 @@ describe('deterministic mode: how the globe is drawn', () => {
       expect(r.understood, say).toBe(true);
       expect(state.reliefFactor, say).toBe(factor);
     }
-    expect((await e.reply('relief x10')).text).toBe('Relief exaggeration set to ×10; drawn at ×10 at the present camera altitude. The chosen factor applies above 1,000 km camera altitude and eases to true scale (1) below 100 km. The analysis never uses the exaggeration.');
+    expect((await e.reply('relief x10')).text).toBe("The globe's relief is not exaggerated: it is drawn at true scale (×1), not ×10.");
     expect((await e.reply('relief off')).text).toContain('smooth sphere');
-    // Beyond what the action takes: its own refusal, nothing changed.
-    const tooMuch = await e.reply('relief x50');
-    expect(tooMuch.text).toContain('params.factor must be at most 30');
     expect(state.reliefFactor).toBe(0);
+    // However much is asked for, the action is never run with more than true scale.
+    await e.reply('relief x50');
+    expect(state.reliefFactor).toBe(1);
   });
 
   it('shows and hides the coverage outlines and the ice-target outlines', async () => {
