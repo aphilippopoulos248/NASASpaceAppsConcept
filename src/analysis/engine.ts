@@ -6,16 +6,20 @@ import { loadTerrainFor } from '../terrain/api';
 import type { TerrainStack } from '../terrain/types';
 import { sampleStack } from './horizon';
 import { createNearbyScan, rankNearbyWith, type NearbyProgress } from './nearby';
-import { findBundledTable, horizonsEphemeris, modelEphemeris, type Ephemeris, type HorizonsTable } from './sky';
-import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from './types';
+import { outlookWith } from './outlook';
+import { findBundledTable, horizonsEphemeris, tabulatedEphemeris, type Ephemeris, type HorizonsTable } from './sky';
+import type { NearbyCandidate, NearbyOptions, Outlook, OutlookOptions, SiteAnalysis } from './types';
 import { analyseWith } from './window';
+
+const windowEndMs = (s: Scenario) => s.startMs + s.durationH * 3_600_000;
 
 /** The ephemeris for a scenario's observer (terrain height plus mast): a covering Horizons table, or the model. */
 export function siteEphemeris(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null): Ephemeris {
   const site = { lat: scenario.site.lat, lon: scenario.site.lon };
   const ground = sampleStack(stack, site.lat, site.lon).h;
   const obsH = (Number.isFinite(ground) ? ground : 0) + Math.max(0, scenario.mastHeightM);
-  return table ? horizonsEphemeris(table, site, obsH) : modelEphemeris(site, obsH);
+  // Without a table: the model, tabulated over the window (same directions to 0.0005 deg, a fraction of the cost).
+  return table ? horizonsEphemeris(table, site, obsH) : tabulatedEphemeris(site, obsH, scenario.startMs, windowEndMs(scenario));
 }
 
 export function runAnalysis(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null): SiteAnalysis {
@@ -25,8 +29,6 @@ export function runAnalysis(scenario: Scenario, stack: TerrainStack, table: Hori
 export function runNearby(scenario: Scenario, stack: TerrainStack, table: HorizonsTable | null, options: NearbyOptions, onProgress?: NearbyProgress): NearbyCandidate[] {
   return rankNearbyWith(scenario, stack, siteEphemeris(scenario, stack, table), options, onProgress);
 }
-
-const windowEndMs = (s: Scenario) => s.startMs + s.durationH * 3_600_000;
 
 /** Hands control back to the event loop once, so queued messages and timers get their turn. */
 const nextTask: () => Promise<void> =
@@ -75,4 +77,9 @@ export async function analyseScenario(scenario: Scenario): Promise<SiteAnalysis>
 export async function nearbyScenario(scenario: Scenario, options: NearbyOptions, onProgress?: NearbyProgress): Promise<NearbyCandidate[]> {
   const [stack, table] = await Promise.all([loadTerrainFor(scenario.site), findBundledTable(scenario.site, scenario.startMs, windowEndMs(scenario))]);
   return runNearbyInSlices(scenario, stack, table, options, onProgress);
+}
+
+/** Loads what a scenario needs and computes the seasonal outlook for its site and mast height. */
+export async function outlookScenario(scenario: Scenario, options: OutlookOptions = {}): Promise<Outlook> {
+  return outlookWith(scenario, await loadTerrainFor(scenario.site), options);
 }
