@@ -1,3 +1,4 @@
+<!-- DRAFT (checkpoint 2026-11-15): not yet reconciled with docs/lunyx/STATUS.md; see docs/lunyx/handover/T-16-T-17-checkpoint.md -->
 # Lunyx
 
 **A lunar landing site navigator.** Pick a place on the Moon and a date, drop to the
@@ -96,7 +97,9 @@ server only; it is never sent to the browser or built into it.
 recognition and appears only where the browser has it.
 
 What has and has not been verified with a real model is recorded in
-[docs/lunyx/actions.md](docs/lunyx/actions.md).
+[docs/lunyx/actions.md](docs/lunyx/actions.md), together with every control and the action
+behind it. Keyboard and screen-reader status is in
+[docs/lunyx/accessibility.md](docs/lunyx/accessibility.md).
 
 ## What needs the network
 
