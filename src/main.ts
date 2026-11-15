@@ -16,13 +16,14 @@ import { SceneHost } from './scene/globe/sceneHost';
 import { mountAssistantButton, mountAssistantDrawer } from './ui/assistant/drawer';
 import { mountComparePanel } from './ui/compare/panel';
 import { mountFiltersPanel } from './ui/globe/filtersPanel';
+import { panelSummary } from './ui/globe/panels';
 import { mountPerson } from './ui/globe/person';
 import { mountReliefChip } from './ui/globe/reliefChip';
 import { mountSiteCard } from './ui/globe/siteCard';
 import { registerSiteScienceActions } from './ui/science/siteScience';
 import { mountCloseButton } from './ui/shared/closeButton';
 import { mountCompass } from './ui/shared/compass';
-import { mountLocatorMap } from './ui/shared/locatorMap';
+import { locatorZoom, mountLocatorMap } from './ui/shared/locatorMap';
 import { mountTimeScrubber } from './ui/shared/timeScrubber';
 import { mountToasts } from './ui/shared/toast';
 import { mountSurfaceHud } from './ui/surface/hud';
@@ -34,7 +35,17 @@ const region = (name: string) => document.getElementById(`region-${name}`) as HT
 async function boot() {
   const host = new SceneHost(document.getElementById('scene') as HTMLCanvasElement);
   setLandings(await loadLandings());
-  actions.registerActions(createCoreActions({ store, landings: getLandings, filters: missionFilter, analysis, prepareSurface: host.prepareSurface, display: displaySummary }));
+  actions.registerActions(
+    createCoreActions({
+      store,
+      landings: getLandings,
+      filters: missionFilter,
+      analysis,
+      prepareSurface: host.prepareSurface,
+      display: displaySummary,
+      shell: () => ({ locatorZoom: locatorZoom(), panels: panelSummary() }),
+    }),
+  );
   registerSiteScienceActions(); // getSiteScience, nearestIceTargets (the site card's science section shows the same readouts)
   // Expose the registry for the assistant's tests and for debugging in the console.
   (window as unknown as { lunyx: unknown }).lunyx = { store, analysis, actions, scene: host };

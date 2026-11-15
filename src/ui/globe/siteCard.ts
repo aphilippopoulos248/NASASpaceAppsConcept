@@ -12,6 +12,7 @@ import { GLOBE_ALTITUDE_KM } from '../../core/coreActions';
 import { matchesFilter, missionFilter } from '../../core/missionFilter';
 import { spanText } from '../../core/scenario';
 import { store } from '../../core/store';
+import { throttle } from '../../core/throttle';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { SiteRef } from '../../core/types';
 import { getLandings } from '../../data/catalog';
@@ -21,6 +22,7 @@ import { loadTerrainFor } from '../../terrain/api';
 import type { TerrainStack } from '../../terrain/types';
 import { button, el, isTypingTarget } from '../dom';
 import { mountSiteScience } from '../science/siteScience';
+import { bindCardKeys } from './cardKeys';
 import { initPanels, isPanelOpen, onPanelChange } from './panels';
 import './siteCard.css';
 
@@ -204,10 +206,8 @@ export function mountSiteCard(region: HTMLElement): void {
   };
 
   // ---------- Sun and Earth at the simulated time ----------
-  let lastSkyMs = -Infinity;
   const renderSky = (site: SiteRef) => {
     const t = store.get().timeMs;
-    lastSkyMs = performance.now();
     skyTitle.textContent = `Sky at ${formatUtc(t)}`;
     const a = currentAnalysis();
     if (a) {
@@ -354,17 +354,25 @@ export function mountSiteCard(region: HTMLElement): void {
   // The window line follows the scenario at once; the numbers follow when the analysis lands.
   store.subscribe(['mastHeightM', 'windowStartMs', 'windowDurationH', 'delayH'], () => store.get().site && renderAnalysis());
   analysis.subscribe((slot) => slot === 'current' && store.get().site && renderAnalysis());
-  // While the clock runs, refresh Sun/Earth a few times a second rather than every frame.
-  store.subscribe(['timeMs'], (s) => {
-    if (s.site && !card.hidden && !body.hidden && performance.now() - lastSkyMs > 250) renderSky(s.site);
-  });
+  // While the clock runs, refresh Sun/Earth a few times a second rather than every frame. The
+  // last change is always drawn: a change inside the quiet interval is drawn when it ends.
+  const skyTick = throttle(() => {
+    const site = store.get().site;
+    if (site && !card.hidden && !body.hidden) renderSky(site);
+  }, 250);
+  store.subscribe(['timeMs'], skyTick);
   onPanelChange((panel, open) => panel === 'site-details' && open && store.get().site && renderSky(store.get().site!));
   render();
 
-  window.addEventListener('keydown', (e) => {
-    if (store.get().view !== 'globe' || !store.get().site || isTypingTarget(e.target)) return;
-    if (e.key === 'Escape') void runAction('clearSite');
-    else if (e.key === 'ArrowRight') step(1);
-    else if (e.key === 'ArrowLeft') step(-1);
+  // Escape closes the card, the left and right arrows step through the landings: globe view only,
+  // and only a press nobody else has handled (see cardKeys.ts).
+  bindCardKeys(window, {
+    view: () => store.get().view,
+    hasSite: () => store.get().site !== null,
+    isTyping: (target) => isTypingTarget(target as EventTarget | null),
+    act: (command) => {
+      if (command === 'clearSite') void runAction('clearSite');
+      else step(command === 'next' ? 1 : -1);
+    },
   });
 }

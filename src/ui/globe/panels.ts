@@ -19,6 +19,11 @@ export function isPanelOpen(panel: PanelName): boolean {
   return panel === 'filters' && !narrow() ? true : open[panel];
 }
 
+/** Every panel's state by the name showPanel takes, as getState reports it. */
+export function panelSummary(): Record<PanelName, boolean> {
+  return { filters: isPanelOpen('filters'), 'site-details': isPanelOpen('site-details'), 'site-science': isPanelOpen('site-science') };
+}
+
 export function onPanelChange(fn: (panel: PanelName, open: boolean) => void): () => void {
   listeners.add(fn);
   return () => listeners.delete(fn);
