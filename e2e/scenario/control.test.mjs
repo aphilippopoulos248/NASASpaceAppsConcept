@@ -101,6 +101,7 @@ function screen(page) {
         band,
         coverage: check('Show elevation data coverage'),
         ice: check('Show mapped ice targets'),
+        flags: check('Show country flags'),
         missions: check('Show previous missions'),
         overlayOn: check('Show optimal landing area'),
         overlay: q('.filters-panel select[aria-label="Landing-area overlay"]')?.value,
@@ -239,6 +240,11 @@ const CASES = [
     await shows(page, (s) => s.filters.coverage === true, 'coverage checkbox');
     await run(page, 'showCoverage', { show: false });
   } },
+  { name: 'showFlags', params: { show: true }, check: async (r, page) => {
+    assert.equal(r.showFlags, true);
+    await shows(page, (s) => s.filters.flags === true, '"Show country flags" ticked');
+    await run(page, 'showFlags', { show: false });
+  } },
   { name: 'showIceTargets', params: { show: true }, check: async (r, page) => {
     assert.equal(r.iceTargetsShown, true);
     await shows(page, (s) => s.filters.ice === true, 'ice-target checkbox');
@@ -276,7 +282,9 @@ const CASES = [
     const card = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('.site-card .sc-window dt')].filter((dt) => !dt.hidden).map((dt) => [dt.textContent.trim(), dt.nextElementSibling.textContent.trim()])));
     const first = (t) => Number(/-?\d+(?:\.\d+)?/.exec(t.replace('−', '-'))[0]);
     near(first(card.Sunlight), r.metrics.illuminationPct, 0.051, 'card sunlight vs getAnalysis');
-    near(first(card['Earth in view']), r.metrics.earthVisiblePct, 0.051, 'card Earth in view vs getAnalysis');
+    // Earth by two definitions since T-47, each its own row.
+    near(first(card["Earth's centre in view"]), r.metrics.earthVisiblePct, 0.051, "card Earth's centre in view vs getAnalysis");
+    near(first(card['Any part of Earth in view']), r.metrics.earthAnyPct, 0.051, 'card any part of Earth in view vs getAnalysis');
     near(first(card.Slope), r.slope.slopeDeg, 0.051, 'card slope vs getAnalysis');
     assert.ok(s.card);
   } },
@@ -318,6 +326,18 @@ const CASES = [
     const a = (await run(page, 'getAnalysis')).result;
     assert.ok(a.events.some((e) => e.type === 'sunset' && e.timeUtc === r.timeUtc), 'the jump lands on an event of the analysis');
     await shows(page, (s) => s.scrubber.date === r.timeUtc.slice(0, 16) && s.scrubber.playPressed === 'false', 'scrubber date at the event, paused');
+    // D-8 (T-47): the sunset is the last limb of a passage that began with the first cut; the result gives both ends.
+    assert.equal(r.label, 'Sun fully set');
+    assert.equal(r.span?.kind, 'set', JSON.stringify(r.span));
+    // Result times are to the minute; the event and its passage's end agree to the second (they may straddle a minute).
+    assert.ok(Math.abs(Date.parse(r.span.end.timeUtc) - Date.parse(r.timeUtc)) <= 60_000, `the sunset is the end of its passage: ${r.span.end.timeUtc} vs ${r.timeUtc}`);
+    assert.equal(r.span.start.label, 'Sun starts setting');
+    assert.ok(r.span.start.timeUtc < r.timeUtc, JSON.stringify(r.span));
+    assert.match(r.span.summary, /^starts setting .+, fully set .+ UTC$/);
+    // `instant` goes to the other end, as the scrubber's sunset button does before the event.
+    const start = (await run(page, 'jumpToEvent', { type: 'sunset', which: 'previous', instant: 'start' })).result;
+    assert.deepEqual([start.instantChoice, start.label, start.timeUtc], ['start', 'Sun starts setting', r.span.start.timeUtc]);
+    await shows(page, (s) => s.scrubber.date === start.timeUtc.slice(0, 16), 'scrubber date at the start of the sunset');
   } },
   // ---- comparison (no panel in this build: state only)
   { name: 'saveScenario', prepare: async (page) => {
@@ -395,9 +415,9 @@ const CASES = [
   { name: 'selectCandidate', params: { rank: 1 }, check: async (r, page) => {
     assert.equal(r.site.id, page.__nearby.candidates[0].id);
     assert.equal((await store(page)).site.id, r.site.id);
-    // A pin or a candidate is "Pinned location" on the card, with its coordinates (formatCoords: 3 decimals).
+    // The card names the candidate as the result does (F-6, fixed in dbc6c59), with its coordinates (formatCoords: 3 decimals).
     const where = `${Math.abs(r.site.latDeg).toFixed(3)}° ${r.site.latDeg >= 0 ? 'N' : 'S'}, ${Math.abs(r.site.lonDegEast).toFixed(3)}° ${r.site.lonDegEast >= 0 ? 'E' : 'W'}`;
-    await shows(page, (s) => s.card?.title === 'Pinned location' && s.card.where.startsWith(where), `the card shows the chosen candidate at ${where}`);
+    await shows(page, (s) => s.card?.title === r.site.name && s.card.where.startsWith(where), `the card shows the chosen candidate "${r.site.name}" at ${where}`);
   } },
   { name: 'stopCompare', check: async (r, page) => {
     assert.equal((await store(page)).comparing, false);
@@ -478,6 +498,19 @@ const CASES = [
   { name: 'clearSite', check: async (r, page) => {
     assert.equal(r.site, null);
     await shows(page, (s) => s.card === null, 'site card closed');
+  } },
+  // ---- mission presets (T-22)
+  { name: 'listPresets', check: async (r) => {
+    assert.ok(r.presets.length >= 3, JSON.stringify(r.presets.map((p) => p.id)));
+    assert.ok(r.presets.some((p) => p.id === 'eclipse-2025-03-14'));
+  } },
+  { name: 'loadPreset', params: { id: 'eclipse-2025-03-14', play: false }, check: async (r, page) => {
+    assert.equal(r.site.id, 'blue-ghost-1');
+    assert.equal(r.view, 'surface');
+    assert.equal(r.playing, false);
+    await shows(page, (s) => s.view === 'surface' && s.scrubber.date === r.timeUtc.slice(0, 16), 'surface view at the preset\'s clock');
+    await run(page, 'exitSurface');
+    await run(page, 'clearSite');
   } },
   // ---- the drawer itself (last: they change the drawer the test types into)
   { name: 'setAssistantOpen', params: { open: false }, check: async (r, page) => {
