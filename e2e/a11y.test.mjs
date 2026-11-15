@@ -351,10 +351,9 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     assert.ok(!labels.some((l) => l.includes('Close the assistant') || l.includes('Message to the assistant')), 'the closed drawer is in the tab order');
   });
 
-  // Finding A-5 (two "Source and limits" disclosures) was fixed upstream in T-46. Finding A-6
-  // (docs/lunyx/accessibility.md), owner @globe: the three mission presets each have a disclosure
-  // named "Timing and data sources".
-  test('controls in one round of Tab have distinct names', { ...SLOW, todo: 'A-6 (@globe, T-22): the three mission presets each have a disclosure named "Timing and data sources"' }, async () => {
+  // Findings A-5 (two "Source and limits" disclosures) and A-6 (three presets' "Timing and data
+  // sources" disclosures) were fixed upstream (original T-46 and T-57); kept as a regression test.
+  test('controls in one round of Tab have distinct names', SLOW, async () => {
     const stops = await tabStops(page);
     const byName = new Map();
     for (const st of stops) byName.set(st.name, (byName.get(st.name) ?? 0) + 1);
