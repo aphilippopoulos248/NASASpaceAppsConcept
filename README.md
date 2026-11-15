@@ -311,8 +311,9 @@ centre.
 - **Desktop only.** The views need WebGL; without a GPU they render slowly.
 - **Open defects** (being fixed by the original team at the time of writing):
   - typing coordinates into Filters > Centre of view could leave the view, or a pin dropped
-    straight after, short of the typed point; fixed in the code (T-43, `6d4da06`), and the
-    walkthrough's re-check of the fix is still to come;
+    straight after, short of the typed point; fixed in the code (the fields by T-43, the flights
+    poleward of 80° by `0c15435`; both in `6d4da06`), and the walkthrough's re-check of the fix is
+    still to come;
   - with the default solar band (0° to 90°) the surface view's key metrics say "Requirement not
     met" for any window with a night, while the compare panel treats that band as no
     requirement (T-46);
