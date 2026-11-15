@@ -1,8 +1,10 @@
-// Accessibility checks that a machine can make, on the built app:
+// Accessibility checks that a machine can make, on the built app (desktop website, decision D-4):
 //   - every control has an accessible name (from the browser's accessibility tree);
 //   - the Tab key reaches every control once, never lands in a hidden region, and focus is visible;
 //   - text in the panels has enough contrast (WCAG AA) whatever part of the Moon is behind them;
-//   - with "reduce motion" set, panels and view changes do not animate.
+//   - with "reduce motion" set, panels and view changes do not animate;
+//   - the compare panel (a dialog) takes the focus, names its controls and gives it back on Escape;
+//   - the surface view's Key metrics and skyline chart are named and readable.
 // What needs a person (does the order make sense, are the names good, screen-reader wording)
 // is written up in docs/lunyx/accessibility.md.
 import assert from 'node:assert/strict';
@@ -60,8 +62,11 @@ async function tabStops(page, max = 120) {
       const cs = getComputedStyle(el);
       const label = el.getAttribute('aria-label') || el.labels?.[0]?.textContent || el.textContent?.trim().slice(0, 40) || el.id || el.className;
       const hiddenBy = el.closest('[inert], [hidden], [aria-hidden="true"]');
+      // Which element this is, not only what it is called: two controls can share a name.
+      if (el.dataset.a11yStop === undefined) el.dataset.a11yStop = String((window.__a11yCount = (window.__a11yCount ?? 0) + 1));
       return {
-        key: `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className : ''}|${label}`,
+        key: `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className : ''}|${label}|${el.dataset.a11yStop}`,
+        name: `${el.tagName.toLowerCase()}|${label}`,
         label: `${el.tagName.toLowerCase()} "${label}"`,
         visible: r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && r.bottom > 0 && r.right > 0 && r.top < innerHeight && r.left < innerWidth,
         inHiddenRegion: Boolean(hiddenBy),
@@ -143,6 +148,138 @@ function lowContrast(page, rootSelector) {
   }, rootSelector);
 }
 
+/**
+ * Presses Tab (or Shift+Tab) until the focused element matches `want` (a description built in
+ * the page: role, name, id and classes), at most `max` times. Returns how many presses it took;
+ * throws if the element was never reached, which means it is not in the keyboard path.
+ */
+async function tabTo(page, want, { max = 150, back = false } = {}) {
+  for (let i = 1; i <= max; i++) {
+    await page.keyboard.press(back ? 'Shift+Tab' : 'Tab');
+    const here = await page.evaluate(() => {
+      const el = document.activeElement;
+      if (!el || el === document.body) return '';
+      const name = el.getAttribute('aria-label') || el.labels?.[0]?.textContent || el.textContent || '';
+      return `${el.tagName.toLowerCase()}#${el.id}.${typeof el.className === 'string' ? el.className.replace(/\s+/g, '.') : ''}|${el.getAttribute('role') ?? ''}|${name.trim().replace(/\s+/g, ' ').slice(0, 80)}`;
+    });
+    if (want.test(here)) return i;
+  }
+  throw new Error(`Tab never reached ${want} in ${max} presses`);
+}
+
+describe('accessibility: a keyboard-only walk of the main journey (desktop)', () => {
+  let app, page;
+  before(async () => {
+    app = await openApp(srv.deterministic);
+    page = app.page;
+  }, SLOW);
+  after(() => app?.close());
+
+  test('typed coordinates and "Drop pin at centre", by keyboard only', SLOW, async () => {
+    await page.evaluate(() => document.activeElement?.blur?.());
+    await tabTo(page, /\|Latitude/);
+    await page.keyboard.type('-88');
+    await page.keyboard.press('Enter');
+    await tabTo(page, /\|Longitude/);
+    await page.keyboard.type('136.7');
+    await page.keyboard.press('Enter');
+    await tabTo(page, /\|Drop pin at centre$/);
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.store.get().site?.kind === 'custom');
+    await until(page, () => /% of the window/.test(document.querySelector('.site-card .sc-window')?.textContent ?? ''));
+  });
+
+  test('A-2: enter the surface view, look around with the arrow keys from wherever the focus is, leave with Escape', SLOW, async () => {
+    await tabTo(page, /\|Enter surface view$/);
+    await page.keyboard.press('Enter');
+    await until(page, () => document.body.dataset.view === 'surface');
+    // Focus arrives on the scene (T-37), which is announced as an application.
+    await until(page, () => document.activeElement?.id === 'scene');
+    assert.equal(await page.evaluate(() => document.getElementById('scene').getAttribute('role')), 'application');
+    const az0 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
+    for (let i = 0; i < 3; i++) await page.keyboard.press('ArrowRight');
+    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 1, az0);
+    // From a HUD button too (not a field): the arrows still turn the view.
+    await tabTo(page, /\|(Face Sun|Fold|Open)$/);
+    const az1 = await page.evaluate(() => window.lunyx.store.get().look.azDeg);
+    await page.keyboard.press('ArrowLeft');
+    await until(page, (a) => Math.abs(((window.lunyx.store.get().look.azDeg - a + 540) % 360) - 180) > 0.5, az1);
+    const el0 = await page.evaluate(() => window.lunyx.store.get().look.elDeg);
+    await page.keyboard.press('ArrowUp');
+    await until(page, (e) => window.lunyx.store.get().look.elDeg > e, el0);
+    const site = await page.evaluate(() => window.lunyx.store.get().site.id);
+    await page.keyboard.press('Escape');
+    await until(page, () => document.body.dataset.view === 'globe');
+    assert.equal(await page.evaluate(() => window.lunyx.store.get().site?.id), site, 'Escape must leave the surface and keep the site (F-1)');
+  });
+
+  test('the compare panel by keyboard: open, save A, scan nearby sites, take rank 1 as B, close', SLOW, async () => {
+    await tabTo(page, /cmp-launcher/);
+    await page.keyboard.press('Enter');
+    await until(page, () => !document.querySelector('.cmp-sheet').hidden && document.querySelector('.cmp-sheet').contains(document.activeElement));
+    await tabTo(page, /\|Save the scenario on screen as A$/, { max: 40 });
+    await page.keyboard.press('Enter');
+    await until(page, () => Boolean(window.lunyx.store.get().compareA));
+    await tabTo(page, /\|tab\|A and B$/, { max: 60, back: true });
+    await page.keyboard.press('ArrowRight');
+    await until(page, () => document.activeElement?.getAttribute('role') === 'tab' && /Nearby sites/.test(document.activeElement.textContent));
+    await tabTo(page, /\|Radius/, { max: 20 });
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('600');
+    await tabTo(page, /\|Spacing/, { max: 5 });
+    await page.keyboard.press('Control+A');
+    await page.keyboard.type('200');
+    await tabTo(page, /\|Scan nearby sites$/, { max: 10 });
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.analysis.nearby().state === 'ready', undefined, 600_000);
+    await tabTo(page, /\|Pin candidate 1, .* and load it as scenario B$/, { max: 60 });
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.analysis.comparison().state === 'ready', undefined, 300_000);
+    // Where the focus is now is checked by the next test (Q-4); close the panel from inside it.
+    await page.locator('.cmp-sheet').focus();
+    await page.keyboard.press('Escape');
+    await until(page, () => document.querySelector('.cmp-sheet').hidden);
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
+  });
+
+  // Finding Q-4 (docs/lunyx/qa-findings.md), owner @analysis: "Compare as B" switches the panel to
+  // its "A and B" tab, which hides the button that had the focus, so the focus falls to the page;
+  // the next Escape then closes the panel without giving the focus back to the launcher.
+  test('after "Compare as B" the focus stays in the compare dialog, and Escape returns it to the launcher', { ...SLOW, todo: 'Q-4 (@analysis): the focus falls out of the dialog when "Compare as B" switches the tab' }, async () => {
+    await tabTo(page, /cmp-launcher/);
+    await page.keyboard.press('Enter');
+    await until(page, () => !document.querySelector('.cmp-sheet').hidden && document.querySelector('.cmp-sheet').contains(document.activeElement));
+    await tabTo(page, /\|tab\|A and B$/, { max: 60 });
+    await page.keyboard.press('ArrowRight');
+    await until(page, () => document.activeElement?.getAttribute('role') === 'tab' && /Nearby sites/.test(document.activeElement.textContent));
+    await until(page, () => window.lunyx.analysis.nearby().state === 'ready' && document.querySelector('[aria-label="Ranked nearby alternatives"] .cmp-nrow:not(.cmp-nhead)'), undefined, 300_000);
+    await tabTo(page, /\|Pin candidate 2, .* and load it as scenario B$/, { max: 80 });
+    await page.keyboard.press('Enter');
+    await until(page, () => window.lunyx.analysis.comparison().state === 'ready', undefined, 300_000);
+    await page.waitForTimeout(300);
+    const where = await page.evaluate(() => {
+      const el = document.activeElement;
+      return { inDialog: Boolean(el && document.querySelector('.cmp-sheet').contains(el)), what: el === document.body ? 'body' : `${el?.tagName.toLowerCase()} "${(el?.getAttribute('aria-label') || el?.textContent || '').trim().slice(0, 60)}"` };
+    });
+    assert.ok(where.inDialog, `after "Compare as B" the focus is on ${where.what}, outside the dialog`);
+    await page.keyboard.press('Escape');
+    await until(page, () => document.querySelector('.cmp-sheet').hidden);
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
+  });
+
+  test('the assistant by keyboard: open, ask, close with Escape', SLOW, async () => {
+    await tabTo(page, /#assistant-button/);
+    await page.keyboard.press('Enter');
+    await until(page, () => document.activeElement?.id === 'assistant-input');
+    await page.keyboard.type('what is the illumination?');
+    const before = await page.evaluate(() => window.lunyxAssistant.session.messages.length);
+    await page.keyboard.press('Enter');
+    await until(page, (n) => window.lunyxAssistant.session.messages.length >= n + 2 && !window.lunyxAssistant.session.busy, before);
+    await page.keyboard.press('Escape');
+    await until(page, () => !window.lunyx.store.get().assistantOpen && document.activeElement?.id === 'assistant-button');
+  });
+});
+
 describe('accessibility: globe view, site card, scrubber and the assistant drawer', () => {
   let app, page;
   before(async () => {
@@ -168,7 +305,10 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     const stops = await tabStops(page);
     assert.ok(stops.length >= 25, `only ${stops.length} tab stops`);
     assert.ok(stops.length < 80, 'Tab did not come back to the start: focus is trapped or the list is endless');
-    assert.equal(new Set(stops.map((s) => s.key)).size, stops.length, 'a control was focused twice in one round');
+    const seen = new Map();
+    for (const [i, st] of stops.entries()) seen.set(st.key, [...(seen.get(st.key) ?? []), i + 1]);
+    const twice = [...seen].filter(([, at]) => at.length > 1).map(([key, at]) => `${key} at stops ${at.join(', ')}`);
+    assert.deepEqual(twice, [], `a control was focused twice in one round:\n${twice.join('\n')}\nall stops: ${stops.map((x) => x.label).join(' | ')}`);
     assert.deepEqual(stops.filter((s) => s.inHiddenRegion).map((s) => s.label), [], 'focus entered a hidden region');
     assert.deepEqual(stops.filter((s) => !s.visible).map((s) => s.label), [], 'focus landed on something that is not on screen');
     assert.deepEqual(stops.filter((s) => !s.ring).map((s) => s.label), [], 'no visible focus indicator');
@@ -178,6 +318,16 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     }
     // The closed drawer is out of the tab order.
     assert.ok(!labels.some((l) => l.includes('Close the assistant') || l.includes('Message to the assistant')), 'the closed drawer is in the tab order');
+  });
+
+  // Finding A-5 (docs/lunyx/accessibility.md): the site-science section has two disclosures both
+  // named "Source and limits" (long-term averages and Diviner temperatures).
+  test('controls in one round of Tab have distinct names', { ...SLOW, todo: 'A-5 (site science, T-30): two disclosures are both named "Source and limits"' }, async () => {
+    const stops = await tabStops(page);
+    const byName = new Map();
+    for (const st of stops) byName.set(st.name, (byName.get(st.name) ?? 0) + 1);
+    const same = [...byName].filter(([, n]) => n > 1).map(([name, n]) => `${name} x${n}`);
+    assert.deepEqual(same, []);
   });
 
   test('text contrast in the panels meets WCAG AA over black space and over sunlit ground', SLOW, async () => {
@@ -207,55 +357,44 @@ describe('accessibility: globe view, site card, scrubber and the assistant drawe
     assert.equal(await page.evaluate(() => document.body.dataset.view), 'globe');
   });
 
-  test('the surface view: names, and Escape leaves it', SLOW, async () => {
+  test('the surface view: names, contrast of the HUD, Key metrics and chart, and Escape leaves it', SLOW, async () => {
     await result(page, 'enterSurface');
-    await until(page, () => document.body.dataset.view === 'surface');
+    await until(page, () => document.body.dataset.view === 'surface' && document.querySelector('.km .km-now tbody tr th'));
     assert.deepEqual(await unnamedControls(page), []);
-    assert.deepEqual(await lowContrast(page, '.surface-hud, .time-scrubber, .locator'), []);
+    assert.deepEqual(await lowContrast(page, '.surface-hud, .km, .skc, .time-scrubber, .locator'), []);
+    // The chart is a named group with its keys described, and its data is also offered as a table.
+    const plot = await page.evaluate(() => document.querySelector('.skc .skc-plot')?.getAttribute('aria-label') ?? '');
+    assert.match(plot, /arrows move the clock/i);
+    await page.locator('.skc').getByRole('button', { name: 'Table', exact: true }).click();
+    await until(page, () => document.querySelector('.skc-data caption')?.textContent.length > 20);
+    assert.deepEqual(await lowContrast(page, '.skc'), []);
+    // The same button now reads "Chart" and is pressed.
+    const back = page.locator('.skc').getByRole('button', { name: 'Chart', exact: true });
+    assert.equal(await back.getAttribute('aria-pressed'), 'true');
+    await back.click();
     await page.locator('#scene').focus();
     await page.keyboard.press('Escape');
     await until(page, () => document.body.dataset.view === 'globe');
   });
-});
 
-describe('accessibility: phone width (390 x 844)', () => {
-  let app, page;
-  before(async () => {
-    app = await openApp(srv.deterministic, { viewport: { width: 390, height: 844 } });
-    page = app.page;
-  }, SLOW);
-  after(() => app?.close());
-
-  test('controls are named, the Filters sheet opens from its button, and nothing is wider than the screen', SLOW, async () => {
+  test('the compare panel: the launcher moves focus into the dialog, its controls are named, Escape gives focus back', SLOW, async () => {
+    const launcher = page.locator('.cmp-launcher');
+    await launcher.focus();
+    await page.keyboard.press('Enter');
+    await until(page, () => !document.querySelector('.cmp-sheet').hidden);
+    await until(page, () => document.querySelector('.cmp-sheet').contains(document.activeElement));
+    assert.equal(await page.locator('.cmp-sheet').getAttribute('role'), 'dialog');
+    assert.ok((await page.locator('.cmp-sheet').getAttribute('aria-labelledby'))?.length > 0, 'the dialog has no name');
     assert.deepEqual(await unnamedControls(page), []);
-    const toggle = page.locator('#left-toggle');
-    assert.equal(await toggle.getAttribute('aria-expanded'), 'false');
-    await toggle.click();
-    await until(page, () => document.body.classList.contains('left-open'));
-    assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+    assert.deepEqual(await lowContrast(page, '.cmp-sheet'), []);
+    // The tabs are a tablist: the arrow keys move between them.
+    await page.locator('.cmp-sheet [role="tab"]').first().focus();
+    await page.keyboard.press('ArrowRight');
+    await until(page, () => document.activeElement?.getAttribute('role') === 'tab' && document.activeElement.getAttribute('aria-selected') === 'true' && document.activeElement !== document.querySelector('.cmp-sheet [role="tab"]'));
     assert.deepEqual(await unnamedControls(page), []);
-    const overflow = await page.evaluate(() =>
-      [...document.querySelectorAll('.ly-panel, .assistant-drawer.is-open, .region-wordmark')]
-        .filter((e) => e.getBoundingClientRect().width > 0)
-        .filter((e) => e.getBoundingClientRect().right > innerWidth + 1 || e.getBoundingClientRect().left < -1)
-        .map((e) => `${e.className}: ${Math.round(e.getBoundingClientRect().left)}..${Math.round(e.getBoundingClientRect().right)} of ${innerWidth}`),
-    );
-    assert.deepEqual(overflow, []);
-    await toggle.click();
-    await until(page, () => !document.body.classList.contains('left-open'));
-  });
-
-  test('the assistant drawer covers the width and its controls are at least 24 px tall', SLOW, async () => {
-    await page.locator('#assistant-button').click();
-    await until(page, () => document.getElementById('assistant-drawer').classList.contains('is-open'));
-    const box = await page.locator('#assistant-drawer').boundingBox();
-    assert.equal(Math.round(box.width), 390);
-    const small = await page.evaluate(() =>
-      [...document.querySelectorAll('#assistant-drawer button, #assistant-drawer textarea')]
-        .filter((e) => !e.hidden && e.getBoundingClientRect().width > 0)
-        .filter((e) => e.getBoundingClientRect().height < 24 || e.getBoundingClientRect().width < 24)
-        .map((e) => `${e.getAttribute('aria-label') || e.textContent.trim()}: ${Math.round(e.getBoundingClientRect().width)}x${Math.round(e.getBoundingClientRect().height)}`),
-    );
-    assert.deepEqual(small, []);
+    assert.deepEqual(await lowContrast(page, '.cmp-sheet'), []);
+    await page.keyboard.press('Escape');
+    await until(page, () => document.querySelector('.cmp-sheet').hidden);
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains('cmp-launcher')), true, 'focus did not return to the launcher');
   });
 });
