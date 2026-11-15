@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { analyseStack } from '../../analysis/api';
 import { candidateOffsets } from '../../analysis/nearby';
+import { fnSource, stackOf } from '../../analysis/testing';
 import type { NearbyCandidate, NearbyOptions, SiteAnalysis } from '../../analysis/types';
 import { listActions, registerActions, resetActions, runAction } from '../../core/actions';
 import { AnalysisStore } from '../../core/analysisStore';
@@ -109,7 +111,7 @@ describe('the compare panel opens through an action', () => {
 
   it('every action has a description and a parameter schema the assistant can use', () => {
     setup();
-    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons', 'rankNearby', 'selectCandidate'];
+    const mine = ['openCompare', 'compareDelayedArrival', 'compareMastHeights', 'swapComparison', 'clearComparison', 'saveComparison', 'loadComparison', 'deleteComparison', 'listComparisons', 'rankNearby', 'selectCandidate', 'exportResults'];
     const registered = listActions();
     for (const name of mine) {
       const def = registered.find((a) => a.name === name);
@@ -465,6 +467,73 @@ describe('nearby alternatives', () => {
     await ok('selectSite', { site: 'im-2' });
     expect(await fails('rankNearby')).toBe('The scan is not available: the 60 m window could not be read');
     expect(await fails('selectCandidate', { rank: 1 })).toBe('There is no ranked list of nearby sites yet. Run rankNearby first.');
+  });
+});
+
+describe('the mission-window table and its export', () => {
+  /** Real analyses on a smooth Moon (fast), and a download that only records what it was given. */
+  function setupExport(withDownload = true) {
+    resetActions();
+    const store = new Store(initialState(Date.UTC(2025, 2, 13)));
+    const smooth = stackOf(fnSource('smooth sphere', 60, () => 0));
+    const analysis = new AnalysisStore(store, { analyse: (sc) => analyseStack(sc, smooth), rankNearby: () => Promise.resolve([]) });
+    const panel = createPanelStore();
+    const files: { filename: string; mimeType: string; text: string }[] = [];
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => [IM2], analysis }));
+    registerActions(createCompareActions({ store, analysis, panel, storage: createCompareStorage(null), now: () => Date.UTC(2026, 10, 15, 1, 2, 3), ...(withDownload && { download: (filename, mimeType, text) => void files.push({ filename, mimeType, text }) }) }));
+    return { store, panel, files };
+  }
+
+  it('openCompare { table } shows the window table of the scenario on screen or of a slot', async () => {
+    const { panel } = setupExport();
+    expect(await ok('openCompare', { table: 'A' })).toMatchObject({ open: true, tab: 'windows', table: 'A' });
+    expect(panel.get()).toMatchObject({ tab: 'windows', tableSlot: 'A' });
+    expect(await ok('openCompare', { tab: 'compare' })).not.toHaveProperty('table');
+    expect(await ok('openCompare', { tab: 'windows' })).toMatchObject({ table: 'A' });
+    expect(await fails('openCompare', { table: 'C' })).toMatch(/must be one of: current, A, B/);
+  });
+
+  it('exportResults: the scenario on screen as CSV, slots as JSON, A and B together with the differences', async () => {
+    const { store, files } = setupExport();
+    expect(await fails('exportResults', { format: 'csv' })).toBe('No site is selected. Select a landing site or drop a pin first.');
+    await ok('dropPin', { lat: 0, lon: 0 });
+    await ok('setMissionWindow', { startUtc: '2025-03-13T00:00Z', durationH: 48 });
+    const r = await ok('exportResults', { format: 'csv' });
+    expect(r).toMatchObject({ format: 'csv', filename: 'lunyx_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m.csv', mimeType: 'text/csv;charset=utf-8', scenarios: [{ slot: 'current' }], spells: 5, downloaded: true });
+    expect(files).toHaveLength(1);
+    expect(r.bytes).toBe(new TextEncoder().encode(files[0].text).length);
+    const lines = files[0].text.trimEnd().split('\r\n');
+    expect(lines).toHaveLength(6);
+    expect(lines[2]).toMatch(/,sun,Dark,2025-03-14T05:44:08Z,2025-03-14T08:10:04Z,/);
+
+    expect(await fails('exportResults', { format: 'json', slot: 'B' })).toBe('Comparison slot B is empty. Save a scenario there first (saveScenario).');
+    await ok('compareDelayedArrival', { delayH: 24 * 7 });
+    const j = await ok('exportResults', { format: 'json', slot: 'AB' });
+    expect(j).toMatchObject({ format: 'json', mimeType: 'application/json', scenarios: [{ slot: 'A' }, { slot: 'B' }] });
+    expect(j.filename).toBe('lunyx_compare_A_pin_0.00000_0.00000_2025-03-13T0000Z_48h_2m_B_pin_0.00000_0.00000_2025-03-20T0000Z_48h_2m.json');
+    const doc = JSON.parse(files[1].text);
+    expect(doc.exportedUtc).toBe('2026-11-15T01:02:03Z');
+    expect(doc.scenarios.map((x: { scenario: { startUtc: string } }) => x.scenario.startUtc)).toEqual(['2025-03-13T00:00Z', '2025-03-20T00:00Z']);
+    expect(doc.comparison).toMatchObject({ meaning: 'B minus A' });
+    // The requirements are checked with the Sun's elevation at the clock.
+    expect(typeof doc.scenarios[0].requirements.sunElevationBand.sunElNowDeg).toBe('number');
+    // The default is what the window table shows.
+    await ok('openCompare', { table: 'B' });
+    expect(await ok('exportResults', { format: 'csv' })).toMatchObject({ scenarios: [{ slot: 'B' }] });
+    expect(store.get().comparing).toBe(true);
+  });
+
+  it('says so when files cannot be downloaded, or the analysis failed', async () => {
+    setupExport(false);
+    await ok('dropPin', { lat: 0, lon: 0 });
+    expect(await fails('exportResults', { format: 'csv' })).toBe('Files cannot be downloaded in this session.');
+    resetActions();
+    const store = new Store(initialState(T0));
+    const analysis = new AnalysisStore(store, { analyse: () => Promise.reject(new Error('the terrain could not be read')), rankNearby: () => Promise.resolve([]) });
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => [IM2], analysis }));
+    registerActions(createCompareActions({ store, analysis, panel: createPanelStore(), storage: createCompareStorage(null), download: () => undefined }));
+    await ok('selectSite', { site: 'im-2' });
+    expect(await fails('exportResults', { format: 'json' })).toBe('The analysis of the scenario on screen is not available: the terrain could not be read');
   });
 });
 

@@ -173,6 +173,30 @@ body[data-view='surface'] .cmp-launcher { left: 50%; transform: translateX(-50%)
   .cmp-ntd[data-label]:not(.cmp-nname):not(.cmp-nchoose)::before { content: attr(data-label) ': '; color: var(--text-muted); font-size: var(--fs-xs); }
 }
 
+/* ---------- window table ---------- */
+.cmp-tablehead { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-4); }
+.cmp-slotpick { flex: none; }
+.cmp-slotpick > .ly-btn { flex: none; min-width: 4.5em; }
+.cmp-export { align-items: center; }
+.cmp-scope { width: auto; }
+.cmp-tablehead + .ly-note { margin-top: var(--sp-1); }
+.cmp-spellgroup .ly-section-title { margin-top: var(--sp-4); }
+.cmp-stable { container: cmp-stable / inline-size; }
+.cmp-srow { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.25fr) minmax(0, 1.25fr) minmax(0, 0.8fr) minmax(0, 1.4fr) minmax(0, 2.2fr); gap: 0 var(--sp-3); align-items: baseline; padding: var(--sp-1) 0; border-bottom: 1px solid var(--border); }
+.cmp-shead { color: var(--text-muted); font-size: var(--fs-xs); font-weight: var(--fw-semibold); border-bottom-color: var(--border-strong); }
+.cmp-std { min-width: 0; overflow-wrap: anywhere; }
+.cmp-sstate { font-weight: var(--fw-medium); }
+.cmp-srow.is-dark .cmp-sstate, .cmp-srow.is-earthGap .cmp-sstate { color: var(--text-muted); }
+.cmp-snote { color: var(--text-muted); font-size: var(--fs-xs); }
+.cmp-spells + .ly-note { margin-top: var(--sp-2); }
+@container cmp-body (max-width: 900px) {
+  .cmp-shead { position: absolute !important; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .cmp-srow { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-1) var(--sp-3); padding: var(--sp-2) 0; }
+  .cmp-srow > .cmp-sstate, .cmp-srow > .cmp-snote { grid-column: 1 / -1; }
+  .cmp-srow > .cmp-snote:empty { display: none; }
+  .cmp-std[data-label]:not(.cmp-sstate):not(.cmp-snote)::before { content: attr(data-label) ': '; color: var(--text-muted); font-size: var(--fs-xs); }
+}
+
 /* ---------- narrow screens ---------- */
 @media (max-width: 700px) {
   .cmp-launcher { top: var(--sp-3); left: auto; right: var(--edge); }

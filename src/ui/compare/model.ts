@@ -4,6 +4,7 @@
 import { blockageAt as realBlockageAt, nextEvents as realNextEvents } from '../../analysis/api';
 import type { Blockage, FullSpan, SiteAnalysis, SkyEvent } from '../../analysis/types';
 import { checkRequirements } from '../../core/analysisReport';
+import { EVENT_INFO } from '../../core/skyEvents';
 import { spanText } from '../../core/scenario';
 import { formatDuration } from '../../core/time';
 import { MOON_RADIUS_M, type AppState, type Scenario } from '../../core/types';
@@ -156,13 +157,11 @@ function bodyNowText(k: Blockage): string {
   return k.clearanceDeg > 0 ? `${where}, ${degText(k.clearanceDeg)} above the skyline${covered}` : `${where}, ${degText(-k.clearanceDeg)} below the skyline (centre hidden)${covered}`;
 }
 
-// Which instant each event is (decision D-8): the same words as the time scrubber's buttons.
-const EVENT_LABEL: Record<SkyEvent['type'], string> = { sunset: 'Sun fully set', sunrise: 'Sun starts rising', earthset: 'Earth\'s centre sets', earthrise: 'Earth\'s centre rises' };
-const EVENT_HINT: Record<SkyEvent['type'], string> = {
-  sunset: 'The next time the last part of the Sun\'s disc goes behind the terrain skyline, after the shared clock: darkness begins. Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.',
-  sunrise: 'The next time the first part of the Sun\'s disc appears above the terrain skyline, after the shared clock. The whole disc is clear later; that instant is not listed here yet.',
-  earthset: 'The next time Earth\'s centre goes behind the terrain skyline, after the shared clock.',
-  earthrise: 'The next time Earth\'s centre comes above the terrain skyline, after the shared clock.',
+// Which instant each event is (decision D-8): the app's shared wording (src/core/skyEvents.ts).
+const EVENT_HINT = (type: SkyEvent['type']): string => {
+  const info = EVENT_INFO[type];
+  const other = info.body === 'sun' ? (info.rising ? ' The whole disc is clear later; that instant is not listed here yet.' : ' Sunlight starts to fall earlier, when the skyline first cuts the disc; that instant is not listed here yet.') : '';
+  return `${info.label}: the next time ${info.instant}, after the shared clock.${other}`;
 };
 const EVENT_ORDER: readonly SkyEvent['type'][] = ['sunset', 'sunrise', 'earthset', 'earthrise'];
 
@@ -195,8 +194,8 @@ export function nowRows(a: SiteAnalysis | null, b: SiteAnalysis | null, timeMs: 
       delta = Math.abs(dh) < 1 / 60 ? 'same time' : `${formatDuration(dh)} ${dh > 0 ? 'later' : 'earlier'}`;
     }
     rows.push({
-      key: type, label: EVENT_LABEL[type],
-      hint: EVENT_HINT[type],
+      key: type, label: EVENT_INFO[type].label,
+      hint: EVENT_HINT(type),
       a: a ? when(ea) : EMPTY, b: b ? when(eb) : EMPTY, delta, tone: 'none',
     });
   }
