@@ -1,0 +1,37 @@
+.sp-toolbar, .sp-metrics-grip { display: none; }
+body[data-view='surface'] .sp-toolbar {
+  display: flex; align-items: center; gap: 8px; grid-column: 1 / -1;
+  flex: 0 0 auto; min-width: 0; border-bottom: 1px solid var(--border); padding-bottom: 5px;
+}
+.sp-grip {
+  flex: 1; min-width: 0; border: 0; border-radius: 4px; background: transparent;
+  color: var(--text-muted); font: inherit; font-size: var(--fs-xs); text-align: left;
+  padding: 5px; cursor: grab; touch-action: none; user-select: none;
+}
+.sp-grip:hover { color: var(--text); background: var(--surface-2); }
+.sp-grip:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+body[data-view='surface'] .sp-metrics-grip { display: block; }
+body[data-view='surface'] .sp-metrics-head > .ly-panel-title { display: none; }
+body[data-view='surface'] .sp-folded > :not(.sp-toolbar) { display: none !important; }
+body[data-view='surface'] .sp-folded { height: auto !important; min-height: 0 !important; bottom: auto; }
+body[data-view='surface'] .sp-positioned {
+  position: fixed !important; left: var(--sp-x) !important; top: var(--sp-y) !important;
+  right: auto !important; bottom: auto !important; width: var(--sp-width) !important;
+  max-width: calc(100vw - 16px) !important; max-height: calc(100dvh - var(--sp-y) - 8px) !important;
+  margin: 0 !important; transform: none !important; overflow: auto;
+}
+/* A transformed region would otherwise change the coordinate system of fixed panels. */
+body[data-view='surface'] .region:has(> .sp-positioned) { transform: none; }
+body[data-view='surface'] .sp-positioned.assistant-drawer:not(.sp-folded) { height: min(650px, calc(100dvh - var(--sp-y) - 8px)); }
+body[data-view='surface'] .sp-positioned.cmp-sheet:not(.sp-folded) { height: min(600px, calc(100dvh - var(--sp-y) - 8px)); }
+body[data-view='surface'] .sp-positioned.skc { width: min(var(--panel-w), calc(100vw - 16px)) !important; }
+body[data-view='surface'] .sp-positioned.skc[data-size='expanded'] { width: min(760px, calc(100vw - 16px)) !important; }
+body[data-view='surface'] .sp-dragging { box-shadow: 0 0 0 2px var(--accent), var(--shadow); user-select: none; }
+body[data-view='surface'] .sp-dragging .sp-grip { cursor: grabbing; }
+body[data-view='surface'] .assistant-drawer > .sp-toolbar,
+body[data-view='surface'] .cmp-sheet > .sp-toolbar { padding: 8px 12px; }
+body[data-view='surface'] .time-scrubber > .ts-play { grid-row: 2 / span 2; }
+body[data-view='surface'] .locator-zoom { top: 42px; }
+/* Keep controls available when a chart is expanded; every panel can now be moved or folded. */
+body[data-view='surface'] .surface-hud { display: grid; }
+.sp-reset { display: block; margin-top: 6px; margin-left: auto; }
