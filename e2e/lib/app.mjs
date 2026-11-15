@@ -2,19 +2,72 @@
 // reach the local preview server (the app must work from bundled data), and small helpers
 // to read the app's own state and results so assertions compare the screen with them.
 //
-// Headless Chromium draws WebGL in software, and this machine is often busy, so frames can
-// take a second or more. Helpers therefore wait on conditions with timers (not on animation
-// frames) and all timeouts are generous.
+// Rendering. Headless Chromium uses the GPU when it can reach one through ANGLE on the
+// desktop OpenGL ES driver (the flags below); otherwise it draws WebGL in software
+// (SwiftShader), where a frame can take a second or more on a busy machine. Helpers therefore
+// wait on conditions with timers (not on animation frames) and all timeouts are generous.
+//   E2E_GL=auto (default)  the GPU when Chromium gets one, SwiftShader otherwise
+//   E2E_GL=gpu             the GPU or nothing: fails if Chromium only gets a software renderer
+//   E2E_GL=swiftshader     software rendering, as on a machine without a GPU
+// The renderer actually used (WEBGL_debug_renderer_info) is printed once per browser.
 import { chromium } from 'playwright';
 
 export const TIMEOUT = Number(process.env.E2E_TIMEOUT_MS ?? 120_000);
 /** node:test options for a test that drives the browser. */
 export const SLOW = { timeout: 5 * TIMEOUT };
 
+export const GL_ARGS = {
+  gpu: ['--use-gl=angle', '--use-angle=gl-egl', '--ignore-gpu-blocklist', '--enable-gpu'],
+  swiftshader: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'],
+};
+
+/** True for a renderer string that names a software rasteriser (or for no WebGL at all). */
+export const isSoftwareRenderer = (name) => !name || /swiftshader|llvmpipe|softpipe|software/i.test(name);
+
+/** The WebGL renderer a browser gives its pages: UNMASKED_RENDERER_WEBGL, or null without WebGL. */
+export async function rendererOf(b) {
+  const page = await b.newPage();
+  try {
+    return await page.evaluate(() => {
+      const canvas = document.createElement('canvas');
+      const gl = canvas.getContext('webgl2') ?? canvas.getContext('webgl');
+      if (!gl) return null;
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      return String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
+    });
+  } finally {
+    await page.close();
+  }
+}
+
+/**
+ * Launches headless Chromium for `mode` (E2E_GL: auto, gpu or swiftshader) and reports what it
+ * renders with: { browser, mode: 'gpu' | 'swiftshader', renderer }.
+ */
+export async function launchChromium(mode = process.env.E2E_GL || 'auto') {
+  const want = String(mode).toLowerCase();
+  if (!['auto', 'gpu', 'swiftshader'].includes(want)) throw new Error(`E2E_GL=${mode}: use auto, gpu or swiftshader`);
+  if (want !== 'swiftshader') {
+    const b = await chromium.launch({ args: GL_ARGS.gpu });
+    const renderer = await rendererOf(b).catch(() => null);
+    if (!isSoftwareRenderer(renderer)) return { browser: b, mode: 'gpu', renderer };
+    await b.close();
+    if (want === 'gpu') throw new Error(`E2E_GL=gpu, but Chromium gets no GPU here (renderer: ${renderer ?? 'no WebGL'}). Use E2E_GL=auto or swiftshader.`);
+  }
+  const b = await chromium.launch({ args: GL_ARGS.swiftshader });
+  return { browser: b, mode: 'swiftshader', renderer: await rendererOf(b).catch(() => null) };
+}
+
 let browserPromise = null;
+/** What the shared browser renders with, once it is running: { mode, renderer }. */
+export const rendering = { mode: null, renderer: null };
 
 export function browser() {
-  browserPromise ??= chromium.launch({ args: ['--use-gl=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+  browserPromise ??= launchChromium().then(({ browser: b, mode, renderer }) => {
+    Object.assign(rendering, { mode, renderer });
+    console.log(`e2e: Chromium renders with ${renderer ?? 'no WebGL'} (${mode === 'gpu' ? 'GPU' : 'SwiftShader, software'})`);
+    return b;
+  });
   return browserPromise;
 }
 
@@ -29,7 +82,8 @@ export async function closeBrowser() {
  * A page with the app loaded.
  *   viewport      default 1280x720
  *   scale         device pixel ratio. Functional tests use 0.5: a quarter of the pixels to
- *                 shade, which keeps software rendering usable. Screenshots use 1.
+ *                 shade, which keeps software rendering usable on a machine without a GPU.
+ *                 Screenshots use 1.
  *   reducedMotion default 'reduce': the app then skips camera flights and fades, so the
  *                 end state of an action is there at once.
  *   offline       default true: every request that does not go to the preview server is
