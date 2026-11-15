@@ -45,7 +45,7 @@
       "thresholds": { "sunlight": 80, "darkness": 6, "earthVisibility": 90, "commBlackout": 6, "slope": 10, "roughness": null },
       "weights": { "sunlight": 3, "darkness": 2, "earthVisibility": 2, "commBlackout": 2, "slope": 1, "roughness": 1 },
       "sources": [
-        "Window: starts at the app's current mission window; 336 h (14 days), about one lunar daytime. Firefly's Blue Ghost Mission 1 completed more than 14 days of surface operations at 18.6° N (Firefly Aerospace, 17 March 2025, https://fireflyspace.com/news/firefly-aerospace-successfully-completes-14-days-of-surface-operations-on-the-moon).",
+        "Window: starts at the app's current mission window; 336 h (14 days), about one lunar daytime. Firefly's Blue Ghost Mission 1 completed more than 14 days of surface operations, 346 hours of daylight (Firefly Aerospace, 17 March 2025, https://fireflyspace.com/news/firefly-aerospace-successfully-completes-14-days-of-surface-operations-on-the-moon). Its landing site lies at 18.6° N in this app's catalogue (LROC's measured lander position, public/data/landings.json), not in that release.",
         "Longest darkness at most 6 h: illustrative default that lets Earth pass in front of the Sun (about 2.3 h of total darkness at Blue Ghost's site on 14 March 2025, docs/lunyx/validation.md section 4) but not the night.",
         "Roughness: no requirement by default, because at most low-latitude sites the bundled elevation grids are too coarse to measure lander-scale roughness. Setting one is a stricter setting and always allowed.",
         "Observer 2 m above the ground: illustrative default (the app's default mast height).",
