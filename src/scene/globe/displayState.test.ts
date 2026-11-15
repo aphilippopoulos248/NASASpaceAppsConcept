@@ -5,6 +5,7 @@ import { AverageMaps } from './averageMaps';
 import { DEFAULT_RELIEF, displaySummary, globeDisplay, registerDisplayActions, reliefText } from './displayState';
 import { COVERAGE_STYLE, OVERLAY_RAMP, SUN_BAND_COLOUR } from './overlayStyle';
 import { createSurfaceUniforms, patchSurfaceMaterial, setSurfaceFeatures } from './surfaceShader';
+import { imageryText } from '../sitePatch';
 
 const uniforms = () => createSurfaceUniforms(OVERLAY_RAMP, SUN_BAND_COLOUR, COVERAGE_STYLE.map((c) => c.colour));
 
@@ -131,4 +132,33 @@ describe('average maps', () => {
     expect(u.uAvgHalf.value.toArray()).toEqual([0, 0, 0, 0]);
     expect(seen[0]).toBe('loading');
   }, 30_000);
+});
+
+describe('close-up imagery state', () => {
+  it('says what is on screen: loading, shown with the layers that arrived, or not reachable', () => {
+    expect(displaySummary().closeUpImagery).toBeNull();
+    // The stars behind the globe are generated, and getState says so.
+    expect(displaySummary().backgroundStars).toBe('Background stars are decorative: random points, not the real sky.');
+    let heard = 0;
+    const off = globeDisplay.subscribe(() => heard++);
+    globeDisplay.setLive({ closeUp: { state: 'loading', credits: [] } });
+    expect(displaySummary().closeUpImagery).toMatchObject({ state: 'loading', layersShown: [], text: expect.stringContaining('loading from NASA Moon Trek') });
+    // Only one of the two layers arrived: only that one is credited.
+    globeDisplay.setLive({ closeUp: { state: 'shown', credits: ['LROC WAC (NASA/GSFC/ASU)'] } });
+    expect(displaySummary().closeUpImagery).toEqual({ state: 'shown', layersShown: ['LROC WAC (NASA/GSFC/ASU)'], text: 'Close-up imagery: LROC WAC (NASA/GSFC/ASU), via NASA Moon Trek.' });
+    // The same state again is not news.
+    globeDisplay.setLive({ closeUp: { state: 'shown', credits: ['LROC WAC (NASA/GSFC/ASU)'] } });
+    expect(heard).toBe(2);
+    // No network: nothing is credited, and the sentence says what is shown instead and that nothing else depends on it.
+    globeDisplay.setLive({ closeUp: { state: 'unavailable', credits: [] } });
+    const text = displaySummary().closeUpImagery!.text;
+    expect(text).toBe(imageryText('unavailable', []));
+    expect(text).toContain('NASA Moon Trek could not be reached');
+    expect(text).toContain('whole-Moon mosaic');
+    expect(text).not.toContain('LROC');
+    expect(heard).toBe(3);
+    globeDisplay.setLive({ closeUp: null });
+    expect(displaySummary().closeUpImagery).toBeNull();
+    off();
+  });
 });

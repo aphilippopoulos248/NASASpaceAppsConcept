@@ -82,6 +82,8 @@ export interface AppState {
   sunElMaxDeg: number;
   overlay: OverlayMode;
   showMissions: boolean;
+  /** 3D country flags on the landing markers (globe view). */
+  showFlags: boolean;
   lightMode: LightMode;
   /** Globe camera: the point under the screen centre and the camera altitude. Written by the globe scene. */
   globeCenter: LatLon & { altitudeKm: number };

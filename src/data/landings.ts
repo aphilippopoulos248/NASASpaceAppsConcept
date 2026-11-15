@@ -34,6 +34,27 @@ export function programColor(program: string): string {
   return PROGRAM_COLORS[program] ?? '#cccccc';
 }
 
+/**
+ * Colour for each country, keyed by the country label in landings.json. The USSR's colour is
+ * Russia's, as the app shows those sites as Russia (see src/data/ownership.ts).
+ */
+export const COUNTRY_COLORS: Record<string, string> = {
+  USA: '#4f9dff',
+  USSR: '#ff4d5e',
+  China: '#ffd23f',
+  India: '#ff9a3c',
+  Japan: '#d77dff',
+};
+
+export function countryColor(country: string): string {
+  return COUNTRY_COLORS[country] ?? '#cccccc';
+}
+
+/** The colour a landing is drawn in: its country's. */
+export function landingColor(l: Landing): string {
+  return countryColor(l.country);
+}
+
 export async function loadLandings(): Promise<Landing[]> {
   const res = await fetch(`${import.meta.env.BASE_URL}data/landings.json`);
   if (!res.ok) throw new Error(`landings.json: HTTP ${res.status}`);

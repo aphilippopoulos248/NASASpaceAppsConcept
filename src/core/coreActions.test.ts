@@ -104,6 +104,42 @@ describe('core actions', () => {
     expect(await runAction('enterSurface')).toEqual({ ok: false, error: 'No terrain for custom pins yet.' });
   });
 
+  it('enterSurface reports back only once the surface is on screen', async () => {
+    resetActions();
+    const store = new Store(initialState(T0));
+    let shown!: () => void;
+    const asked: string[] = [];
+    const viewShown = (view: string) => {
+      asked.push(view);
+      return new Promise<void>((resolve) => (shown = resolve));
+    };
+    registerActions(createCoreActions({ store, filters: new MissionFilterStore(), landings: () => LANDINGS, prepareSurface: () => Promise.resolve(), viewShown }));
+    await runAction('selectSite', { site: 'apollo-11' });
+    let done = false;
+    const pending = runAction('enterSurface').then((r) => {
+      done = true;
+      return r;
+    });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+    // The state has changed, but the scene is still fading over: what needs the surface on
+    // screen (lookAtBody, setFieldOfView) must not be told "done" yet.
+    expect(store.get().view).toBe('surface');
+    expect(asked).toEqual(['surface']);
+    expect(done).toBe(false);
+    shown();
+    expect(await pending).toMatchObject({ ok: true, result: { view: 'surface' } });
+  });
+
+  it('setGlobeCamera says where the view will centre when it cannot centre on a pole', async () => {
+    setup();
+    const plain = await runAction<any>('setGlobeCamera', { lat: -84.79, lon: 29.2 });
+    expect(plain).toMatchObject({ ok: true, result: { view: 'globe', target: { latDeg: -84.79, lonDegEast: expect.closeTo(29.2, 9), altitudeKm: null } } });
+    expect(plain.ok && 'note' in plain.result).toBe(false);
+    const r = await runAction<any>('setGlobeCamera', { lat: -90, lon: 10, altitudeKm: 300 });
+    expect(r).toMatchObject({ ok: true, result: { target: { latDeg: -90, lonDegEast: 10 }, centredLatDeg: -89.9, note: expect.stringContaining('exactly on a pole the globe cannot be turned') } });
+    expect((await runAction<any>('setGlobeCamera', { lat: 89.95, lon: 0 })) as unknown).toMatchObject({ ok: true, result: { centredLatDeg: 89.9 } });
+  });
+
   it('records the globe camera when no scene is listening', async () => {
     const { store } = setup();
     await runAction('setGlobeCamera', { lat: 10, lon: 190, altitudeKm: 500 });
@@ -156,6 +192,8 @@ describe('core actions', () => {
     expect(all.result.sites[1]).toEqual({
       id: 'apollo-11', name: 'Apollo 11', latDeg: 0.67408, lonDegEast: 23.47297, program: 'Apollo', country: 'USA',
       landedUtc: '1969-07-20T12:00Z', crewed: true, region: 'r', positionApproximate: false, summary: 's', shown: true,
+      // No GCAT record or explored areas are loaded in this setup (see siteRecords.test.ts for real ones).
+      ownership: null, exploredArea: null,
     });
     // A query: nothing on screen changed.
     expect(JSON.stringify(store.get())).toBe(before);
@@ -234,15 +272,15 @@ describe('core actions', () => {
     };
     // 14 March 2025, 06:00 UTC: full Moon (the hour of the total lunar eclipse).
     let s = await read();
-    expect(s.moonPhase).toMatchObject({ name: 'Full Moon', litFromEarthPct: 100 });
-    expect(moonPhaseText(s.moonPhase)).toBe('Full Moon · 100% lit from Earth');
+    expect(s.moonPhase).toMatchObject({ name: 'Full Moon', litFromEarthPct: 100, lunarEclipse: 'partial' });
+    expect(moonPhaseText(s.moonPhase)).toBe('Full Moon · partial lunar eclipse');
     expect([s.locatorZoom, s.panels]).toEqual([1, { filters: true, 'site-details': true, 'site-science': true }]);
     // IM-2's touchdown, a week earlier: the line under the scrubber reads "First quarter · 51% lit from Earth".
     await runAction('setTime', { utc: '2025-03-06T17:28Z' });
     shell.locatorZoom = 8;
     shell.panels['site-science'] = false;
     s = await read();
-    expect(s.moonPhase).toEqual({ name: 'First quarter', litFromEarthPct: 51, waxing: true });
+    expect(s.moonPhase).toEqual({ name: 'First quarter', litFromEarthPct: 51, waxing: true, lunarEclipse: null });
     expect([s.locatorZoom, s.panels['site-science']]).toEqual([8, false]);
     expect(JSON.parse(JSON.stringify(s))).toEqual(s);
   });
