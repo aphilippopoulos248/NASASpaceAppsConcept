@@ -1,0 +1,69 @@
+{
+ "note": "Published statements used in check 2, quoted as fetched on 2026-11-14. 'derived' is this fixture's reading of the quote in UTC, with the precision the wording supports.",
+ "sources": [
+  {
+   "id": "firefly-pr-2025-03-18",
+   "what": "Blue Ghost Mission 1: end of daylight on 16 March 2025",
+   "url": "https://fireflyspace.com/news/firefly-aerospace-successfully-completes-14-days-of-surface-operations-on-the-moon",
+   "publisher": "Firefly Aerospace, press release",
+   "quotes": [
+    "completing more than 14 days of surface operations (346 hours of daylight), and operating just over 5 hours into the lunar night with the final data received around 6:15 pm CDT on March 16",
+    "Firefly also captured imagery of the lunar sunset on March 16",
+    "Following the sunset, Blue Ghost operated for 5 hours into the lunar night"
+   ],
+   "derived": "Final data about 23:15 UTC (6:15 pm CDT = UTC-5). 'Just over 5 hours' of night before that puts the start of night at about 18:15 UTC or a little earlier. Independently, 346 h after the 08:34 UTC touchdown is 18:34 UTC. So: night began around 18:15-18:35 UTC on 16 March, to within a few tens of minutes ('around', 'just over', whole hours). The release does not say what 'sunset' means (first contact, last limb, or loss of power)."
+  },
+  {
+   "id": "kut-2025-03-14",
+   "what": "Blue Ghost Mission 1: the 14 March 2025 eclipse as seen from the landing site",
+   "url": "https://www.kut.org/text/science/2025-03-14/firefly-aerospace-blue-ghost-lunar-lander-total-solar-eclipse",
+   "publisher": "KUT Radio (Austin NPR station), report by Kailey Hunt, published 2025-03-14 4:00 PM CDT, citing Firefly",
+   "quotes": [
+    "The solar eclipse lasted nearly five hours, starting at 12 a.m. CST and ending around 4:52 a.m. at the Blue Ghost's landing site in the Mare Crisium",
+    "Totality lasted just over 2 hours, beginning at 1:18 a.m.",
+    "Another image, taken around 3:30 a.m., shows the lunar lander capturing a \"diamond ring effect,\" as the sun prepared to emerge from totality behind Earth."
+   ],
+   "derived": "Read as US Central Daylight Time (UTC-5), which was in force in Texas on that date and is the zone of the article's own time stamp and of Firefly's caption: eclipse 05:00 to about 09:52 UTC, totality from 06:18 UTC for 'just over 2 hours', Sun about to re-emerge around 08:30 UTC. The article writes 'CST' once; taken literally (UTC-6) every time would be one hour later. Precision: one minute for 1:18 and 4:52, 'around' for the rest."
+  },
+  {
+   "id": "fox-2025-03-14",
+   "what": "Firefly's caption for the diamond-ring image",
+   "url": "https://www.fox7austin.com/news/blue-ghost-lander-eclipse-from-moon",
+   "publisher": "FOX 7 Austin, quoting Firefly Aerospace",
+   "quotes": ["Captured at our landing site in the Moon's Mare Crisium around 3:30 am CDT, the photo shows the sun about to emerge from totality behind Earth."],
+   "derived": "About 08:30 UTC, just before the end of totality."
+  },
+  {
+   "id": "isro-2023-09-02",
+   "what": "Chandrayaan-3: next sunrise at the landing site",
+   "url": "https://www.thenewsminute.com/news/chandrayaan-3-isro-say-moon-rover-pragyan-put-sleep-mode-181838",
+   "publisher": "ISRO post of 2023-09-02, as reproduced by The News Minute",
+   "quotes": ["The solar panel is oriented to receive the light at the next sunrise expected on September 22, 2023."],
+   "derived": "A date only: 22 September 2023."
+  },
+  {
+   "id": "isro-site-2023-09-04",
+   "what": "Chandrayaan-3: status after the lunar day",
+   "url": "https://www.isro.gov.in/Chandrayaan3.html",
+   "publisher": "ISRO, Chandrayaan-3 page",
+   "quotes": ["September 04, 2023 The lander and rover are in sleep mode. Awaiting their awakening around September 22, 2023."],
+   "derived": "A date only."
+  },
+  {
+   "id": "ie-2023-09",
+   "what": "Chandrayaan-3: sunset date",
+   "url": "https://interestingengineering.com/innovation/india-to-revive-lander-rover-moon",
+   "publisher": "Interesting Engineering (secondary source)",
+   "quotes": ["Knowing that the Sun would set at Shivshakti point on September 4, the scientists began a phased shutdown of the two devices on September 2."],
+   "derived": "A date only: 4 September 2023."
+  },
+  {
+   "id": "alsj-scotti",
+   "what": "Apollo 11-17: altitude and azimuth of the Sun and Earth at landing, at the start and end of each EVA and at lift-off (37 instants)",
+   "url": "https://www.nasa.gov/wp-content/uploads/static/history/alsj/Scotti_AltAz.txt",
+   "publisher": "Apollo Lunar Surface Journal (NASA), table by Jim Scotti; copy in events/alsj_scotti_altaz.txt",
+   "quotes": ["e-lon and e-lat are the sub-Earth longitude and latitudes derived from interpolating the Nautical Almanac lunar ephemeris data. e-Alt and e-Az are the Altitude and Azimuth of the Earth at that time."],
+   "derived": "Values to 0.01 deg, computed from sub-Earth and sub-solar points, i.e. directions from the Moon's centre: Earth's altitude therefore lacks the site parallax (up to 0.26 deg)."
+  }
+ ]
+}

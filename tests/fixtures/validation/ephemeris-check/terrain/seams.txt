@@ -1,0 +1,23 @@
+site             3 m minus 60 m over the overlap      60 m just outside minus 3 m just inside, along the edge      skyline formed on the edge
+                 mean      std                        mean      lowest    highest                               (share of azimuths, 2 m)
+surveyor-3       -0.00 m   1.90 m                     -0.16 m   -4.74 m   +3.94 m                              
+surveyor-7       -0.00 m   2.11 m                     +0.43 m   -4.76 m   +7.12 m                              
+apollo-11        -0.00 m   3.94 m                     -0.17 m   -7.45 m  +17.51 m                              
+apollo-12        +0.00 m   1.84 m                     +0.01 m   -4.88 m   +9.57 m                              
+luna-16          +0.01 m   2.58 m                     +0.88 m   -5.04 m  +13.93 m                              
+apollo-14        -0.00 m   2.18 m                     -0.09 m   -6.40 m   +6.39 m                              
+apollo-15        +0.00 m   2.21 m                     -0.20 m   -8.36 m   +7.68 m                               0.0 %  
+luna-20          -0.01 m   2.27 m                     -0.93 m   -5.92 m   +9.96 m                              
+apollo-16        -0.02 m   2.83 m                     -0.12 m   -5.69 m  +15.43 m                              
+apollo-17        +0.01 m   2.93 m                     +0.37 m   -7.38 m  +21.63 m                              
+luna-21          -0.01 m   3.56 m                     -0.90 m   -9.16 m   +8.50 m                              
+luna-23          +0.00 m   2.92 m                     +0.31 m   -6.10 m  +16.04 m                              
+luna-24          +0.01 m   2.91 m                     +0.84 m   -6.27 m  +12.56 m                              
+change-3         +0.01 m   2.91 m                     +0.30 m   -9.60 m   +7.41 m                              
+change-4         +0.01 m   3.06 m                     +1.04 m   -5.21 m  +17.88 m                              
+change-5         +0.01 m   3.30 m                     +0.19 m  -10.01 m   +8.71 m                              
+slim             +0.00 m   2.65 m                     -0.02 m   -6.61 m  +18.80 m                              
+change-6         -0.01 m   3.28 m                     -0.79 m   -9.30 m   +7.45 m                              
+blue-ghost-1     -0.00 m   3.37 m                     +0.16 m   -6.37 m   +7.77 m                               5.7 %  33.4-38.9, 56.4-58.1, 256.5-260.9, 263.3-263.9, 267.9-275.5
+
+A step of 1 m at 768 m is 0.075 deg of skyline; the Sun crosses that in about 9 minutes at the equator.

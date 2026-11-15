@@ -1,0 +1,9 @@
+[
+ { "id": "blue-ghost-1.surface",      "site": { "id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81 }, "mastHeightM": 2,   "start": "2025-03-02T08:34:00Z", "durationH": 363, "stepMin": 10 },
+ { "id": "blue-ghost-1.sunset-1min",  "site": { "id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81 }, "mastHeightM": 2,   "start": "2025-03-16T16:00:00Z", "durationH": 8,   "stepMin": 1, "series": true },
+ { "id": "blue-ghost-1.sunset-1min.mast0.5", "site": { "id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81 }, "mastHeightM": 0.5, "start": "2025-03-16T16:00:00Z", "durationH": 8, "stepMin": 1, "series": true },
+ { "id": "blue-ghost-1.sunset-1min.mast5",   "site": { "id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81 }, "mastHeightM": 5,   "start": "2025-03-16T16:00:00Z", "durationH": 8, "stepMin": 1, "series": true },
+ { "id": "blue-ghost-1.eclipse-1min", "site": { "id": "blue-ghost-1", "name": "Blue Ghost Mission 1", "kind": "landing", "lat": 18.562, "lon": 61.81 }, "mastHeightM": 2,   "start": "2025-03-14T04:00:00Z", "durationH": 7,   "stepMin": 1, "series": true },
+ { "id": "chandrayaan-3.surface",     "site": { "id": "chandrayaan-3", "name": "Chandrayaan-3", "kind": "landing", "lat": -69.3741, "lon": 32.32 },      "mastHeightM": 2,   "start": "2023-08-23T12:33:00Z", "durationH": 791, "stepMin": 10 },
+ { "id": "apollo-15.surface",         "site": { "id": "apollo-15", "name": "Apollo 15", "kind": "landing", "lat": 26.13239, "lon": 3.6333 },             "mastHeightM": 2,   "start": "1971-07-30T22:16:00Z", "durationH": 349, "stepMin": 10 }
+]

@@ -1,0 +1,179 @@
+{
+ "surveyor-3": {
+  "overlapMeanM": -0.0015035900452057614,
+  "overlapStdM": 1.8999606342094613,
+  "edgeStepMeanM": -0.15624287307228513,
+  "edgeStepMinM": -4.7410920715333305,
+  "edgeStepMaxM": 3.9361312866089975,
+  "halfWidthM": 768.0
+ },
+ "surveyor-7": {
+  "overlapMeanM": -0.0008555943559910731,
+  "overlapStdM": 2.109718759896918,
+  "edgeStepMeanM": 0.42508107665322115,
+  "edgeStepMinM": -4.75728485104554,
+  "edgeStepMaxM": 7.1193667221229475,
+  "halfWidthM": 768.0
+ },
+ "apollo-11": {
+  "overlapMeanM": -0.00461563069280172,
+  "overlapStdM": 3.941680066648185,
+  "edgeStepMeanM": -0.171657832265381,
+  "edgeStepMinM": -7.45349288939974,
+  "edgeStepMaxM": 17.50536376953005,
+  "halfWidthM": 768.0
+ },
+ "apollo-12": {
+  "overlapMeanM": 0.002058380256072256,
+  "overlapStdM": 1.8393154487973629,
+  "edgeStepMeanM": 0.009280665516880227,
+  "edgeStepMinM": -4.876750946038555,
+  "edgeStepMaxM": 9.567048645021487,
+  "halfWidthM": 768.0
+ },
+ "luna-16": {
+  "overlapMeanM": 0.00547532518276746,
+  "overlapStdM": 2.5765322137360074,
+  "edgeStepMeanM": 0.8752797865868862,
+  "edgeStepMinM": -5.0420684814585,
+  "edgeStepMaxM": 13.93191680908285,
+  "halfWidthM": 768.0
+ },
+ "apollo-14": {
+  "overlapMeanM": -0.003053954115944643,
+  "overlapStdM": 2.1802212568444173,
+  "edgeStepMeanM": -0.09137295305721338,
+  "edgeStepMinM": -6.402267608638795,
+  "edgeStepMaxM": 6.390425872795959,
+  "halfWidthM": 768.0
+ },
+ "apollo-15": {
+  "overlapMeanM": 0.0044694872791487894,
+  "overlapStdM": 2.2071084614736156,
+  "edgeStepMeanM": -0.20439664900286525,
+  "edgeStepMinM": -8.36075500487891,
+  "edgeStepMaxM": 7.682296752929915,
+  "halfWidthM": 768.0,
+  "skylineOnEdgeShare": 0.0,
+  "skylineOnEdgeAzRuns": []
+ },
+ "luna-20": {
+  "overlapMeanM": -0.008964166872073093,
+  "overlapStdM": 2.266507821325904,
+  "edgeStepMeanM": -0.9317525291452247,
+  "edgeStepMinM": -5.919853210436713,
+  "edgeStepMaxM": 9.956250610355482,
+  "halfWidthM": 768.0
+ },
+ "apollo-16": {
+  "overlapMeanM": -0.015517256578240575,
+  "overlapStdM": 2.8339697479674886,
+  "edgeStepMeanM": -0.11780344429633535,
+  "edgeStepMinM": -5.694363880736082,
+  "edgeStepMaxM": 15.430303163530368,
+  "halfWidthM": 768.0
+ },
+ "apollo-17": {
+  "overlapMeanM": 0.006855539617324517,
+  "overlapStdM": 2.9340142628075743,
+  "edgeStepMeanM": 0.3678217816353606,
+  "edgeStepMinM": -7.37974487305155,
+  "edgeStepMaxM": 21.628546447729605,
+  "halfWidthM": 768.0
+ },
+ "luna-21": {
+  "overlapMeanM": -0.009662315782184034,
+  "overlapStdM": 3.5559551183349187,
+  "edgeStepMeanM": -0.8960488379007092,
+  "edgeStepMinM": -9.162200317368388,
+  "edgeStepMaxM": 8.498456420903494,
+  "halfWidthM": 768.0
+ },
+ "luna-23": {
+  "overlapMeanM": 0.001518699238712732,
+  "overlapStdM": 2.924310508304453,
+  "edgeStepMeanM": 0.31411181449888703,
+  "edgeStepMinM": -6.098131408718928,
+  "edgeStepMaxM": 16.038726501470137,
+  "halfWidthM": 768.0
+ },
+ "luna-24": {
+  "overlapMeanM": 0.005414154627573402,
+  "overlapStdM": 2.909387805576867,
+  "edgeStepMeanM": 0.8420288133616052,
+  "edgeStepMinM": -6.2697827148449505,
+  "edgeStepMaxM": 12.559258728032546,
+  "halfWidthM": 768.0
+ },
+ "change-3": {
+  "overlapMeanM": 0.007006149790743214,
+  "overlapStdM": 2.90507502025724,
+  "edgeStepMeanM": 0.3034271931641017,
+  "edgeStepMinM": -9.604365539550145,
+  "edgeStepMaxM": 7.413414306687628,
+  "halfWidthM": 768.0
+ },
+ "change-4": {
+  "overlapMeanM": 0.012726858359786637,
+  "overlapStdM": 3.060997600298672,
+  "edgeStepMeanM": 1.0402370762833373,
+  "edgeStepMinM": -5.211550292966422,
+  "edgeStepMaxM": 17.882159423936173,
+  "halfWidthM": 768.0
+ },
+ "change-5": {
+  "overlapMeanM": 0.008987823099158148,
+  "overlapStdM": 3.298472714861688,
+  "edgeStepMeanM": 0.19012037396422832,
+  "edgeStepMinM": -10.014872436487167,
+  "edgeStepMaxM": 8.710453186040013,
+  "halfWidthM": 768.0
+ },
+ "slim": {
+  "overlapMeanM": 0.0038593367034121142,
+  "overlapStdM": 2.647579559361658,
+  "edgeStepMeanM": -0.022856378556178503,
+  "edgeStepMinM": -6.613610458377934,
+  "edgeStepMaxM": 18.795403289742353,
+  "halfWidthM": 768.0
+ },
+ "change-6": {
+  "overlapMeanM": -0.005215982791200564,
+  "overlapStdM": 3.279940172373437,
+  "edgeStepMeanM": -0.7902819490440303,
+  "edgeStepMinM": -9.300536499017653,
+  "edgeStepMaxM": 7.45088378906712,
+  "halfWidthM": 768.0
+ },
+ "blue-ghost-1": {
+  "overlapMeanM": -0.0022013311154820896,
+  "overlapStdM": 3.365027093113711,
+  "edgeStepMeanM": 0.15546452522277,
+  "edgeStepMinM": -6.369081115712561,
+  "edgeStepMaxM": 7.773245239253811,
+  "halfWidthM": 768.0,
+  "skylineOnEdgeShare": 0.056666666666666664,
+  "skylineOnEdgeAzRuns": [
+   [
+    33.4,
+    38.900000000000006
+   ],
+   [
+    56.400000000000006,
+    58.1
+   ],
+   [
+    256.5,
+    260.90000000000003
+   ],
+   [
+    263.3,
+    263.90000000000003
+   ],
+   [
+    267.90000000000003,
+    275.5
+   ]
+  ]
+ }
+}
