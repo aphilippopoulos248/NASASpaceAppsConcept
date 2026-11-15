@@ -112,9 +112,11 @@ part of Earth's disc".
 
 Example sentences from real results: section 6 (added with the implementation commit).
 
-## 5. Where consumers quote a single instant or an unlabelled time today (integration 2ade856)
+## 5. Where consumers quote a single instant or an unlabelled time today (integration bbaa93d)
 
 None of these is changed by @events (D-1 of lunyx-science: consumers' files belong to their owners).
+Since T-33 most of them label the one instant they show ("Sun fully set"); what D-8 still needs is
+the other end, which `span` / `nextTransitions` now provide.
 
 | File and line | Owner | What it shows now | What D-8 needs from the new fields |
 | --- | --- | --- | --- |
@@ -123,10 +125,11 @@ None of these is changed by @events (D-1 of lunyx-science: consumers' files belo
 | `src/core/coreActions.ts:249-273` (`jumpToEvent`) | @globe | Jumps to and reports one instant (labelled) | Report the span of the event jumped to |
 | `src/ui/shared/timeScrubber.ts:128-130, 166-172` (jump buttons, marks) | @globe | One mark and one time per event, labelled with its instant | Draw/describe the span (first cut to last limb); grazes from `transitions` |
 | `src/ui/globe/siteCard.ts:106, 258, 261` ("Earth in view") | @globe | Earth's centre figure, in the same card as PGDA's "Any of Earth in view" (`src/ui/science/siteScience.ts:239`) | Label it "Earth's centre in view" and add `earthAnyPct` ("any part of Earth's disc") |
-| `src/assistant/deterministic/intents.ts:484` | @assistant | "Moved the clock to the next sunset: HH:MM UTC" | Name the instant and the other end |
-| `src/assistant/deterministic/intents.ts:495` | @assistant | "The next sunset is at HH:MM UTC": an **unlabelled sunset time** | "The Sun starts setting ... and is fully set ... UTC" from the span |
-| `src/ui/compare/model.ts:159, 180-193` ("Next sunset" rows) | @analysis | A time labelled "Next sunset", defined in the hint | Both ends; `earthAnyPct` row if wanted |
-| Surface key metrics and countdowns (original T-10, `src/ui/surface/**`, not yet integrated) | @surface | Countdowns to the next sunset / sunrise / Earthset / Earthrise | "starts setting ..., fully set ..." from `nextEvents(a, t)[type].span`, or `nextTransitions(a, t)` near the window edge |
+| `src/ui/surface/metricsModel.ts:73-86, 139-160` (countdowns) | @surface | "Sunset in 3 h ..." with the instant named in `instant` / `detail` ("Sunset at HH:MM UTC: the last limb ...") | "starts setting HH:MM, fully set HH:MM UTC" from `next[type].span` (or `transitionSummary`); near the window's end `nextTransitions(a, t)` still has the passage when `nextEvents` returns null |
+| `src/ui/surface/metrics.ts:94-95, 180` ("Earth's centre in sight") | @surface | Already labelled Earth's centre | `earthAnyPct` beside it if wanted |
+| `src/assistant/deterministic/intents.ts:444, 484` | @assistant | "Moved the clock to the next sunset: HH:MM UTC" | Name the instant and the other end |
+| `src/assistant/deterministic/intents.ts:495` | @assistant | "The next sunset is at HH:MM UTC": an **unlabelled sunset time** | "The Sun starts setting ... and is fully set ... UTC" from the span (once `analysisReport.ts` passes it) |
+| `src/ui/compare/model.ts:160, 187-200` (event rows) | @analysis | Labelled single instant ("Sun fully set") | Both ends; `ComparisonDiff.earthAnyPct` row if wanted |
 
 ## 6. Verification and example sentences
 
