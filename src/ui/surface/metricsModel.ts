@@ -4,6 +4,7 @@
 import { blockageAt, nextEvents, skyAt } from '../../analysis/api';
 import type { Blockage, FullSpan, SiteAnalysis, SkyEvent } from '../../analysis/types';
 import type { AnalysisStatus } from '../../core/analysisStore';
+import { sunBandRequired } from '../../core/requirements';
 import { formatDuration, formatUtc } from '../../core/time';
 import type { AppState } from '../../core/types';
 
@@ -185,10 +186,12 @@ function flags(a: SiteAnalysis, sun: BodyNow | null, req: Requirements): string[
   const out: string[] = [];
   const m = a.metrics;
   const band = `${req.sunElMinDeg}° to ${req.sunElMaxDeg}°`;
-  if (sun && (sun.elDeg < req.sunElMinDeg || sun.elDeg > req.sunElMaxDeg)) {
+  // The default band (0 to 90 degrees) is no requirement: one rule for every panel (src/core/requirements.ts).
+  const banded = sunBandRequired(req);
+  if (banded && sun && (sun.elDeg < req.sunElMinDeg || sun.elDeg > req.sunElMaxDeg)) {
     out.push(`Sun elevation now ${deg(sun.elDeg)} is ${sun.elDeg < req.sunElMinDeg ? 'below' : 'above'} the required band (${band}).`);
   }
-  if (Number.isFinite(m.minSunElDeg) && (m.minSunElDeg < req.sunElMinDeg || m.maxSunElDeg > req.sunElMaxDeg)) {
+  if (banded && Number.isFinite(m.minSunElDeg) && (m.minSunElDeg < req.sunElMinDeg || m.maxSunElDeg > req.sunElMaxDeg)) {
     out.push(`Over the mission window the Sun's elevation runs from ${deg(m.minSunElDeg)} to ${deg(m.maxSunElDeg)}: outside the required band (${band}) for part of it.`);
   }
   if (req.maxEarthGapH !== null && Number.isFinite(m.longestEarthGapH) && m.longestEarthGapH > req.maxEarthGapH) {

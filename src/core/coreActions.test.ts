@@ -376,7 +376,8 @@ describe('getAnalysis', () => {
       state: 'ready',
       scenario: { site: { id: 'im-2', latDeg: -84.79, lonDegEast: 29.2 }, startUtc: '2025-03-06T17:28Z', endUtc: '2025-03-07T17:28Z', durationH: 24, mastHeightM: 2 },
       now: { timeUtc: '2025-03-06T17:28Z', insideAnalysedWindow: true },
-      requirements: { sunElevationBand: { minDeg: 0, maxDeg: 90, metNow: true }, maxEarthGap: null },
+      // The default band (0 to 90 deg) is no requirement: nothing is checked against it.
+      requirements: { sunElevationBand: { required: false, minDeg: 0, maxDeg: 90, metNow: null, metForWholeWindow: null, note: expect.stringMatching(/^No solar elevation band is required/) }, maxEarthGap: null },
     });
     for (const key of ['illuminationPct', 'sunAnyPct', 'earthVisiblePct']) {
       expect(a.metrics[key]).toBeGreaterThanOrEqual(0);
