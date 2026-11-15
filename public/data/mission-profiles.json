@@ -1,0 +1,58 @@
+{
+  "about": "Mission profiles of the landing-site decision engine (Lunyx decision D-17). Each profile is a window, an observer height, a landing-region radius, thresholds (a minimum for sunlight and Earth line of sight, a maximum for the others; null = no requirement) and weights. Every number cites its source or is labelled an illustrative default: none of them is a NASA or mission requirement. Change them in the app for a real mission.",
+  "profiles": [
+    {
+      "id": "polar-short-stay",
+      "name": "Polar lander, short surface stay",
+      "description": "A solar-powered lander near a lunar pole that works for about ten Earth days, must not meet a long night, and talks to Earth directly.",
+      "window": { "startUtc": "current", "durationH": 240 },
+      "mastHeightM": 2,
+      "landingRadiusM": 100,
+      "thresholds": { "sunlight": 60, "darkness": 24, "earthVisibility": 50, "commBlackout": 48, "slope": 10, "roughness": 1 },
+      "weights": { "sunlight": 3, "darkness": 2, "earthVisibility": 2, "commBlackout": 2, "slope": 1, "roughness": 1 },
+      "sources": [
+        "Window: starts at the app's current mission window; 240 h (10 days): illustrative default.",
+        "Observer 2 m above the ground: illustrative default (the app's default mast height).",
+        "Landing region radius 100 m: illustrative default.",
+        "Thresholds (sunlight at least 60 %, longest darkness at most 24 h, Earth line of sight at least 50 %, longest blackout at most 48 h, slope at most 10°, roughness at most 1 m): illustrative defaults, not mission requirements.",
+        "Weights (sunlight 3, darkness 2, Earth line of sight 2, blackout 2, slope 1, roughness 1): illustrative defaults."
+      ]
+    },
+    {
+      "id": "polar-long-stay",
+      "name": "Polar long stay, one lunar day-night cycle",
+      "description": "A lander or rover near a lunar pole that stays through a whole lunar day-night cycle, so the length of its darkness and of its blackouts from Earth matter most.",
+      "window": { "startUtc": "current", "durationH": 709 },
+      "mastHeightM": 2,
+      "landingRadiusM": 100,
+      "thresholds": { "sunlight": 50, "darkness": 100, "earthVisibility": 40, "commBlackout": 150, "slope": 10, "roughness": 1 },
+      "weights": { "sunlight": 2, "darkness": 3, "earthVisibility": 1, "commBlackout": 2, "slope": 1, "roughness": 1 },
+      "sources": [
+        "Window: starts at the app's current mission window; 709 h is one mean synodic month, 29.53 days, the lunar day-night cycle (NASA NSSDCA Moon Fact Sheet, https://nssdc.gsfc.nasa.gov/planetary/factsheet/moonfact.html).",
+        "Observer 2 m above the ground: illustrative default (the app's default mast height).",
+        "Landing region radius 100 m: illustrative default.",
+        "Thresholds (sunlight at least 50 %, longest darkness at most 100 h, Earth line of sight at least 40 %, longest blackout at most 150 h, slope at most 10°, roughness at most 1 m): illustrative defaults, not mission requirements.",
+        "Weights (sunlight 2, darkness 3, Earth line of sight 1, blackout 2, slope 1, roughness 1): illustrative defaults."
+      ]
+    },
+    {
+      "id": "low-latitude-daylight-sortie",
+      "name": "Low-latitude daylight sortie, about 14 days",
+      "description": "A lander at low or middle latitude that lands in the local morning and works through one lunar daytime, ending around sunset.",
+      "window": { "startUtc": "current", "durationH": 336 },
+      "mastHeightM": 2,
+      "landingRadiusM": 100,
+      "thresholds": { "sunlight": 80, "darkness": 6, "earthVisibility": 90, "commBlackout": 6, "slope": 10, "roughness": null },
+      "weights": { "sunlight": 3, "darkness": 2, "earthVisibility": 2, "commBlackout": 2, "slope": 1, "roughness": 1 },
+      "sources": [
+        "Window: starts at the app's current mission window; 336 h (14 days), about one lunar daytime. Firefly's Blue Ghost Mission 1 completed more than 14 days of surface operations at 18.6° N (Firefly Aerospace, 17 March 2025, https://fireflyspace.com/news/firefly-aerospace-successfully-completes-14-days-of-surface-operations-on-the-moon).",
+        "Longest darkness at most 6 h: illustrative default that lets Earth pass in front of the Sun (about 2.3 h of total darkness at Blue Ghost's site on 14 March 2025, docs/lunyx/validation.md section 4) but not the night.",
+        "Roughness: no requirement by default, because at most low-latitude sites the bundled elevation grids are too coarse to measure lander-scale roughness. Setting one is a stricter setting and always allowed.",
+        "Observer 2 m above the ground: illustrative default (the app's default mast height).",
+        "Landing region radius 100 m: illustrative default.",
+        "Other thresholds (sunlight at least 80 %, Earth line of sight at least 90 %, longest blackout at most 6 h, slope at most 10°): illustrative defaults, not mission requirements.",
+        "Weights (sunlight 3, darkness 2, Earth line of sight 2, blackout 2, slope 1, roughness 1): illustrative defaults."
+      ]
+    }
+  ]
+}
