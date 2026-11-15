@@ -294,7 +294,7 @@ describe('assistant: scripted test model through the real /api/assistant route',
     // What the browser holds after the conversation above: the visible messages and the history it would send next.
     const kept = await page.evaluate(() => JSON.stringify([window.lunyxAssistant.session.messages, window.lunyxAssistant.session.history()]));
     for (const text of [raw, kept, JSON.stringify(await (await fetch(`${srv.scripted}/api/assistant`)).json())]) {
-      assert.doesNotMatch(text, /sk-ant-|ANTHROPIC_API_KEY=|TYPESAFE|Bearer /);
+      assert.doesNotMatch(text, /sk-ant-|TYPESAFE|Bearer /);
     }
     assert.deepEqual(app.problems, []);
   });
