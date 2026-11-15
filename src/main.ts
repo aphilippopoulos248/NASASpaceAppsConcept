@@ -7,6 +7,7 @@ import { analysis } from './core/analysisStore';
 import * as actions from './core/actions';
 import { createCoreActions } from './core/coreActions';
 import { createPresetActions } from './core/presetActions';
+import { createDecisionActions } from './core/decisionActions';
 import { applyDeepLink, parseDeepLink, syncUrl } from './core/deepLink';
 import { missionFilter } from './core/missionFilter';
 import { store } from './core/store';
@@ -56,6 +57,8 @@ async function boot() {
   );
   registerSiteScienceActions(); // getSiteScience, nearestIceTargets (the site card's science section shows the same readouts)
   actions.registerActions(createPresetActions({ store, presets: getPresets, landings: getLandings, analysis, prepareSurface: host.prepareSurface, viewShown: host.viewShown }));
+  // The decision engine's tools (D-17): profiles, settings, evaluateSite, compareSites, findBestSites.
+  actions.registerActions(createDecisionActions({ store, landings: getLandings }));
   // Expose the registry for the assistant's tests and for debugging in the console.
   (window as unknown as { lunyx: unknown }).lunyx = { store, analysis, actions, scene: host };
 
